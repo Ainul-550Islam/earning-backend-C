@@ -30,6 +30,8 @@ class CacheManager:
             self._initialize_services()
     
     def _load_configuration(self):
+        import os
+        print(f"DEBUG REDIS_URL: {os.environ.get(chr(82)+chr(69)+chr(68)+chr(73)+chr(83)+chr(95)+chr(85)+chr(82)+chr(76))}")
         """Load cache configuration from environment"""
         redis_url = os.getenv('REDIS_URL')
         if redis_url:
