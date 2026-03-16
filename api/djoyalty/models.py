@@ -1,0 +1,58 @@
+from django.db import models
+
+class Customer(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    code = models.CharField(max_length=32, unique=True)
+    firstname = models.CharField(max_length=64, null=True, blank=True)
+    lastname = models.CharField(max_length=64, null=True, blank=True)
+    street = models.CharField(max_length=64, null=True, blank=True)
+    city = models.CharField(max_length=64, null=True, blank=True)
+    zip = models.CharField(max_length=16, null=True, blank=True)
+    email = models.CharField(max_length=64, null=True, blank=True)
+    phone = models.CharField(max_length=64, null=True, blank=True)
+    note = models.TextField(null=True, blank=True)
+    newsletter = models.BooleanField(default=True)
+
+    def __str__(self):
+        return '[{}] {}'.format(self.code, ' '.join(filter(None, [self.firstname, self.lastname])))
+
+class FullPriceTxnManager(models.Manager):
+    def get_queryset(self):
+        return super(FullPriceTxnManager, self).get_queryset().filter(is_discount=False)
+
+class DiscountedTxnManager(models.Manager):
+    def get_queryset(self):
+        return super(DiscountedTxnManager, self).get_queryset().filter(is_discount=True)
+
+class SpendingTxnManager(models.Manager):
+    def get_queryset(self):
+        return super(SpendingTxnManager, self).get_queryset().filter(value__lt=0) # value_lt কে value__lt করুন
+
+class Txn(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    # এখানে on_delete যোগ করা হয়েছে
+    customer = models.ForeignKey('Customer', related_name='transactions', on_delete=models.CASCADE)
+    value = models.DecimalField(decimal_places=2, max_digits=7)
+    is_discount = models.BooleanField(default=False)
+
+    objects = models.Manager()
+    txn_full = FullPriceTxnManager()
+    txn_discount = DiscountedTxnManager()
+    spending = SpendingTxnManager()
+
+    def __str__(self):
+        return '{}{}@{} by {}'.format(self.value, '[X]' if self.is_discount else '', self.timestamp, self.customer)
+
+class CustomerRelatedEvtManager(models.Manager):
+    def get_queryset(self):
+        return super(CustomerRelatedEvtManager, self).get_queryset().filter(customer__isnull=False)
+
+class Event(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    # এখানেও on_delete যোগ করা হয়েছে
+    customer = models.ForeignKey('Customer', related_name='events', null=True, blank=True, on_delete=models.CASCADE)
+    action = models.CharField(max_length=128)
+    description = models.TextField(null=True, blank=True) # DateTime এর বদলে TextField করা হয়েছে
+
+    objects = models.Manager()
+    customer_related = CustomerRelatedEvtManager()

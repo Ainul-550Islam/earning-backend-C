@@ -1,0 +1,195 @@
+{% comment %} {% extends "unfold/layouts/base_simple.html" %}
+
+{% load i18n unfold %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block title %}
+    Dashboard - {{ site_title|default:_('Django site admin') }}
+{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            📊 Dashboard Overview
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">
+            Real-time statistics and analytics for your earning platform
+        </p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Users Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                        {% include "unfold/icons/outline/users.html" with class="w-6 h-6 text-blue-600 dark:text-blue-400" %}
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Users</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ users.total_users|default:"0" }}</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-green-600 dark:text-green-400">+{{ users.new_today|default:"0" }} today</span>
+                    <span class="text-sm text-gray-500">{{ users.active_today|default:"0" }} active</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Earnings Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="p-3 rounded-full bg-green-100 dark:bg-green-900/30">
+                        {% include "unfold/icons/outline/currency-dollar.html" with class="w-6 h-6 text-green-600 dark:text-green-400" %}
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Earnings</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">${{ earnings.total_earnings|default:"0"|floatformat:2 }}</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-green-600 dark:text-green-400">+${{ earnings.today|default:"0"|floatformat:2 }} today</span>
+                    <span class="text-sm text-gray-500">{{ earnings.completed_offers|default:"0" }} offers</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payments Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                        {% include "unfold/icons/outline/credit-card.html" with class="w-6 h-6 text-purple-600 dark:text-purple-400" %}
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Payments</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">${{ payments.total_paid|default:"0"|floatformat:2 }}</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-yellow-600 dark:text-yellow-400">{{ payments.pending|default:"0" }} pending</span>
+                    <span class="text-sm text-gray-500">{{ payments.processed|default:"0" }} processed</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Referrals Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30">
+                        {% include "unfold/icons/outline/user-group.html" with class="w-6 h-6 text-orange-600 dark:text-orange-400" %}
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Referrals</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ referrals.total_referrals|default:"0" }}</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-green-600 dark:text-green-400">+{{ referrals.today|default:"0" }} today</span>
+                    <span class="text-sm text-gray-500">${{ referrals.commission|default:"0"|floatformat:2 }} earned</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-8">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="/admin/users/user/" class="block p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        {% include "unfold/icons/outline/users.html" with class="w-5 h-5 text-gray-600 dark:text-gray-400" %}
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Manage Users</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">View and manage all users</p>
+                    </div>
+                </div>
+            </a>
+            
+            <a href="/admin/wallet/withdrawalrequest/" class="block p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        {% include "unfold/icons/outline/currency-dollar.html" with class="w-5 h-5 text-gray-600 dark:text-gray-400" %}
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Process Payments</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Handle withdrawal requests</p>
+                    </div>
+                </div>
+            </a>
+            
+            <a href="/admin/ad_networks/offer/" class="block p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        {% include "unfold/icons/outline/gift.html" with class="w-5 h-5 text-gray-600 dark:text-gray-400" %}
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Manage Offers</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">View and update offers</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h2>
+        <div class="space-y-4">
+            <!-- Sample Activity Items -->
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="p-2 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                        {% include "unfold/icons/outline/user-add.html" with class="w-4 h-4 text-blue-600 dark:text-blue-400" %}
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">New user registered</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">John Doe joined 2 hours ago</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="p-2 rounded-full bg-green-100 dark:bg-green-900/30">
+                        {% include "unfold/icons/outline/check-circle.html" with class="w-4 h-4 text-green-600 dark:text-green-400" %}
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">Payment processed</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Withdrawal request #1234 completed</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="p-2 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
+                        {% include "unfold/icons/outline/exclamation.html" with class="w-4 h-4 text-yellow-600 dark:text-yellow-400" %}
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">Fraud detected</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Suspicious activity from IP 192.168.1.1</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% endcomment %}

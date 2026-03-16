@@ -1,0 +1,228 @@
+C:\Users\Ainul Islam\New folder (8)\earning_backend\venv\Lib\site-packages\django\db\backends\utils.py:98: RuntimeWarning: Accessing the database during app initialization is discouraged. To fix this warning, avoid executing queries in AppConfig.ready() or when your app modules are imported.
+  warnings.warn(self.APPS_NOT_READY_WARNING_MSG, category=RuntimeWarning)
+Creating test database for alias 'default' ('test_earning_db')...
+Got an error creating the test database: database "test_earning_db" already exists
+
+[INFO] Already registered: OTP
+[INFO] Already registered: LoginHistory
+[INFO] Already registered: UserActivity
+[INFO] Already registered: UserDevice
+[INFO] Already registered: DeviceFingerprint
+[INFO] Already registered: IPReputation
+[INFO] Already registered: UserAccountLink
+[INFO] Already registered: UserBehavior
+[INFO] Already registered: FraudDetectionLog
+[INFO] Already registered: RiskScoreHistory
+[INFO] Already registered: RateLimitTracker
+[INFO] Already registered: KYCVerification
+[INFO] Already registered: UserLevel
+[INFO] Already registered: NotificationSettings
+[INFO] Already registered: SecuritySettings
+[INFO] Already registered: UserStatistics
+[INFO] Already registered: UserPreferences
+[INFO] Already registered: UserRank
+
+[OK] Total 0 models registered successfully!
+
+[SECURE] Registering Security models in BOTH admin sites...
+[SECURE] Registration Complete!
+Successfully registered: Users
+Successfully registered: Groups
+Successfully registered: Backups
+Successfully registered: Backup Schedules
+Successfully registered: Storage Locations
+Successfully registered: Backup Restorations
+Successfully registered: Backup Logs
+Successfully registered: Referrals
+Successfully registered: System Settings
+Successfully registered: System Reports
+Successfully registered: User Profiles
+[OK] Registered: PaymentGateway
+[OK] Registered: PaymentGatewayMethod
+[OK] Registered: GatewayTransaction
+[OK] Registered: PayoutRequest
+[OK] Registered: GatewayConfig
+[OK] Registered: Currency
+[OK] Registered: PaymentGatewayWebhookLog
+[OK][OK][OK] 7 payment_gateways models registered in default admin
+[OK] Registered: OfferCategory
+[OK] Registered: OfferProvider
+[OK] Registered: Offer
+[OK] Registered: OfferClick
+[OK] Registered: OfferConversion
+[OK] Registered: OfferWall
+[OK][OK][OK] 6 offerwall models registered, 0 already existed
+[OK] Registered: AnalyticsEvent
+[OK] Registered: UserAnalytics
+[OK] Registered: RevenueAnalytics
+[OK] Registered: OfferPerformanceAnalytics
+[OK] Registered: FunnelAnalytics
+[OK] Registered: RetentionAnalytics
+[OK] Registered: Dashboard
+[OK] Registered: Report
+[OK] Registered: RealTimeMetric
+[OK] Registered: AlertRule
+[OK] Registered: AlertHistory
+[OK][OK][OK] 11 analytics models registered successfully!
+[OK] Registered: ReferralEarning in default admin
+[OK] Registered: ReferralSettings in default admin
+[OK][OK][OK] All referral models registered in default admin
+[OK] Registered: DailyCheckIn
+[OK] Registered: SpinWheel
+[OK][OK][OK] 2 engagement models registered!
+--- CMS ADMIN LOADED ---
+
+[DOC] Registering CMS models in default admin...
+[OK] Registered: ContentCategory
+[OK] Registered: ContentPage
+[OK] Registered: Banner
+[OK] Registered: FAQCategory
+[OK] Registered: FAQ
+[OK] Registered: BannerImpression
+[OK] Registered: BannerClick
+[OK] Registered: FAQFeedback
+[OK] Registered: ContentViewLog
+[OK] Registered: ContentShare
+[OK] Registered: SiteSettings
+[OK] Registered: ImageGallery
+[OK] Registered: GalleryImage
+[OK] Registered: FileManager
+[OK] Registered: Comment
+[OK] Registered: CommentLike
+[OK] Registered: SiteAnalytics
+[OK] Registered: PermissionAuditLog
+[OK] Registered: ContentPermission
+[OK] Registered: PermissionStats
+[OK] Registered: BannerReward
+[DOC] Registered 21 CMS models in default admin
+[OK] Registered: FAQ
+[OK] Registered: SupportTicket
+[OK] Registered: SupportSettings
+[OK][OK][OK] 3 support models registered!
+[OK] Registered: KYC
+[OK] Registered: KYCVerificationLog
+[OK][OK][OK] 2 KYC models registered successfully!
+[OK] Registered: MasterTask
+[OK] Registered: UserTaskCompletion
+[OK] Registered: AdminLedger
+[OK][OK][OK] 3 tasks models registered successfully!
+[OK] Registered: RateLimitConfig in default admin
+[OK] Registered: RateLimitLog in default admin
+[OK] Registered: UserRateLimitProfile in default admin
+[OK][OK][OK] 3 rate_limit models registered in default admin
+[OK] UserAdmin registered in localization/admin.py
+[OK] Registered: Country
+[OK] Registered: City
+[OK] Registered: Currency
+[OK] Registered: Language
+[OK] Registered: Timezone
+[OK] Registered: TranslationKey
+[OK] Registered: Translation
+[OK] Registered: TranslationCache
+[OK] Registered: MissingTranslation
+[OK] Registered: UserLanguagePreference
+[OK][OK][OK] 10 localization models registered!
+[LOADING] Loading users admin...
+[OK] Registered: OTP
+[OK] Registered: LoginHistory
+[OK] Registered: UserActivity
+[OK] Registered: UserDevice
+[OK] Registered: DeviceFingerprint
+[OK] Registered: IPReputation
+[OK] Registered: UserAccountLink
+[OK] Registered: UserBehavior
+[OK] Registered: FraudDetectionLog
+[OK] Registered: RiskScoreHistory
+[OK] Registered: RateLimitTracker
+[OK] Registered: KYCVerification
+[OK] Registered: UserLevel
+[OK] Registered: NotificationSettings
+[OK] Registered: SecuritySettings
+[OK] Registered: UserStatistics
+[OK] Registered: UserPreferences
+[OK] Registered: UserRank
+[OK][OK][OK] 18 users models registered from apps.py
+[LOADING] Checking payment_gateways admin registration...
+[OK] All payment_gateways models already registered
+[OK] Ad Networks signals loaded
+[LOADING] Checking ad_networks admin registration...
+[OK] Registered: AdNetworkWebhookLog from apps.py
+[OK] Registered: NetworkStatistic from apps.py
+[OK] Registered: OfferPerformanceAnalytics from apps.py
+[OK] Registered: OfferSyncLog from apps.py
+[OK] Registered: OfferWall from apps.py
+[OK] Registered: SmartOfferRecommendation from apps.py
+[OK] Registered: UserOfferLimit from apps.py
+[OK][OK][OK] 7 ad_networks models registered from apps.py
+[LOADING] Checking offerwall admin registration...
+[OK] All offerwall models already registered
+[OK] Fraud Detection signals loaded
+[LOADING] Checking fraud detection admin registration...
+[WARN] Could not import admin classes: cannot import name 'DeviceFingerprintAdmin' from 'api.fraud_detection.admin' (C:\Users\Ainul Islam\New folder (8)\earning_backend\api\fraud_detection\admin.py)
+[OK] Registered: FraudRule (default)
+[OK] Registered: FraudAttempt (default)
+[OK] Registered: FraudPattern (default)
+[OK] Registered: UserRiskProfile (default)
+[OK] Registered: DeviceFingerprint (default)
+[OK] Registered: IPReputation (default)
+[OK] Registered: FraudAlert (default)
+[OK] Registered: OfferCompletion (default)
+[LOADING] Checking analytics admin registration...
+[OK] All analytics models already registered
+[WARN] No signals found for referral app
+[LOADING] Checking referral admin registration...
+[OK] All referral models already registered
+[OK] Notifications signals loaded
+[LOADING] Checking notifications admin registration...
+[OK] Registered: Notification from apps.py
+[OK] Registered: NotificationTemplate from apps.py
+[OK] Registered: NotificationPreference from apps.py
+[OK] Registered: DeviceToken from apps.py
+[OK] Registered: NotificationCampaign from apps.py
+[OK] Registered: NotificationAnalytics from apps.py
+[OK] Registered: NotificationRule from apps.py
+[OK] Registered: NotificationFeedback from apps.py
+[OK] Registered: NotificationLog from apps.py
+[OK] Registered: Notice from apps.py
+[OK][OK][OK] 10 notifications models registered from apps.py
+[OK] CMS Admin successfully loaded!
+[LOADING] Loading support admin...
+[OK] All support models already registered
+[OK] Djoyalty signals loaded
+[LOADING] Checking djoyalty admin registration...
+[OK] Registered: Customer from apps.py
+[OK] Registered: Txn from apps.py
+[OK] Registered: Event from apps.py
+[OK][OK][OK] 3 djoyalty models registered from apps.py
+[OK] Wallet signal connected to User model: users.User
+[LOADING] Checking wallet admin registration...
+[OK] Registered: UserPaymentMethod from apps.py
+[OK] Registered: WalletTransaction from apps.py
+[OK] Registered: WalletWebhookLog from apps.py
+[OK] Registered: Wallet from apps.py
+[OK] Registered: Withdrawal from apps.py
+[OK][OK][OK] 5 wallet models registered from apps.py
+[OK] Tasks signals loaded
+[LOADING] Loading tasks admin...
+[OK] All tasks models already registered
+[OK] Rate limit signals loaded
+[LOADING] Checking rate_limit admin registration...
+[OK] All rate_limit models already registered
+[OK] Localization signals loaded
+[LOADING] Checking localization admin registration...
+[OK] All localization models already registered
+[OK] Audit Logs signals loaded
+[LOADING] Checking audit_logs admin registration...
+[OK] Registered: AuditLog from apps.py
+[OK] Registered: AuditLogConfig from apps.py
+[OK] Registered: AuditLogArchive from apps.py
+[OK] Registered: AuditAlertRule from apps.py
+[OK] Registered: AuditDashboard from apps.py
+[OK][OK][OK] 5 audit_logs models registered from apps.py
+[LOADING] Checking backup admin registration...
+[OK] Registered: RetentionPolicy from apps.py
+[OK] Registered: BackupNotificationConfig from apps.py
+[OK] Registered: DeltaBackupTracker from apps.py
+[OK][OK][OK] 3 backup models registered from apps.py
+Found 116 test(s).
+Type 'yes' if you would like to try deleting the test database 'test_earning_db', or 'no' to cancel: Tests cancelled.

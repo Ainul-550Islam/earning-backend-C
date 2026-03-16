@@ -1,0 +1,353 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .stat-card {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700;
+    }
+    .stat-value {
+        @apply text-3xl font-bold;
+    }
+    .stat-label {
+        @apply text-sm font-medium text-gray-500 dark:text-gray-400;
+    }
+    .badge {
+        @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+    }
+    .chart-container {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700;
+    }
+    .table-container {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="unfold-dashboard space-y-6">
+    <!-- Welcome Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-xl p-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Support System Dashboard</h1>
+                <p class="text-blue-100">Manage support tickets, FAQs, and system settings</p>
+            </div>
+            <div class="text-right">
+                <div class="text-2xl font-bold">{{ today|date:"F j, Y" }}</div>
+                <div class="text-blue-100">{% now "g:i A" %}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Tickets -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="stat-label">Total Tickets</p>
+                    <p class="stat-value text-blue-600 dark:text-blue-400">{{ total_tickets }}</p>
+                </div>
+                <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-2xl">
+                    <span class="text-2xl">📋</span>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600 dark:text-gray-400">Open: {{ open_tickets }}</span>
+                    <span class="text-green-600 dark:text-green-400">Resolved: {{ resolved_tickets }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Open Tickets -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="stat-label">Open Tickets</p>
+                    <p class="stat-value text-amber-600 dark:text-amber-400">{{ open_tickets }}</p>
+                </div>
+                <div class="p-3 bg-amber-100 dark:bg-amber-900 rounded-2xl">
+                    <span class="text-2xl">📥</span>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                    {{ unresponded_tickets }} awaiting response
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Activity -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="stat-label">Today's Activity</p>
+                    <p class="stat-value text-emerald-600 dark:text-emerald-400">{{ today_tickets }}</p>
+                </div>
+                <div class="p-3 bg-emerald-100 dark:bg-emerald-900 rounded-2xl">
+                    <span class="text-2xl">📈</span>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                    {{ today_resolved }} resolved today
+                </div>
+            </div>
+        </div>
+
+        <!-- Resolution Rate -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="stat-label">Resolution Rate</p>
+                    <p class="stat-value text-purple-600 dark:text-purple-400">{{ resolution_rate }}%</p>
+                </div>
+                <div class="p-3 bg-purple-100 dark:bg-purple-900 rounded-2xl">
+                    <span class="text-2xl">✅</span>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                    {{ resolved_tickets|add:closed_tickets }} / {{ total_tickets }} tickets
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Support Status & Recent Tickets -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Support Status -->
+        <div class="lg:col-span-1">
+            <div class="stat-card">
+                <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Support Status</h3>
+                
+                {% if support_settings %}
+                <div class="space-y-4">
+                    <!-- Online Status -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Support Status:</span>
+                        {% if support_settings.is_support_online %}
+                        <span class="badge bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                            ✅ Online
+                        </span>
+                        {% else %}
+                        <span class="badge bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200">
+                            ❌ Offline
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Maintenance -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Maintenance:</span>
+                        {% if support_settings.maintenance_mode %}
+                        <span class="badge bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                            ⚠️ Active
+                        </span>
+                        {% else %}
+                        <span class="badge bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                            ✅ Inactive
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Support Hours -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Support Hours:</span>
+                        <span class="font-medium">
+                            {{ support_settings.support_hours_start|time:"g:i A" }} - {{ support_settings.support_hours_end|time:"g:i A" }}
+                        </span>
+                    </div>
+
+                    <!-- App Version -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">App Version:</span>
+                        <span class="font-medium">v{{ support_settings.latest_version_name }}</span>
+                    </div>
+
+                    <!-- Force Update -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Force Update:</span>
+                        {% if support_settings.force_update %}
+                        <span class="badge bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200">
+                            🔴 Required
+                        </span>
+                        {% else %}
+                        <span class="badge bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                            ✅ Optional
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
+                    <a href="/admin/support/supportsettings/{{ support_settings.id }}/change/" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                        ✏️ Edit Settings
+                    </a>
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <div class="text-4xl mb-4">⚙️</div>
+                    <p class="mb-4">Support settings not configured</p>
+                    <a href="/admin/support/supportsettings/add/" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                        ⚙️ Configure Settings
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Tickets -->
+        <div class="lg:col-span-2">
+            <div class="table-container">
+                <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Support Tickets</h3>
+                        <a href="/admin/support/supportticket/" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                            View All →
+                        </a>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ticket</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">User</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Subject</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Priority</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+                            {% for ticket in recent_tickets %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <a href="/admin/support/supportticket/{{ ticket.id }}/change/" 
+                                       class="font-mono text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+                                        {{ ticket.ticket_id }}
+                                    </a>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                                            {{ ticket.user.username|first|upper }}
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ ticket.user.username }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate" title="{{ ticket.subject }}">
+                                        {{ ticket.subject }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if ticket.status == 'open' %}
+                                    <span class="badge bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                        📥 Open
+                                    </span>
+                                    {% elif ticket.status == 'in_progress' %}
+                                    <span class="badge bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                        ⏳ In Progress
+                                    </span>
+                                    {% elif ticket.status == 'resolved' %}
+                                    <span class="badge bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                                        ✅ Resolved
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                                        🔒 Closed
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if ticket.priority == 'urgent' %}
+                                    <span class="badge bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200">
+                                        🚨 Urgent
+                                    </span>
+                                    {% elif ticket.priority == 'high' %}
+                                    <span class="badge bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                        🔴 High
+                                    </span>
+                                    {% elif ticket.priority == 'medium' %}
+                                    <span class="badge bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                        🟡 Medium
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                                        🟢 Low
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                    <div class="text-4xl mb-4">📭</div>
+                                    <p>No recent support tickets</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Distribution -->
+    <div class="chart-container">
+        <h3 class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100">Ticket Categories</h3>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {% for stat in category_stats %}
+            <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{{ stat.count }}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                    {% if stat.category == 'payment' %}💰 Payment
+                    {% elif stat.category == 'coins' %}🪙 Coins
+                    {% elif stat.category == 'account' %}👤 Account
+                    {% elif stat.category == 'technical' %}🔧 Technical
+                    {% else %}❓ Other{% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-5 text-center py-8 text-gray-500 dark:text-gray-400">
+                <div class="text-4xl mb-4">📊</div>
+                <p>No category data available</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <a href="/admin/support/supportticket/add/" 
+           class="stat-card text-center hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
+            <div class="text-4xl mb-4">📝</div>
+            <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Create Ticket</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Create a new support ticket manually</p>
+        </a>
+        
+        <a href="/admin/support/faq/add/" 
+           class="stat-card text-center hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
+            <div class="text-4xl mb-4">❓</div>
+            <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Add FAQ</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Add new frequently asked question</p>
+        </a>
+        
+        <a href="/admin/support/analytics/" 
+           class="stat-card text-center hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
+            <div class="text-4xl mb-4">📈</div>
+            <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">View Analytics</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Detailed support analytics & reports</p>
+        </a>
+    </div>
+</div>
+{% endblock %}

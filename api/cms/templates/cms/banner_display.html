@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{ banner.description|default:'' }}">
+    <title>{{ banner.title }} - {{ site_name }}</title>
+    
+    <!-- Meta tags for social sharing -->
+    <meta property="og:title" content="{{ banner.title }}">
+    <meta property="og:description" content="{{ banner.description|default:'' }}">
+    <meta property="og:image" content="{{ banner.image.url }}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta name="twitter:card" content="summary_large_image">
+    
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --accent-color: #f72585;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --success-color: #4cc9f0;
+            --warning-color: #ffd166;
+            --danger-color: #ef476f;
+            --border-radius: 12px;
+            --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-color);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        /* Banner Styles */
+        .banner-container {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 30px;
+        }
+        
+        .banner-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .banner-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            max-height: 500px;
+            object-fit: cover;
+        }
+        
+        .banner-content {
+            padding: 30px;
+        }
+        
+        .banner-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            line-height: 1.2;
+        }
+        
+        .banner-description {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.8;
+        }
+        
+        /* Banner Types */
+        .hero-banner .banner-content {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+        
+        .hero-banner .banner-title,
+        .hero-banner .banner-description {
+            color: white;
+        }
+        
+        .reward-banner {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .reward-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, var(--accent-color), var(--warning-color));
+            opacity: 0.1;
+            border-radius: 50%;
+            transform: translate(50%, -50%);
+        }
+        
+        .reward-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, var(--accent-color), #ff6b6b);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 5px 15px rgba(239, 71, 111, 0.4);
+            z-index: 1;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 14px 32px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: var(--transition);
+            cursor: pointer;
+            border: none;
+            outline: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .btn-reward {
+            background: linear-gradient(135deg, var(--accent-color), #ff6b6b);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-reward::after {
+            content: '💰';
+            position: absolute;
+            right: 10px;
+            animation: coin-shine 2s infinite;
+        }
+        
+        @keyframes coin-shine {
+            0%, 100% { opacity: 0.8; transform: rotate(0deg); }
+            50% { opacity: 1; transform: rotate(180deg); }
+        }
+        
+        /* Stats Section */
+        .banner-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid #eee;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            min-width: 120px;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            line-height: 1;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        /* Device Preview */
+        .device-preview {
+            background: #f8f9fa;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .device-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .device-tab {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid transparent;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        
+        .device-tab.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .preview-frame {
+            width: 100%;
+            height: 400px;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background: white;
+            position: relative;
+        }
+        
+        .mobile-preview {
+            max-width: 375px;
+            margin: 0 auto;
+            height: 667px;
+            border: 10px solid #333;
+            border-radius: 30px;
+        }
+        
+        /* Position Badges */
+        .position-indicator {
+            display: inline-block;
+            padding: 6px 15px;
+            background: #e9ecef;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .banner-title {
+                font-size: 1.8rem;
+            }
+            
+            .banner-content {
+                padding: 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .banner-stats {
+                justify-content: center;
+            }
+            
+            .preview-frame {
+                height: 300px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-title {
+                font-size: 1.5rem;
+            }
+            
+            .banner-description {
+                font-size: 1rem;
+            }
+            
+            .reward-badge {
+                font-size: 0.9rem;
+                padding: 8px 20px;
+            }
+            
+            .stat-item {
+                min-width: 100px;
+            }
+        }
+        
+        /* Loading Animation */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 50px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Error State */
+        .error-message {
+            background: #ffeaea;
+            border-left: 4px solid var(--danger-color);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin: 20px 0;
+        }
+        
+        /* Success Message */
+        .success-message {
+            background: #e8f7ef;
+            border-left: 4px solid var(--success-color);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin: 20px 0;
+        }
+    </style>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle banner click tracking
+            const bannerLinks = document.querySelectorAll('.banner-link');
+            bannerLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const bannerId = this.dataset.bannerId;
+                    
+                    // Send click tracking request
+                    fetch(`/api/v1/cms/banners/${bannerId}/record_click/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.redirect_url && data.redirect_url !== '#') {
+                            // Redirect after tracking
+                            setTimeout(() => {
+                                window.location.href = data.redirect_url;
+                            }, 100);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error tracking click:', error);
+                        // Proceed with original link
+                        if (link.href && link.href !== '#') {
+                            window.location.href = link.href;
+                        }
+                    });
+                    
+                    // Prevent immediate redirect
+                    e.preventDefault();
+                });
+            });
+            
+            // Handle device preview tabs
+            const deviceTabs = document.querySelectorAll('.device-tab');
+            const previewFrames = document.querySelectorAll('.preview-frame');
+            
+            deviceTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const device = this.dataset.device;
+                    
+                    // Update active tab
+                    deviceTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update preview
+                    previewFrames.forEach(frame => {
+                        frame.style.display = 'none';
+                        if (frame.classList.contains(device + '-preview')) {
+                            frame.style.display = 'block';
+                        }
+                    });
+                });
+            });
+            
+            // Initialize first tab as active
+            if (deviceTabs.length > 0) {
+                deviceTabs[0].click();
+            }
+            
+            // Handle impression tracking
+            const bannerId = {{ banner.id|default:'null' }};
+            if (bannerId && bannerId !== 'null') {
+                // Record impression
+                fetch(`/api/v1/cms/banners/${bannerId}/record_impression/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+            }
+            
+            // Utility function to get CSRF token
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            // Countdown timer for limited time offers
+            const countdownElement = document.getElementById('countdown-timer');
+            if (countdownElement && countdownElement.dataset.endDate) {
+                const endDate = new Date(countdownElement.dataset.endDate).getTime();
+                
+                const timer = setInterval(function() {
+                    const now = new Date().getTime();
+                    const distance = endDate - now;
+                    
+                    if (distance < 0) {
+                        clearInterval(timer);
+                        countdownElement.innerHTML = "EXPIRED";
+                        return;
+                    }
+                    
+                    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    
+                    countdownElement.innerHTML = `
+                        <div class="time-unit">
+                            <span class="time-value">${days}</span>
+                            <span class="time-label">Days</span>
+                        </div>
+                        <div class="time-unit">
+                            <span class="time-value">${hours}</span>
+                            <span class="time-label">Hours</span>
+                        </div>
+                        <div class="time-unit">
+                            <span class="time-value">${minutes}</span>
+                            <span class="time-label">Minutes</span>
+                        </div>
+                        <div class="time-unit">
+                            <span class="time-value">${seconds}</span>
+                            <span class="time-label">Seconds</span>
+                        </div>
+                    `;
+                }, 1000);
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        {% if banner %}
+            <div class="banner-container {{ banner.banner_type|default:'hero' }}-banner {% if banner.reward_amount > 0 %}reward-banner{% endif %}">
+                <!-- Position Indicator -->
+                <div class="position-indicator">
+                    Position: {{ banner.get_position_display }}
+                </div>
+                
+                <!-- Reward Badge (if applicable) -->
+                {% if banner.reward_amount > 0 %}
+                    <div class="reward-badge">
+                        Earn ${{ banner.reward_amount|floatformat:2 }}
+                    </div>
+                {% endif %}
+                
+                <!-- Banner Image -->
+                {% if banner.image %}
+                    <img src="{{ banner.image.url }}" 
+                         alt="{{ banner.title }}"
+                         class="banner-image"
+                         onerror="this.onerror=null; this.src='{{ STATIC_URL }}img/default-banner.jpg';">
+                {% endif %}
+                
+                <!-- Banner Content -->
+                <div class="banner-content">
+                    <h1 class="banner-title">{{ banner.title }}</h1>
+                    
+                    {% if banner.description %}
+                        <div class="banner-description">
+                            {{ banner.description|safe }}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Countdown Timer (if end_date exists) -->
+                    {% if banner.end_date %}
+                        <div class="countdown-container" style="margin: 25px 0;">
+                            <h3 style="margin-bottom: 10px; color: var(--accent-color);">Limited Time Offer!</h3>
+                            <div id="countdown-timer" 
+                                 data-end-date="{{ banner.end_date|date:'c' }}"
+                                 style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                                <!-- Countdown will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        {% if banner.link_type == 'external' and banner.link_url %}
+                            <a href="{{ banner.link_url }}" 
+                               class="btn btn-primary banner-link"
+                               data-banner-id="{{ banner.id }}"
+                               target="_blank">
+                                {% if banner.banner_type == 'offer' %}Claim Offer{% else %}Learn More{% endif %}
+                            </a>
+                        {% elif banner.link_type == 'internal' and banner.internal_page %}
+                            <a href="{{ banner.internal_page.get_absolute_url }}"
+                               class="btn btn-primary banner-link"
+                               data-banner-id="{{ banner.id }}">
+                                Read More
+                            </a>
+                        {% elif banner.link_type == 'offer' and banner.offer %}
+                            <a href="{% url 'offer-detail' banner.offer.id %}"
+                               class="btn btn-reward banner-link"
+                               data-banner-id="{{ banner.id }}">
+                                💰 Earn ${{ banner.reward_amount|floatformat:2 }}
+                            </a>
+                        {% elif banner.link_type == 'task' and banner.task %}
+                            <a href="{% url 'task-detail' banner.task.id %}"
+                               class="btn btn-primary banner-link"
+                               data-banner-id="{{ banner.id }}">
+                                Start Task
+                            </a>
+                        {% endif %}
+                        
+                        <!-- Share Button -->
+                        <button class="btn btn-secondary" onclick="shareBanner()">
+                            📤 Share
+                        </button>
+                        
+                        <!-- Close/Dismiss Button (for popups) -->
+                        {% if banner.banner_type == 'popup' %}
+                            <button class="btn btn-secondary" onclick="closeBanner()">
+                                ✕ Dismiss
+                            </button>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Banner Statistics -->
+                    <div class="banner-stats">
+                        <div class="stat-item">
+                            <span class="stat-value">{{ banner.impression_count }}</span>
+                            <span class="stat-label">Impressions</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">{{ banner.click_count }}</span>
+                            <span class="stat-label">Clicks</span>
+                        </div>
+                        {% if banner.reward_amount > 0 %}
+                        <div class="stat-item">
+                            <span class="stat-value">{{ banner.conversion_count }}</span>
+                            <span class="stat-label">Conversions</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${{ banner.total_revenue|floatformat:2 }}</span>
+                            <span class="stat-label">Revenue</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Device Preview Section -->
+            <div class="device-preview">
+                <h3 style="margin-bottom: 20px; color: var(--secondary-color);">Preview on Different Devices</h3>
+                
+                <div class="device-tabs">
+                    <button class="device-tab active" data-device="desktop">Desktop</button>
+                    <button class="device-tab" data-device="mobile">Mobile</button>
+                    <button class="device-tab" data-device="tablet">Tablet</button>
+                </div>
+                
+                <div class="preview-frame desktop-preview" style="display: block;">
+                    <!-- Desktop preview of banner -->
+                    <div style="padding: 20px; background: white; height: 100%; overflow: auto;">
+                        <div style="max-width: 1200px; margin: 0 auto;">
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h4 style="margin: 0; color: var(--primary-color);">Desktop Preview</h4>
+                            </div>
+                            <!-- Simplified banner preview -->
+                            <div style="background: linear-gradient(135deg, #4361ee, #3a0ca3); padding: 40px; border-radius: 12px; color: white;">
+                                <h3 style="margin: 0 0 15px 0;">{{ banner.title|truncatechars:50 }}</h3>
+                                <p style="margin: 0; opacity: 0.9;">{{ banner.description|truncatechars:100|default:"Sample banner description..." }}</p>
+                                <button style="margin-top: 20px; padding: 10px 25px; background: white; color: #4361ee; border: none; border-radius: 6px; font-weight: bold;">
+                                    Click Here
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="preview-frame mobile-preview" style="display: none;">
+                    <!-- Mobile preview of banner -->
+                    <div style="padding: 15px; background: white; height: 100%; overflow: auto;">
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <h4 style="margin: 0; color: var(--primary-color); font-size: 14px;">Mobile Preview</h4>
+                        </div>
+                        <!-- Simplified mobile banner preview -->
+                        <div style="background: linear-gradient(135deg, #4361ee, #3a0ca3); padding: 25px; border-radius: 12px; color: white; text-align: center;">
+                            <h4 style="margin: 0 0 10px 0; font-size: 18px;">{{ banner.title|truncatechars:30 }}</h4>
+                            <p style="margin: 0; opacity: 0.9; font-size: 14px;">{{ banner.description|truncatechars:60|default:"Sample description..." }}</p>
+                            <button style="margin-top: 15px; padding: 8px 20px; background: white; color: #4361ee; border: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                                Tap Here
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="preview-frame tablet-preview" style="display: none;">
+                    <!-- Tablet preview of banner -->
+                    <div style="padding: 20px; background: white; height: 100%; overflow: auto;">
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin: 0; color: var(--primary-color);">Tablet Preview</h4>
+                        </div>
+                        <!-- Simplified tablet banner preview -->
+                        <div style="background: linear-gradient(135deg, #4361ee, #3a0ca3); padding: 30px; border-radius: 12px; color: white;">
+                            <h3 style="margin: 0 0 15px 0; font-size: 22px;">{{ banner.title|truncatechars:40 }}</h3>
+                            <p style="margin: 0; opacity: 0.9;">{{ banner.description|truncatechars:80|default:"Sample banner description..." }}</p>
+                            <button style="margin-top: 20px; padding: 10px 25px; background: white; color: #4361ee; border: none; border-radius: 6px; font-weight: bold;">
+                                Click Here
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Banner Information -->
+            <div style="background: white; border-radius: var(--border-radius); padding: 25px; margin-top: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+                <h3 style="margin-bottom: 20px; color: var(--secondary-color);">Banner Information</h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div>
+                        <h4 style="color: #666; margin-bottom: 10px; font-size: 0.9rem;">CAMPAIGN DETAILS</h4>
+                        <p><strong>Name:</strong> {{ banner.name }}</p>
+                        <p><strong>Type:</strong> {{ banner.get_banner_type_display }}</p>
+                        <p><strong>Status:</strong> 
+                            <span style="color: {% if banner.is_active_now %}green{% else %}red{% endif %}; font-weight: bold;">
+                                {% if banner.is_active_now %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <h4 style="color: #666; margin-bottom: 10px; font-size: 0.9rem;">SCHEDULE</h4>
+                        <p><strong>Start:</strong> {{ banner.start_date|date:"M d, Y H:i" }}</p>
+                        <p><strong>End:</strong> {% if banner.end_date %}{{ banner.end_date|date:"M d, Y H:i" }}{% else %}No end date{% endif %}</p>
+                        <p><strong>Priority:</strong> {{ banner.priority }}</p>
+                    </div>
+                    
+                    <div>
+                        <h4 style="color: #666; margin-bottom: 10px; font-size: 0.9rem;">TARGETING</h4>
+                        <p><strong>Device:</strong> {{ banner.get_target_device_display }}</p>
+                        <p><strong>Min Level:</strong> {{ banner.min_user_level }}</p>
+                        {% if banner.target_audience %}
+                        <p><strong>Audience:</strong> Custom targeting applied</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+        {% else %}
+            <!-- No Banner Found -->
+            <div class="error-message">
+                <h2>Banner Not Found</h2>
+                <p>The requested banner could not be found or is no longer active.</p>
+                <a href="{% url 'banner-display' %}" class="btn btn-primary" style="margin-top: 15px;">
+                    View Active Banners
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        // Share banner function
+        function shareBanner() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '{{ banner.title }}',
+                    text: '{{ banner.description|striptags|truncatechars:100 }}',
+                    url: window.location.href
+                })
+                .then(() => console.log('Shared successfully'))
+                .catch(error => console.log('Error sharing:', error));
+            } else {
+                // Fallback: Copy to clipboard
+                navigator.clipboard.writeText(window.location.href)
+                    .then(() => {
+                        alert('Link copied to clipboard!');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy: ', err);
+                    });
+            }
+        }
+        
+        // Close banner function (for popups)
+        function closeBanner() {
+            document.querySelector('.banner-container').style.display = 'none';
+            
+            // Send dismiss event to server
+            const bannerId = {{ banner.id|default:'null' }};
+            if (bannerId && bannerId !== 'null') {
+                fetch(`/api/v1/cms/banners/${bannerId}/record_impression/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        impression_type: 'dismiss'
+                    })
+                });
+            }
+        }
+        
+        // Auto-refresh for real-time stats (if needed)
+        function refreshStats() {
+            const bannerId = {{ banner.id|default:'null' }};
+            if (bannerId && bannerId !== 'null') {
+                fetch(`/api/v1/cms/banners/${bannerId}/stats/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update stats on the page
+                        const stats = data.overview;
+                        document.querySelectorAll('.stat-value')[0].textContent = stats.total_impressions;
+                        document.querySelectorAll('.stat-value')[1].textContent = stats.total_clicks;
+                        // Add more updates as needed
+                    });
+            }
+        }
+        
+        // Auto-refresh every 30 seconds if on admin view
+        {% if request.user.is_staff %}
+        setInterval(refreshStats, 30000);
+        {% endif %}
+    </script>
+</body>
+</html>

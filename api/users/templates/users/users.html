@@ -1,0 +1,1144 @@
+{% extends 'unfold/layouts/base_simple.html' %}
+{% load static humanize %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* Custom Styles for Fraud Analytics Dashboard */
+:root {
+    --primary-color: #2563eb;
+    --critical-color: #dc2626;
+    --warning-color: #f59e0b;
+    --safe-color: #10b981;
+    --dark-bg: #0f172a;
+    --card-bg: #1e293b;
+    --border-color: #334155;
+}
+
+/* Gauge Meter Styles */
+.gauge-container {
+    width: 200px;
+    height: 120px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.gauge {
+    width: 200px;
+    height: 100px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 100px 100px 0 0;
+    background: linear-gradient(90deg, var(--safe-color) 0%, var(--warning-color) 50%, var(--critical-color) 100%);
+}
+
+.gauge:before {
+    content: '';
+    position: absolute;
+    width: 160px;
+    height: 80px;
+    background: var(--dark-bg);
+    border-radius: 100px 100px 0 0;
+    top: 10px;
+    left: 20px;
+}
+
+.gauge-needle {
+    position: absolute;
+    width: 4px;
+    height: 80px;
+    background: white;
+    bottom: 0;
+    left: 50%;
+    transform-origin: bottom center;
+    transform: translateX(-50%) rotate(0deg);
+    transition: transform 1s ease;
+    z-index: 2;
+    border-radius: 2px 2px 0 0;
+}
+
+.gauge-needle:after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 50%;
+    bottom: 0;
+    left: 50%;
+    transform: translate(-50%, 50%);
+}
+
+.gauge-value {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    z-index: 3;
+}
+
+.gauge-label {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #94a3b8;
+}
+
+/* Heatmap Styles */
+#fraudHeatmap {
+    height: 300px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--card-bg);
+}
+
+/* Timeline Styles */
+.timeline {
+    position: relative;
+    padding-left: 30px;
+    margin-top: 20px;
+}
+
+.timeline:before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border-color);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.timeline-item:before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 15px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--primary-color);
+}
+
+.timeline-item.critical {
+    border-left-color: var(--critical-color);
+}
+
+.timeline-item.critical:before {
+    background: var(--critical-color);
+}
+
+.timeline-item.warning {
+    border-left-color: var(--warning-color);
+}
+
+.timeline-item.warning:before {
+    background: var(--warning-color);
+}
+
+.timeline-date {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 5px;
+}
+
+.timeline-event {
+    font-weight: 500;
+    color: white;
+}
+
+/* Badge Styles */
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 5px;
+}
+
+.badge-veteran {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #1f2937;
+}
+
+.badge-high-alert {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+.badge-trusted {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.badge-new {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Spider Web Graph */
+.spider-web {
+    height: 300px;
+    position: relative;
+    background: var(--card-bg);
+    border-radius: 10px;
+}
+
+/* Log Stream Styles */
+.log-stream {
+    height: 300px;
+    overflow-y: auto;
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.log-entry {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    border-left: 3px solid;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.log-entry.critical {
+    border-left-color: var(--critical-color);
+}
+
+.log-entry.high {
+    border-left-color: var(--warning-color);
+}
+
+.log-entry.medium {
+    border-left-color: #3b82f6;
+}
+
+.log-entry.low {
+    border-left-color: #94a3b8;
+}
+
+/* Action Center */
+.action-center {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.action-btn {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+}
+
+.action-btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.action-btn-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.action-btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+/* Anomaly Alert */
+.anomaly-alert {
+    animation: flash 2s infinite;
+    border: 2px solid #fbbf24;
+}
+
+@keyframes flash {
+    0%, 100% {
+        border-color: #fbbf24;
+        box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    }
+    50% {
+        border-color: #f59e0b;
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
+    }
+}
+
+/* Digital Fingerprint Card */
+.fingerprint-card {
+    background: linear-gradient(135deg, var(--card-bg), #1a1f2e);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.fingerprint-card:before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+    z-index: 0;
+}
+
+.trust-score {
+    font-size: 48px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #10b981, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.fingerprint-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.fingerprint-item {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.fingerprint-label {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 4px;
+}
+
+.fingerprint-value {
+    font-weight: 600;
+    color: white;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--card-bg);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Dark Mode Adjustments */
+.dark .bg-gray-800 {
+    background-color: var(--dark-bg) !important;
+}
+
+.dark .border-gray-700 {
+    border-color: var(--border-color) !important;
+}
+
+.dark .text-gray-400 {
+    color: #94a3b8 !important;
+}
+
+.dark .text-gray-300 {
+    color: #cbd5e1 !important;
+}
+
+.dark .text-gray-500 {
+    color: #64748b !important;
+}
+
+/* Card Styling */
+.dashboard-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary-color);
+}
+</style>
+{% endblock %}
+
+{% block title %}Fraud Analytics Dashboard - Unfold Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="dashboard-card">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-white mb-2">Fraud Analytics Control Center</h1>
+                <p class="text-gray-400">Real-time monitoring and threat detection dashboard</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="exportReport('pdf')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export PDF
+                </button>
+                <button onclick="exportReport('excel')" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Level Dashboard -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Risk Meter -->
+        <div class="dashboard-card">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.346 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                System Risk Level
+            </h2>
+            <div class="gauge-container">
+                <div class="gauge">
+                    <div class="gauge-needle" id="riskNeedle"></div>
+                </div>
+                <div class="gauge-value" id="riskValue">{{ overall_risk_score|default:65 }}</div>
+            </div>
+            <div class="gauge-label" id="riskLabel">Medium Risk</div>
+            
+            <div class="mt-6 grid grid-cols-3 gap-4">
+                <div class="text-center p-3 bg-gray-900 rounded-lg">
+                    <div class="text-2xl font-bold text-green-400">{{ total_fraud_events|intcomma }}</div>
+                    <div class="text-sm text-gray-400">Total Events</div>
+                </div>
+                <div class="text-center p-3 bg-gray-900 rounded-lg">
+                    <div class="text-2xl font-bold text-yellow-400">{{ unresolved_fraud|intcomma }}</div>
+                    <div class="text-sm text-gray-400">Unresolved</div>
+                </div>
+                <div class="text-center p-3 bg-gray-900 rounded-lg">
+                    <div class="text-2xl font-bold text-red-400">{{ critical_fraud|intcomma }}</div>
+                    <div class="text-sm text-gray-400">Critical</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Anomaly Detection Alert -->
+        <div class="dashboard-card lg:col-span-2 {% if anomaly_detected %}anomaly-alert{% endif %}">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Anomaly Detection
+                {% if anomaly_detected %}
+                <span class="px-3 py-1 bg-yellow-500 text-black text-sm font-bold rounded-full animate-pulse">
+                    ALERT: {{ anomaly_message }}
+                </span>
+                {% endif %}
+            </h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="p-4 bg-gray-900 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Today's Reg.</span>
+                        <span class="text-lg font-bold {% if registration_anomaly %}text-yellow-400{% else %}text-green-400{% endif %}">
+                            {{ today_registrations }}
+                        </span>
+                    </div>
+                    {% if registration_anomaly %}
+                    <div class="text-xs text-yellow-400 mt-1">↑ {{ registration_change }}% from avg.</div>
+                    {% endif %}
+                </div>
+                
+                <div class="p-4 bg-gray-900 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Failed Logins</span>
+                        <span class="text-lg font-bold {% if login_anomaly %}text-red-400{% else %}text-green-400{% endif %}">
+                            {{ failed_logins }}
+                        </span>
+                    </div>
+                    {% if login_anomaly %}
+                    <div class="text-xs text-red-400 mt-1">↑ {{ login_change }}% from avg.</div>
+                    {% endif %}
+                </div>
+                
+                <div class="p-4 bg-gray-900 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">VPN Usage</span>
+                        <span class="text-lg font-bold {% if vpn_anomaly %}text-orange-400{% else %}text-blue-400{% endif %}">
+                            {{ vpn_sessions }}
+                        </span>
+                    </div>
+                    {% if vpn_anomaly %}
+                    <div class="text-xs text-orange-400 mt-1">↑ {{ vpn_change }}% from avg.</div>
+                    {% endif %}
+                </div>
+                
+                <div class="p-4 bg-gray-900 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Multi-Accounts</span>
+                        <span class="text-lg font-bold {% if multi_account_anomaly %}text-purple-400{% else %}text-green-400{% endif %}">
+                            {{ multi_account_detected }}
+                        </span>
+                    </div>
+                    {% if multi_account_anomaly %}
+                    <div class="text-xs text-purple-400 mt-1">↑ {{ multi_account_change }}% from avg.</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if anomaly_detected %}
+            <div class="mt-4 p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <span class="text-yellow-200">⚠️ Anomaly Detected: {{ anomaly_message }}</span>
+                    <button onclick="acknowledgeAnomaly()" class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded transition-colors">
+                        Acknowledge
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Fraud Trends Chart -->
+        <div class="dashboard-card">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+                Fraud Trends Over Time
+            </h2>
+            <canvas id="fraudTrendsChart" height="250"></canvas>
+        </div>
+
+        <!-- Risk Distribution Donut -->
+        <div class="dashboard-card">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                </svg>
+                Risk Score Distribution
+            </h2>
+            <canvas id="riskDistributionChart" height="250"></canvas>
+        </div>
+    </div>
+
+    <!-- Heatmap and Action Center -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Geographic Heatmap -->
+        <div class="dashboard-card lg:col-span-2">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                Fraud Activity Heatmap
+            </h2>
+            <div id="fraudHeatmap" class="flex items-center justify-center">
+                <div class="text-gray-500 text-center">
+                    <svg class="w-16 h-16 mx-auto mb-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Loading heatmap visualization...
+                </div>
+            </div>
+            <div class="mt-4 text-sm text-gray-400">
+                Showing suspicious IP locations from last 7 days
+            </div>
+        </div>
+
+        <!-- Action Center Sidebar -->
+        <div class="action-center">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Quick Actions
+            </h2>
+            
+            <button onclick="bulkBanCriticalUsers()" class="action-btn action-btn-danger">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+                Bulk Ban Critical Users
+                <span class="bg-white/20 px-2 py-1 rounded text-xs">
+                    {{ critical_users_count }}
+                </span>
+            </button>
+            
+            <button onclick="blockSuspiciousIPRange()" class="action-btn action-btn-warning">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Block IP Range
+                <span class="bg-white/20 px-2 py-1 rounded text-xs">
+                    {{ suspicious_ips_count }}
+                </span>
+            </button>
+            
+            <button onclick="generateWeeklyReport()" class="action-btn action-btn-primary">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Generate Weekly Report
+            </button>
+            
+            <button onclick="scanMultiAccounts()" class="action-btn" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white;">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13 0a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Scan Multi-Accounts
+            </button>
+            
+            <button onclick="purgeExpiredSessions()" class="action-btn" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: white;">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Cleanup Old Sessions
+            </button>
+            
+            <div class="mt-6">
+                <h3 class="font-bold text-white mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Real-time Stats
+                </h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Active Threats:</span>
+                        <span class="font-bold text-red-400">{{ active_threats }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Blocked IPs:</span>
+                        <span class="font-bold text-orange-400">{{ blocked_ips_count }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Banned Devices:</span>
+                        <span class="font-bold text-purple-400">{{ banned_devices }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Auto Resolved:</span>
+                        <span class="font-bold text-green-400">{{ auto_resolved }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Real-time Log Stream -->
+    <div class="dashboard-card">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                Real-time Fraud Detection Log Stream
+            </div>
+            <button onclick="toggleLogStream()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors">
+                <span id="logToggleText">Pause</span>
+            </button>
+        </h2>
+        <div class="log-stream" id="logStream">
+            {% for log in recent_logs %}
+            <div class="log-entry {{ log.severity }}">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                    <div>
+                        <span class="font-bold text-white">{{ log.event_type }}</span>
+                        <span class="text-gray-400 text-sm ml-2">{{ log.user.username|default:"System" }}</span>
+                        <div class="text-gray-300 text-sm mt-1">{{ log.description }}</div>
+                    </div>
+                    <div class="flex flex-col sm:items-end gap-2">
+                        <span class="text-gray-500 text-sm">{{ log.detected_at|timesince }} ago</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs px-2 py-1 rounded {% if log.severity == 'critical' %}bg-red-900/50 text-red-300{% elif log.severity == 'high' %}bg-orange-900/50 text-orange-300{% else %}bg-blue-900/50 text-blue-300{% endif %}">
+                                {{ log.severity|upper }}
+                            </span>
+                            {% if not log.is_resolved %}
+                            <button onclick="resolveLog({{ log.id }})" class="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded transition-colors">
+                                Mark Resolved
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 mt-2">IP: {{ log.ip_address }}</div>
+            </div>
+            {% empty %}
+            <div class="text-center text-gray-500 py-8">
+                <svg class="w-12 h-12 mx-auto mb-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                No recent fraud activity
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Multi-Account Linkage Graph -->
+    <div class="dashboard-card">
+        <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+            </svg>
+            Multi-Account Linkage Detection
+        </h2>
+        <div class="spider-web" id="spiderWebGraph">
+            <div class="h-full flex flex-col items-center justify-center text-gray-500">
+                <svg class="w-16 h-16 mx-auto mb-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+                Loading account linkage visualization...
+            </div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center p-4 bg-gray-900 rounded-lg">
+                <div class="text-2xl font-bold text-purple-400">{{ linked_accounts_count }}</div>
+                <div class="text-sm text-gray-400">Linked Accounts</div>
+            </div>
+            <div class="text-center p-4 bg-gray-900 rounded-lg">
+                <div class="text-2xl font-bold text-orange-400">{{ shared_devices }}</div>
+                <div class="text-sm text-gray-400">Shared Devices</div>
+            </div>
+            <div class="text-center p-4 bg-gray-900 rounded-lg">
+                <div class="text-2xl font-bold text-red-400">{{ shared_ips }}</div>
+                <div class="text-sm text-gray-400">Shared IPs</div>
+            </div>
+            <div class="text-center p-4 bg-gray-900 rounded-lg">
+                <div class="text-2xl font-bold text-blue-400">{{ suspicious_clusters }}</div>
+                <div class="text-sm text-gray-400">Suspicious Clusters</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrascript %}
+{{ block.super }}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Heatmap.js -->
+<script src="https://cdn.jsdelivr.net/npm/heatmap.js/build/heatmap.min.js"></script>
+
+<script>
+// Risk Meter Configuration
+function updateRiskMeter(riskScore) {
+    const needle = document.getElementById('riskNeedle');
+    const valueElement = document.getElementById('riskValue');
+    const labelElement = document.getElementById('riskLabel');
+    
+    // Calculate needle rotation (-90deg to 90deg)
+    const rotation = (riskScore / 100) * 180 - 90;
+    if (needle) {
+        needle.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+    }
+    
+    // Update value and label
+    if (valueElement) {
+        valueElement.textContent = riskScore;
+    }
+    
+    if (labelElement) {
+        if (riskScore >= 80) {
+            labelElement.textContent = 'Critical Risk';
+            labelElement.style.color = 'var(--critical-color)';
+        } else if (riskScore >= 60) {
+            labelElement.textContent = 'High Risk';
+            labelElement.style.color = 'var(--warning-color)';
+        } else if (riskScore >= 40) {
+            labelElement.textContent = 'Medium Risk';
+            labelElement.style.color = 'yellow';
+        } else {
+            labelElement.textContent = 'Low Risk';
+            labelElement.style.color = 'var(--safe-color)';
+        }
+    }
+}
+
+// Initialize Fraud Trends Chart
+const fraudTrendsCtx = document.getElementById('fraudTrendsChart');
+if (fraudTrendsCtx) {
+    const fraudTrendsChart = new Chart(fraudTrendsCtx.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: {{ fraud_trend_labels|safe }},
+            datasets: [
+                {
+                    label: 'Total Fraud Events',
+                    data: {{ fraud_trend_data|safe }},
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Resolved Events',
+                    data: {{ resolved_trend_data|safe }},
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#e2e8f0'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#94a3b8'
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#94a3b8'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Initialize Risk Distribution Donut Chart
+const riskDistributionCtx = document.getElementById('riskDistributionChart');
+if (riskDistributionCtx) {
+    const riskDistributionChart = new Chart(riskDistributionCtx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Critical (80-100)', 'High (60-79)', 'Medium (40-59)', 'Low (0-39)'],
+            datasets: [{
+                data: {{ risk_distribution_data|safe }},
+                backgroundColor: [
+                    '#dc2626',
+                    '#f59e0b',
+                    '#3b82f6',
+                    '#10b981'
+                ],
+                borderWidth: 0,
+                hoverOffset: 20
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#e2e8f0',
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Heatmap Initialization
+function initHeatmap() {
+    const heatmapContainer = document.getElementById('fraudHeatmap');
+    if (heatmapContainer && typeof h337 !== 'undefined') {
+        const heatmapInstance = h337.create({
+            container: heatmapContainer,
+            radius: 35,
+            maxOpacity: 0.8,
+            minOpacity: 0.2,
+            blur: 0.85,
+            gradient: {
+                0.4: 'blue',
+                0.6: 'cyan',
+                0.7: 'lime',
+                0.8: 'yellow',
+                1.0: 'red'
+            }
+        });
+
+        // Add sample heatmap data
+        const points = [];
+        const width = heatmapContainer.offsetWidth;
+        const height = 300;
+
+        for (let i = 0; i < 50; i++) {
+            points.push({
+                x: Math.floor(Math.random() * width),
+                y: Math.floor(Math.random() * height),
+                value: Math.floor(Math.random() * 100)
+            });
+        }
+
+        heatmapInstance.setData({
+            max: 100,
+            data: points
+        });
+    }
+}
+
+// Initialize heatmap when page loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHeatmap);
+} else {
+    initHeatmap();
+}
+
+// Real-time Log Stream
+let logStreamActive = true;
+const logStream = document.getElementById('logStream');
+
+function toggleLogStream() {
+    if (logStream) {
+        logStreamActive = !logStreamActive;
+        const toggleText = document.getElementById('logToggleText');
+        if (toggleText) {
+            toggleText.textContent = logStreamActive ? 'Pause' : 'Resume';
+        }
+    }
+}
+
+// Action Center Functions
+function bulkBanCriticalUsers() {
+    if (confirm(`Are you sure you want to ban all ${critical_users_count} critical users?`)) {
+        fetch('/admin/bulk-ban-critical/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Network response was not ok.');
+        })
+        .then(data => {
+            alert(`${data.banned_count} users have been banned.`);
+            location.reload();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error banning users. Please check console for details.');
+        });
+    }
+}
+
+function blockSuspiciousIPRange() {
+    const ipRange = prompt('Enter IP range to block (e.g., 192.168.1.0/24):');
+    if (ipRange) {
+        fetch('/admin/block-ip-range/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ip_range: ipRange })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(`IP range ${ipRange} has been blocked. ${data.blocked_count} IPs affected.`);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error blocking IP range.');
+        });
+    }
+}
+
+function generateWeeklyReport() {
+    fetch('/admin/generate-fraud-report/')
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'fraud-weekly-report.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error generating report.');
+        });
+}
+
+function exportReport(format) {
+    fetch(`/admin/export-fraud-data/?format=${format}`)
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fraud-report-${new Date().toISOString().split('T')[0]}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error exporting report.');
+        });
+}
+
+function resolveLog(logId) {
+    fetch(`/admin/resolve-fraud-log/${logId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Log marked as resolved.');
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error resolving log.');
+    });
+}
+
+function acknowledgeAnomaly() {
+    fetch('/admin/acknowledge-anomaly/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(() => {
+        const alertElement = document.querySelector('.anomaly-alert');
+        if (alertElement) {
+            alertElement.remove();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error acknowledging anomaly.');
+    });
+}
+
+// Initialize risk meter with actual risk score
+updateRiskMeter({{ overall_risk_score|default:65 }});
+
+// CSRF Token helper
+function getCSRFToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    return csrfToken ? csrfToken.value : '';
+}
+
+// Initialize when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize risk meter
+    updateRiskMeter({{ overall_risk_score|default:65 }});
+    
+    // Add loading state to buttons
+    document.querySelectorAll('.action-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const originalText = this.innerHTML;
+            this.innerHTML = '<span class="animate-spin mr-2">⟳</span>Processing...';
+            this.disabled = true;
+            
+            // Restore button after 3 seconds if still disabled
+            setTimeout(() => {
+                if (this.disabled) {
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                }
+            }, 3000);
+        });
+    });
+});
+</script>
+{% endblock %}

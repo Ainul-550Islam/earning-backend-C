@@ -1,0 +1,363 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Security Dashboard{% endblock %}
+
+{% block extrahead %}
+<style>
+    .dashboard-container {
+        padding: 20px;
+        background: #f8f9fa;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    
+    .stat-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+    
+    .stat-value {
+        font-size: 36px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .stat-label {
+        font-size: 14px;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .stat-card.danger { border-left: 4px solid #dc3545; }
+    .stat-card.warning { border-left: 4px solid #ffc107; }
+    .stat-card.success { border-left: 4px solid #28a745; }
+    .stat-card.info { border-left: 4px solid #17a2b8; }
+    .stat-card.primary { border-left: 4px solid #007bff; }
+    
+    .stat-card.danger .stat-value { color: #dc3545; }
+    .stat-card.warning .stat-value { color: #ffc107; }
+    .stat-card.success .stat-value { color: #28a745; }
+    .stat-card.info .stat-value { color: #17a2b8; }
+    .stat-card.primary .stat-value { color: #007bff; }
+    
+    .section-title {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 30px 0 20px 0;
+        color: #333;
+    }
+    
+    .activity-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .activity-item {
+        padding: 15px;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-icon {
+        font-size: 32px;
+    }
+    
+    .activity-content {
+        flex: 1;
+    }
+    
+    .activity-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    
+    .activity-meta {
+        font-size: 12px;
+        color: #6c757d;
+    }
+    
+    .badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .badge-danger { background: #dc3545; color: white; }
+    .badge-warning { background: #ffc107; color: #333; }
+    .badge-success { background: #28a745; color: white; }
+    .badge-info { background: #17a2b8; color: white; }
+    
+    .chart-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h1 style="margin: 0; font-size: 32px; color: #333;">🔐 Security Dashboard</h1>
+        <div style="font-size: 14px; color: #6c757d;">
+            Last updated: {{ dashboard_generated|date:"F d, Y - H:i:s" }}
+        </div>
+    </div>
+    
+    <!-- Main Statistics Grid -->
+    <div class="stats-grid">
+        <!-- Users -->
+        <div class="stat-card primary">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value">{{ total_users|default:"0" }}</div>
+            <div class="stat-label">Total Users</div>
+            <div style="margin-top: 10px; font-size: 12px; color: #6c757d;">
+                {{ active_users_today }} active today
+            </div>
+        </div>
+        
+        <!-- Threats -->
+        <div class="stat-card danger">
+            <div class="stat-icon">🚨</div>
+            <div class="stat-value">{{ unresolved_threats|default:"0" }}</div>
+            <div class="stat-label">Unresolved Threats</div>
+            <div style="margin-top: 10px; font-size: 12px; color: #6c757d;">
+                {{ threats_today }} detected today
+            </div>
+        </div>
+        
+        <!-- Suspicious Devices -->
+        <div class="stat-card warning">
+            <div class="stat-icon">📱</div>
+            <div class="stat-value">{{ suspicious_devices|default:"0" }}</div>
+            <div class="stat-label">Suspicious Devices</div>
+            <div style="margin-top: 10px; font-size: 12px; color: #6c757d;">
+                {{ rooted_devices }} rooted devices
+            </div>
+        </div>
+        
+        <!-- Active Bans -->
+        <div class="stat-card danger">
+            <div class="stat-icon">🚫</div>
+            <div class="stat-value">{{ active_bans|default:"0" }}</div>
+            <div class="stat-label">Active Bans</div>
+            <div style="margin-top: 10px; font-size: 12px; color: #6c757d;">
+                {{ permanent_bans }} permanent
+            </div>
+        </div>
+        
+        <!-- Blocked IPs -->
+        <div class="stat-card info">
+            <div class="stat-icon">🌐</div>
+            <div class="stat-value">{{ blocked_ips|default:"0" }}</div>
+            <div class="stat-label">Blocked IPs</div>
+        </div>
+        
+        <!-- VPN Detected -->
+        <div class="stat-card warning">
+            <div class="stat-icon">🔐</div>
+            <div class="stat-value">{{ vpn_detected|default:"0" }}</div>
+            <div class="stat-label">VPN Detected</div>
+        </div>
+        
+        <!-- Critical Threats -->
+        <div class="stat-card danger">
+            <div class="stat-icon">💥</div>
+            <div class="stat-value">{{ critical_threats|default:"0" }}</div>
+            <div class="stat-label">Critical Threats</div>
+        </div>
+        
+        <!-- New Users -->
+        <div class="stat-card success">
+            <div class="stat-icon">✨</div>
+            <div class="stat-value">{{ new_users_week|default:"0" }}</div>
+            <div class="stat-label">New Users (7 days)</div>
+        </div>
+    </div>
+    
+    <!-- Recent Activities Section -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px;">
+        <!-- Recent Threats -->
+        <div>
+            <h2 class="section-title">🚨 Recent Security Threats</h2>
+            <div class="activity-card">
+                {% for threat in recent_threats %}
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        {% if threat.severity == 'critical' %}🔴
+                        {% elif threat.severity == 'high' %}🟠
+                        {% elif threat.severity == 'medium' %}🟡
+                        {% else %}🟢{% endif %}
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">
+                            {{ threat.get_security_type_display }}
+                            {% if threat.user %}
+                            <span style="color: #6c757d;">- {{ threat.user.username }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="activity-meta">
+                            {{ threat.created_at|timesince }} ago
+                            {% if threat.ip_address %} • {{ threat.ip_address }}{% endif %}
+                        </div>
+                    </div>
+                    <span class="badge badge-{{ threat.severity }}">
+                        {{ threat.get_severity_display }}
+                    </span>
+                </div>
+                {% empty %}
+                <div style="padding: 40px; text-align: center; color: #6c757d;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+                    <div>No recent threats detected</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- High Risk Users -->
+        <div>
+            <h2 class="section-title">⚠️ High Risk Users</h2>
+            <div class="activity-card">
+                {% for risk in high_risk_users %}
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        {% if risk.current_score >= 80 %}🔴
+                        {% elif risk.current_score >= 60 %}🟠
+                        {% else %}🟡{% endif %}
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">{{ risk.user.username }}</div>
+                        <div class="activity-meta">
+                            Risk Score: {{ risk.current_score }} • 
+                            {{ risk.suspicious_activities }} suspicious activities
+                        </div>
+                    </div>
+                    <span class="badge badge-danger">{{ risk.current_score }}</span>
+                </div>
+                {% empty %}
+                <div style="padding: 40px; text-align: center; color: #6c757d;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+                    <div>No high-risk users</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Bans -->
+    <div style="margin-top: 40px;">
+        <h2 class="section-title">🚫 Recent Bans</h2>
+        <div class="activity-card">
+            {% for ban in recent_bans %}
+            <div class="activity-item">
+                <div class="activity-icon">
+                    {% if ban.is_permanent %}🔒{% else %}⏳{% endif %}
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">
+                        {{ ban.user.username }}
+                        <span style="color: #6c757d;">- {{ ban.get_reason_display }}</span>
+                    </div>
+                    <div class="activity-meta">
+                        {{ ban.created_at|timesince }} ago
+                        {% if not ban.is_permanent and ban.banned_until %}
+                        • Expires: {{ ban.banned_until|date:"M d, Y" }}
+                        {% endif %}
+                    </div>
+                </div>
+                <span class="badge {% if ban.is_permanent %}badge-danger{% else %}badge-warning{% endif %}">
+                    {% if ban.is_permanent %}PERMANENT{% else %}TEMPORARY{% endif %}
+                </span>
+            </div>
+            {% empty %}
+            <div style="padding: 40px; text-align: center; color: #6c757d;">
+                <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+                <div>No recent bans</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Threat Types Chart -->
+    <div style="margin-top: 40px;">
+        <h2 class="section-title">📊 Top Threat Types</h2>
+        <div class="chart-container">
+            {% for threat_type in threat_types %}
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="font-weight: 600;">{{ threat_type.security_type|title }}</span>
+                    <span style="color: #6c757d;">{{ threat_type.count }}</span>
+                </div>
+                <div style="background: #e9ecef; border-radius: 10px; height: 10px; overflow: hidden;">
+                    {% widthratio threat_type.count total_threats 100 as percentage %}
+                    <div style="background: #dc3545; width: {{ percentage }}%; height: 100%; border-radius: 10px;"></div>
+                </div>
+            </div>
+            {% empty %}
+            <div style="padding: 40px; text-align: center; color: #6c757d;">
+                <div style="font-size: 48px; margin-bottom: 10px;">📊</div>
+                <div>No threat data available</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div style="margin-top: 40px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h3 style="margin-top: 0;">⚡ Quick Actions</h3>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            {% comment %} <a href="{% url 'admin:security_securitylog_changelist' %}" class="button" style="background: #dc3545; color: white; text-decoration: none;"> {% endcomment %}
+                <a href="/api/cms-admin/security/securitylog/" class="button" style="background: #dc3545; color: white; text-decoration: none;">
+                View All Threats
+            </a>
+            {% comment %} <a href="{% url 'admin:security_userban_changelist' %}" class="button" style="background: #ffc107; color: #333; text-decoration: none;"> {% endcomment %}
+                <a href="/api/cms-admin/security/userban/" class="button" style="background: #ffc107; color: #333; text-decoration: none;">
+                Manage Bans
+            </a>
+            {% comment %} <a href="{% url 'admin:security_deviceinfo_changelist' %}" class="button" style="background: #17a2b8; color: white; text-decoration: none;"> {% endcomment %}
+                <a href="/api/cms-admin/security/deviceinfo/" class="button" style="background: #17a2b8; color: white; text-decoration: none;">
+                Check Devices
+            </a>
+            {% comment %} <a href="{% url 'admin:security_ipblacklist_changelist' %}" class="button" style="background: #6c757d; color: white; text-decoration: none;"> {% endcomment %}
+                <a href="/api/cms-admin/security/ipblacklist/" class="button" style="background: #6c757d; color: white; text-decoration: none;">
+                IP Blacklist
+            </a>
+            {% comment %} <a href="{% url 'admin:security_riskscore_changelist' %}" class="button" style="background: #fd7e14; color: white; text-decoration: none;"> {% endcomment %}
+                <a href="/api/cms-admin/security/riskscore/" class="button" style="background: #fd7e14; color: white; text-decoration: none;">
+                Risk Scores
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

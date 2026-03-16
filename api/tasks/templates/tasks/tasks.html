@@ -1,0 +1,1481 @@
+{% extends 'unfold/layouts/base_simple.html' %}
+{% load static humanize %}
+
+{% block extrastyle %}
+<style>
+/* Custom Styles for Task Dashboard */
+:root {
+    --primary-color: #4f46e5;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --info-color: #3b82f6;
+    --dark-bg: #0f172a;
+    --card-bg: #1e293b;
+    --border-color: #334155;
+}
+
+/* Task Card Styles */
+.task-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.task-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    border-color: var(--primary-color);
+}
+
+.task-card.featured {
+    border-left: 4px solid #f59e0b;
+    background: linear-gradient(135deg, #1e293b 0%, #1e1b4b 100%);
+}
+
+.task-card.high-priority {
+    border-left: 4px solid #ef4444;
+}
+
+.task-card.sequential {
+    border-left: 4px solid #10b981;
+}
+
+.task-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-featured {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.badge-new {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.badge-high-reward {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.badge-streak {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+/* Task Timer */
+.task-timer {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 6px 12px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    color: #ef4444;
+    font-weight: bold;
+}
+
+.timer-expiring {
+    animation: blink 1s infinite;
+    background: rgba(239, 68, 68, 0.2);
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Streak Progress */
+.streak-container {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.streak-container:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #f59e0b, #ef4444, #10b981);
+}
+
+.streak-day {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.streak-day.active {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.streak-day.inactive {
+    background: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+}
+
+.streak-day.today {
+    border: 2px solid #f59e0b;
+    background: transparent;
+    color: #f59e0b;
+}
+
+/* Task Progress */
+.task-progress {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.progress-green {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.progress-orange {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.progress-red {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+/* Proof Upload */
+.proof-upload {
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.proof-upload:hover {
+    border-color: var(--primary-color);
+    background: rgba(79, 70, 229, 0.05);
+}
+
+.proof-upload.drag-over {
+    border-color: var(--success-color);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.proof-preview {
+    max-width: 300px;
+    max-height: 200px;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+}
+
+/* Task Chain Visualization */
+.task-chain {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.chain-node {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    position: relative;
+}
+
+.chain-node.completed {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.chain-node.current {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    animation: pulse-blue 2s infinite;
+}
+
+.chain-node.locked {
+    background: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+}
+
+.chain-connector {
+    width: 40px;
+    height: 2px;
+    background: var(--border-color);
+}
+
+.chain-connector.completed {
+    background: #10b981;
+}
+
+@keyframes pulse-blue {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+    50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+}
+
+/* Reliability Score */
+.reliability-score {
+    width: 100px;
+    height: 100px;
+    position: relative;
+}
+
+.reliability-circle {
+    width: 100%;
+    height: 100%;
+}
+
+.reliability-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.score-high { color: #10b981; }
+.score-medium { color: #f59e0b; }
+.score-low { color: #ef4444; }
+
+/* Task Filter */
+.filter-pill {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.filter-pill:hover {
+    border-color: var(--primary-color);
+    color: #e2e8f0;
+}
+
+.filter-pill.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Task Stats Cards */
+.stat-card {
+    background: linear-gradient(135deg, var(--card-bg), #1a1f2e);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.stat-icon.earning { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.stat-icon.tasks { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.stat-icon.streak { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.stat-icon.reliability { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+
+/* Notification Bell */
+.notification-bell {
+    position: relative;
+    cursor: pointer;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ef4444;
+    color: white;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    animation: pulse 2s infinite;
+}
+
+/* Task Modal */
+.task-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.task-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: 16px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* Loading Animation */
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Grid */
+@media (max-width: 768px) {
+    .task-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .stat-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-900">
+    <!-- Header -->
+    <div class="bg-gray-800 border-b border-gray-700">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Task Management Dashboard</h1>
+                    <p class="text-gray-400">Earn money by completing tasks. Your current balance: 
+                        <span class="font-bold text-green-400">${{ user_balance|default:"0.00" }}</span>
+                    </p>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Notification Bell -->
+                    <div class="notification-bell relative" onclick="toggleNotifications()">
+                        <button class="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg">
+                            🔔
+                            {% if unread_notifications > 0 %}
+                            <span class="notification-badge">{{ unread_notifications }}</span>
+                            {% endif %}
+                        </button>
+                    </div>
+                    
+                    <!-- User Profile -->
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 
+                                   flex items-center justify-center text-white font-bold">
+                            {{ user.username|first|upper }}
+                        </div>
+                        <div>
+                            <div class="text-white font-medium">{{ user.username }}</div>
+                            <div class="text-sm text-gray-400">Level {{ user_level }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-6">
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 stat-grid">
+            <!-- Total Earnings -->
+            <div class="stat-card">
+                <div class="stat-icon earning">
+                    💰
+                </div>
+                <div class="text-2xl font-bold text-white">${{ total_earnings|floatformat:2 }}</div>
+                <div class="text-gray-400">Total Earnings</div>
+                <div class="text-sm text-green-400 mt-2">
+                    +${{ today_earnings|floatformat:2 }} today
+                </div>
+            </div>
+            
+            <!-- Tasks Completed -->
+            <div class="stat-card">
+                <div class="stat-icon tasks">
+                    ✅
+                </div>
+                <div class="text-2xl font-bold text-white">{{ tasks_completed }}</div>
+                <div class="text-gray-400">Tasks Completed</div>
+                <div class="text-sm text-blue-400 mt-2">
+                    {{ tasks_in_progress }} in progress
+                </div>
+            </div>
+            
+            <!-- Current Streak -->
+            <div class="stat-card">
+                <div class="stat-icon streak">
+                    🔥
+                </div>
+                <div class="text-2xl font-bold text-white">{{ current_streak }} days</div>
+                <div class="text-gray-400">Current Streak</div>
+                <div class="text-sm text-orange-400 mt-2">
+                    {% if streak_bonus > 0 %}
+                    +${{ streak_bonus }} bonus unlocked
+                    {% else %}
+                    Complete 3 days for bonus
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Reliability Score -->
+            <div class="stat-card">
+                <div class="stat-icon reliability">
+                    📊
+                </div>
+                <div class="text-2xl font-bold text-white {{ reliability_class }}">
+                    {{ reliability_score }}%
+                </div>
+                <div class="text-gray-400">Reliability Score</div>
+                <div class="text-sm text-purple-400 mt-2">
+                    {% if reliability_score >= 80 %}
+                    Excellent quality
+                    {% elif reliability_score >= 60 %}
+                    Good quality
+                    {% else %}
+                    Needs improvement
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Streak Progress -->
+        <div class="streak-container mb-8">
+            <h2 class="text-xl font-bold text-white mb-4">🔥 Daily Streak Progress</h2>
+            <div class="flex items-center justify-between mb-4">
+                <div class="text-gray-300">
+                    {% if current_streak >= 3 %}
+                    🎉 You're on a {{ current_streak }}-day streak!
+                    {% else %}
+                    Complete tasks daily to earn streak bonuses
+                    {% endif %}
+                </div>
+                <div class="text-yellow-400 font-bold">
+                    Next bonus: {{ next_bonus_day }} days
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-center gap-2">
+                {% for day in streak_days %}
+                <div class="streak-day {% if day.completed %}active{% elif day.today %}today{% else %}inactive{% endif %}"
+                     title="{{ day.date }}: {% if day.completed %}Completed{% else %}Not completed{% endif %}">
+                    {{ day.day }}
+                    {% if day.completed %}✓{% endif %}
+                </div>
+                {% if not forloop.last %}
+                <div class="chain-connector {% if day.completed and streak_days.forloop.counter.completed %}completed{% endif %}"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            
+            <div class="mt-4 text-center text-gray-400 text-sm">
+                {% if streak_warning %}
+                ⚠️ {{ streak_warning }}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Task Filters -->
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-white mb-4">Filter Tasks</h2>
+            <div class="flex flex-wrap gap-2">
+                <button class="filter-pill active" data-filter="all">All Tasks</button>
+                <button class="filter-pill" data-filter="available">Available</button>
+                <button class="filter-pill" data-filter="featured">Featured ⭐</button>
+                <button class="filter-pill" data-filter="high_reward">High Reward 💰</button>
+                <button class="filter-pill" data-filter="easy">Easy ✅</button>
+                <button class="filter-pill" data-filter="survey">Survey 📝</button>
+                <button class="filter-pill" data-filter="install">Install 📱</button>
+            </div>
+        </div>
+
+        <!-- Task Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 task-grid mb-8">
+            {% for task in tasks %}
+            <div class="task-card {% if task.is_featured %}featured{% endif %} {% if task.priority == 'high' %}high-priority{% endif %}">
+                {% if task.is_featured %}
+                <div class="task-badge badge-featured">⭐ Featured</div>
+                {% elif task.is_new %}
+                <div class="task-badge badge-new">🆕 New</div>
+                {% elif task.reward_amount > 5 %}
+                <div class="task-badge badge-high-reward">💰 High Reward</div>
+                {% endif %}
+                
+                <div class="p-6">
+                    <!-- Task Header -->
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="font-bold text-white text-lg mb-1">{{ task.title }}</h3>
+                            <div class="flex items-center gap-2 text-sm text-gray-400">
+                                <span class="px-2 py-1 rounded bg-gray-800">
+                                    {{ task.get_task_type_display }}
+                                </span>
+                                <span class="px-2 py-1 rounded {% if task.difficulty == 'easy' %}bg-green-900/50 text-green-300{% elif task.difficulty == 'medium' %}bg-yellow-900/50 text-yellow-300{% else %}bg-red-900/50 text-red-300{% endif %}">
+                                    {{ task.get_difficulty_display }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-green-400">${{ task.reward_amount }}</div>
+                            {% if task.bonus_amount > 0 %}
+                            <div class="text-sm text-yellow-400">+${{ task.bonus_amount }} bonus</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Task Description -->
+                    <p class="text-gray-300 mb-4">{{ task.description|truncatechars:100 }}</p>
+                    
+                    <!-- Task Progress -->
+                    <div class="mb-4">
+                        <div class="flex justify-between text-sm text-gray-400 mb-1">
+                            <span>{{ task.total_completions }} completed</span>
+                            <span>{{ task.remaining_slots }} slots left</span>
+                        </div>
+                        <div class="task-progress">
+                            <div class="progress-bar {% if task.remaining_slots > 10 %}progress-green{% elif task.remaining_slots > 0 %}progress-orange{% else %}progress-red{% endif %}"
+                                 style="width: {{ task.completion_percentage }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Task Info -->
+                    <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+                        <div class="flex items-center gap-2 text-gray-400">
+                            ⏱️ {{ task.estimated_time }} mins
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-400">
+                            📊 {{ task.success_rate|floatformat:0 }}% success
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-400">
+                            🔄 {{ task.cooldown_hours }}h cooldown
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-400">
+                            🎯 Level {{ task.min_user_level }}+
+                        </div>
+                    </div>
+                    
+                    <!-- Task Actions -->
+                    <div class="flex gap-2">
+                        {% if task.user_status == 'available' %}
+                        <button onclick="startTask('{{ task.id }}')" 
+                                class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 
+                                       text-white py-3 rounded-lg font-semibold transition-all">
+                            Start Task
+                        </button>
+                        <button onclick="viewTaskDetails('{{ task.id }}')"
+                                class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
+                            Details
+                        </button>
+                        
+                        {% elif task.user_status == 'in_progress' %}
+                        <div class="flex-1">
+                            <div class="task-timer {% if task.time_remaining_minutes < 5 %}timer-expiring{% endif %}" 
+                                 id="timer-{{ task.id }}">
+                                {{ task.time_remaining }}
+                            </div>
+                        </div>
+                        <button onclick="submitTask('{{ task.id }}')"
+                                class="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold">
+                            Submit
+                        </button>
+                        
+                        {% elif task.user_status == 'completed' %}
+                        <button disabled
+                                class="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold">
+                            ✅ Completed
+                        </button>
+                        <button onclick="viewTaskProof('{{ task.id }}')"
+                                class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
+                            View Proof
+                        </button>
+                        
+                        {% elif task.user_status == 'unavailable' %}
+                        <button disabled
+                                class="flex-1 bg-gray-600 text-gray-400 py-3 rounded-lg">
+                            Requirements not met
+                        </button>
+                        
+                        {% elif task.user_status == 'cooldown' %}
+                        <button disabled
+                                class="flex-1 bg-orange-600 text-white py-3 rounded-lg">
+                            ⏳ Cooldown: {{ task.cooldown_remaining }}
+                        </button>
+                        
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Sequential Task Indicator -->
+                    {% if task.parent_task %}
+                    <div class="mt-3 text-sm text-blue-400">
+                        🔗 Requires: {{ task.parent_task.title }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full text-center py-12">
+                <div class="text-4xl mb-4">📭</div>
+                <h3 class="text-xl font-bold text-white mb-2">No tasks available</h3>
+                <p class="text-gray-400">Check back later for new tasks or complete your profile to unlock more.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Task Chain Visualization -->
+        {% if task_chains %}
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-white mb-4">🔗 Sequential Task Chains</h2>
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                {% for chain in task_chains %}
+                <div class="mb-6 last:mb-0">
+                    <h3 class="font-bold text-white mb-4">{{ chain.name }}</h3>
+                    <div class="task-chain">
+                        {% for node in chain.nodes %}
+                        <div class="chain-node {% if node.status == 'completed' %}completed{% elif node.status == 'current' %}current{% else %}locked{% endif %}"
+                             title="{{ node.title }}">
+                            {% if node.status == 'completed' %}✓{% elif node.status == 'current' %}▶️{% else %}🔒{% endif %}
+                        </div>
+                        {% if not forloop.last %}
+                        <div class="chain-connector {% if node.status == 'completed' %}completed{% endif %}"></div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="text-center text-gray-400 text-sm mt-2">
+                        {% if chain.next_reward %}
+                        Next reward: ${{ chain.next_reward }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- User Tasks History -->
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4">📋 Your Recent Tasks</h2>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-gray-400 border-b border-gray-700">
+                            <th class="pb-3 text-left">Task</th>
+                            <th class="pb-3 text-left">Status</th>
+                            <th class="pb-3 text-left">Reward</th>
+                            <th class="pb-3 text-left">Started</th>
+                            <th class="pb-3 text-left">Completed</th>
+                            <th class="pb-3 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user_task in user_tasks %}
+                        <tr class="border-b border-gray-700/50 hover:bg-gray-700/30">
+                            <td class="py-3">
+                                <div class="font-medium text-white">{{ user_task.task_title|truncatechars:30 }}</div>
+                                <div class="text-sm text-gray-400">{{ user_task.get_task_type_display }}</div>
+                            </td>
+                            <td class="py-3">
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold
+                                    {% if user_task.status == 'approved' %}bg-green-900/50 text-green-300
+                                    {% elif user_task.status == 'rejected' %}bg-red-900/50 text-red-300
+                                    {% elif user_task.status == 'submitted' %}bg-orange-900/50 text-orange-300
+                                    {% elif user_task.status == 'in_progress' %}bg-blue-900/50 text-blue-300
+                                    {% else %}bg-gray-900/50 text-gray-300{% endif %}">
+                                    {{ user_task.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="py-3">
+                                <div class="font-bold text-green-400">${{ user_task.earned_amount|default:"0.00" }}</div>
+                                {% if user_task.bonus_earned > 0 %}
+                                <div class="text-xs text-yellow-400">+${{ user_task.bonus_earned }} bonus</div>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 text-gray-400">
+                                {{ user_task.started_at|date:"M d, H:i" }}
+                            </td>
+                            <td class="py-3 text-gray-400">
+                                {% if user_task.completed_at %}
+                                {{ user_task.completed_at|date:"M d, H:i" }}
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="py-3">
+                                <div class="flex gap-2">
+                                    {% if user_task.status == 'submitted' %}
+                                    <button onclick="viewTaskProof('{{ user_task.id }}')"
+                                            class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded">
+                                        View Proof
+                                    </button>
+                                    {% elif user_task.status == 'rejected' %}
+                                    <button onclick="resubmitTask('{{ user_task.id }}')"
+                                            class="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white text-sm rounded">
+                                        Resubmit
+                                    </button>
+                                    <button onclick="openSupportTicket('{{ user_task.id }}')"
+                                            class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded">
+                                        Appeal
+                                    </button>
+                                    {% elif user_task.status == 'approved' %}
+                                    <button onclick="shareTask('{{ user_task.id }}')"
+                                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded">
+                                        Share
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="py-8 text-center text-gray-500">
+                                No task history yet. Start your first task!
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Detail Modal -->
+<div id="taskModal" class="task-modal">
+    <div class="modal-content">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="modalTaskTitle" class="text-2xl font-bold text-white"></h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <div id="modalTaskContent"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Proof Upload Modal -->
+<div id="proofModal" class="task-modal">
+    <div class="modal-content">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">Submit Task Proof</h2>
+                <button onclick="closeProofModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <div id="proofFormContainer"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications Panel -->
+<div id="notificationsPanel" class="fixed top-16 right-4 w-96 bg-gray-800 border border-gray-700 
+                                   rounded-xl shadow-2xl z-50 hidden">
+    <div class="p-4 border-b border-gray-700">
+        <div class="flex justify-between items-center">
+            <h3 class="font-bold text-white">Notifications</h3>
+            <button onclick="markAllAsRead()" class="text-sm text-blue-400 hover:text-blue-300">
+                Mark all as read
+            </button>
+        </div>
+    </div>
+    
+    <div class="max-h-96 overflow-y-auto">
+        <div id="notificationsList">
+            <!-- Notifications will be loaded here -->
+        </div>
+    </div>
+    
+    <div class="p-4 border-t border-gray-700 text-center">
+        <a href="#" class="text-sm text-gray-400 hover:text-white">View all notifications</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrascript %}
+<script>
+// Global variables
+let taskTimers = {};
+let currentTaskId = null;
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize task timers
+    initTaskTimers();
+    
+    // Load notifications
+    loadNotifications();
+    
+    // Initialize filters
+    initFilters();
+    
+    // Start auto-refresh for timers
+    setInterval(updateTaskTimers, 1000);
+    
+    // Load real-time updates
+    setInterval(loadTaskUpdates, 30000);
+});
+
+// Task Timer Functions
+function initTaskTimers() {
+    {% for task in tasks %}
+    {% if task.user_status == 'in_progress' and task.time_remaining_seconds > 0 %}
+    startTimer('{{ task.id }}', {{ task.time_remaining_seconds }});
+    {% endif %}
+    {% endfor %}
+}
+
+function startTimer(taskId, seconds) {
+    taskTimers[taskId] = {
+        seconds: seconds,
+        interval: setInterval(function() {
+            updateTimer(taskId);
+        }, 1000)
+    };
+}
+
+function updateTimer(taskId) {
+    if (!taskTimers[taskId]) return;
+    
+    taskTimers[taskId].seconds--;
+    
+    if (taskTimers[taskId].seconds <= 0) {
+        clearInterval(taskTimers[taskId].interval);
+        delete taskTimers[taskId];
+        
+        // Task expired
+        document.querySelector(`#timer-${taskId}`).innerHTML = 'Expired';
+        document.querySelector(`#timer-${taskId}`).classList.add('timer-expiring');
+        
+        // Show notification
+        showNotification('Task Expired', 'Your task has expired due to time limit.', 'warning');
+        
+        return;
+    }
+    
+    const minutes = Math.floor(taskTimers[taskId].seconds / 60);
+    const seconds = taskTimers[taskId].seconds % 60;
+    
+    const timerElement = document.querySelector(`#timer-${taskId}`);
+    if (timerElement) {
+        timerElement.innerHTML = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Add warning class if less than 5 minutes
+        if (taskTimers[taskId].seconds < 300) {
+            timerElement.classList.add('timer-expiring');
+        }
+    }
+}
+
+function updateTaskTimers() {
+    Object.keys(taskTimers).forEach(taskId => {
+        updateTimer(taskId);
+    });
+}
+
+// Task Actions
+function startTask(taskId) {
+    showLoading();
+    
+    fetch(`/api/tasks/${taskId}/start/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        
+        if (data.success) {
+            showNotification('Task Started', 'You have started the task. Complete it before the timer expires!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification('Error', data.error || 'Failed to start task', 'error');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        showNotification('Error', 'Network error occurred', 'error');
+    });
+}
+
+function submitTask(taskId) {
+    currentTaskId = taskId;
+    openProofModal(taskId);
+}
+
+function viewTaskDetails(taskId) {
+    showLoading();
+    
+    fetch(`/api/tasks/${taskId}/details/`)
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        
+        if (data.success) {
+            document.getElementById('modalTaskTitle').textContent = data.task.title;
+            
+            const content = `
+                <div class="space-y-4">
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h3 class="font-bold text-white mb-2">📝 Description</h3>
+                        <p class="text-gray-300">${data.task.description}</p>
+                    </div>
+                    
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h3 class="font-bold text-white mb-2">📋 Instructions</h3>
+                        <div class="text-gray-300 whitespace-pre-line">${data.task.instructions}</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-900 rounded-lg p-4">
+                            <h3 class="font-bold text-white mb-2">💰 Rewards</h3>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Base Reward:</span>
+                                    <span class="text-green-400 font-bold">$${data.task.reward_amount}</span>
+                                </div>
+                                ${data.task.bonus_amount > 0 ? `
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Bonus:</span>
+                                    <span class="text-yellow-400 font-bold">+$${data.task.bonus_amount}</span>
+                                </div>
+                                ` : ''}
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">XP Reward:</span>
+                                    <span class="text-blue-400 font-bold">${data.task.xp_reward} XP</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-900 rounded-lg p-4">
+                            <h3 class="font-bold text-white mb-2">📊 Requirements</h3>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Difficulty:</span>
+                                    <span class="font-bold ${getDifficultyColor(data.task.difficulty)}">
+                                        ${data.task.difficulty_display}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Time:</span>
+                                    <span class="text-gray-300">${data.task.estimated_time} mins</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Cooldown:</span>
+                                    <span class="text-gray-300">${data.task.cooldown_hours} hours</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Level:</span>
+                                    <span class="text-gray-300">${data.task.min_user_level}+</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <h3 class="font-bold text-white mb-2">📈 Statistics</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-gray-400">Success Rate</div>
+                                <div class="text-xl font-bold ${getSuccessRateColor(data.task.success_rate)}">
+                                    ${data.task.success_rate}%
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-gray-400">Completions</div>
+                                <div class="text-xl font-bold text-white">
+                                    ${data.task.total_completions}/${data.task.max_completions}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${data.task.user_status === 'available' ? `
+                    <div class="pt-4 border-t border-gray-700">
+                        <button onclick="startTask('${taskId}')"
+                                class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 
+                                       text-white py-3 rounded-lg font-bold text-lg">
+                            Start Task for $${data.task.reward_amount}
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            document.getElementById('modalTaskContent').innerHTML = content;
+            document.getElementById('taskModal').classList.add('active');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        showNotification('Error', 'Failed to load task details', 'error');
+    });
+}
+
+function openProofModal(taskId) {
+    const form = `
+        <form id="proofForm" class="space-y-4" enctype="multipart/form-data">
+            <input type="hidden" name="task_id" value="${taskId}">
+            
+            <div>
+                <label class="block text-gray-300 mb-2">Screenshot Proof</label>
+                <div class="proof-upload" onclick="document.getElementById('screenshotInput').click()"
+                     ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+                    <div class="text-4xl mb-2">📷</div>
+                    <div class="text-gray-300">Drag & drop screenshot or click to upload</div>
+                    <div class="text-sm text-gray-500 mt-2">PNG, JPG up to 5MB</div>
+                    <input type="file" id="screenshotInput" name="screenshot" accept="image/*" 
+                           class="hidden" onchange="handleFileSelect(event)">
+                </div>
+                <div id="filePreview" class="mt-4"></div>
+            </div>
+            
+            <div>
+                <label class="block text-gray-300 mb-2">Transaction/Reference ID</label>
+                <input type="text" name="reference_id" 
+                       class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white"
+                       placeholder="Enter transaction ID or reference code">
+            </div>
+            
+            <div>
+                <label class="block text-gray-300 mb-2">Verification Code</label>
+                <input type="text" name="verification_code"
+                       class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white"
+                       placeholder="Enter verification code if provided">
+            </div>
+            
+            <div>
+                <label class="block text-gray-300 mb-2">Additional Notes</label>
+                <textarea name="notes" rows="3"
+                          class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white"
+                          placeholder="Any additional information..."></textarea>
+            </div>
+            
+            <div class="pt-4 border-t border-gray-700">
+                <button type="button" onclick="submitProof()"
+                        class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 
+                               text-white py-3 rounded-lg font-bold text-lg">
+                    📤 Submit Proof
+                </button>
+            </div>
+        </form>
+    `;
+    
+    document.getElementById('proofFormContainer').innerHTML = form;
+    document.getElementById('proofModal').classList.add('active');
+}
+
+function submitProof() {
+    const form = document.getElementById('proofForm');
+    const formData = new FormData(form);
+    
+    showLoading();
+    
+    fetch(`/api/tasks/${currentTaskId}/submit/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        
+        if (data.success) {
+            showNotification('Proof Submitted', 'Your task proof has been submitted for review.', 'success');
+            closeProofModal();
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification('Error', data.error || 'Failed to submit proof', 'error');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        showNotification('Error', 'Network error occurred', 'error');
+    });
+}
+
+// File Upload Handling
+function handleDragOver(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.classList.add('drag-over');
+}
+
+function handleDragLeave(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.classList.remove('drag-over');
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.classList.remove('drag-over');
+    
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        handleFile(files[0]);
+    }
+}
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        handleFile(file);
+    }
+}
+
+function handleFile(file) {
+    if (!file.type.startsWith('image/')) {
+        showNotification('Error', 'Please upload an image file', 'error');
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        showNotification('Error', 'File size must be less than 5MB', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById('filePreview');
+        preview.innerHTML = `
+            <div class="flex items-center justify-between bg-gray-900 rounded-lg p-3">
+                <div class="flex items-center gap-3">
+                    <img src="${e.target.result}" class="w-16 h-16 object-cover rounded">
+                    <div>
+                        <div class="text-white font-medium">${file.name}</div>
+                        <div class="text-sm text-gray-400">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                    </div>
+                </div>
+                <button onclick="removeFile()" class="text-red-400 hover:text-red-300">
+                    &times;
+                </button>
+            </div>
+        `;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeFile() {
+    document.getElementById('screenshotInput').value = '';
+    document.getElementById('filePreview').innerHTML = '';
+}
+
+// Filter Functions
+function initFilters() {
+    const filterPills = document.querySelectorAll('.filter-pill');
+    filterPills.forEach(pill => {
+        pill.addEventListener('click', function() {
+            const filter = this.dataset.filter;
+            
+            // Update active state
+            filterPills.forEach(p => p.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Filter tasks
+            filterTasks(filter);
+        });
+    });
+}
+
+function filterTasks(filter) {
+    const taskCards = document.querySelectorAll('.task-card');
+    
+    taskCards.forEach(card => {
+        let show = false;
+        
+        switch(filter) {
+            case 'all':
+                show = true;
+                break;
+            case 'available':
+                show = card.querySelector('[onclick*="startTask"]');
+                break;
+            case 'featured':
+                show = card.classList.contains('featured');
+                break;
+            case 'high_reward':
+                const rewardText = card.querySelector('.text-green-400')?.textContent || '';
+                const reward = parseFloat(rewardText.replace('$', ''));
+                show = reward >= 5;
+                break;
+            case 'easy':
+                show = card.querySelector('.bg-green-900\\/50');
+                break;
+            case 'survey':
+                const taskType = card.querySelector('.bg-gray-800')?.textContent || '';
+                show = taskType.includes('Survey');
+                break;
+            case 'install':
+                const installType = card.querySelector('.bg-gray-800')?.textContent || '';
+                show = installType.includes('Install');
+                break;
+        }
+        
+        if (show) {
+            card.style.display = 'block';
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 10);
+        } else {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(10px)';
+            setTimeout(() => {
+                card.style.display = 'none';
+            }, 300);
+        }
+    });
+}
+
+// Notification Functions
+function loadNotifications() {
+    fetch('/api/notifications/unread/')
+    .then(response => response.json())
+    .then(data => {
+        if (data.notifications && data.notifications.length > 0) {
+            updateNotificationsList(data.notifications);
+        }
+    })
+    .catch(error => console.error('Failed to load notifications:', error));
+}
+
+function updateNotificationsList(notifications) {
+    const container = document.getElementById('notificationsList');
+    if (!container) return;
+    
+    let html = '';
+    
+    notifications.forEach(notification => {
+        const timeAgo = getTimeAgo(notification.created_at);
+        
+        html += `
+            <div class="p-4 border-b border-gray-700 hover:bg-gray-700/30 cursor-pointer 
+                        ${notification.read ? 'opacity-70' : ''}"
+                 onclick="viewNotification('${notification.id}')">
+                <div class="flex gap-3">
+                    <div class="text-2xl">${notification.icon || '🔔'}</div>
+                    <div class="flex-1">
+                        <div class="font-medium text-white">${notification.title}</div>
+                        <div class="text-gray-300 text-sm mt-1">${notification.message}</div>
+                        <div class="text-gray-500 text-xs mt-2">${timeAgo}</div>
+                    </div>
+                    ${!notification.read ? 
+                    `<div class="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html || `
+        <div class="p-8 text-center text-gray-500">
+            <div class="text-4xl mb-2">📭</div>
+            <div>No notifications</div>
+        </div>
+    `;
+}
+
+function toggleNotifications() {
+    const panel = document.getElementById('notificationsPanel');
+    panel.classList.toggle('hidden');
+    
+    if (!panel.classList.contains('hidden')) {
+        loadNotifications();
+    }
+}
+
+function viewNotification(notificationId) {
+    fetch(`/api/notifications/${notificationId}/mark-read/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(() => {
+        loadNotifications();
+    });
+    
+    // Close panel
+    document.getElementById('notificationsPanel').classList.add('hidden');
+}
+
+function markAllAsRead() {
+    fetch('/api/notifications/mark-all-read/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(() => {
+        loadNotifications();
+        showNotification('Notifications', 'All notifications marked as read', 'success');
+    });
+}
+
+// Utility Functions
+function showLoading() {
+    // Implement loading overlay
+    console.log('Loading...');
+}
+
+function hideLoading() {
+    // Hide loading overlay
+    console.log('Loading complete');
+}
+
+function showNotification(title, message, type = 'info') {
+    // Use browser notifications or custom implementation
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body: message });
+    } else {
+        alert(`${title}: ${message}`);
+    }
+}
+
+function closeModal() {
+    document.getElementById('taskModal').classList.remove('active');
+}
+
+function closeProofModal() {
+    document.getElementById('proofModal').classList.remove('active');
+}
+
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function getTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+function getDifficultyColor(difficulty) {
+    switch(difficulty) {
+        case 'easy': return 'text-green-400';
+        case 'medium': return 'text-yellow-400';
+        case 'hard': return 'text-red-400';
+        default: return 'text-gray-400';
+    }
+}
+
+function getSuccessRateColor(rate) {
+    if (rate >= 80) return 'text-green-400';
+    if (rate >= 60) return 'text-yellow-400';
+    return 'text-red-400';
+}
+
+// Real-time Updates
+function loadTaskUpdates() {
+    fetch('/api/tasks/updates/')
+    .then(response => response.json())
+    .then(data => {
+        if (data.updated) {
+            // Update task counts and stats
+            if (data.stats) {
+                updateStats(data.stats);
+            }
+            
+            // Check for new notifications
+            if (data.new_notifications > 0) {
+                loadNotifications();
+            }
+        }
+    })
+    .catch(error => console.error('Failed to load updates:', error));
+}
+
+function updateStats(stats) {
+    // Update displayed stats if needed
+    console.log('Stats updated:', stats);
+}
+</script>
+{% endblock %}

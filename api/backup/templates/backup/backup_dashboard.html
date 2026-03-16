@@ -1,0 +1,1508 @@
+<!-- admin/backup_dashboard.html -->
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --primary: #3b82f6;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --info: #8b5cf6;
+        --dark: #1f2937;
+        --light: #f9fafb;
+    }
+    
+    .dashboard-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+    
+    @media (min-width: 1024px) {
+        .dashboard-grid {
+            grid-template-columns: repeat(12, 1fr);
+        }
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+        border-left: 4px solid;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .stat-card.health { border-left-color: var(--success); }
+    .stat-card.total { border-left-color: var(--primary); }
+    .stat-card.storage { border-left-color: var(--info); }
+    .stat-card.active { border-left-color: var(--warning); }
+    .stat-card.running { border-left-color: #8b5cf6; }
+    .stat-card.failed { border-left-color: var(--danger); }
+    .stat-card.pending { border-left-color: #6b7280; }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    .health-icon { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+    .total-icon { background: rgba(59, 130, 246, 0.1); color: var(--primary); }
+    .storage-icon { background: rgba(139, 92, 246, 0.1); color: var(--info); }
+    .active-icon { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+    
+    .progress-container {
+        width: 100%;
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .progress-health { background: linear-gradient(90deg, var(--success), #34d399); }
+    .progress-storage { background: linear-gradient(90deg, var(--info), #a78bfa); }
+    .progress-success { background: linear-gradient(90deg, var(--primary), #60a5fa); }
+    
+    .health-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .health-badge.healthy { background: #d1fae5; color: #065f46; }
+    .health-badge.warning { background: #fef3c7; color: #92400e; }
+    .health-badge.critical { background: #fee2e2; color: #991b1b; }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-running { background: #dbeafe; color: #1e40af; }
+    .status-completed { background: #d1fae5; color: #065f46; }
+    .status-failed { background: #fee2e2; color: #991b1b; }
+    .status-pending { background: #f3f4f6; color: #374151; }
+    
+    .storage-location-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid #e5e7eb;
+        transition: all 0.2s ease;
+    }
+    
+    .storage-location-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1);
+    }
+    
+    .storage-progress {
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .storage-fill {
+        height: 100%;
+        border-radius: 3px;
+    }
+    
+    .storage-healthy { background: var(--success); }
+    .storage-warning { background: var(--warning); }
+    .storage-critical { background: var(--danger); }
+    
+    .running-backup-item {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        border-radius: 8px;
+        padding: 1rem;
+        border-left: 4px solid var(--primary);
+        margin-bottom: 0.75rem;
+    }
+    
+    .backup-progress {
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0.5rem 0;
+    }
+    
+    .backup-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), #60a5fa);
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+    
+    .action-button {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .action-button.primary {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .action-button.primary:hover {
+        background: #2563eb;
+        transform: translateY(-1px);
+    }
+    
+    .action-button.success {
+        background: var(--success);
+        color: white;
+    }
+    
+    .action-button.danger {
+        background: var(--danger);
+        color: white;
+    }
+    
+    .maintenance-active {
+        animation: pulse 2s infinite;
+        background: linear-gradient(135deg, #fef3c7, #fbbf24);
+        border: 2px solid #f59e0b;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+    
+    .notification-toast {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 9999;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .notification-success {
+        background: #d1fae5;
+        color: #065f46;
+        border-left: 4px solid var(--success);
+    }
+    
+    .notification-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border-left: 4px solid var(--danger);
+    }
+    
+    .notification-warning {
+        background: #fef3c7;
+        color: #92400e;
+        border-left: 4px solid var(--warning);
+    }
+    
+    .notification-info {
+        background: #dbeafe;
+        color: #1e40af;
+        border-left: 4px solid var(--primary);
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .quick-stat-item {
+        text-align: center;
+        padding: 0.75rem;
+        background: #f9fafb;
+        border-radius: 8px;
+    }
+    
+    .backup-type-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .type-full { background: #d1fae5; color: #065f46; }
+    .type-partial { background: #dbeafe; color: #1e40af; }
+    .type-incremental { background: #e0e7ff; color: #3730a3; }
+    .type-delta { background: #f3e8ff; color: #6b21a8; }
+    
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        .stat-card {
+            background: #1f2937;
+            color: #f9fafb;
+        }
+        
+        .storage-location-card {
+            background: #1f2937;
+            border-color: #374151;
+        }
+        
+        .running-backup-item {
+            background: #111827;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extrahead %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script>
+    // Dashboard Configuration
+    const DASHBOARD_CONFIG = {
+        refreshInterval: 10000, // 10 seconds
+        autoRefresh: true,
+        charts: {},
+        progressTrackers: {}
+    };
+    
+    // Health score colors
+    const HEALTH_COLORS = {
+        healthy: { bg: '#d1fae5', text: '#065f46', icon: '✅' },
+        warning: { bg: '#fef3c7', text: '#92400e', icon: '⚠️' },
+        critical: { bg: '#fee2e2', text: '#991b1b', icon: '❌' }
+    };
+    
+    // Backup status colors
+    const STATUS_COLORS = {
+        running: { bg: '#dbeafe', text: '#1e40af', icon: '🔄' },
+        completed: { bg: '#d1fae5', text: '#065f46', icon: '✅' },
+        failed: { bg: '#fee2e2', text: '#991b1b', icon: '❌' },
+        pending: { bg: '#f3f4f6', text: '#374151', icon: '⏳' },
+        validating: { bg: '#fef3c7', text: '#92400e', icon: '🔍' },
+        uploading: { bg: '#e0e7ff', text: '#3730a3', icon: '📤' },
+        encrypting: { bg: '#f3e8ff', text: '#6b21a8', icon: '🔒' },
+        compressing: { bg: '#fce7f3', text: '#9d174d', icon: '🗜️' }
+    };
+    
+    // Storage type icons
+    const STORAGE_ICONS = {
+        local: '💻',
+        s3: '☁️',
+        gcs: '📊',
+        azure: '🔷',
+        ftp: '📁',
+        sftp: '🔐',
+        dropbox: '📦',
+        multi: '🔄',
+        redundant: '🔁'
+    };
+    
+    // Initialize dashboard
+    function initializeDashboard() {
+        console.log('🚀 Initializing Backup Dashboard...');
+        
+        // Setup auto-refresh
+        setupAutoRefresh();
+        
+        // Initialize charts
+        initializeCharts();
+        
+        // Update all progress bars
+        updateAllProgressBars();
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Update timestamp
+        updateTimestamp();
+        
+        console.log('✅ Dashboard initialized successfully');
+    }
+    
+    // Setup auto-refresh
+    function setupAutoRefresh() {
+        if (DASHBOARD_CONFIG.refreshInterval) {
+            setInterval(refreshDashboard, DASHBOARD_CONFIG.refreshInterval);
+        }
+    }
+    
+    // Refresh dashboard data
+    async function refreshDashboard() {
+        if (!DASHBOARD_CONFIG.autoRefresh) return;
+        
+        try {
+            console.log('🔄 Refreshing dashboard...');
+            
+            // Get backup status
+            const statusResponse = await fetch('/admin/backup/api/backup-status/');
+            const statusData = await statusResponse.json();
+            
+            // Update status indicators
+            updateStatusIndicators(statusData);
+            
+            // Update progress bars
+            updateAllProgressBars();
+            
+            // Update charts
+            updateCharts();
+            
+            // Update timestamp
+            updateTimestamp();
+            
+            console.log('✅ Dashboard refreshed successfully');
+            
+        } catch (error) {
+            console.error('❌ Dashboard refresh failed:', error);
+            showNotification('Failed to refresh dashboard', 'error');
+        }
+    }
+    
+    // Update status indicators
+    function updateStatusIndicators(data) {
+        // Running backups
+        const runningElement = document.getElementById('running-count');
+        if (runningElement && data.running !== undefined) {
+            runningElement.textContent = data.running;
+            runningElement.classList.toggle('pulse', data.running > 0);
+        }
+        
+        // Pending backups
+        const pendingElement = document.getElementById('pending-count');
+        if (pendingElement && data.pending !== undefined) {
+            pendingElement.textContent = data.pending;
+        }
+        
+        // Failed backups (24h)
+        const failedElement = document.getElementById('failed-count');
+        if (failedElement && data.failed_24h !== undefined) {
+            failedElement.textContent = data.failed_24h;
+        }
+        
+        // Maintenance mode
+        const maintenanceElement = document.getElementById('maintenance-indicator');
+        if (maintenanceElement) {
+            const isActive = data.maintenance_mode === true;
+            maintenanceElement.innerHTML = isActive ? 
+                '<span class="text-red-600 font-bold animate-pulse">🔴 MAINTENANCE MODE ACTIVE</span>' :
+                '<span class="text-green-600">🟢 Normal Operation</span>';
+            
+            // Update toggle button
+            const toggleButton = document.getElementById('toggle-maintenance');
+            if (toggleButton) {
+                toggleButton.dataset.mode = isActive;
+                toggleButton.innerHTML = isActive ? 
+                    '<i class="fas fa-tools mr-2"></i>Disable Maintenance Mode' :
+                    '<i class="fas fa-tools mr-2"></i>Enable Maintenance Mode';
+                toggleButton.className = isActive ? 
+                    'action-button danger' : 'action-button warning';
+            }
+        }
+    }
+    
+    // Initialize charts
+    function initializeCharts() {
+        // Status Distribution Chart
+        const statusCtx = document.getElementById('statusChart');
+        if (statusCtx) {
+            const statusData = JSON.parse(statusCtx.dataset.values || '[]');
+            const statusLabels = JSON.parse(statusCtx.dataset.labels || '[]');
+            
+            DASHBOARD_CONFIG.charts.status = new Chart(statusCtx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.7)',  // completed
+                            'rgba(59, 130, 246, 0.7)',  // running
+                            'rgba(239, 68, 68, 0.7)',   // failed
+                            'rgba(245, 158, 11, 0.7)',  // pending
+                            'rgba(107, 114, 128, 0.7)', // others
+                        ],
+                        borderColor: [
+                            'rgb(16, 185, 129)',
+                            'rgb(59, 130, 246)',
+                            'rgb(239, 68, 68)',
+                            'rgb(245, 158, 11)',
+                            'rgb(107, 114, 128)',
+                        ],
+                        borderWidth: 2,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw} backups`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+        
+        // Storage Distribution Chart
+        const storageCtx = document.getElementById('storageChart');
+        if (storageCtx) {
+            const storageData = JSON.parse(storageCtx.dataset.values || '[]');
+            const storageLabels = JSON.parse(storageCtx.dataset.labels || '[]');
+            
+            DASHBOARD_CONFIG.charts.storage = new Chart(storageCtx.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: storageLabels,
+                    datasets: [{
+                        data: storageData,
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)',   // local
+                            'rgba(245, 158, 11, 0.7)',   // s3
+                            'rgba(139, 92, 246, 0.7)',   // gcs
+                            'rgba(239, 68, 68, 0.7)',    // azure
+                            'rgba(16, 185, 129, 0.7)',   // ftp
+                            'rgba(99, 102, 241, 0.7)',   // sftp
+                            'rgba(236, 72, 153, 0.7)',   // dropbox
+                            'rgba(20, 184, 166, 0.7)',   // multi
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Daily Growth Chart
+        const growthCtx = document.getElementById('growthChart');
+        if (growthCtx) {
+            DASHBOARD_CONFIG.charts.growth = new Chart(growthCtx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+                    datasets: [{
+                        label: 'Backup Count',
+                        data: [12, 19, 15, 25, 22, 30, 28],
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Storage Used (GB)',
+                        data: [45, 52, 48, 65, 70, 85, 90],
+                        borderColor: 'rgb(16, 185, 129)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Count / GB'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Update all progress bars
+    function updateAllProgressBars() {
+        // Update running backup progress
+        updateRunningBackupProgress();
+        
+        // Update storage usage progress
+        updateStorageProgress();
+    }
+    
+    // Update running backup progress
+    async function updateRunningBackupProgress() {
+        const backupElements = document.querySelectorAll('[data-backup-id]');
+        
+        for (const element of backupElements) {
+            const backupId = element.dataset.backupId;
+            
+            try {
+                const response = await fetch(`/admin/backup/api/backup-progress/${backupId}/`);
+                const progress = await response.json();
+                
+                updateBackupProgressElement(element, progress);
+                
+                // Clear interval if backup is finished
+                if (['completed', 'failed', 'cancelled'].includes(progress.status)) {
+                    if (DASHBOARD_CONFIG.progressTrackers[backupId]) {
+                        clearInterval(DASHBOARD_CONFIG.progressTrackers[backupId]);
+                        delete DASHBOARD_CONFIG.progressTrackers[backupId];
+                    }
+                }
+                
+            } catch (error) {
+                console.error(`Failed to update progress for backup ${backupId}:`, error);
+            }
+        }
+    }
+    
+    // Update individual backup progress element
+    function updateBackupProgressElement(element, progress) {
+        const progressBar = element.querySelector('.backup-progress-fill');
+        const percentageText = element.querySelector('.progress-percentage');
+        const stepText = element.querySelector('.progress-step');
+        const statusBadge = element.querySelector('.status-badge');
+        
+        if (progressBar) {
+            progressBar.style.width = `${progress.percentage}%`;
+        }
+        
+        if (percentageText) {
+            percentageText.textContent = `${progress.percentage}%`;
+        }
+        
+        if (stepText) {
+            stepText.textContent = progress.current_step || 'Processing...';
+        }
+        
+        if (statusBadge) {
+            statusBadge.className = `status-badge status-${progress.status}`;
+            statusBadge.textContent = `${STATUS_COLORS[progress.status]?.icon || ''} ${progress.status.charAt(0).toUpperCase() + progress.status.slice(1)}`;
+        }
+    }
+    
+    // Update storage progress
+    function updateStorageProgress() {
+        const storageElements = document.querySelectorAll('.storage-fill');
+        
+        storageElements.forEach(element => {
+            const percentage = parseInt(element.dataset.percentage) || 0;
+            element.style.width = `${percentage}%`;
+            
+            // Update color based on percentage
+            if (percentage > 90) {
+                element.className = 'storage-fill storage-critical';
+            } else if (percentage > 75) {
+                element.className = 'storage-fill storage-warning';
+            } else {
+                element.className = 'storage-fill storage-healthy';
+            }
+        });
+    }
+    
+    // Update charts
+    function updateCharts() {
+        // This would fetch new data and update charts
+        // For now, we'll just rotate data for demo purposes
+        if (DASHBOARD_CONFIG.charts.status) {
+            const chart = DASHBOARD_CONFIG.charts.status;
+            chart.data.datasets[0].data = chart.data.datasets[0].data.map(value => 
+                Math.max(0, value + (Math.random() * 2 - 1))
+            );
+            chart.update('none');
+        }
+    }
+    
+    // Update timestamp
+    function updateTimestamp() {
+        const now = new Date();
+        const timestampElement = document.getElementById('timestamp');
+        
+        if (timestampElement) {
+            timestampElement.textContent = 
+                `Last updated: ${now.toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    second: '2-digit'
+                })}`;
+        }
+    }
+    
+    // Setup event listeners
+    function setupEventListeners() {
+        // Toggle auto-refresh
+        const toggleRefreshBtn = document.getElementById('toggle-refresh');
+        if (toggleRefreshBtn) {
+            toggleRefreshBtn.addEventListener('click', toggleAutoRefresh);
+        }
+        
+        // Toggle maintenance mode
+        const toggleMaintenanceBtn = document.getElementById('toggle-maintenance');
+        if (toggleMaintenanceBtn) {
+            toggleMaintenanceBtn.addEventListener('click', toggleMaintenanceMode);
+        }
+        
+        // Quick backup button
+        const quickBackupBtn = document.getElementById('quick-backup');
+        if (quickBackupBtn) {
+            quickBackupBtn.addEventListener('click', startQuickBackup);
+        }
+        
+        // Manual refresh
+        const manualRefreshBtn = document.getElementById('manual-refresh');
+        if (manualRefreshBtn) {
+            manualRefreshBtn.addEventListener('click', manualRefresh);
+        }
+        
+        // Health check buttons
+        document.querySelectorAll('.health-check-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const backupId = this.dataset.backupId;
+                performHealthCheck(backupId);
+            });
+        });
+        
+        // Download buttons
+        document.querySelectorAll('.download-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const backupId = this.dataset.backupId;
+                downloadBackup(backupId);
+            });
+        });
+    }
+    
+    // Toggle auto-refresh
+    function toggleAutoRefresh() {
+        DASHBOARD_CONFIG.autoRefresh = !DASHBOARD_CONFIG.autoRefresh;
+        const button = document.getElementById('toggle-refresh');
+        
+        if (DASHBOARD_CONFIG.autoRefresh) {
+            button.innerHTML = '<i class="fas fa-pause mr-2"></i>Disable Auto Refresh';
+            button.className = 'action-button warning';
+            showNotification('Auto refresh enabled', 'info');
+        } else {
+            button.innerHTML = '<i class="fas fa-play mr-2"></i>Enable Auto Refresh';
+            button.className = 'action-button success';
+            showNotification('Auto refresh disabled', 'info');
+        }
+    }
+    
+    // Toggle maintenance mode
+    async function toggleMaintenanceMode() {
+        const button = document.getElementById('toggle-maintenance');
+        const currentMode = button.dataset.mode === 'true';
+        const newMode = !currentMode;
+        
+        try {
+            const response = await fetch('/admin/backup/api/maintenance-mode/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({ enable: newMode })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                button.dataset.mode = newMode;
+                
+                if (newMode) {
+                    button.innerHTML = '<i class="fas fa-tools mr-2"></i>Disable Maintenance Mode';
+                    button.className = 'action-button danger';
+                    showNotification('Maintenance mode enabled', 'warning');
+                } else {
+                    button.innerHTML = '<i class="fas fa-tools mr-2"></i>Enable Maintenance Mode';
+                    button.className = 'action-button warning';
+                    showNotification('Maintenance mode disabled', 'success');
+                }
+                
+                // Update indicator
+                updateStatusIndicators({ maintenance_mode: newMode });
+                
+            } else {
+                showNotification('Failed to toggle maintenance mode: ' + result.error, 'error');
+            }
+        } catch (error) {
+            console.error('Failed to toggle maintenance mode:', error);
+            showNotification('Failed to toggle maintenance mode', 'error');
+        }
+    }
+    
+    // Start quick backup
+    async function startQuickBackup() {
+        const button = document.getElementById('quick-backup');
+        const originalText = button.innerHTML;
+        
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Starting...';
+        button.disabled = true;
+        
+        try {
+            const response = await fetch('/admin/backup/api/start-backup/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({
+                    type: 'full',
+                    storage: 'local',
+                    tables: ['*'],
+                    description: 'Quick backup from dashboard'
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Backup started successfully! Backup ID: ' + result.backup_id, 'success');
+                
+                // Refresh dashboard after 2 seconds
+                setTimeout(refreshDashboard, 2000);
+                
+            } else {
+                showNotification('Failed to start backup: ' + result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Failed to start backup:', error);
+            showNotification('Failed to start backup', 'error');
+        } finally {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    }
+    
+    // Manual refresh
+    function manualRefresh() {
+        refreshDashboard();
+        showNotification('Dashboard refreshed', 'info');
+    }
+    
+    // Perform health check
+    async function performHealthCheck(backupId) {
+        try {
+            const response = await fetch(`/admin/backup/api/health-check/${backupId}/`);
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification(`Health check ${result.healthy ? 'passed' : 'failed'}: ${result.message}`, 
+                    result.healthy ? 'success' : 'warning');
+            } else {
+                showNotification('Health check failed: ' + result.error, 'error');
+            }
+        } catch (error) {
+            console.error('Health check failed:', error);
+            showNotification('Health check failed', 'error');
+        }
+    }
+    
+    // Download backup
+    async function downloadBackup(backupId) {
+        showNotification('Preparing download...', 'info');
+        
+        // Open download in new window
+        window.open(`/admin/backup/backup/${backupId}/download/`, '_blank');
+    }
+    
+    // Show notification
+    function showNotification(message, type = 'info') {
+        // Remove existing notifications
+        document.querySelectorAll('.notification-toast').forEach(toast => {
+            toast.remove();
+        });
+        
+        // Create new notification
+        const toast = document.createElement('div');
+        toast.className = `notification-toast notification-${type}`;
+        
+        const icons = {
+            success: '✅',
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+        
+        toast.innerHTML = `
+            <div class="flex items-center">
+                <span class="text-xl">${icons[type] || icons.info}</span>
+                <div class="ml-3">
+                    <p class="font-medium">${message}</p>
+                </div>
+                <button class="ml-auto text-xl opacity-50 hover:opacity-100" onclick="this.parentElement.parentElement.remove()">
+                    ×
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+    
+    // Get CSRF token
+    function getCSRFToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('📊 Backup Dashboard Loading...');
+        setTimeout(initializeDashboard, 100);
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="p-4 md:p-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+                    <i class="fas fa-database text-blue-500"></i>
+                    {{ title }}
+                </h1>
+                <p class="text-gray-600 dark:text-gray-300 mt-2" id="timestamp">
+                    Last updated: {{ current_time }}
+                </p>
+            </div>
+            
+            <div class="flex flex-wrap gap-3">
+                <button id="quick-backup" class="action-button primary">
+                    <i class="fas fa-bolt mr-2"></i>Quick Backup
+                </button>
+                <button id="manual-refresh" class="action-button">
+                    <i class="fas fa-sync-alt mr-2"></i>Refresh Now
+                </button>
+                <button id="toggle-refresh" class="action-button success">
+                    <i class="fas fa-pause mr-2"></i>Disable Auto Refresh
+                </button>
+                <button id="toggle-maintenance" 
+                        data-mode="{{ maintenance_mode|yesno:'true,false' }}"
+                        class="action-button {% if maintenance_mode %}danger{% else %}warning{% endif %}">
+                    <i class="fas fa-tools mr-2"></i>
+                    {% if maintenance_mode %}Disable Maintenance Mode{% else %}Enable Maintenance Mode{% endif %}
+                </button>
+            </div>
+        </div>
+        
+        <!-- Maintenance Mode Warning -->
+        {% if maintenance_mode %}
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">
+                        MAINTENANCE MODE ACTIVE
+                    </h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>
+                            Maintenance mode is currently enabled. Some operations may be restricted.
+                            <span id="maintenance-indicator" class="font-bold ml-2">🔴 MAINTENANCE MODE ACTIVE</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Main Statistics Grid -->
+    <div class="dashboard-grid mb-8">
+        <!-- Backup Health Card -->
+        <div class="lg:col-span-3">
+            <div class="stat-card health h-full">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Backup Health</h3>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="health-badge {{ backup_health.status|lower }}">
+                                {% if backup_health.status == 'Healthy' %}✅
+                                {% elif backup_health.status == 'Warning' %}⚠️
+                                {% else %}❌{% endif %}
+                                {{ backup_health.status }}
+                            </span>
+                            <span class="text-2xl font-bold text-gray-800 dark:text-white">
+                                {{ backup_health.score }}/100
+                            </span>
+                        </div>
+                    </div>
+                    <div class="stat-icon health-icon">
+                        <i class="fas fa-heartbeat"></i>
+                    </div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar progress-health" style="width: {{ backup_health.score }}%"></div>
+                </div>
+                <div class="quick-stats">
+                    <div class="quick-stat-item">
+                        <div class="text-2xl font-bold text-green-600">{{ healthy_backups|default:0 }}</div>
+                        <div class="text-xs text-gray-500">Healthy</div>
+                    </div>
+                    <div class="quick-stat-item">
+                        <div class="text-2xl font-bold text-yellow-600">{{ unhealthy_backups|default:0 }}</div>
+                        <div class="text-xs text-gray-500">Unhealthy</div>
+                    </div>
+                    <div class="quick-stat-item">
+                        <div class="text-2xl font-bold text-blue-600">{{ backup_health.compliance_rate|default:100 }}%</div>
+                        <div class="text-xs text-gray-500">Compliance</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Total Backups Card -->
+        <div class="lg:col-span-3">
+            <div class="stat-card total h-full">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Total Backups</h3>
+                        <p class="text-3xl font-bold text-gray-800 dark:text-white mt-2">{{ total_backups }}</p>
+                    </div>
+                    <div class="stat-icon total-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-gray-600">Success Rate</span>
+                        <span class="font-medium">{{ success_rate }}%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar progress-success" style="width: {{ success_rate }}%"></div>
+                    </div>
+                </div>
+                <div class="quick-stats">
+                    <div class="quick-stat-item">
+                        <div class="text-2xl font-bold text-green-600">{{ successful_backups }}</div>
+                        <div class="text-xs text-gray-500">Successful</div>
+                    </div>
+                    <div class="quick-stat-item">
+                        <div class="text-2xl font-bold text-red-600">{{ failed_backups }}</div>
+                        <div class="text-xs text-gray-500">Failed</div>
+                    </div>
+                    <div class="quick-stat-item">
+                        <div class="text-2xl font-bold text-blue-600">{{ running_backups }}</div>
+                        <div class="text-xs text-gray-500">Running</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Storage Used Card -->
+        <div class="lg:col-span-3">
+            <div class="stat-card storage h-full">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Storage Used</h3>
+                        <p class="text-3xl font-bold text-gray-800 dark:text-white mt-2">{{ total_size }}</p>
+                    </div>
+                    <div class="stat-icon storage-icon">
+                        <i class="fas fa-hdd"></i>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-gray-600">Daily Growth</span>
+                        <span class="font-medium">{{ avg_daily_growth|filesizeformat }}/day</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar progress-storage" 
+                             style="width: {{ capacity_percentage|default:0 }}%"></div>
+                    </div>
+                </div>
+                <div class="quick-stats">
+                    <div class="quick-stat-item">
+                        <div class="text-2xl font-bold text-purple-600">{{ storage_locations|length }}</div>
+                        <div class="text-xs text-gray-500">Locations</div>
+                    </div>
+                    <div class="quick-stat-item">
+                        <div class="text-2xl font-bold text-blue-600">{{ active_schedules }}</div>
+                        <div class="text-xs text-gray-500">Schedules</div>
+                    </div>
+                    <div class="quick-stat-item">
+                        <div class="text-2xl font-bold text-green-600">{{ redundant_backups|default:0 }}</div>
+                        <div class="text-xs text-gray-500">Redundant</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Active Status Card -->
+        <div class="lg:col-span-3">
+            <div class="stat-card active h-full">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Active Status</h3>
+                    </div>
+                    <div class="stat-icon active-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Running Backups:</span>
+                        <span id="running-count" class="font-bold text-blue-600">{{ running_backups }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Pending Backups:</span>
+                        <span id="pending-count" class="font-bold text-yellow-600">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Failed (24h):</span>
+                        <span id="failed-count" class="font-bold text-red-600">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Expired Backups:</span>
+                        <span class="font-bold text-gray-600">{{ retention_analysis.expired_backups|default:0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="dashboard-grid mb-8">
+        <!-- Status Distribution Chart -->
+        <div class="lg:col-span-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 h-full">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                    Backup Status Distribution
+                </h3>
+                <div class="chart-container">
+                    <canvas id="statusChart" 
+                            data-labels='{{ status_distribution|map:"status"|join:","|escapejs }}'
+                            data-values='{{ status_distribution|map:"count"|join:"," }}'></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Storage Distribution Chart -->
+        <div class="lg:col-span-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 h-full">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                    Storage Distribution
+                </h3>
+                <div class="chart-container">
+                    <canvas id="storageChart" 
+                            data-labels='{{ storage_distribution|map:"storage_type"|join:","|escapejs }}'
+                            data-values='{{ storage_distribution|map:"total_size"|join:"," }}'></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Running Backups & Storage Locations -->
+    <div class="dashboard-grid mb-8">
+        <!-- Running Backups -->
+        <div class="lg:col-span-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                        <i class="fas fa-sync-alt text-blue-500 mr-2"></i>
+                        Running Backups
+                        <span class="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            {{ running_backups }}
+                        </span>
+                    </h3>
+                    <a href="{% url 'backup_admin:backup_monitoring' %}" 
+                       class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                        View all <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
+                
+                {% if running_backups > 0 %}
+                <div id="running-backups-list">
+                    {% for backup in recent_backups %}
+                    {% if backup.status == 'running' and forloop.counter <= 3 %}
+                    <div class="running-backup-item" data-backup-id="{{ backup.id }}">
+                        <div class="flex justify-between items-center mb-2">
+                            <div>
+                                <p class="font-medium text-gray-800 dark:text-white">{{ backup.name }}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="backup-type-badge type-{{ backup.backup_type }}">
+                                        {{ backup.get_backup_type_display }}
+                                    </span>
+                                    <span class="status-badge status-running">
+                                        🔄 Running
+                                    </span>
+                                </div>
+                            </div>
+                            <span class="text-sm font-medium text-blue-600 progress-percentage">0%</span>
+                        </div>
+                        <div class="backup-progress">
+                            <div class="backup-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-500 mt-2">
+                            <span class="progress-step">Initializing...</span>
+                            <span>Started: {{ backup.start_time|time:"H:i" }}</span>
+                        </div>
+                        <div class="flex justify-end gap-2 mt-3">
+                            <button class="health-check-btn text-xs px-3 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200"
+                                    data-backup-id="{{ backup.id }}">
+                                <i class="fas fa-stethoscope mr-1"></i>Health Check
+                            </button>
+                            <button class="download-btn text-xs px-3 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                                    data-backup-id="{{ backup.id }}">
+                                <i class="fas fa-download mr-1"></i>Download
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-check-circle text-4xl text-green-500 mb-4"></i>
+                    <p class="mb-2">No backups currently running</p>
+                    <button onclick="startQuickBackup()" class="text-blue-600 hover:text-blue-800 font-medium">
+                        <i class="fas fa-play mr-1"></i>Start a backup
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Storage Locations -->
+        <div class="lg:col-span-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                        <i class="fas fa-server text-purple-500 mr-2"></i>
+                        Storage Locations
+                        <span class="ml-2 text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                            {{ storage_locations|length }} locations
+                        </span>
+                    </h3>
+                    <a href="{% url 'backup_admin:storage_management' %}" 
+                       class="text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400">
+                        Manage <i class="fas fa-cog ml-1"></i>
+                    </a>
+                </div>
+                
+                <div class="space-y-3">
+                    {% for location in storage_locations|slice:":4" %}
+                    <div class="storage-location-card">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 flex items-center justify-center rounded-full 
+                                    {% if location.is_connected %}bg-green-100{% else %}bg-red-100{% endif %}">
+                                    <span class="text-xl">
+                                        {{ STORAGE_ICONS.location.storage_type|default:"🗂️" }}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-800 dark:text-white">{{ location.name }}</p>
+                                    <p class="text-xs text-gray-500">
+                                        {% if location.is_connected %}
+                                        <i class="fas fa-check-circle text-green-500 mr-1"></i>Connected
+                                        {% else %}
+                                        <i class="fas fa-times-circle text-red-500 mr-1"></i>Disconnected
+                                        {% endif %}
+                                        • {{ location.backup_count }} backups
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-medium text-gray-800 dark:text-white">
+                                    {{ location.location_size|filesizeformat }}
+                                </p>
+                                <p class="text-xs text-gray-500">
+                                    {{ location.usage_percentage|default:0|floatformat:1 }}% used
+                                </p>
+                            </div>
+                        </div>
+                        <div class="storage-progress">
+                            <div class="storage-fill" 
+                                 data-percentage="{{ location.usage_percentage|default:0 }}"
+                                 style="width: {{ location.usage_percentage|default:0 }}%"></div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-server text-4xl text-gray-400 mb-4"></i>
+                        <p class="mb-2">No storage locations configured</p>
+                        <a href="{% url 'backup_admin:storage_management' %}" 
+                           class="text-purple-600 hover:text-purple-800 font-medium">
+                            <i class="fas fa-plus mr-1"></i>Add storage location
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Backups Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                <i class="fas fa-history text-gray-500 mr-2"></i>
+                Recent Backups
+            </h3>
+            <div class="flex gap-2">
+                <a href="{% url 'backup_admin:run_backup' %}" 
+                   class="action-button primary text-sm">
+                    <i class="fas fa-plus mr-1"></i>New Backup
+                </a>
+                <a href="{% url 'backup_admin:backup_backup_changelist' %}" 
+                   class="action-button text-sm">
+                    <i class="fas fa-list mr-1"></i>View All
+                </a>
+            </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Name
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Type
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Status
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Health
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Size
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Started
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Duration
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for backup in recent_backups|slice:":8" %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                {{ backup.name|truncatechars:30 }}
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                {{ backup.database_name }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="backup-type-badge type-{{ backup.backup_type }}">
+                                {{ backup.get_backup_type_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% with status_color=STATUS_COLORS|get_item:backup.status %}
+                            <span class="status-badge status-{{ backup.status }}">
+                                {% if backup.status == 'completed' %}✅
+                                {% elif backup.status == 'running' %}🔄
+                                {% elif backup.status == 'failed' %}❌
+                                {% elif backup.status == 'pending' %}⏳
+                                {% elif backup.status == 'validating' %}🔍
+                                {% elif backup.status == 'uploading' %}📤
+                                {% elif backup.status == 'encrypting' %}🔒
+                                {% elif backup.status == 'compressing' %}🗜️
+                                {% endif %}
+                                {{ backup.get_status_display }}
+                            </span>
+                            {% endwith %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if backup.is_healthy %}
+                            <span class="health-badge healthy">
+                                ✅ Healthy
+                            </span>
+                            {% elif backup.health_score >= 70 %}
+                            <span class="health-badge warning">
+                                ⚠️ {{ backup.health_score }}/100
+                            </span>
+                            {% else %}
+                            <span class="health-badge critical">
+                                ❌ {{ backup.health_score }}/100
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {{ backup.file_size|filesizeformat }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 dark:text-white">
+                                {{ backup.start_time|date:"M d" }}
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                {{ backup.start_time|time:"H:i" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {% if backup.duration_human %}
+                            {{ backup.duration_human }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div class="flex gap-2">
+                                {% if backup.status == 'completed' %}
+                                <a href="#" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 download-btn"
+                                   data-backup-id="{{ backup.id }}">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <a href="#" class="text-green-600 hover:text-green-900 dark:text-green-400">
+                                    <i class="fas fa-redo"></i>
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'backup_admin:backup_backup_change' backup.id %}" 
+                                   class="text-gray-600 hover:text-gray-900 dark:text-gray-400">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="#" class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 health-check-btn"
+                                   data-backup-id="{{ backup.id }}">
+                                    <i class="fas fa-stethoscope"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-database text-4xl text-gray-300 mb-4"></i>
+                            <p class="mb-2">No backups found</p>
+                            <a href="{% url 'backup_admin:run_backup' %}" class="text-blue-600 hover:text-blue-800">
+                                Create your first backup →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if recent_backups|length > 8 %}
+        <div class="px-6 py-4 border-t dark:border-gray-700 text-center">
+            <a href="{% url 'backup_admin:backup_backup_changelist' %}" 
+               class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                View all {{ total_backups }} backups <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Quick Links -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <a href="{% url 'backup_admin:backup_monitoring' %}" 
+           class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition text-center">
+            <div class="text-blue-500 text-2xl mb-2">
+                <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <p class="font-medium text-gray-800 dark:text-white">Monitoring</p>
+            <p class="text-sm text-gray-500">Live tracking</p>
+        </a>
+        
+        <a href="{% url 'backup_admin:backup_analytics' %}" 
+           class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition text-center">
+            <div class="text-purple-500 text-2xl mb-2">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <p class="font-medium text-gray-800 dark:text-white">Analytics</p>
+            <p class="text-sm text-gray-500">Performance stats</p>
+        </a>
+        
+        <a href="{% url 'backup_admin:schedule_manager' %}" 
+           class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition text-center">
+            <div class="text-green-500 text-2xl mb-2">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <p class="font-medium text-gray-800 dark:text-white">Schedules</p>
+            <p class="text-sm text-gray-500">Automated backups</p>
+        </a>
+        
+        <a href="{% url 'backup_admin:restore_backup' %}" 
+           class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition text-center">
+            <div class="text-red-500 text-2xl mb-2">
+                <i class="fas fa-redo"></i>
+            </div>
+            <p class="font-medium text-gray-800 dark:text-white">Restore</p>
+            <p class="text-sm text-gray-500">Recovery wizard</p>
+        </a>
+    </div>
+</div>
+{% endblock %}

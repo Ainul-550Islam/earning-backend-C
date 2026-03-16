@@ -1,0 +1,271 @@
+[2026-01-31 11:23:29,570: WARNING/MainProcess] No hostname was supplied. Reverting to default 'localhost'
+[2026-01-31 11:23:29,652: WARNING/MainProcess] C:\Users\Ainul Islam\New folder (8)\earning_backend\venv\Lib\site-packages\celery\worker\consumer\consumer.py:507: CPendingDeprecationWarning: The broker_connection_retry configuration setting will no longer determine
+whether broker connection retries are made during startup in Celery 6.0 and above.
+If you wish to retain the existing behavior for retrying connections on startup,
+you should set broker_connection_retry_on_startup to True.
+  warnings.warn(
+
+[2026-01-31 11:23:31,679: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 2.00 seconds... (1/100)
+
+[2026-01-31 11:23:35,726: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 4.00 seconds... (2/100)
+
+[2026-01-31 11:23:41,758: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 6.00 seconds... (3/100)
+
+[2026-01-31 11:23:49,795: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 8.00 seconds... (4/100)
+
+[2026-01-31 11:23:59,813: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 10.00 seconds... (5/100)
+
+[2026-01-31 11:24:11,841: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 12.00 seconds... (6/100)
+
+[2026-01-31 11:24:25,899: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 14.00 seconds... (7/100)
+
+[2026-01-31 11:24:41,929: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 16.00 seconds... (8/100)
+
+[2026-01-31 11:24:59,959: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 18.00 seconds... (9/100)
+
+[2026-01-31 11:25:19,992: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 20.00 seconds... (10/100)
+
+[2026-01-31 11:25:42,011: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 22.00 seconds... (11/100)
+
+[2026-01-31 11:26:06,039: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 24.00 seconds... (12/100)
+
+[2026-01-31 11:26:32,074: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 26.00 seconds... (13/100)
+
+[2026-01-31 11:27:00,201: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 28.00 seconds... (14/100)
+
+[2026-01-31 11:27:30,241: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 30.00 seconds... (15/100)
+
+[2026-01-31 11:28:02,280: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:28:36,348: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:29:10,370: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:29:44,435: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:30:18,462: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:30:52,523: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:31:26,581: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:32:00,645: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:32:34,682: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:33:08,726: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:33:42,759: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:34:16,825: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:34:50,879: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:35:24,900: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:35:58,959: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:36:33,012: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:37:07,073: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:37:41,122: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:38:15,187: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:38:49,231: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:39:23,283: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:39:57,351: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:40:31,386: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:41:05,422: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:41:39,469: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:42:13,533: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:42:47,597: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:43:21,643: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:43:55,710: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:44:29,741: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:45:03,809: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:45:37,864: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:46:11,930: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:46:45,973: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:47:20,034: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:47:54,079: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:48:28,141: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:49:02,190: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:49:36,236: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:50:10,281: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:50:44,346: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:51:18,381: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:51:52,430: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:52:26,573: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:53:00,661: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:53:34,713: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:54:08,743: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:54:42,809: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:55:16,865: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:55:50,907: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:56:24,953: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:56:58,995: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:57:33,048: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:58:07,099: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:58:41,160: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:59:15,211: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 11:59:49,280: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:00:23,308: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:00:57,355: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:01:31,406: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:02:05,476: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:02:39,502: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:03:13,567: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:03:47,614: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:04:21,681: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:04:55,752: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:05:29,801: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:06:03,861: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:06:37,902: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:07:11,953: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:07:46,005: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:08:20,068: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+
+[2026-01-31 12:08:54,110: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [WinError 10061] No connection could be made because the target machine actively refused it.
+Trying again in 32.00 seconds... (16/100)
+

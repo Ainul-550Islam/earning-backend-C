@@ -1,0 +1,328 @@
+version: "1.0"
+last_updated: "2024-01-15T10:30:00Z"
+rules:
+  # Account Fraud Rules
+  - name: "multi_account_same_ip"
+    description: "Multiple accounts from same IP address"
+    rule_type: "account"
+    severity: "high"
+    condition:
+      operator: "AND"
+      conditions:
+        - field: "ip_address"
+          operator: "equals"
+          value: "{{ current_ip }}"
+        - field: "account_count"
+          operator: "greater_than"
+          value: 3
+    weight: 25
+    threshold: 70
+    action_on_trigger: "review"
+    run_frequency: "realtime"
+    is_active: true
+
+  - name: "new_account_high_activity"
+    description: "New account with unusually high activity"
+    rule_type: "account"
+    severity: "medium"
+    condition:
+      operator: "AND"
+      conditions:
+        - field: "account_age_days"
+          operator: "less_than"
+          value: 1
+        - field: "activity_count"
+          operator: "greater_than"
+          value: 100
+        - field: "activity_per_hour"
+          operator: "greater_than"
+          value: 20
+    weight: 20
+    threshold: 65
+    action_on_trigger: "flag"
+    run_frequency: "hourly"
+    is_active: true
+
+  # Payment Fraud Rules
+  - name: "large_credit_transaction"
+    description: "Unusually large credit transaction"
+    rule_type: "payment"
+    severity: "high"
+    condition:
+      operator: "AND"
+      conditions:
+        - field: "transaction_type"
+          operator: "equals"
+          value: "credit"
+        - field: "amount"
+          operator: "greater_than"
+          value: 1000
+        - field: "user_risk_score"
+          operator: "greater_than"
+          value: 50
+    weight: 30
+    threshold: 75
+    action_on_trigger: "review"
+    run_frequency: "realtime"
+    is_active: true
+
+  - name: "rapid_successive_withdrawals"
+    description: "Multiple withdrawal attempts in short time"
+    rule_type: "payment"
+    severity: "medium"
+    condition:
+      operator: "AND"
+      conditions:
+        - field: "transaction_type"
+          operator: "equals"
+          value: "debit"
+        - field: "withdrawal_count"
+          operator: "greater_than"
+          value: 3
+        - field: "time_window_minutes"
+          operator: "less_than"
+          value: 10
+    weight: 25
+    threshold: 70
+    action_on_trigger: "limit"
+    run_frequency: "realtime"
+    is_active: true
+
+  # Offer Fraud Rules
+  - name: "unnatural_offer_completion_rate"
+    description: "Unnaturally high offer completion rate"
+    rule_type: "offer"
+    severity: "high"
+    condition:
+      operator: "AND"
+      conditions:
+        - field: "offer_completion_rate"
+          operator: "greater_than"
+          value: 90
+        - field: "total_offers"
+          operator: "greater_than"
+          value: 10
+        - field: "completion_time_avg"
+          operator: "less_than"
+          value: 60
+    weight: 30
+    threshold: 80
+    action_on_trigger: "review"
+    run_frequency: "daily"
+    is_active: true
+
+  - name: "click_farm_pattern"
+    description: "Patterns indicative of click farm activity"
+    rule_type: "offer"
+    severity: "critical"
+    condition:
+      operator: "OR"
+      conditions:
+        - field: "click_velocity"
+          operator: "greater_than"
+          value: 100
+        - field: "click_regularity"
+          operator: "greater_than"
+          value: 0.9
+        - field: "device_similarity"
+          operator: "greater_than"
+          value: 0.8
+    weight: 35
+    threshold: 85
+    action_on_trigger: "suspend"
+    run_frequency: "hourly"
+    is_active: true
+
+  # Referral Fraud Rules
+  - name: "referral_chain_fraud"
+    description: "Suspicious referral chain patterns"
+    rule_type: "referral"
+    severity: "high"
+    condition:
+      operator: "AND"
+      conditions:
+        - field: "referral_chain_length"
+          operator: "greater_than"
+          value: 3
+        - field: "conversion_rate"
+          operator: "greater_than"
+          value: 80
+        - field: "time_between_referrals"
+          operator: "less_than"
+          value: 300
+    weight: 28
+    threshold: 75
+    action_on_trigger: "review"
+    run_frequency: "daily"
+    is_active: true
+
+  - name: "self_referral_attempt"
+    description: "Attempt to refer own accounts"
+    rule_type: "referral"
+    severity: "critical"
+    condition:
+      operator: "OR"
+      conditions:
+        - field: "same_device_referral"
+          operator: "equals"
+          value: true
+        - field: "same_ip_referral"
+          operator: "equals"
+          value: true
+        - field: "same_payment_method"
+          operator: "equals"
+          value: true
+    weight: 40
+    threshold: 90
+    action_on_trigger: "ban"
+    run_frequency: "realtime"
+    is_active: true
+
+  # Device Fraud Rules
+  - name: "device_spoofing_detected"
+    description: "Device fingerprint spoofing detected"
+    rule_type: "behavior"
+    severity: "high"
+    condition:
+      operator: "OR"
+      conditions:
+        - field: "canvas_spoofing"
+          operator: "equals"
+          value: true
+        - field: "webgl_spoofing"
+          operator: "equals"
+          value: true
+        - field: "font_spoofing"
+          operator: "equals"
+          value: true
+        - field: "timezone_spoofing"
+          operator: "equals"
+          value: true
+    weight: 32
+    threshold: 80
+    action_on_trigger: "suspend"
+    run_frequency: "realtime"
+    is_active: true
+
+  - name: "vpn_proxy_usage"
+    description: "VPN or Proxy detected"
+    rule_type: "behavior"
+    severity: "medium"
+    condition:
+      operator: "OR"
+      conditions:
+        - field: "is_vpn"
+          operator: "equals"
+          value: true
+        - field: "is_proxy"
+          operator: "equals"
+          value: true
+        - field: "is_tor"
+          operator: "equals"
+          value: true
+    weight: 22
+    threshold: 65
+    action_on_trigger: "flag"
+    run_frequency: "realtime"
+    is_active: true
+
+  # Withdrawal Fraud Rules
+  - name: "withdrawal_to_blacklisted_account"
+    description: "Withdrawal to blacklisted bank account"
+    rule_type: "withdrawal"
+    severity: "critical"
+    condition:
+      operator: "AND"
+      conditions:
+        - field: "withdrawal_account_blacklisted"
+          operator: "equals"
+          value: true
+        - field: "amount"
+          operator: "greater_than"
+          value: 50
+    weight: 45
+    threshold: 95
+    action_on_trigger: "ban"
+    run_frequency: "realtime"
+    is_active: true
+
+  - name: "rapid_withdrawal_after_deposit"
+    description: "Immediate withdrawal after deposit"
+    rule_type: "withdrawal"
+    severity: "high"
+    condition:
+      operator: "AND"
+      conditions:
+        - field: "time_since_deposit"
+          operator: "less_than"
+          value: 300
+        - field: "withdrawal_percentage"
+          operator: "greater_than"
+          value: 80
+    weight: 30
+    threshold: 75
+    action_on_trigger: "limit"
+    run_frequency: "realtime"
+    is_active: true
+
+  # Behavioral Fraud Rules
+  - name: "robotic_activity_patterns"
+    description: "Robotic or non-human activity patterns"
+    rule_type: "behavior"
+    severity: "high"
+    condition:
+      operator: "OR"
+      conditions:
+        - field: "activity_regularity"
+          operator: "greater_than"
+          value: 0.95
+        - field: "click_pattern_variance"
+          operator: "less_than"
+          value: 0.1
+        - field: "typing_speed_consistency"
+          operator: "greater_than"
+          value: 0.9
+    weight: 28
+    threshold: 78
+    action_on_trigger: "review"
+    run_frequency: "hourly"
+    is_active: true
+
+  - name: "geographic_impossible_travel"
+    description: "Impossible geographic travel detected"
+    rule_type: "behavior"
+    severity: "critical"
+    condition:
+      operator: "AND"
+      conditions:
+        - field: "distance_km"
+          operator: "greater_than"
+          value: 500
+        - field: "time_seconds"
+          operator: "less_than"
+          value: 300
+    weight: 40
+    threshold: 90
+    action_on_trigger: "suspend"
+    run_frequency: "realtime"
+    is_active: true
+
+metadata:
+  rule_engine_version: "2.0.0"
+  total_rules: 15
+  active_rules: 15
+  default_action: "review"
+  update_frequency: "weekly"
+  severity_levels:
+    critical:
+      threshold: 90
+      action: "ban"
+    high:
+      threshold: 75
+      action: "suspend"
+    medium:
+      threshold: 65
+      action: "flag"
+    low:
+      threshold: 50
+      action: "monitor"

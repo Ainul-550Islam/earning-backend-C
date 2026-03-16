@@ -1,0 +1,110 @@
+/* MessageAttachments.css — Cyberpunk attachment UI */
+
+/* ── Dropzone ─────────────────────────────────────────────────── */
+.ma-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 12px; margin: 8px 0;
+  border: 1.5px dashed rgba(0,243,255,0.3); border-radius: 8px;
+  cursor: pointer; transition: all 0.2s;
+  background: rgba(0,243,255,0.03);
+}
+.ma-dropzone:hover, .ma-dropzone--active {
+  border-color: #00f3ff; background: rgba(0,243,255,0.07);
+  box-shadow: 0 0 12px rgba(0,243,255,0.15);
+}
+.ma-dropzone--disabled { opacity: 0.4; cursor: not-allowed; }
+.ma-dz-icon  { font-size: 1.4rem; }
+.ma-dz-text  { font-size: 0.8rem; color: #00f3ff; font-family: 'Rajdhani', sans-serif; }
+.ma-dz-hint  { font-size: 0.65rem; color: rgba(255,255,255,0.35); }
+
+/* ── Root ─────────────────────────────────────────────────────── */
+.ma-root { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+
+/* ── List ─────────────────────────────────────────────────────── */
+.ma-list {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 8px;
+  background: rgba(0,0,0,0.2); border-radius: 8px;
+  border: 1px solid rgba(0,243,255,0.1);
+}
+
+/* ── Item ─────────────────────────────────────────────────────── */
+.ma-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 6px; width: 100%;
+  background: rgba(0,243,255,0.05);
+  border: 1px solid rgba(0,243,255,0.15);
+  position: relative; transition: all 0.2s;
+}
+.ma-item--done    { border-color: rgba(0,255,136,0.3); }
+.ma-item--error   { border-color: rgba(255,51,85,0.4); background: rgba(255,51,85,0.05); }
+.ma-item--uploading { border-color: rgba(255,215,0,0.3); }
+
+/* ── Preview ──────────────────────────────────────────────────── */
+.ma-preview {
+  width: 36px; height: 36px; border-radius: 4px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.3); flex-shrink: 0;
+}
+.ma-thumb { width: 100%; height: 100%; object-fit: cover; }
+.ma-icon  { font-size: 1.2rem; }
+
+/* ── Info ─────────────────────────────────────────────────────── */
+.ma-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ma-name {
+  font-size: 0.75rem; color: #e0e0e0; font-family: 'Rajdhani', sans-serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ma-size  { font-size: 0.65rem; color: rgba(255,255,255,0.4); }
+.ma-error { font-size: 0.65rem; color: #ff3355; }
+
+/* ── Progress bar ─────────────────────────────────────────────── */
+.ma-bar-wrap {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 3px; background: rgba(255,255,255,0.1); border-radius: 0 0 6px 6px;
+  overflow: hidden;
+}
+.ma-bar {
+  height: 100%; background: linear-gradient(90deg, #00f3ff, #ff00ff);
+  transition: width 0.2s; border-radius: 0 0 6px 6px;
+  box-shadow: 0 0 6px #00f3ff;
+}
+.ma-pct { display: none; }
+
+/* ── Status ───────────────────────────────────────────────────── */
+.ma-status { flex-shrink: 0; width: 20px; text-align: center; }
+.ma-ok    { color: #00ff88; font-size: 0.9rem; }
+.ma-spin  { color: #ffd700; font-size: 0.9rem; display: inline-block; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.ma-retry {
+  background: none; border: 1px solid #ffd700; color: #ffd700;
+  border-radius: 4px; cursor: pointer; font-size: 0.75rem; padding: 1px 4px;
+}
+.ma-retry:hover { background: rgba(255,215,0,0.1); }
+
+/* ── Remove ───────────────────────────────────────────────────── */
+.ma-remove {
+  background: none; border: none; color: rgba(255,255,255,0.3);
+  cursor: pointer; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px;
+  flex-shrink: 0; transition: color 0.2s;
+}
+.ma-remove:hover { color: #ff3355; }
+
+/* ── Add more ─────────────────────────────────────────────────── */
+.ma-add-more {
+  width: 36px; height: 36px; border-radius: 6px; align-self: flex-start;
+  background: rgba(0,243,255,0.05); border: 1.5px dashed rgba(0,243,255,0.3);
+  color: #00f3ff; cursor: pointer; font-size: 1rem; transition: all 0.2s;
+}
+.ma-add-more:hover { background: rgba(0,243,255,0.1); border-color: #00f3ff; }
+
+/* ── Footer ───────────────────────────────────────────────────── */
+.ma-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 4px;
+}
+.ma-count { font-size: 0.65rem; color: rgba(255,255,255,0.35); font-family: 'Rajdhani', sans-serif; }
+.ma-clear {
+  background: none; border: none; color: rgba(255,51,85,0.6);
+  cursor: pointer; font-size: 0.7rem; font-family: 'Rajdhani', sans-serif;
+}
+.ma-clear:hover { color: #ff3355; }

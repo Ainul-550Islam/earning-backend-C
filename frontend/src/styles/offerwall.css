@@ -1,0 +1,691 @@
+/* src/styles/offerwall.css
+   EarnNexus Admin Panel — Offerwall Manager
+   Dark sci-fi / cyber aesthetic matching the design reference
+*/
+
+/* ── Google Font Import ──────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+/* ── CSS Variables ───────────────────────────────────────────────────────── */
+:root {
+  --ow-bg-deep:       #020912;
+  --ow-bg-mid:        #050e1a;
+  --ow-bg-card:       #060f1e;
+  --ow-bg-input:      #050b14;
+  --ow-border:        #1a3a5c;
+  --ow-border-light:  #1a3a5c44;
+
+  --ow-cyan:          #00d4ff;
+  --ow-cyan-dim:      #00d4ff22;
+  --ow-cyan-glow:     #00d4ff18;
+  --ow-green:         #00ff88;
+  --ow-green-dim:     #00ff8818;
+  --ow-gold:          #ffd700;
+  --ow-gold-dim:      #ffd70018;
+  --ow-orange:        #ff6b35;
+  --ow-orange-dim:    #ff6b3518;
+  --ow-red:           #ff3d71;
+  --ow-red-dim:       #ff3d7118;
+  --ow-purple:        #bf5fff;
+  --ow-purple-dim:    #bf5fff18;
+
+  --ow-text-bright:   #e0f0ff;
+  --ow-text-muted:    #7a9cc0;
+  --ow-text-dim:      #3a5c7a;
+
+  --ow-font-mono:     'Share Tech Mono', 'Courier New', monospace;
+  --ow-font-ui:       'Rajdhani', 'Segoe UI', sans-serif;
+
+  --ow-radius-sm:     6px;
+  --ow-radius-md:     10px;
+  --ow-radius-lg:     14px;
+  --ow-radius-xl:     18px;
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes ow-fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ow-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes ow-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+@keyframes ow-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes ow-scan {
+  0%   { top: 0; opacity: 0.6; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes ow-border-glow {
+  0%, 100% { box-shadow: 0 0 8px var(--ow-cyan-glow); }
+  50%       { box-shadow: 0 0 20px var(--ow-cyan-dim); }
+}
+
+@keyframes ow-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+
+/* ── Base Container ──────────────────────────────────────────────────────── */
+.ow-root {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 20% 0%, #001833 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, #001833 0%, transparent 50%),
+    linear-gradient(135deg, var(--ow-bg-deep) 0%, var(--ow-bg-mid) 100%);
+  color: var(--ow-text-bright);
+  font-family: var(--ow-font-ui);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Subtle scan line overlay */
+.ow-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 212, 255, 0.012) 2px,
+    rgba(0, 212, 255, 0.012) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Page Header ─────────────────────────────────────────────────────────── */
+.ow-header {
+  position: relative;
+  z-index: 1;
+  padding: 20px 28px 16px;
+  border-bottom: 1px solid var(--ow-border-light);
+  background: linear-gradient(180deg, rgba(4,12,24,.95), transparent);
+  backdrop-filter: blur(8px);
+}
+
+.ow-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ow-font-mono);
+  font-size: 10px;
+  color: var(--ow-text-muted);
+  letter-spacing: 2px;
+  margin-bottom: 14px;
+}
+
+.ow-breadcrumb .active {
+  color: var(--ow-cyan);
+}
+
+.ow-title {
+  font-family: var(--ow-font-mono);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  background: linear-gradient(90deg, var(--ow-text-bright), var(--ow-cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.ow-subtitle {
+  font-family: var(--ow-font-mono);
+  font-size: 11px;
+  color: var(--ow-text-muted);
+  letter-spacing: 1px;
+  margin: 2px 0 0;
+}
+
+/* ── Icon Box ────────────────────────────────────────────────────────────── */
+.ow-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--ow-radius-md);
+  background: var(--ow-cyan-dim);
+  border: 1px solid rgba(0, 212, 255, 0.27);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px var(--ow-cyan-glow);
+  animation: ow-border-glow 3s ease infinite;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.ow-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: var(--ow-radius-sm);
+  padding: 9px 14px;
+  font-family: var(--ow-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--ow-border);
+  background: rgba(26, 58, 92, 0.13);
+  color: var(--ow-text-muted);
+}
+
+.ow-btn:hover {
+  border-color: rgba(0, 212, 255, 0.53);
+  color: var(--ow-cyan);
+  transform: translateY(-1px);
+}
+
+.ow-btn-primary {
+  background: linear-gradient(135deg, var(--ow-cyan-dim), rgba(0, 212, 255, 0.05));
+  border-color: rgba(0, 212, 255, 0.33);
+  color: var(--ow-cyan);
+  box-shadow: 0 0 20px var(--ow-cyan-glow);
+  padding: 9px 18px;
+}
+
+.ow-btn-primary:hover {
+  box-shadow: 0 0 30px var(--ow-cyan-dim);
+  border-color: rgba(0, 212, 255, 0.6);
+}
+
+.ow-btn-danger {
+  background: var(--ow-red-dim);
+  border-color: rgba(255, 61, 113, 0.27);
+  color: var(--ow-red);
+}
+
+.ow-btn-danger:hover {
+  border-color: rgba(255, 61, 113, 0.6);
+  box-shadow: 0 0 12px rgba(255, 61, 113, 0.2);
+}
+
+/* ── Summary Stats Row ───────────────────────────────────────────────────── */
+.ow-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+@media (max-width: 900px) {
+  .ow-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.ow-stat-card {
+  border-radius: var(--ow-radius-md);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: transform 0.2s;
+}
+
+.ow-stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.ow-stat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--ow-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ow-stat-label {
+  font-family: var(--ow-font-mono);
+  font-size: 9px;
+  color: var(--ow-text-muted);
+  letter-spacing: 1.5px;
+  margin-bottom: 2px;
+}
+
+.ow-stat-value {
+  font-family: var(--ow-font-mono);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ow-text-bright);
+}
+
+/* ── Search + Filter Bar ─────────────────────────────────────────────────── */
+.ow-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.ow-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ow-bg-input);
+  border: 1px solid var(--ow-border);
+  border-radius: var(--ow-radius-sm);
+  padding: 9px 14px;
+  flex: 1;
+  max-width: 320px;
+  transition: border-color 0.2s;
+}
+
+.ow-search:focus-within {
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+.ow-search input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--ow-text-bright);
+  font-size: 12px;
+  width: 100%;
+  font-family: var(--ow-font-mono);
+}
+
+.ow-search input::placeholder {
+  color: var(--ow-text-dim);
+}
+
+.ow-filter-btn {
+  background: transparent;
+  border: 1px solid var(--ow-border);
+  border-radius: var(--ow-radius-sm);
+  padding: 8px 14px;
+  color: var(--ow-text-muted);
+  font-family: var(--ow-font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ow-filter-btn:hover,
+.ow-filter-btn.active {
+  border-color: rgba(0, 212, 255, 0.53);
+  color: var(--ow-cyan);
+  background: var(--ow-cyan-dim);
+}
+
+.ow-count-label {
+  margin-left: auto;
+  font-family: var(--ow-font-mono);
+  font-size: 11px;
+  color: var(--ow-text-muted);
+}
+
+.ow-count-label span {
+  color: var(--ow-cyan);
+  font-weight: 700;
+}
+
+/* ── Offerwall Card Grid ─────────────────────────────────────────────────── */
+.ow-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* ── Offerwall Card ──────────────────────────────────────────────────────── */
+.ow-card {
+  background: linear-gradient(135deg, #060f1e 0%, #0a1628 100%);
+  border-radius: var(--ow-radius-lg);
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  animation: ow-fadeUp 0.4s ease both;
+}
+
+.ow-card:hover {
+  transform: translateY(-4px);
+}
+
+.ow-card-top-line {
+  height: 2px;
+  /* set dynamically per card color */
+}
+
+.ow-card-glow {
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  filter: blur(20px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.ow-card:hover .ow-card-glow {
+  opacity: 1;
+}
+
+.ow-card-body {
+  padding: 16px 18px;
+}
+
+/* Card header */
+.ow-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ow-card-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ow-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ow-font-mono);
+  font-size: 14px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.ow-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ow-text-bright);
+  letter-spacing: 0.5px;
+}
+
+.ow-card-id {
+  font-size: 10px;
+  color: var(--ow-text-muted);
+  margin-top: 1px;
+}
+
+/* API Key Row */
+.ow-api-key-row {
+  background: var(--ow-bg-input);
+  border: 1px solid var(--ow-border);
+  border-radius: var(--ow-radius-sm);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ow-api-key-text {
+  flex: 1;
+  font-family: var(--ow-font-mono);
+  font-size: 11px;
+  color: var(--ow-text-muted);
+  letter-spacing: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Micro stats */
+.ow-mini-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ow-mini-stat {
+  background: #0a1628;
+  border: 1px solid rgba(26, 58, 92, 0.27);
+  border-radius: var(--ow-radius-sm);
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.ow-mini-stat-label {
+  font-family: var(--ow-font-mono);
+  font-size: 9px;
+  color: var(--ow-text-muted);
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+.ow-mini-stat-value {
+  font-family: var(--ow-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Total earned bar */
+.ow-earned-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: var(--ow-radius-sm);
+  margin-bottom: 14px;
+}
+
+.ow-earned-label {
+  font-family: var(--ow-font-mono);
+  font-size: 10px;
+  color: var(--ow-text-muted);
+  letter-spacing: 1px;
+}
+
+.ow-earned-value {
+  font-family: var(--ow-font-mono);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* Card actions */
+.ow-card-actions {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid rgba(26, 58, 92, 0.27);
+  padding-top: 12px;
+}
+
+.ow-card-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--ow-radius-sm);
+  padding: 7px 0;
+  font-family: var(--ow-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.ow-card-btn:hover {
+  opacity: 0.82;
+  transform: translateY(-1px);
+}
+
+.ow-card-btn-icon {
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ow-radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ow-card-btn-icon:hover {
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+/* ── Status Badge ────────────────────────────────────────────────────────── */
+.ow-badge {
+  font-family: var(--ow-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  border-radius: 4px;
+  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ow-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ow-badge-active  { color: var(--ow-green);  background: var(--ow-green-dim);  border: 1px solid rgba(0,255,136,.27); }
+.ow-badge-inactive{ color: var(--ow-orange); background: var(--ow-orange-dim); border: 1px solid rgba(255,107,53,.27); }
+.ow-badge-pending { color: var(--ow-gold);   background: var(--ow-gold-dim);   border: 1px solid rgba(255,215,0,.27); }
+
+/* ── Skeleton Loader ─────────────────────────────────────────────────────── */
+.ow-skeleton {
+  background: linear-gradient(
+    90deg,
+    #0d2137 25%,
+    rgba(26, 58, 92, 0.27) 50%,
+    #0d2137 75%
+  );
+  background-size: 200% 100%;
+  animation: ow-shimmer 1.6s infinite;
+  border-radius: var(--ow-radius-sm);
+}
+
+/* ── Modal Overlay ───────────────────────────────────────────────────────── */
+.ow-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+}
+
+.ow-modal {
+  background: linear-gradient(135deg, #060f1e, #0a1628);
+  border: 1px solid rgba(0, 212, 255, 0.27);
+  border-radius: var(--ow-radius-lg);
+  padding: 28px;
+  width: 440px;
+  max-width: 90vw;
+  animation: ow-fadeUp 0.3s ease both;
+  box-shadow: 0 24px 80px var(--ow-cyan-glow), 0 0 0 1px rgba(0, 212, 255, 0.06);
+  position: relative;
+}
+
+.ow-modal-title {
+  font-family: var(--ow-font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ow-text-bright);
+  letter-spacing: 1px;
+}
+
+/* Form field */
+.ow-field-label {
+  font-family: var(--ow-font-mono);
+  font-size: 10px;
+  color: var(--ow-text-muted);
+  letter-spacing: 1.5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.ow-field-input {
+  width: 100%;
+  background: var(--ow-bg-input);
+  border: 1px solid var(--ow-border);
+  border-radius: var(--ow-radius-sm);
+  padding: 10px 14px;
+  color: var(--ow-text-bright);
+  font-size: 12px;
+  font-family: var(--ow-font-mono);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.ow-field-input:focus {
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+.ow-field-input::placeholder {
+  color: var(--ow-text-dim);
+}
+
+/* ── Error Banner ────────────────────────────────────────────────────────── */
+.ow-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--ow-red-dim);
+  border: 1px solid rgba(255, 61, 113, 0.27);
+  border-radius: var(--ow-radius-sm);
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-family: var(--ow-font-mono);
+  font-size: 12px;
+  color: var(--ow-red);
+}
+
+/* ── Empty State ─────────────────────────────────────────────────────────── */
+.ow-empty {
+  text-align: center;
+  padding: 60px 20px;
+  border: 1px dashed var(--ow-border);
+  border-radius: var(--ow-radius-lg);
+}
+
+.ow-empty-text {
+  font-family: var(--ow-font-mono);
+  font-size: 13px;
+  color: var(--ow-text-muted);
+  letter-spacing: 1px;
+  margin-top: 12px;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar         { width: 4px; height: 4px; }
+::-webkit-scrollbar-track   { background: var(--ow-bg-deep); }
+::-webkit-scrollbar-thumb   { background: var(--ow-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ow-cyan); }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .ow-header        { padding: 16px; }
+  .ow-stats-grid    { grid-template-columns: repeat(2, 1fr); }
+  .ow-cards-grid    { grid-template-columns: 1fr; }
+  .ow-title         { font-size: 16px; }
+  .ow-toolbar       { flex-direction: column; align-items: stretch; }
+  .ow-search        { max-width: 100%; }
+  .ow-count-label   { margin-left: 0; }
+}

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        /* Dark/Light mode support */
+        @media (prefers-color-scheme: dark) {
+            .dark\:bg-gray-900 { background-color: #111827; }
+            .dark\:text-white { color: #ffffff; }
+            .dark\:text-gray-300 { color: #d1d5db; }
+            .dark\:bg-gray-800 { background-color: #1f2937; }
+            .dark\:border-gray-700 { border-color: #374151; }
+            .dark\:hover\:bg-gray-700:hover { background-color: #374151; }
+            .dark\:shadow-lg { box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); }
+        }
+        
+        /* Custom animations */
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Smooth transitions */
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+        
+        /* Hover effects */
+        .hover-lift {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .dark .hover-lift:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+<body class="h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-white transition-colors duration-300">
+    <div class="min-h-screen p-4 md:p-6">
+        <!-- Header Section -->
+        <header class="mb-8 animate-fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        <i data-lucide="bar-chart-3" class="inline-block w-8 h-8 mr-2"></i>
+                        Dashboard Overview
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-300 mt-2 text-lg">
+                        Real-time statistics and analytics for your earning platform
+                    </p>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Dark/Light Mode Toggle -->
+                    <button id="themeToggle" class="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow">
+                        <i id="themeIcon" data-lucide="sun" class="w-5 h-5 text-gray-700 dark:text-yellow-400"></i>
+                    </button>
+                    
+                    <!-- Refresh Button -->
+                    <button onclick="refreshDashboard()" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        <span class="hidden md:inline">Refresh</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Stats Grid -->
+        <div class="stats-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- User Stats Card -->
+            <div class="card animate-fade-in hover-lift" style="--animation-order: 1;">
+                <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-6 shadow-lg">
+                    <div class="absolute top-4 right-4 w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                        <i data-lucide="users" class="w-8 h-8 text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Total Users</h3>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-4xl font-bold text-gray-900 dark:text-white">{{ users_total }}</span>
+                            <span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-xs font-medium flex items-center">
+                                <i data-lucide="trending-up" class="w-3 h-3 mr-1"></i>
+                                +{{ users_new }} today
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600 dark:text-gray-400">Active Today</span>
+                            <span class="font-medium text-gray-900 dark:text-white">{{ stats.users.active_today }}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
+                            {% with active_percentage=stats.users.active_today|default:0 %}
+                            {% widthratio active_percentage users_total 100 as percentage %}
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: {{ percentage|default:0 }}%"></div>
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Earnings Stats Card -->
+            <div class="card animate-fade-in hover-lift" style="--animation-order: 2;">
+                <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-900 p-6 shadow-lg">
+                    <div class="absolute top-4 right-4 w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                        <i data-lucide="dollar-sign" class="w-8 h-8 text-green-600 dark:text-green-400"></i>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Total Earnings</h3>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-4xl font-bold text-gray-900 dark:text-white">${{ earnings_total }}</span>
+                            <span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-xs font-medium flex items-center">
+                                <i data-lucide="trending-up" class="w-3 h-3 mr-1"></i>
+                                +${{ earnings_today }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600 dark:text-gray-400">Completed Offers</span>
+                            <span class="font-medium text-gray-900 dark:text-white">{{ stats.earnings.completed_offers }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span class="text-gray-600 dark:text-gray-400">Avg/User</span>
+                            <span class="font-medium text-gray-900 dark:text-white">
+                                {% if users_total > 0 %}
+                                    ${{ earnings_total|floatformat:2 }}
+                                {% else %}
+                                    $0.00
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payments Stats Card -->
+            <div class="card animate-fade-in hover-lift" style="--animation-order: 3;">
+                <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-900 p-6 shadow-lg">
+                    <div class="absolute top-4 right-4 w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                        <i data-lucide="credit-card" class="w-8 h-8 text-purple-600 dark:text-purple-400"></i>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Payments</h3>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-4xl font-bold text-gray-900 dark:text-white">${{ payments_total }}</span>
+                            <span class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full text-xs font-medium flex items-center">
+                                <i data-lucide="clock" class="w-3 h-3 mr-1"></i>
+                                {{ payments_pending }} pending
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600 dark:text-gray-400">Processed</span>
+                            <span class="font-medium text-gray-900 dark:text-white">{{ stats.payments.processed }}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
+                            {% with total=stats.payments.processed|add:stats.payments.pending %}
+                            {% if total > 0 %}
+                                {% widthratio stats.payments.processed total 100 as percentage %}
+                                <div class="bg-purple-600 h-2 rounded-full" style="width: {{ percentage }}%"></div>
+                            {% else %}
+                                <div class="bg-purple-600 h-2 rounded-full" style="width: 0%"></div>
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referrals Stats Card -->
+            <div class="card animate-fade-in hover-lift" style="--animation-order: 4;">
+                <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-800 dark:to-gray-900 p-6 shadow-lg">
+                    <div class="absolute top-4 right-4 w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
+                        <i data-lucide="share-2" class="w-8 h-8 text-orange-600 dark:text-orange-400"></i>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Referrals</h3>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-4xl font-bold text-gray-900 dark:text-white">{{ referrals_total }}</span>
+                            <span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-xs font-medium flex items-center">
+                                <i data-lucide="users" class="w-3 h-3 mr-1"></i>
+                                +{{ referrals_today }} today
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600 dark:text-gray-400">Commission</span>
+                            <span class="font-medium text-gray-900 dark:text-white">${{ stats.referrals.commission }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span class="text-gray-600 dark:text-gray-400">Avg/Referral</span>
+                            <span class="font-medium text-gray-900 dark:text-white">
+                                {% if referrals_total > 0 %}
+                                    ${{ stats.referrals.commission|floatformat:2 }}
+                                {% else %}
+                                    $0.00
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Performance Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="lg:col-span-2 animate-fade-in">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover-lift p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+                            <i data-lucide="activity" class="inline-block w-5 h-5 mr-2 text-green-500"></i>
+                            System Performance
+                        </h3>
+                        <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-sm font-medium">
+                            <i data-lucide="check-circle" class="inline-block w-3 h-3 mr-1"></i>
+                            Operational
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="text-center p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                            <div class="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                                {{ stats.system.active_offers }}
+                            </div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">Active Offers</div>
+                        </div>
+                        
+                        <div class="text-center p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                            <div class="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
+                                {{ stats.system.success_rate }}%
+                            </div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">Success Rate</div>
+                        </div>
+                        
+                        <div class="text-center p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                            <div class="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                                {{ stats.system.avg_response_time }}ms
+                            </div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">Avg Response</div>
+                        </div>
+                        
+                        <div class="text-center p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                            <div class="text-3xl font-bold {% if stats.system.maintenance_mode %}text-red-600 dark:text-red-400{% else %}text-gray-600 dark:text-gray-400{% endif %} mb-2">
+                                {% if stats.system.maintenance_mode %}ON{% else %}OFF{% endif %}
+                            </div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">Maintenance</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Section -->
+        <div class="animate-fade-in">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+                        <i data-lucide="bolt" class="inline-block w-5 h-5 mr-2 text-yellow-500"></i>
+                        Quick Actions
+                    </h3>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <a href="/admin/users/user/" class="group relative p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl hover-lift transition-all duration-300 overflow-hidden">
+                        <div class="relative z-10">
+                            <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mb-3">
+                                <i data-lucide="users" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <h4 class="font-semibold text-gray-900 dark:text-white mb-1">Manage Users</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">View and manage user accounts</p>
+                        </div>
+                    </a>
+                    
+                    <a href="/admin/wallet/withdrawalrequest/" class="group relative p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl hover-lift transition-all duration-300 overflow-hidden">
+                        <div class="relative z-10">
+                            <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mb-3">
+                                <i data-lucide="credit-card" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <h4 class="font-semibold text-gray-900 dark:text-white mb-1">Process Payments</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Handle withdrawal requests</p>
+                        </div>
+                    </a>
+                    
+                    <a href="/admin/ad_networks/offer/" class="group relative p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl hover-lift transition-all duration-300 overflow-hidden">
+                        <div class="relative z-10">
+                            <div class="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mb-3">
+                                <i data-lucide="gift" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <h4 class="font-semibold text-gray-900 dark:text-white mb-1">Manage Offers</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Create and update offers</p>
+                        </div>
+                    </a>
+                    
+                    <a href="/admin/alerts/alertrule/" class="group relative p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl hover-lift transition-all duration-300 overflow-hidden">
+                        <div class="relative z-10">
+                            <div class="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center mb-3">
+                                <i data-lucide="bell" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <h4 class="font-semibold text-gray-900 dark:text-white mb-1">Alert Rules</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Configure monitoring alerts</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+        
+        // Theme toggle functionality
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                themeIcon.setAttribute('data-lucide', 'moon');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                themeIcon.setAttribute('data-lucide', 'sun');
+            }
+            lucide.createIcons();
+        }
+        
+        // Load saved theme
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeIcon = document.getElementById('themeIcon');
+            
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+                themeIcon.setAttribute('data-lucide', 'sun');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeIcon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
+        }
+        
+        // Refresh dashboard
+        function refreshDashboard() {
+            window.location.reload();
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTheme();
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        });
+    </script>
+</body>
+</html> 

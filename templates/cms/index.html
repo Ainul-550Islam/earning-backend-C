@@ -1,0 +1,339 @@
+{% comment %} {% comment %} {% extends "admin/base_site.html" %}
+{% load i18n static admin_urls %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        .dashboard-container {
+            padding: 20px;
+        }
+        
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            border-top: 4px solid;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card-content { border-top-color: #4361ee; }
+        .stat-card-banner { border-top-color: #f72585; }
+        .stat-card-faq { border-top-color: #4cc9f0; }
+        .stat-card-category { border-top-color: #7209b7; }
+        .stat-card-user { border-top-color: #f8961e; }
+        .stat-card-file { border-top-color: #38b000; }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #212529;
+            line-height: 1;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-icon {
+            font-size: 2.5rem;
+            opacity: 0.7;
+            float: right;
+        }
+        
+        .recent-activity {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .activity-item {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .activity-content {
+            flex: 1;
+        }
+        
+        .activity-time {
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-quick {
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-content { background: #4361ee; color: white; }
+        .btn-banner { background: #f72585; color: white; }
+        .btn-faq { background: #4cc9f0; color: white; }
+        .btn-category { background: #7209b7; color: white; }
+        
+        .btn-quick:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            color: white;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h1 style="color: #4361ee; margin-bottom: 30px;">📊 Dashboard Overview</h1>
+    
+    <!-- Statistics Cards -->
+    <div class="dashboard-stats">
+        <div class="stat-card stat-card-content">
+            <div class="stat-icon">📄</div>
+            <div class="stat-label">Total Content</div>
+            <div class="stat-value" id="stat-content">0</div>
+            <small>{{ content_stats.published_pages }} Published • {{ content_stats.draft_pages }} Draft</small>
+        </div>
+        
+        <div class="stat-card stat-card-banner">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-label">Active Banners</div>
+            <div class="stat-value" id="stat-banners">0</div>
+            <small>{{ banner_stats.total_banners }} Total • {{ banner_stats.active_banners }} Active</small>
+        </div>
+        
+        <div class="stat-card stat-card-faq">
+            <div class="stat-icon">❓</div>
+            <div class="stat-label">FAQ Articles</div>
+            <div class="stat-value" id="stat-faqs">0</div>
+            <small>{{ faq_stats.active_faqs }} Active • {{ faq_stats.featured_faqs }} Featured</small>
+        </div>
+        
+        <div class="stat-card stat-card-category">
+            <div class="stat-icon">📂</div>
+            <div class="stat-label">Categories</div>
+            <div class="stat-value" id="stat-categories">0</div>
+            <small>{{ category_stats|length }} Active Categories</small>
+        </div>
+        
+        <div class="stat-card stat-card-user">
+            <div class="stat-icon">👥</div>
+            <div class="stat-label">Total Views</div>
+            <div class="stat-value" id="stat-views">{{ content_stats.total_views|default:"0" }}</div>
+            <small>Content Views</small>
+        </div>
+        
+        <div class="stat-card stat-card-file">
+            <div class="stat-icon">📎</div>
+            <div class="stat-label">Files</div>
+            <div class="stat-value" id="stat-files">0</div>
+            <small>Total Uploaded Files</small>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div style="margin: 30px 0;">
+        <h3 style="color: #3a0ca3; margin-bottom: 15px;">⚡ Quick Actions</h3>
+        <div class="quick-actions">
+            <a href="{% url 'admin:cms_contentpage_add' %}" class="btn-quick btn-content">
+                <span>➕</span> Add Content
+            </a>
+            <a href="{% url 'admin:cms_banner_add' %}" class="btn-quick btn-banner">
+                <span>🎯</span> Create Banner
+            </a>
+            <a href="{% url 'admin:cms_faq_add' %}" class="btn-quick btn-faq">
+                <span>❓</span> Add FAQ
+            </a>
+            <a href="{% url 'admin:cms_contentcategory_add' %}" class="btn-quick btn-category">
+                <span>📂</span> New Category
+            </a>
+            <a href="{% url 'admin:cms_filemanager_add' %}" class="btn-quick" style="background: #38b000; color: white;">
+                <span>📎</span> Upload File
+            </a>
+            <a href="{% url 'admin:cms_imagesallery_add' %}" class="btn-quick" style="background: #f8961e; color: white;">
+                <span>🖼️</span> New Gallery
+            </a>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="recent-activity">
+        <h3 style="color: #3a0ca3; margin-bottom: 20px;">📈 Recent Activity</h3>
+        
+        <div class="activity-list">
+            {% for page in recent_pages|slice:":5" %}
+            <div class="activity-item">
+                <div class="activity-icon" style="background: #e3f2fd;">
+                    📄
+                </div>
+                <div class="activity-content">
+                    <strong>{{ page.title|truncatechars:50 }}</strong>
+                    <div style="color: #6c757d; font-size: 0.9rem;">
+                        Content {{ page.get_status_display|lower }} • {{ page.category.name|default:"Uncategorized" }}
+                    </div>
+                </div>
+                <div class="activity-time">
+                    {{ page.updated_at|timesince }} ago
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% for banner in recent_banners|slice:":3" %}
+            <div class="activity-item">
+                <div class="activity-icon" style="background: #fce4ec;">
+                    🎯
+                </div>
+                <div class="activity-content">
+                    <strong>{{ banner.name }}</strong>
+                    <div style="color: #6c757d; font-size: 0.9rem;">
+                        Banner • {{ banner.get_banner_type_display }}
+                    </div>
+                </div>
+                <div class="activity-time">
+                    {{ banner.created_at|timesince }} ago
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% for faq in recent_faqs|slice:":3" %}
+            <div class="activity-item">
+                <div class="activity-icon" style="background: #e0f7fa;">
+                    ❓
+                </div>
+                <div class="activity-content">
+                    <strong>{{ faq.question|truncatechars:60 }}</strong>
+                    <div style="color: #6c757d; font-size: 0.9rem;">
+                        FAQ • {{ faq.category.name|default:"General" }}
+                    </div>
+                </div>
+                <div class="activity-time">
+                    {{ faq.created_at|timesince }} ago
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Popular Content -->
+    <div class="recent-activity" style="margin-top: 30px;">
+        <h3 style="color: #3a0ca3; margin-bottom: 20px;">🔥 Popular Content</h3>
+        
+        <div class="activity-list">
+            {% for content in popular_content|slice:":5" %}
+            <div class="activity-item">
+                <div class="activity-icon" style="background: #fff3e0;">
+                    🔥
+                </div>
+                <div class="activity-content">
+                    <strong>{{ content.title|truncatechars:50 }}</strong>
+                    <div style="color: #6c757d; font-size: 0.9rem;">
+                        {{ content.view_count }} views • {{ content.get_page_type_display }}
+                    </div>
+                </div>
+                <div class="activity-time">
+                    {{ content.published_date|date:"M d, Y" }}
+                </div>
+            </div>
+            {% empty %}
+            <div class="activity-item">
+                <div class="activity-content">
+                    <em>No popular content yet</em>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate stats counters
+    function animateCounter(elementId, target) {
+        const element = document.getElementById(elementId);
+        let current = 0;
+        const increment = target / 50;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            element.textContent = Math.floor(current);
+        }, 20);
+    }
+    
+    // Set target values (you would get these from context or AJAX)
+    const stats = {
+        'stat-content': {{ content_stats.total_pages|default:42 }},
+        'stat-banners': {{ banner_stats.total_banners|default:18 }},
+        'stat-faqs': {{ faq_stats.total_faqs|default:56 }},
+        'stat-categories': {{ category_stats|length|default:12 }},
+        'stat-files': 24  // This would come from context
+    };
+    
+    // Start animations
+    for (const [id, value] of Object.entries(stats)) {
+        animateCounter(id, value);
+    }
+    
+    // Add hover effects to activity items
+    document.querySelectorAll('.activity-item').forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+            this.style.transform = 'translateX(5px)';
+            this.style.transition = 'all 0.3s ease';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+            this.style.transform = '';
+        });
+    });
+});
+</script>
+{% endblock %} {% endcomment %} {% endcomment %}

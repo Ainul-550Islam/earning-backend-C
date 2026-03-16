@@ -1,0 +1,874 @@
+<!-- admin/fraud_dashboard.html -->
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    .fraud-card {
+        transition: all 0.3s ease;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .fraud-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    .map-container {
+        height: 400px;
+        width: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+    .risk-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .risk-high { background: #fee2e2; color: #991b1b; }
+    .risk-medium { background: #fef3c7; color: #92400e; }
+    .risk-low { background: #d1fae5; color: #065f46; }
+    .real-time-alert {
+        animation: pulse 2s infinite;
+        border-left: 4px solid #ef4444;
+    }
+    @keyframes pulse {
+        0%, 100% { background-color: transparent; }
+        50% { background-color: #fef2f2; }
+    }
+    .notification-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #ef4444;
+        color: white;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block extrahead %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Auto-refresh configuration
+    let refreshInterval;
+    let refreshEnabled = true;
+    const REFRESH_INTERVAL = 15000; // 15 seconds
+    
+    // WebSocket connection for real-time notifications
+    let websocket = null;
+    let notificationCount = 0;
+    
+    // Initialize dashboard
+    function initializeDashboard() {
+        setupAutoRefresh();
+        initializeCharts();
+        setupWebSocket();
+        updateLastRefreshedTime();
+    }
+    
+    // Setup auto-refresh
+    function setupAutoRefresh() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+        
+        if (refreshEnabled) {
+            refreshInterval = setInterval(refreshDashboardData, REFRESH_INTERVAL);
+        }
+    }
+    
+    // Setup WebSocket for real-time notifications
+    function setupWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/fraud/alerts/`;
+        
+        try {
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = function() {
+                console.log('WebSocket connected');
+                updateConnectionStatus(true);
+            };
+            
+            websocket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleRealTimeAlert(data);
+            };
+            
+            websocket.onclose = function() {
+                console.log('WebSocket disconnected');
+                updateConnectionStatus(false);
+                // Try to reconnect after 5 seconds
+                setTimeout(setupWebSocket, 5000);
+            };
+            
+            websocket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        } catch (error) {
+            console.error('Failed to setup WebSocket:', error);
+        }
+    }
+    
+    // Handle real-time alert
+    function handleRealTimeAlert(alert) {
+        // Increment notification count
+        notificationCount++;
+        updateNotificationBadge();
+        
+        // Show toast notification
+        showToastNotification(alert);
+        
+        // Play sound (optional)
+        playAlertSound();
+        
+        // Update dashboard data if needed
+        if (alert.type === 'fraud_detected') {
+            refreshDashboardData();
+        }
+    }
+    
+    // Show toast notification
+    function showToastNotification(alert) {
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 max-w-md bg-white rounded-lg shadow-lg border-l-4 border-red-500 z-50 overflow-hidden';
+        toast.innerHTML = `
+            <div class="p-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                            <span class="text-red-600 text-lg">🚨</span>
+                        </div>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <p class="text-sm font-medium text-gray-900">${alert.title || 'New Alert'}</p>
+                        <p class="mt-1 text-sm text-gray-500">${alert.message || 'Fraud detection alert'}</p>
+                        <div class="mt-2 flex space-x-3">
+                            <button onclick="viewAlert('${alert.id}')" class="text-xs bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
+                                View Details
+                            </button>
+                            <button onclick="dismissNotification(this)" class="text-xs bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300">
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" class="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-500">
+                        &times;
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 10000);
+    }
+    
+    // Play alert sound
+    function playAlertSound() {
+        try {
+            const audio = new Audio('/static/fraud/alert.mp3');
+            audio.volume = 0.3;
+            audio.play();
+        } catch (error) {
+            console.log('Could not play alert sound');
+        }
+    }
+    
+    // Update notification badge
+    function updateNotificationBadge() {
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+            badge.textContent = notificationCount;
+            badge.style.display = notificationCount > 0 ? 'flex' : 'none';
+        }
+    }
+    
+    // View alert details
+    function viewAlert(alertId) {
+        window.location.href = `/admin/fraud/fraudalert/${alertId}/change/`;
+    }
+    
+    // Dismiss notification
+    function dismissNotification(button) {
+        const toast = button.closest('.fixed');
+        if (toast) {
+            toast.remove();
+        }
+    }
+    
+    // Update WebSocket connection status
+    function updateConnectionStatus(connected) {
+        const statusEl = document.getElementById('websocket-status');
+        if (statusEl) {
+            if (connected) {
+                statusEl.innerHTML = '<span class="text-green-600">● Connected</span>';
+            } else {
+                statusEl.innerHTML = '<span class="text-red-600">● Disconnected</span>';
+            }
+        }
+    }
+    
+    // Refresh dashboard data
+    async function refreshDashboardData() {
+        try {
+            const response = await fetch('/admin/fraud/api/fraud-stats/');
+            const data = await response.json();
+            
+            // Update key metrics
+            updateKeyMetrics(data);
+            
+            // Update timestamp
+            updateLastRefreshedTime();
+            
+        } catch (error) {
+            console.error('Dashboard refresh failed:', error);
+        }
+    }
+    
+    // Update key metrics
+    function updateKeyMetrics(data) {
+        // Fraud blocked 24h
+        updateMetric('fraud-blocked-24h', data.fraud_blocked_24h);
+        
+        // Average risk score
+        updateMetric('avg-risk-score', data.avg_risk_score);
+        
+        // Active critical alerts
+        updateMetric('active-critical-alerts', data.active_critical_alerts);
+        
+        // Fraud detection rate
+        updateMetric('fraud-detection-rate', data.fraud_detection_rate + '%');
+        
+        // False positive rate
+        updateMetric('false-positive-rate', data.false_positive_rate + '%');
+    }
+    
+    // Update individual metric
+    function updateMetric(elementId, value) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            const oldValue = element.textContent;
+            element.textContent = value;
+            
+            // Add animation class
+            element.classList.add('updated');
+            setTimeout(() => {
+                element.classList.remove('updated');
+            }, 1000);
+        }
+    }
+    
+    // Update last refreshed time
+    function updateLastRefreshedTime() {
+        const now = new Date();
+        document.getElementById('last-refreshed').textContent = 
+            `Last updated: ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}`;
+    }
+    
+    // Toggle auto-refresh
+    function toggleAutoRefresh() {
+        refreshEnabled = !refreshEnabled;
+        const button = document.getElementById('toggle-refresh');
+        
+        if (refreshEnabled) {
+            button.innerHTML = '⏸️ Disable Auto Refresh';
+            button.classList.remove('bg-red-500');
+            button.classList.add('bg-green-500');
+            setupAutoRefresh();
+        } else {
+            button.innerHTML = '▶️ Enable Auto Refresh';
+            button.classList.remove('bg-green-500');
+            button.classList.add('bg-red-500');
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+    }
+    
+    // Initialize charts
+    function initializeCharts() {
+        // Fraud Type Distribution Chart
+        const fraudTypeCtx = document.getElementById('fraudTypeChart');
+        if (fraudTypeCtx) {
+            new Chart(fraudTypeCtx.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: {{ fraud_type_labels|safe }},
+                    datasets: [{
+                        data: {{ fraud_type_data|safe }},
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)',   // red
+                            'rgba(245, 158, 11, 0.7)',  // orange
+                            'rgba(59, 130, 246, 0.7)',  // blue
+                            'rgba(16, 185, 129, 0.7)',  // green
+                            'rgba(139, 92, 246, 0.7)',  // purple
+                            'rgba(236, 72, 153, 0.7)',  // pink
+                        ],
+                        borderColor: [
+                            'rgb(239, 68, 68)',
+                            'rgb(245, 158, 11)',
+                            'rgb(59, 130, 246)',
+                            'rgb(16, 185, 129)',
+                            'rgb(139, 92, 246)',
+                            'rgb(236, 72, 153)',
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 15
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Initialize map
+    function initializeMap() {
+        const mapEl = document.getElementById('fraud-map');
+        if (mapEl) {
+            // Initialize map (coordinates for world view)
+            const map = L.map('fraud-map').setView([20, 0], 2);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18,
+            }).addTo(map);
+            
+            // Add fraud location markers (this would be populated with real data)
+            // For demo purposes, we'll add some sample markers
+            const sampleLocations = [
+                {lat: 40.7128, lng: -74.0060, count: 25, country: 'US'}, // New York
+                {lat: 51.5074, lng: -0.1278, count: 18, country: 'UK'}, // London
+                {lat: 35.6762, lng: 139.6503, count: 12, country: 'JP'}, // Tokyo
+                {lat: 28.6139, lng: 77.2090, count: 32, country: 'IN'}, // Delhi
+                {lat: 55.7558, lng: 37.6173, count: 8, country: 'RU'},  // Moscow
+            ];
+            
+            sampleLocations.forEach(location => {
+                const color = location.count > 20 ? '#ef4444' : location.count > 10 ? '#f59e0b' : '#3b82f6';
+                
+                L.circleMarker([location.lat, location.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.5,
+                    radius: Math.sqrt(location.count) * 2
+                }).addTo(map)
+                .bindPopup(`
+                    <strong>${location.country}</strong><br>
+                    ${location.count} fraud attempts<br>
+                    <small>Click for details</small>
+                `);
+            });
+        }
+    }
+    
+    // View real-time alerts
+    function viewRealTimeAlerts() {
+        window.location.href = '/admin/fraud/real-time-monitoring/';
+    }
+    
+    // View geographic analysis
+    function viewGeographicAnalysis() {
+        window.location.href = '/admin/fraud/geographic-view/';
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeDashboard();
+        
+        // Add event listeners
+        document.getElementById('toggle-refresh').addEventListener('click', toggleAutoRefresh);
+        document.getElementById('manual-refresh').addEventListener('click', function() {
+            refreshDashboardData();
+            showToastNotification({
+                title: 'Dashboard Refreshed',
+                message: 'Fraud dashboard data has been updated',
+                type: 'info'
+            });
+        });
+        
+        // Initialize map if element exists
+        if (document.getElementById('fraud-map')) {
+            initializeMap();
+        }
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="p-6" id="dashboard-content">
+    <!-- Header Section -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+            <div class="flex items-center space-x-4">
+                <p class="text-gray-600" id="last-refreshed">
+                    Last updated: {{ current_time }}
+                </p>
+                <span id="websocket-status" class="text-sm">
+                    <span class="text-green-600">● Connected</span>
+                </span>
+            </div>
+        </div>
+        <div class="flex space-x-3">
+            <div class="relative">
+                <button onclick="viewRealTimeAlerts()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition flex items-center">
+                    🚨 Real-time Alerts
+                    <span id="notification-badge" class="notification-badge" style="display: none;">0</span>
+                </button>
+            </div>
+            <button id="manual-refresh" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                🔄 Refresh Now
+            </button>
+            <button id="toggle-refresh" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
+                ⏸️ Disable Auto Refresh
+            </button>
+        </div>
+    </div>
+    
+    <!-- Key Metrics Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <!-- Total Fraud Blocked (24h) -->
+        <div class="fraud-card bg-white rounded-xl shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Fraud Blocked (24h)</p>
+                    <p id="fraud-blocked-24h" class="text-3xl font-bold text-gray-800">{{ fraud_blocked_last_24h }}</p>
+                </div>
+                <div class="p-3 bg-red-100 rounded-lg">
+                    <span class="text-2xl text-red-600">🛡️</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <p class="text-sm text-gray-600">
+                    Confirmed fraud attempts prevented
+                </p>
+            </div>
+        </div>
+        
+        <!-- Average Risk Score -->
+        <div class="fraud-card bg-white rounded-xl shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Avg Risk Score</p>
+                    <p id="avg-risk-score" class="text-3xl font-bold text-gray-800">{{ avg_risk_score }}</p>
+                </div>
+                <div class="p-3 bg-yellow-100 rounded-lg">
+                    <span class="text-2xl text-yellow-600">📊</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-600 mr-2">Current average</span>
+                    {% if avg_risk_score >= 70 %}
+                    <span class="risk-badge risk-high">High Risk</span>
+                    {% elif avg_risk_score >= 40 %}
+                    <span class="risk-badge risk-medium">Medium Risk</span>
+                    {% else %}
+                    <span class="risk-badge risk-low">Low Risk</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Active Critical Alerts -->
+        <div class="fraud-card bg-white rounded-xl shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Critical Alerts</p>
+                    <p id="active-critical-alerts" class="text-3xl font-bold text-gray-800">{{ active_critical_alerts }}</p>
+                </div>
+                <div class="p-3 bg-orange-100 rounded-lg">
+                    <span class="text-2xl text-orange-600">🚨</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <p class="text-sm text-gray-600">
+                    Active priority alerts
+                </p>
+            </div>
+        </div>
+        
+        <!-- Fraud Detection Rate -->
+        <div class="fraud-card bg-white rounded-xl shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Detection Rate</p>
+                    <p id="fraud-detection-rate" class="text-3xl font-bold text-gray-800">{{ fraud_detection_rate }}%</p>
+                </div>
+                <div class="p-3 bg-green-100 rounded-lg">
+                    <span class="text-2xl text-green-600">🎯</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-green-500 h-2 rounded-full" style="width: {{ fraud_detection_rate }}%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- False Positive Rate -->
+        <div class="fraud-card bg-white rounded-xl shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">False Positives</p>
+                    <p id="false-positive-rate" class="text-3xl font-bold text-gray-800">{{ false_positive_rate }}%</p>
+                </div>
+                <div class="p-3 bg-blue-100 rounded-lg">
+                    <span class="text-2xl text-blue-600">⚖️</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-500 h-2 rounded-full" style="width: {{ false_positive_rate }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts & Map Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Fraud Type Distribution -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Fraud Type Distribution</h3>
+                <span class="text-sm text-gray-500">{{ total_fraud_attempts }} total attempts</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="fraudTypeChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Geographic Map -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Geographic Fraud Analysis</h3>
+                <button onclick="viewGeographicAnalysis()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    View details →
+                </button>
+            </div>
+            <div class="map-container" id="fraud-map">
+                <!-- Map will be initialized by JavaScript -->
+            </div>
+            <div class="mt-4 text-sm text-gray-600">
+                Showing fraud attempt locations from suspicious IPs
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity & Risk Distribution -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Recent Critical Alerts -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <span class="text-red-600">●</span> Recent Critical Alerts
+                    <span class="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full">{{ active_critical_alerts }}</span>
+                </h3>
+                <a href="{% url 'fraud_admin:fraud_fraudalert_changelist' %}" 
+                   class="text-sm text-blue-600 hover:text-blue-800">
+                    View all →
+                </a>
+            </div>
+            <div class="space-y-3 max-h-[300px] overflow-y-auto">
+                {% for alert in recent_critical_alerts %}
+                <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition {% if not alert.is_resolved %}real-time-alert{% endif %}">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 flex items-center justify-center rounded-full 
+                            {% if alert.priority == 'critical' %}bg-red-100
+                            {% elif alert.priority == 'high' %}bg-orange-100
+                            {% else %}bg-yellow-100{% endif %}">
+                            <span class="{% if alert.priority == 'critical' %}text-red-600
+                                       {% elif alert.priority == 'high' %}text-orange-600
+                                       {% else %}text-yellow-600{% endif %}">
+                                {% if alert.priority == 'critical' %}🚨
+                                {% elif alert.priority == 'high' %}⚠️
+                                {% else %}🔔{% endif %}
+                            </span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-800">{{ alert.title|truncatechars:40 }}</p>
+                            <p class="text-xs text-gray-500">
+                                {{ alert.user.username|default:"System" }} • {{ alert.created_at|timesince }} ago
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-800">{{ alert.created_at|time:"H:i" }}</p>
+                        {% if alert.is_resolved %}
+                        <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                            Resolved
+                        </span>
+                        {% else %}
+                        <span class="text-xs px-2 py-1 rounded-full bg-red-100 text-red-800">
+                            Active
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-gray-500">
+                    <p>No critical alerts in the last 24 hours</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Risk Distribution -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">User Risk Distribution</h3>
+                <span class="text-sm text-gray-500">Based on overall risk scores</span>
+            </div>
+            <div class="space-y-4">
+                <!-- High Risk -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm font-medium text-red-700">High Risk (70+)</span>
+                        <span class="text-sm font-bold">{{ risk_distribution.high_risk }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-red-500 h-2.5 rounded-full" 
+                             style="width: {% widthratio risk_distribution.high_risk risk_distribution.high_risk|add:risk_distribution.medium_risk|add:risk_distribution.low_risk 100 %}%"></div>
+                    </div>
+                </div>
+                
+                <!-- Medium Risk -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm font-medium text-yellow-700">Medium Risk (40-69)</span>
+                        <span class="text-sm font-bold">{{ risk_distribution.medium_risk }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-yellow-500 h-2.5 rounded-full" 
+                             style="width: {% widthratio risk_distribution.medium_risk risk_distribution.high_risk|add:risk_distribution.medium_risk|add:risk_distribution.low_risk 100 %}%"></div>
+                    </div>
+                </div>
+                
+                <!-- Low Risk -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm font-medium text-green-700">Low Risk (0-39)</span>
+                        <span class="text-sm font-bold">{{ risk_distribution.low_risk }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-green-500 h-2.5 rounded-full" 
+                             style="width: {% widthratio risk_distribution.low_risk risk_distribution.high_risk|add:risk_distribution.medium_risk|add:risk_distribution.low_risk 100 %}%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-4 border-t">
+                <h4 class="text-sm font-medium text-gray-800 mb-2">Risk Management Actions</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="{% url 'fraud_admin:risk_analysis' %}" 
+                       class="px-3 py-2 bg-blue-100 text-blue-700 text-sm rounded hover:bg-blue-200 transition text-center">
+                        📊 Analyze Risks
+                    </a>
+                    <a href="{% url 'fraud_admin:fraud_userriskprofile_changelist' %}?risk_score=high" 
+                       class="px-3 py-2 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200 transition text-center">
+                        👤 High Risk Users
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Fraud Attempts & Top Fraudulent IPs -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Recent Fraud Attempts -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Recent Fraud Attempts</h3>
+                <a href="{% url 'fraud_admin:fraud_fraudattempt_changelist' %}" 
+                   class="text-sm text-blue-600 hover:text-blue-800">
+                    View all →
+                </a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for attempt in recent_fraud_attempts|slice:":5" %}
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ attempt.user.username|default:"Anonymous"|truncatechars:15 }}
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                    {% if attempt.attempt_type == 'payment_fraud' %}bg-red-100 text-red-800
+                                    {% elif attempt.attempt_type == 'account_takeover' %}bg-orange-100 text-orange-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ attempt.attempt_type|truncatechars:12 }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="text-sm font-bold 
+                                    {% if attempt.fraud_score >= 80 %}text-red-600
+                                    {% elif attempt.fraud_score >= 60 %}text-orange-600
+                                    {% else %}text-yellow-600{% endif %}">
+                                    {{ attempt.fraud_score }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                {% if attempt.status == 'confirmed' %}
+                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                                    ✅ Confirmed
+                                </span>
+                                {% elif attempt.status == 'false_positive' %}
+                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                    ❌ False
+                                </span>
+                                {% else %}
+                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                    🔍 Detected
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {{ attempt.created_at|time:"H:i" }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                                No recent fraud attempts
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Top Fraudulent IPs -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Top Fraudulent IPs</h3>
+                <a href="{% url 'fraud_admin:fraud_ipreputation_changelist' %}" 
+                   class="text-sm text-blue-600 hover:text-blue-800">
+                    View all →
+                </a>
+            </div>
+            <div class="space-y-3">
+                {% for ip in top_fraudulent_ips %}
+                <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 flex items-center justify-center rounded-full 
+                            {% if ip.fraud_score >= 80 %}bg-red-100
+                            {% elif ip.fraud_score >= 60 %}bg-orange-100
+                            {% else %}bg-yellow-100{% endif %}">
+                            <span class="{% if ip.fraud_score >= 80 %}text-red-600
+                                       {% elif ip.fraud_score >= 60 %}text-orange-600
+                                       {% else %}text-yellow-600{% endif %}">
+                                {% if ip.is_blacklisted %}⛔{% else %}🌐{% endif %}
+                            </span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-800">{{ ip.ip_address }}</p>
+                            <p class="text-xs text-gray-500">
+                                {{ ip.country|default:"Unknown" }}
+                                {% if ip.fraud_attempts %}({{ ip.fraud_attempts }} attempts){% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold 
+                            {% if ip.fraud_score >= 80 %}text-red-600
+                            {% elif ip.fraud_score >= 60 %}text-orange-600
+                            {% else %}text-yellow-600{% endif %}">
+                            {{ ip.fraud_score }}/100
+                        </p>
+                        {% if ip.is_blacklisted %}
+                        <span class="text-xs text-red-600">Blacklisted</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-gray-500">
+                    <p>No suspicious IPs detected</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <a href="{% url 'fraud_admin:real_time_monitoring' %}" 
+               class="p-4 bg-red-50 hover:bg-red-100 rounded-lg transition text-center">
+                <div class="text-2xl mb-2">🚨</div>
+                <p class="font-medium text-red-700">Real-time Monitoring</p>
+                <p class="text-sm text-red-600">Live fraud detection</p>
+            </a>
+            
+            <a href="{% url 'fraud_admin:bulk_ip_analysis' %}" 
+               class="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition text-center">
+                <div class="text-2xl mb-2">🔍</div>
+                <p class="font-medium text-blue-700">Bulk IP Analysis</p>
+                <p class="text-sm text-blue-600">Check multiple IPs</p>
+            </a>
+            
+            <a href="{% url 'fraud_admin:fraud_timeline' %}" 
+               class="p-4 bg-green-50 hover:bg-green-100 rounded-lg transition text-center">
+                <div class="text-2xl mb-2">📊</div>
+                <p class="font-medium text-green-700">Fraud Timeline</p>
+                <p class="text-sm text-green-600">View historical data</p>
+            </a>
+            
+            <a href="{% url 'fraud_admin:fraud_analytics' %}" 
+               class="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition text-center">
+                <div class="text-2xl mb-2">📈</div>
+                <p class="font-medium text-purple-700">Advanced Analytics</p>
+                <p class="text-sm text-purple-600">Detailed insights</p>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,459 @@
+C:\Users\Ainul Islam\New folder (8)\earning_backend\venv\Lib\site-packages\django\db\backends\utils.py:98: RuntimeWarning: Accessing the database during app initialization is discouraged. To fix this warning, avoid executing queries in AppConfig.ready() or when your app modules are imported.
+  warnings.warn(self.APPS_NOT_READY_WARNING_MSG, category=RuntimeWarning)
+Using existing test database for alias 'default' ('test_earning_db')...
+[INFO] Already registered: OTP
+[INFO] Already registered: LoginHistory
+[INFO] Already registered: UserActivity
+[INFO] Already registered: UserDevice
+[INFO] Already registered: DeviceFingerprint
+[INFO] Already registered: IPReputation
+[INFO] Already registered: UserAccountLink
+[INFO] Already registered: UserBehavior
+[INFO] Already registered: FraudDetectionLog
+[INFO] Already registered: RiskScoreHistory
+[INFO] Already registered: RateLimitTracker
+[INFO] Already registered: KYCVerification
+[INFO] Already registered: UserLevel
+[INFO] Already registered: NotificationSettings
+[INFO] Already registered: SecuritySettings
+[INFO] Already registered: UserStatistics
+[INFO] Already registered: UserPreferences
+[INFO] Already registered: UserRank
+
+[OK] Total 0 models registered successfully!
+
+[SECURE] Registering Security models in BOTH admin sites...
+[SECURE] Registration Complete!
+Successfully registered: Users
+Successfully registered: Groups
+Successfully registered: Backups
+Successfully registered: Backup Schedules
+Successfully registered: Storage Locations
+Successfully registered: Backup Restorations
+Successfully registered: Backup Logs
+Successfully registered: Referrals
+Successfully registered: System Settings
+Successfully registered: System Reports
+Successfully registered: User Profiles
+[OK] Registered: PaymentGateway
+[OK] Registered: PaymentGatewayMethod
+[OK] Registered: GatewayTransaction
+[OK] Registered: PayoutRequest
+[OK] Registered: GatewayConfig
+[OK] Registered: Currency
+[OK] Registered: PaymentGatewayWebhookLog
+[OK][OK][OK] 7 payment_gateways models registered in default admin
+[OK] Registered: OfferCategory
+[OK] Registered: OfferProvider
+[OK] Registered: Offer
+[OK] Registered: OfferClick
+[OK] Registered: OfferConversion
+[OK] Registered: OfferWall
+[OK][OK][OK] 6 offerwall models registered, 0 already existed
+[OK] Registered: AnalyticsEvent
+[OK] Registered: UserAnalytics
+[OK] Registered: RevenueAnalytics
+[OK] Registered: OfferPerformanceAnalytics
+[OK] Registered: FunnelAnalytics
+[OK] Registered: RetentionAnalytics
+[OK] Registered: Dashboard
+[OK] Registered: Report
+[OK] Registered: RealTimeMetric
+[OK] Registered: AlertRule
+[OK] Registered: AlertHistory
+[OK][OK][OK] 11 analytics models registered successfully!
+[OK] Registered: ReferralEarning in default admin
+[OK] Registered: ReferralSettings in default admin
+[OK][OK][OK] All referral models registered in default admin
+[OK] Registered: DailyCheckIn
+[OK] Registered: SpinWheel
+[OK][OK][OK] 2 engagement models registered!
+--- CMS ADMIN LOADED ---
+
+[DOC] Registering CMS models in default admin...
+[OK] Registered: ContentCategory
+[OK] Registered: ContentPage
+[OK] Registered: Banner
+[OK] Registered: FAQCategory
+[OK] Registered: FAQ
+[OK] Registered: BannerImpression
+[OK] Registered: BannerClick
+[OK] Registered: FAQFeedback
+[OK] Registered: ContentViewLog
+[OK] Registered: ContentShare
+[OK] Registered: SiteSettings
+[OK] Registered: ImageGallery
+[OK] Registered: GalleryImage
+[OK] Registered: FileManager
+[OK] Registered: Comment
+[OK] Registered: CommentLike
+[OK] Registered: SiteAnalytics
+[OK] Registered: PermissionAuditLog
+[OK] Registered: ContentPermission
+[OK] Registered: PermissionStats
+[OK] Registered: BannerReward
+[DOC] Registered 21 CMS models in default admin
+[OK] Registered: FAQ
+[OK] Registered: SupportTicket
+[OK] Registered: SupportSettings
+[OK][OK][OK] 3 support models registered!
+[OK] Registered: KYC
+[OK] Registered: KYCVerificationLog
+[OK][OK][OK] 2 KYC models registered successfully!
+[OK] Registered: MasterTask
+[OK] Registered: UserTaskCompletion
+[OK] Registered: AdminLedger
+[OK][OK][OK] 3 tasks models registered successfully!
+[OK] Registered: RateLimitConfig in default admin
+[OK] Registered: RateLimitLog in default admin
+[OK] Registered: UserRateLimitProfile in default admin
+[OK][OK][OK] 3 rate_limit models registered in default admin
+[OK] UserAdmin registered in localization/admin.py
+[OK] Registered: Country
+[OK] Registered: City
+[OK] Registered: Currency
+[OK] Registered: Language
+[OK] Registered: Timezone
+[OK] Registered: TranslationKey
+[OK] Registered: Translation
+[OK] Registered: TranslationCache
+[OK] Registered: MissingTranslation
+[OK] Registered: UserLanguagePreference
+[OK][OK][OK] 10 localization models registered!
+[LOADING] Loading users admin...
+[OK] Registered: OTP
+[OK] Registered: LoginHistory
+[OK] Registered: UserActivity
+[OK] Registered: UserDevice
+[OK] Registered: DeviceFingerprint
+[OK] Registered: IPReputation
+[OK] Registered: UserAccountLink
+[OK] Registered: UserBehavior
+[OK] Registered: FraudDetectionLog
+[OK] Registered: RiskScoreHistory
+[OK] Registered: RateLimitTracker
+[OK] Registered: KYCVerification
+[OK] Registered: UserLevel
+[OK] Registered: NotificationSettings
+[OK] Registered: SecuritySettings
+[OK] Registered: UserStatistics
+[OK] Registered: UserPreferences
+[OK] Registered: UserRank
+[OK][OK][OK] 18 users models registered from apps.py
+[LOADING] Checking payment_gateways admin registration...
+[OK] All payment_gateways models already registered
+[OK] Ad Networks signals loaded
+[LOADING] Checking ad_networks admin registration...
+[OK] Registered: AdNetworkWebhookLog from apps.py
+[OK] Registered: NetworkStatistic from apps.py
+[OK] Registered: OfferPerformanceAnalytics from apps.py
+[OK] Registered: OfferSyncLog from apps.py
+[OK] Registered: OfferWall from apps.py
+[OK] Registered: SmartOfferRecommendation from apps.py
+[OK] Registered: UserOfferLimit from apps.py
+[OK][OK][OK] 7 ad_networks models registered from apps.py
+[LOADING] Checking offerwall admin registration...
+[OK] All offerwall models already registered
+[OK] Fraud Detection signals loaded
+[LOADING] Checking fraud detection admin registration...
+[WARN] Could not import admin classes: cannot import name 'DeviceFingerprintAdmin' from 'api.fraud_detection.admin' (C:\Users\Ainul Islam\New folder (8)\earning_backend\api\fraud_detection\admin.py)
+[OK] Registered: FraudRule (default)
+[OK] Registered: FraudAttempt (default)
+[OK] Registered: FraudPattern (default)
+[OK] Registered: UserRiskProfile (default)
+[OK] Registered: DeviceFingerprint (default)
+[OK] Registered: IPReputation (default)
+[OK] Registered: FraudAlert (default)
+[OK] Registered: OfferCompletion (default)
+[LOADING] Checking analytics admin registration...
+[OK] All analytics models already registered
+[WARN] No signals found for referral app
+[LOADING] Checking referral admin registration...
+[OK] All referral models already registered
+[OK] Notifications signals loaded
+[LOADING] Checking notifications admin registration...
+[OK] Registered: Notification from apps.py
+[OK] Registered: NotificationTemplate from apps.py
+[OK] Registered: NotificationPreference from apps.py
+[OK] Registered: DeviceToken from apps.py
+[OK] Registered: NotificationCampaign from apps.py
+[OK] Registered: NotificationAnalytics from apps.py
+[OK] Registered: NotificationRule from apps.py
+[OK] Registered: NotificationFeedback from apps.py
+[OK] Registered: NotificationLog from apps.py
+[OK] Registered: Notice from apps.py
+[OK][OK][OK] 10 notifications models registered from apps.py
+[OK] CMS Admin successfully loaded!
+[LOADING] Loading support admin...
+[OK] All support models already registered
+[OK] Djoyalty signals loaded
+[LOADING] Checking djoyalty admin registration...
+[OK] Registered: Customer from apps.py
+[OK] Registered: Txn from apps.py
+[OK] Registered: Event from apps.py
+[OK][OK][OK] 3 djoyalty models registered from apps.py
+[OK] Wallet signal connected to User model: users.User
+[LOADING] Checking wallet admin registration...
+[OK] Registered: UserPaymentMethod from apps.py
+[OK] Registered: WalletTransaction from apps.py
+[OK] Registered: WalletWebhookLog from apps.py
+[OK] Registered: Wallet from apps.py
+[OK] Registered: Withdrawal from apps.py
+[OK][OK][OK] 5 wallet models registered from apps.py
+[OK] Tasks signals loaded
+[LOADING] Loading tasks admin...
+[OK] All tasks models already registered
+[OK] Rate limit signals loaded
+[LOADING] Checking rate_limit admin registration...
+[OK] All rate_limit models already registered
+[OK] Localization signals loaded
+[LOADING] Checking localization admin registration...
+[OK] All localization models already registered
+[OK] Audit Logs signals loaded
+[LOADING] Checking audit_logs admin registration...
+[OK] Registered: AuditLog from apps.py
+[OK] Registered: AuditLogConfig from apps.py
+[OK] Registered: AuditLogArchive from apps.py
+[OK] Registered: AuditAlertRule from apps.py
+[OK] Registered: AuditDashboard from apps.py
+[OK][OK][OK] 5 audit_logs models registered from apps.py
+[LOADING] Checking backup admin registration...
+[OK] Registered: RetentionPolicy from apps.py
+[OK] Registered: BackupNotificationConfig from apps.py
+[OK] Registered: DeltaBackupTracker from apps.py
+[OK][OK][OK] 3 backup models registered from apps.py
+Found 119 test(s).
+Operations to perform:
+  Synchronize unmigrated apps: admob_ssv, cache, ckeditor, ckeditor_uploader, core, corsheaders, django_filters, messages, rest_framework, rest_framework_simplejwt, staticfiles, tests
+  Apply all migrations: ad_networks, admin, admin_panel, alerts, analytics, api, audit_logs, auth, authtoken, backup, cms, contenttypes, django_celery_beat, django_celery_results, djoyalty, engagement, fraud_detection, kyc, localization, notifications, offerwall, payment_gateways, rate_limit, referral, security, sessions, sites, support, tasks, token_blacklist, users, wallet
+Synchronizing apps without migrations:
+  Creating tables...
+    Running deferred SQL...
+Running migrations:
+  Applying tasks.0001_initial... OK
+  Applying contenttypes.0001_initial... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0001_initial... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying users.0001_initial... OK
+  Applying ad_networks.0001_initial... OK
+  Applying ad_networks.0002_initial... OK
+  Applying ad_networks.0003_adnetworkwebhooklog_is_processed_and_more... OK
+  Applying admin.0001_initial... OK
+  Applying admin.0002_logentry_remove_auto_add... OK
+  Applying admin.0003_logentry_add_action_flag_choices... OK
+  Applying admin_panel.0001_initial... OK
+  Applying admin_panel.0002_initial... OK
+  Applying alerts.0001_initial... OK
+  Applying alerts.0001_5_pg_trgm... OK
+  Applying alerts.0002_initial... OK
+  Applying alerts.0003_remove_alertrule_rule_name_gin_idx_and_more... OK
+  Applying alerts.0004_remove_alertrule_rule_name_gin_idx_and_more... OK
+  Applying alerts.0005_remove_alertrule_rule_name_gin_idx_and_more... OK
+  Applying offerwall.0001_initial... OK
+  Applying analytics.0001_initial... OK
+  Applying analytics.0002_initial... OK
+  Applying api.0001_initial... OK
+  Applying api.0002_initial... OK
+  Applying audit_logs.0001_initial... OK
+  Applying audit_logs.0002_initial... OK
+  Applying authtoken.0001_initial... OK
+  Applying authtoken.0002_initial... OK
+  Applying backup.0001_initial... OK
+  Applying backup.0002_initial... OK
+  Applying wallet.0001_initial... OK
+  Applying tasks.0002_initial... OK
+  Applying offerwall.0002_initial... OK
+  Applying cms.0001_initial... OK
+  Applying cms.0002_initial... OK
+  Applying cms.0003_initial... OK
+  Applying cms.0004_initial... OK
+  Applying django_celery_beat.0001_initial... OK
+  Applying django_celery_results.0001_initial... OK
+  Applying djoyalty.0001_initial... OK
+  Applying engagement.0001_initial... OK
+  Applying engagement.0002_initial... OK
+  Applying engagement.0003_dailycheckin_bonus_claimed_and_more... OK
+  Applying fraud_detection.0001_initial... OK
+  Applying fraud_detection.0002_initial... OK
+  Applying kyc.0001_initial... OK
+  Applying kyc.0002_initial... OK
+  Applying localization.0001_initial... OK
+  Applying notifications.0001_initial... OK
+  Applying notifications.0002_initial... OK
+  Applying payment_gateways.0001_initial... OK
+  Applying payment_gateways.0002_initial... OK
+  Applying rate_limit.0001_initial... OK
+  Applying rate_limit.0002_initial... OK
+  Applying referral.0001_initial... OK
+  Applying referral.0002_initial... OK
+  Applying security.0001_initial... OK
+  Applying security.0002_initial... OK
+  Applying security.0003_alter_deviceinfo_options_and_more... OK
+  Applying sessions.0001_initial... OK
+  Applying sites.0001_initial... OK
+  Applying sites.0002_alter_domain_unique... OK
+  Applying support.0001_initial... OK
+  Applying support.0002_initial... OK
+  Applying tasks.0003_usertaskcompletion_admin_revenue_received... OK
+  Applying token_blacklist.0001_initial... OK
+  Applying token_blacklist.0002_initial... OK
+  Applying users.0002_ratelimittracker_count_ratelimittracker_created_at_and_more... OK
+C:\Users\Ainul Islam\New folder (8)\earning_backend\venv\Lib\site-packages\rest_framework\fields.py:992: UserWarning: min_value should be a Decimal instance.
+  warnings.warn("min_value should be a Decimal instance.")
+
+(process:7344): GLib-GIO-WARNING **: 15:42:03.857: Unexpectedly, UWP app `Microsoft.OutlookForWindows_1.2025.1209.500_x64__8wekyb3d8bbwe' (AUMId `Microsoft.OutlookForWindows_8wekyb3d8bbwe!Microsoft.OutlookforWindows') supports 4 extensions but has no verbs
+
+(process:7344): GLib-GIO-WARNING **: 15:42:04.365: Unexpectedly, UWP app `AdobeSystemsIncorporated.AdobePhotoshopExpress_5.0.40.0_x64__mtcwf2zmmt10c' (AUMId `AdobeSystemsIncorporated.AdobePhotoshopExpress_mtcwf2zmmt10c!App') supports 21 extensions but has no verbs
+Redis cache service initialized
+System check identified no issues (0 silenced).
+test_ad_network_creation (api.tests.test_ad_networks.AdNetworkTest.test_ad_network_creation) ... ok
+test_blacklisted_ip (api.tests.test_ad_networks.AdNetworkTest.test_blacklisted_ip) ... ok
+test_fraud_detection_rule (api.tests.test_ad_networks.AdNetworkTest.test_fraud_detection_rule) ... ok
+test_network_statistic (api.tests.test_ad_networks.AdNetworkTest.test_network_statistic) ... ok
+test_offer_category_creation (api.tests.test_ad_networks.AdNetworkTest.test_offer_category_creation) ... ok
+test_offer_creation (api.tests.test_ad_networks.AdNetworkTest.test_offer_creation) ... ok
+test_offerwall_creation (api.tests.test_ad_networks.AdNetworkTest.test_offerwall_creation) ... ok
+test_user_offer_limit (api.tests.test_ad_networks.AdNetworkTest.test_user_offer_limit) ... ok
+test_webhook_log_creation (api.tests.test_ad_networks.AdNetworkTest.test_webhook_log_creation) ... ok
+test_admin_action_creation (api.tests.test_admin_panel.AdminPanelTest.test_admin_action_creation) ... ok
+test_admin_action_without_target (api.tests.test_admin_panel.AdminPanelTest.test_admin_action_without_target) ... ok
+test_report_creation (api.tests.test_admin_panel.AdminPanelTest.test_report_creation) ... ok
+test_site_content (api.tests.test_admin_panel.AdminPanelTest.test_site_content) ... ok
+test_site_notification (api.tests.test_admin_panel.AdminPanelTest.test_site_notification) ... ok
+test_system_settings_import (api.tests.test_admin_panel.AdminPanelTest.test_system_settings_import) ... ok
+test_analytics_event_page_view (api.tests.test_analytics.AnalyticsTest.test_analytics_event_page_view) ... ok
+test_revenue_analytics (api.tests.test_analytics.AnalyticsTest.test_revenue_analytics) ... ok
+test_user_analytics (api.tests.test_analytics.AnalyticsTest.test_user_analytics) ... ok
+test_audit_log_config (api.tests.test_audit_logs.AuditLogTest.test_audit_log_config) ... ok
+test_audit_log_creation (api.tests.test_audit_logs.AuditLogTest.test_audit_log_creation) ... ok
+test_audit_log_failure (api.tests.test_audit_logs.AuditLogTest.test_audit_log_failure) ... ok
+test_audit_log_with_data (api.tests.test_audit_logs.AuditLogTest.test_audit_log_with_data) ... ok
+test_audit_log_without_user (api.tests.test_audit_logs.AuditLogTest.test_audit_log_without_user) ... ok
+test_backup_creation (api.tests.test_backup.BackupTest.test_backup_creation) ... ok
+test_backup_log (api.tests.test_backup.BackupTest.test_backup_log) ... ok
+test_backup_notification_config (api.tests.test_backup.BackupTest.test_backup_notification_config) ... ok
+test_backup_restoration (api.tests.test_backup.BackupTest.test_backup_restoration) ... ok
+test_backup_schedule (api.tests.test_backup.BackupTest.test_backup_schedule) ... ok
+test_backup_storage_location (api.tests.test_backup.BackupTest.test_backup_storage_location) ... ok
+test_delta_backup_tracker (api.tests.test_backup.BackupTest.test_delta_backup_tracker) ... ok
+test_retention_policy (api.tests.test_backup.BackupTest.test_retention_policy) ... ok
+test_banner_click (api.tests.test_cms.CMSTest.test_banner_click) ... ok
+test_banner_creation (api.tests.test_cms.CMSTest.test_banner_creation) ... ok
+test_banner_impression (api.tests.test_cms.CMSTest.test_banner_impression) ... ok
+test_content_category_creation (api.tests.test_cms.CMSTest.test_content_category_creation) ... ok
+test_content_page_creation (api.tests.test_cms.CMSTest.test_content_page_creation) ... ok
+test_faq_category (api.tests.test_cms.CMSTest.test_faq_category) ... ok
+test_faq_creation (api.tests.test_cms.CMSTest.test_faq_creation) ... ok
+test_faq_feedback (api.tests.test_cms.CMSTest.test_faq_feedback) ... ok
+test_custom_managers (api.tests.test_djoyalty.DjoyaltyTest.test_custom_managers) ... ok
+test_customer_creation (api.tests.test_djoyalty.DjoyaltyTest.test_customer_creation) ... ok
+test_discount_transaction (api.tests.test_djoyalty.DjoyaltyTest.test_discount_transaction) ... ok
+test_event_creation (api.tests.test_djoyalty.DjoyaltyTest.test_event_creation) ... ok
+test_event_without_customer (api.tests.test_djoyalty.DjoyaltyTest.test_event_without_customer) ... ok
+test_transaction_creation (api.tests.test_djoyalty.DjoyaltyTest.test_transaction_creation) ... ok
+test_daily_checkin (api.tests.test_engagement.EngagementTest.test_daily_checkin) ... ok
+test_spin_wheel (api.tests.test_engagement.EngagementTest.test_spin_wheel) ... ok
+test_create_kyc (api.tests.test_kyc.KYCModelTest.test_create_kyc) ... ok
+test_kyc_status_transition (api.tests.test_kyc.KYCModelTest.test_kyc_status_transition) ... ok
+test_kyc_verification_log (api.tests.test_kyc.KYCModelTest.test_kyc_verification_log) ... ok
+test_country_creation (api.tests.test_localization.LocalizationTest.test_country_creation) ... ok
+test_currency_creation (api.tests.test_localization.LocalizationTest.test_currency_creation) ... ok
+test_language_creation (api.tests.test_localization.LocalizationTest.test_language_creation) ... ok
+test_timezone_creation (api.tests.test_localization.LocalizationTest.test_timezone_creation) ... ok
+test_translation_key (api.tests.test_localization.LocalizationTest.test_translation_key) ... ok
+test_user_language_preference (api.tests.test_localization.LocalizationTest.test_user_language_preference) ... ok
+test_mark_notification_read (api.tests.test_notifications.NotificationTest.test_mark_notification_read) ... ok
+test_notification_creation (api.tests.test_notifications.NotificationTest.test_notification_creation) ... ok
+test_offer_click_tracking (api.tests.test_offerwall.OfferwallTest.test_offer_click_tracking) ... ok
+test_offer_conversion (api.tests.test_offerwall.OfferwallTest.test_offer_conversion) ... ok
+test_offer_creation (api.tests.test_offerwall.OfferwallTest.test_offer_creation) ... ok
+test_offer_click_tracking (api.tests.test_offerwall.SafeOfferwallTest.test_offer_click_tracking)
+Test offer click tracking – bulletproof ... ok
+test_offer_conversion (api.tests.test_offerwall.SafeOfferwallTest.test_offer_conversion)
+Test offer conversion – bulletproof ... ok
+test_offer_creation (api.tests.test_offerwall.SafeOfferwallTest.test_offer_creation)
+Test offer creation – bulletproof ... ok
+test_gateway_creation (api.tests.test_payment_gateways.PaymentGatewayTest.test_gateway_creation) ... ok
+test_gateway_transaction (api.tests.test_payment_gateways.PaymentGatewayTest.test_gateway_transaction) ... ok
+test_rate_limit_config (api.tests.test_rate_limit.RateLimitTest.test_rate_limit_config) ... ok
+test_rate_limit_log (api.tests.test_rate_limit.RateLimitTest.test_rate_limit_log) ... ok
+test_user_rate_limit_profile (api.tests.test_rate_limit.RateLimitTest.test_user_rate_limit_profile) ... ok
+test_referral_creation (api.tests.test_referral.ReferralModelTest.test_referral_creation) ... ok
+test_referral_earning (api.tests.test_referral.ReferralModelTest.test_referral_earning) ... ok
+test_referral_settings (api.tests.test_referral.ReferralModelTest.test_referral_settings) ... ok
+test_brute_force_protection (api.tests.test_security.SecurityTest.test_brute_force_protection) ... ok
+test_sql_injection_protection (api.tests.test_security.SecurityTest.test_sql_injection_protection) ... ok
+test_xss_protection (api.tests.test_security.SecurityTest.test_xss_protection) ... ok
+test_create_ticket (api.tests.test_support.SupportTicketTest.test_create_ticket) ... ok
+test_faq_creation (api.tests.test_support.SupportTicketTest.test_faq_creation) ... ok
+test_ticket_close (api.tests.test_support.SupportTicketTest.test_ticket_close) ... ok
+test_admin_ledger (api.tests.test_tasks.TaskModelTest.test_admin_ledger)
+Test AdminLedger creation with required fields ... ok
+test_admin_ledger_profit_calculation (api.tests.test_tasks.TaskModelTest.test_admin_ledger_profit_calculation)
+Test profit calculation methods ... ok
+test_bulk_operations (api.tests.test_tasks.TaskModelTest.test_bulk_operations)
+Test bulk task operations ... ok
+test_create_master_task (api.tests.test_tasks.TaskModelTest.test_create_master_task)
+Test MasterTask creation - with actual model fields ... ok
+test_task_availability_check (api.tests.test_tasks.TaskModelTest.test_task_availability_check)
+Test task availability methods ... ok
+test_task_completion_with_rewards (api.tests.test_tasks.TaskModelTest.test_task_completion_with_rewards)
+Test completing task with rewards ... ok
+test_task_reward_calculation (api.tests.test_tasks.TaskModelTest.test_task_reward_calculation)
+Test task reward calculation ... ok
+test_user_task_completion (api.tests.test_tasks.TaskModelTest.test_user_task_completion)
+Test UserTaskCompletion creation ... ok
+test_authenticated_profile_access (api.tests.test_users.UserAPITest.test_authenticated_profile_access) ... ok
+test_unauthenticated_profile_denied (api.tests.test_users.UserAPITest.test_unauthenticated_profile_denied) ... ok
+test_user_login_api (api.tests.test_users.UserAPITest.test_user_login_api) ... ok
+test_user_registration_api (api.tests.test_users.UserAPITest.test_user_registration_api) ... ok
+test_email_unique (api.tests.test_users.UserModelTest.test_email_unique) ... ok
+test_user_created (api.tests.test_users.UserModelTest.test_user_created) ... ok
+test_user_default_balance (api.tests.test_users.UserModelTest.test_user_default_balance) ... ok
+test_user_default_role (api.tests.test_users.UserModelTest.test_user_default_role) ... ok
+test_user_referral_code_auto_generated (api.tests.test_users.UserModelTest.test_user_referral_code_auto_generated) ... ok
+test_wallet_auto_created (api.tests.test_users.UserModelTest.test_wallet_auto_created)
+Signal \u09a6\u09bf\u09af\u09bc\u09c7 wallet auto-create \u09b9\u0993\u09af\u09bc\u09be\u09b0 test\u0964 ... ok
+test_user_level_creation (api.tests.test_users.UserProfileModelTest.test_user_level_creation) ... ok
+test_user_profile_creation (api.tests.test_users.UserProfileModelTest.test_user_profile_creation) ... ok
+test_user_statistics_creation (api.tests.test_users.UserProfileModelTest.test_user_statistics_creation) ... ok
+test_create_bkash_method (api.tests.test_wallet.UserPaymentMethodTest.test_create_bkash_method) ... ok
+test_create_nagad_method (api.tests.test_wallet.UserPaymentMethodTest.test_create_nagad_method) ... ok
+test_authenticated_wallet_access (api.tests.test_wallet.WalletAPITest.test_authenticated_wallet_access) ... ok
+test_unauthenticated_wallet_access_denied (api.tests.test_wallet.WalletAPITest.test_unauthenticated_wallet_access_denied) ... ok
+test_wallet_balance_update (api.tests.test_wallet.WalletModelTest.test_wallet_balance_update) ... ok
+test_wallet_bonus_balance (api.tests.test_wallet.WalletModelTest.test_wallet_bonus_balance) ... ok
+test_wallet_created_with_user (api.tests.test_wallet.WalletModelTest.test_wallet_created_with_user) ... ok
+test_wallet_default_balance_zero (api.tests.test_wallet.WalletModelTest.test_wallet_default_balance_zero) ... ok
+test_wallet_frozen_balance (api.tests.test_wallet.WalletModelTest.test_wallet_frozen_balance) ... ok
+test_wallet_lock (api.tests.test_wallet.WalletModelTest.test_wallet_lock) ... ok
+test_wallet_str (api.tests.test_wallet.WalletModelTest.test_wallet_str) ... ok
+test_wallet_total_earned (api.tests.test_wallet.WalletModelTest.test_wallet_total_earned) ... ok
+test_wallet_unlock (api.tests.test_wallet.WalletModelTest.test_wallet_unlock) ... ok
+test_create_earning_transaction (api.tests.test_wallet.WalletTransactionModelTest.test_create_earning_transaction) ... ok
+test_create_withdrawal_transaction (api.tests.test_wallet.WalletTransactionModelTest.test_create_withdrawal_transaction) ... ok
+test_transaction_id_auto_generated (api.tests.test_wallet.WalletTransactionModelTest.test_transaction_id_auto_generated) ... ok
+test_create_webhook_log (api.tests.test_wallet.WalletWebhookLogTest.test_create_webhook_log) ... ok
+test_mark_webhook_processed (api.tests.test_wallet.WalletWebhookLogTest.test_mark_webhook_processed) ... ok
+test_create_withdrawal_request (api.tests.test_wallet.WithdrawalTest.test_create_withdrawal_request) ... ok
+test_withdrawal_status_transition (api.tests.test_wallet.WithdrawalTest.test_withdrawal_status_transition) ... ok
+
+----------------------------------------------------------------------
+Ran 119 tests in 784.214s
+
+OK
+Preserving test database for alias 'default' ('test_earning_db')...
+Auto-set expiry date for 10.0.0.1 to 2026-04-22 09:42:20.401388+00:00
+
+[OK]: Wallet auto-created successfully for uw_eec2358d

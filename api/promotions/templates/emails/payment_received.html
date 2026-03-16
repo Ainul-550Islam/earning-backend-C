@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Received</title>
+<style>
+  body { margin:0; padding:0; background:#f4f6f9; font-family:'Segoe UI',Arial,sans-serif; }
+  .wrapper { max-width:600px; margin:40px auto; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.08); }
+  .header { background:linear-gradient(135deg,#6c5ce7 0%,#a29bfe 100%); padding:40px; text-align:center; }
+  .header h1 { color:#fff; margin:0; font-size:24px; font-weight:700; }
+  .header p { color:rgba(255,255,255,0.85); margin:8px 0 0; font-size:14px; }
+  .body { padding:36px 40px; }
+  .amount-hero { text-align:center; padding:32px; background:linear-gradient(135deg,#f8f6ff,#ede9fe); border-radius:12px; margin:0 0 28px; }
+  .amount-hero .direction { font-size:13px; color:#6c5ce7; text-transform:uppercase; letter-spacing:1px; font-weight:700; margin:0 0 8px; }
+  .amount-hero .amount { font-size:48px; font-weight:900; color:#5b4ccc; margin:0; line-height:1; }
+  .amount-hero .currency { font-size:18px; color:#888; margin:4px 0 0; }
+  .amount-hero .local { font-size:14px; color:#6c5ce7; margin:8px 0 0; background:rgba(108,92,231,0.1); display:inline-block; padding:4px 12px; border-radius:20px; }
+  .tx-box { background:#f8f9fc; border-radius:10px; padding:24px; margin:0 0 28px; }
+  .tx-box h3 { font-size:13px; text-transform:uppercase; color:#aaa; letter-spacing:1px; margin:0 0 16px; font-weight:700; }
+  .tx-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee; font-size:14px; }
+  .tx-row:last-child { border:none; }
+  .tx-row .key { color:#888; }
+  .tx-row .val { color:#1a1a2e; font-weight:600; }
+  .tx-row .val.success { color:#00b386; }
+  .balance-box { display:flex; gap:16px; margin:0 0 28px; }
+  .balance-card { flex:1; background:#f8f9fc; border-radius:10px; padding:16px; text-align:center; }
+  .balance-card .bl { font-size:12px; color:#aaa; text-transform:uppercase; letter-spacing:1px; margin:0 0 6px; }
+  .balance-card .bv { font-size:20px; font-weight:800; color:#1a1a2e; }
+  .cta { text-align:center; margin:0 0 24px; }
+  .cta a { background:linear-gradient(135deg,#6c5ce7,#a29bfe); color:#fff; text-decoration:none; padding:14px 36px; border-radius:8px; font-size:15px; font-weight:600; display:inline-block; }
+  .footer { background:#f8f9fc; padding:24px 40px; text-align:center; border-top:1px solid #eee; }
+  .footer p { font-size:12px; color:#aaa; margin:4px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <h1>💸 Payment Received</h1>
+    <p>Your withdrawal has been processed successfully</p>
+  </div>
+  <div class="body">
+    <div class="amount-hero">
+      <div class="direction">💳 You Received</div>
+      <div class="amount">{{ local_amount|floatformat:2 }}</div>
+      <div class="currency">{{ currency }} via {{ payment_method }}</div>
+      {% if local_amount != usd_amount %}
+      <div class="local">= ${{ usd_amount|floatformat:4 }} USD</div>
+      {% endif %}
+    </div>
+    <div class="tx-box">
+      <h3>Transaction Details</h3>
+      <div class="tx-row"><span class="key">Transaction ID</span><span class="val">{{ transaction_id }}</span></div>
+      <div class="tx-row"><span class="key">Payment Method</span><span class="val">{{ payment_method }}</span></div>
+      <div class="tx-row"><span class="key">Account</span><span class="val">{{ masked_account }}</span></div>
+      <div class="tx-row"><span class="key">Gross Amount</span><span class="val">${{ usd_amount|floatformat:4 }} USD</span></div>
+      <div class="tx-row"><span class="key">Platform Fee</span><span class="val">-${{ fee_usd|floatformat:4 }} USD ({{ fee_percent }}%)</span></div>
+      <div class="tx-row"><span class="key">Net Paid</span><span class="val success">{{ local_amount|floatformat:2 }} {{ currency }}</span></div>
+      <div class="tx-row"><span class="key">Exchange Rate</span><span class="val">1 USD = {{ exchange_rate }} {{ currency }}</span></div>
+      <div class="tx-row"><span class="key">Processed At</span><span class="val">{{ processed_at }}</span></div>
+      <div class="tx-row"><span class="key">Status</span><span class="val success">✅ Completed</span></div>
+    </div>
+    <div class="balance-box">
+      <div class="balance-card">
+        <div class="bl">Previous Balance</div>
+        <div class="bv">${{ prev_balance|floatformat:4 }}</div>
+      </div>
+      <div class="balance-card">
+        <div class="bl">Withdrawn</div>
+        <div class="bv" style="color:#6c5ce7;">-${{ usd_amount|floatformat:4 }}</div>
+      </div>
+      <div class="balance-card">
+        <div class="bl">New Balance</div>
+        <div class="bv" style="color:#00b386;">${{ new_balance|floatformat:4 }}</div>
+      </div>
+    </div>
+    <div class="cta">
+      <a href="{{ dashboard_url }}">View Transaction History</a>
+    </div>
+  </div>
+  <div class="footer">
+    <p>© {{ current_year }} {{ site_name }}. All rights reserved.</p>
+    <p>Questions? Contact <a href="/cdn-cgi/l/email-protection#651e1e45161015150a17113a0008040c09451818" style="color:#6c5ce7;">{{ support_email }}</a></p>
+    <p><a href="{{ unsubscribe_url }}" style="color:#aaa;">Unsubscrib

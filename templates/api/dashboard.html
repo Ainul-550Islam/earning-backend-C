@@ -1,0 +1,278 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earning Pro - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="background-effects">
+        <div class="bg-orb orb-1"></div>
+        <div class="bg-orb orb-2"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon">⚡</div>
+                <h1 class="logo-text">EARNING PRO</h1>
+            </div>
+
+            <nav class="desktop-nav">
+                <div class="balance-display">
+                    <span class="dollar-icon">💵</span>
+                    <span class="balance-amount">$125.50</span>
+                </div>
+                <button class="icon-btn notification-btn">
+                    🔔
+                    <span class="notification-badge"></span>
+                </button>
+                <button class="user-avatar">U</button>
+            </nav>
+
+            <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div class="mobile-menu" id="mobileMenu">
+            <div class="balance-display mobile">
+                <span class="dollar-icon">💵</span>
+                <span>Balance: $125.50</span>
+            </div>
+            <button class="mobile-menu-item">Profile</button>
+            <button class="mobile-menu-item">Notifications</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Stats Grid -->
+        <section class="stats-grid">
+            <div class="stat-card stat-card-green">
+                <div class="stat-header">
+                    <span class="stat-label">TODAY</span>
+                    <div class="stat-icon">💰</div>
+                </div>
+                <div class="stat-footer">
+                    <span class="stat-value">$125.43</span>
+                    <span class="stat-change positive">↗15%</span>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-blue">
+                <div class="stat-header">
+                    <span class="stat-label">CLICKS</span>
+                    <div class="stat-icon">👆</div>
+                </div>
+                <div class="stat-footer">
+                    <span class="stat-value">847</span>
+                    <span class="stat-change positive">↗8%</span>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-purple">
+                <div class="stat-header">
+                    <span class="stat-label">CONVERSIONS</span>
+                    <div class="stat-icon">🎯</div>
+                </div>
+                <div class="stat-footer">
+                    <span class="stat-value">42</span>
+                    <span class="stat-change negative">↘2%</span>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-orange">
+                <div class="stat-header">
+                    <span class="stat-label">ACTIVE</span>
+                    <div class="stat-icon">👥</div>
+                </div>
+                <div class="stat-footer">
+                    <span class="stat-value">3,245</span>
+                    <span class="stat-change positive">↗4.8%</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Earnings Chart -->
+        <section class="chart-section">
+            <h2 class="section-title">
+                <div class="title-accent"></div>
+                Earnings Overview (Last 7 Days)
+            </h2>
+            <div class="chart-container">
+                <canvas id="earningsChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Activity & Offers Grid -->
+        <div class="content-grid">
+            <!-- Recent Activity -->
+            <section class="activity-section">
+                <h2 class="section-title">
+                    🕐 Recent Activity
+                </h2>
+                <div class="activity-list">
+                    <div class="activity-item">
+                        <div class="activity-info">
+                            <div class="status-dot completed"></div>
+                            <div>
+                                <p class="activity-type">Ad Click</p>
+                                <p class="activity-time">2 min ago</p>
+                            </div>
+                        </div>
+                        <div class="activity-amount">
+                            <p class="amount">+$0.05</p>
+                            <p class="status">✓</p>
+                        </div>
+                    </div>
+
+                    <div class="activity-item">
+                        <div class="activity-info">
+                            <div class="status-dot pending"></div>
+                            <div>
+                                <p class="activity-type">Survey</p>
+                                <p class="activity-time">15 min ago</p>
+                            </div>
+                        </div>
+                        <div class="activity-amount">
+                            <p class="amount">+$1.50</p>
+                            <p class="status">⏳</p>
+                        </div>
+                    </div>
+
+                    <div class="activity-item">
+                        <div class="activity-info">
+                            <div class="status-dot completed"></div>
+                            <div>
+                                <p class="activity-type">App Install</p>
+                                <p class="activity-time">1 hour ago</p>
+                            </div>
+                        </div>
+                        <div class="activity-amount">
+                            <p class="amount">+$2.00</p>
+                            <p class="status">✓</p>
+                        </div>
+                    </div>
+
+                    <div class="activity-item">
+                        <div class="activity-info">
+                            <div class="status-dot completed"></div>
+                            <div>
+                                <p class="activity-type">Referral</p>
+                                <p class="activity-time">3 hours ago</p>
+                            </div>
+                        </div>
+                        <div class="activity-amount">
+                            <p class="amount">+$5.00</p>
+                            <p class="status">✓</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Available Offers -->
+            <section class="offers-section">
+                <h2 class="section-title">
+                    🏆 Available Offers
+                </h2>
+                <div class="offers-list">
+                    <button class="offer-item">
+                        <div class="offer-info">
+                            <span class="offer-icon">📝</span>
+                            <div>
+                                <p class="offer-type">Survey</p>
+                                <p class="offer-details">10 min • Quick</p>
+                            </div>
+                        </div>
+                        <div class="offer-reward">
+                            <span class="offer-amount">+$1.50</span>
+                            <span class="offer-arrow">→</span>
+                        </div>
+                    </button>
+
+                    <button class="offer-item">
+                        <div class="offer-info">
+                            <span class="offer-icon">⬇️</span>
+                            <div>
+                                <p class="offer-type">App Install</p>
+                                <p class="offer-details">5 min • Featured</p>
+                            </div>
+                        </div>
+                        <div class="offer-reward">
+                            <span class="offer-amount">+$2.00</span>
+                            <span class="offer-arrow">→</span>
+                        </div>
+                    </button>
+
+                    <button class="offer-item">
+                        <div class="offer-info">
+                            <span class="offer-icon">📱</span>
+                            <div>
+                                <p class="offer-type">Watch Ad</p>
+                                <p class="offer-details">30 sec • Instant</p>
+                            </div>
+                        </div>
+                        <div class="offer-reward">
+                            <span class="offer-amount">+$0.10</span>
+                            <span class="offer-arrow">→</span>
+                        </div>
+                    </button>
+
+                    <button class="offer-item">
+                        <div class="offer-info">
+                            <span class="offer-icon">🎮</span>
+                            <div>
+                                <p class="offer-type">Game Trial</p>
+                                <p class="offer-details">20 min • Hot</p>
+                            </div>
+                        </div>
+                        <div class="offer-reward">
+                            <span class="offer-amount">+$3.50</span>
+                            <span class="offer-arrow">→</span>
+                        </div>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Referral Program -->
+        <section class="referral-section">
+            <div class="referral-header">
+                <div>
+                    <h2 class="section-title">
+                        👥 Referral Program
+                    </h2>
+                    <p class="referral-description">Invite friends and earn 20% of their earnings forever!</p>
+                </div>
+                <div class="referral-stats">
+                    <div class="referral-stat">
+                        <p class="referral-stat-label">Total Referred</p>
+                        <p class="referral-stat-value">15</p>
+                    </div>
+                    <div class="referral-stat">
+                        <p class="referral-stat-label">Earnings</p>
+                        <p class="referral-stat-value earnings">$125.50</p>
+                    </div>
+                </div>
+            </div>
+            <div class="referral-code-box">
+                <span class="referral-label">Your Code:</span>
+                <code class="referral-code" id="referralCode">EARN123</code>
+                <button class="copy-btn" id="copyBtn">
+                    <span class="copy-icon" id="copyIcon">📋</span>
+                    <span class="copy-text" id="copyText">Copy</span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/dashboard.js"></script>
+
+</body>
+</html>

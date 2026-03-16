@@ -1,0 +1,469 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static unfold %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* GatewayTransaction Flow Styling */
+.flow-container {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+}
+
+.flow-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.flow-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.flow-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-completed { background: #d1fae5; color: #065f46; }
+.status-processing { background: #dbeafe; color: #1e40af; }
+.status-pending { background: #fef3c7; color: #92400e; }
+.status-failed { background: #fee2e2; color: #991b1b; }
+
+.flow-timeline {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.step-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 600;
+    border: 3px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.step-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+.step-time {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.step-active .step-icon {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+    animation: pulse 2s infinite;
+}
+
+.step-completed .step-icon {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+
+.step-pending .step-icon {
+    background: #e5e7eb;
+    color: #6b7280;
+    border-color: #e5e7eb;
+}
+
+.step-failed .step-icon {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+.flow-line {
+    flex: 1;
+    height: 3px;
+    background: #e5e7eb;
+    position: relative;
+    top: -24px;
+}
+
+.flow-line.completed {
+    background: #10b981;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+/* Security Section */
+.security-alert {
+    background: #fffbeb;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.alert-icon {
+    color: #f59e0b;
+    font-size: 1.25rem;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-title {
+    font-weight: 600;
+    color: #92400e;
+    margin-bottom: 0.25rem;
+}
+
+.alert-message {
+    font-size: 0.875rem;
+    color: #92400e;
+}
+
+/* Two-Factor Approval Modal */
+.two-factor-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.two-factor-content {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 90%;
+}
+
+.code-inputs {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.code-input {
+    width: 50px;
+    height: 60px;
+    text-align: center;
+    font-size: 1.5rem;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.code-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Audit Trail */
+.audit-trail {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.audit-item {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.audit-item:last-child {
+    border-bottom: none;
+}
+
+.audit-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.audit-details {
+    flex: 1;
+}
+
+.audit-action {
+    font-weight: 500;
+    color: #374151;
+}
+
+.audit-meta {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% if original %}
+<div class="flow-container">
+    <div class="flow-header">
+        <div class="flow-title">GatewayTransaction Flow</div>
+        <div class="flow-status status-{{ original.status }}">
+            {% if original.status == 'completed' %}✅ Completed
+            {% elif original.status == 'processing' %}⚡ Processing
+            {% elif original.status == 'pending' %}⏱️ Pending
+            {% else %}❌ Failed{% endif %}
+        </div>
+    </div>
+
+    <div class="flow-timeline">
+        {% with steps=original.get_flow_steps %}
+        {% for step in steps %}
+        <div class="flow-step step-{{ step.status }}">
+            <div class="step-icon">
+                {% if step.status == 'completed' %}✓
+                {% elif step.status == 'active' %}⚡
+                {% elif step.status == 'failed' %}✗
+                {% else %}{{ forloop.counter }}{% endif %}
+            </div>
+            <div class="step-label">{{ step.name }}</div>
+            {% if step.timestamp %}
+            <div class="step-time">{{ step.timestamp|date:"H:i" }}</div>
+            {% endif %}
+        </div>
+        {% if not forloop.last %}
+        <div class="flow-line {% if step.status == 'completed' %}completed{% endif %}"></div>
+        {% endif %}
+        {% endfor %}
+        {% endwith %}
+    </div>
+
+    <!-- Timeline Details -->
+    <div class="audit-trail">
+        <div style="font-weight: 500; margin-bottom: 0.75rem; color: #374151;">Audit Trail</div>
+        <div class="audit-item">
+            <div class="audit-icon">📝</div>
+            <div class="audit-details">
+                <div class="audit-action">GatewayTransaction Created</div>
+                <div class="audit-meta">By {{ original.user.username }} at {{ original.created_at|date:"Y-m-d H:i:s" }}</div>
+            </div>
+        </div>
+        {% if original.processed_at %}
+        <div class="audit-item">
+            <div class="audit-icon">⚡</div>
+            <div class="audit-details">
+                <div class="audit-action">Processing Started</div>
+                <div class="audit-meta">At {{ original.processed_at|date:"Y-m-d H:i:s" }}</div>
+            </div>
+        </div>
+        {% endif %}
+        {% if original.approved_by %}
+        <div class="audit-item">
+            <div class="audit-icon">✅</div>
+            <div class="audit-details">
+                <div class="audit-action">Approved by Admin</div>
+                <div class="audit-meta">{{ original.approved_by.username }} at {{ original.approved_at|date:"Y-m-d H:i:s" }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Security Warnings -->
+    {% if original.risk_score >= 70 %}
+    <div class="security-alert">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-content">
+            <div class="alert-title">High Risk GatewayTransaction</div>
+            <div class="alert-message">
+                This GatewayTransaction has been flagged as high risk (Score: {{ original.risk_score }}).
+                Requires additional verification before approval.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if original.requires_approval and original.status == 'pending' %}
+    <div class="security-alert">
+        <div class="alert-icon">🔒</div>
+        <div class="alert-content">
+            <div class="alert-title">Two-Factor Approval Required</div>
+            <div class="alert-message">
+                This GatewayTransaction amount (${{ original.amount|floatformat:2 }}) exceeds the approval threshold.
+                Requires two-factor authentication to proceed.
+            </div>
+            <button onclick="showTwoFactorModal()" 
+                    style="margin-top: 0.5rem; background: #3b82f6; color: white; 
+                           border: none; padding: 0.5rem 1rem; border-radius: 6px; 
+                           cursor: pointer; font-size: 0.875rem;">
+                Initiate 2FA Approval
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{{ block.super }}
+
+<!-- Two-Factor Modal -->
+<div id="twoFactorModal" class="two-factor-modal">
+    <div class="two-factor-content">
+        <h3 style="margin-bottom: 1rem; color: #374151;">Two-Factor Authentication</h3>
+        <p style="color: #6b7280; margin-bottom: 1.5rem; font-size: 0.875rem;">
+            A verification code has been sent to your registered email.
+            Enter the 6-digit code below to approve this GatewayTransaction.
+        </p>
+        
+        <form id="twoFactorForm" method="post" action="{% url 'admin:approve_with_2fa' original.id %}">
+            {% csrf_token %}
+            <div class="code-inputs">
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" required>
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" required>
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" required>
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" required>
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" required>
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" required>
+            </div>
+            
+            <input type="hidden" name="verification_code" id="verificationCode">
+            
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="submit" 
+                        style="flex: 1; background: #10b981; color: white; border: none; 
+                               padding: 0.75rem; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                    Verify & Approve
+                </button>
+                <button type="button" onclick="hideTwoFactorModal()"
+                        style="flex: 1; background: #6b7280; color: white; border: none; 
+                               padding: 0.75rem; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                    Cancel
+                </button>
+            </div>
+        </form>
+        
+        <div style="text-align: center; margin-top: 1rem;">
+            <button onclick="resendCode()" 
+                    style="background: none; border: none; color: #3b82f6; cursor: pointer; 
+                           font-size: 0.875rem; text-decoration: underline;">
+                Resend Code
+            </button>
+        </div>
+    </div>
+</div>
+
+{% block extrajs %}
+{{ block.super }}
+<script>
+// Two-Factor Modal Functions
+function showTwoFactorModal() {
+    document.getElementById('twoFactorModal').style.display = 'flex';
+    // Auto-focus first input
+    document.querySelector('.code-input').focus();
+}
+
+function hideTwoFactorModal() {
+    document.getElementById('twoFactorModal').style.display = 'none';
+    // Clear inputs
+    document.querySelectorAll('.code-input').forEach(input => input.value = '');
+}
+
+function resendCode() {
+    // Implement resend code logic
+    alert('Verification code has been resent to your email.');
+}
+
+// Code input auto-focus
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.code-input');
+    
+    inputs.forEach((input, index) => {
+        input.addEventListener('input', function() {
+            // Auto-focus next input
+            if (this.value.length === 1 && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+            }
+            
+            // Update hidden field
+            updateVerificationCode();
+        });
+        
+        input.addEventListener('keydown', function(e) {
+            // Handle backspace
+            if (e.key === 'Backspace' && !this.value && index > 0) {
+                inputs[index - 1].focus();
+            }
+        });
+    });
+    
+    function updateVerificationCode() {
+        let code = '';
+        inputs.forEach(input => code += input.value);
+        document.getElementById('verificationCode').value = code;
+    }
+});
+
+// Real-time status updates
+function updateGatewayTransactionStatus() {
+    // Implement WebSocket or polling for real-time updates
+    console.log('Checking GatewayTransaction status...');
+}
+
+// Auto-refresh every 10 seconds
+setInterval(updateGatewayTransactionStatus, 10000);
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'Enter') {
+        // Ctrl+Enter to approve
+        if ({{ original.status == 'pending'|yesno:'true,false' }}) {
+            showTwoFactorModal();
+        }
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,559 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static unfold %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* Dashboard Styles */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+    transition: transform 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.metric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.metric-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 0.5rem;
+}
+
+.metric-trend {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.trend-up { color: #10b981; }
+.trend-down { color: #ef4444; }
+.trend-neutral { color: #6b7280; }
+
+.chart-container {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+}
+
+.chart-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 1rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stat-card {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.health-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.health-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.health-good { background: #10b981; }
+.health-fair { background: #f59e0b; }
+.health-poor { background: #ef4444; }
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+
+.action-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    transform: translateY(-2px);
+}
+
+.action-icon {
+    font-size: 1.5rem;
+}
+
+.action-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Progress Bars */
+.progress-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-green { background: #10b981; }
+.progress-yellow { background: #f59e0b; }
+.progress-orange { background: #f97316; }
+.progress-red { background: #ef4444; }
+
+/* Tooltips */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltip-text {
+    visibility: hidden;
+    width: 200px;
+    background-color: #374151;
+    color: white;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.75rem;
+}
+
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Alert Badges */
+.alert-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.badge-critical { background: #fee2e2; color: #991b1b; }
+.badge-warning { background: #fef3c7; color: #92400e; }
+.badge-info { background: #dbeafe; color: #1e40af; }
+.badge-success { background: #d1fae5; color: #065f46; }
+
+/* Real-time indicators */
+.realtime-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background: #f3f4f6;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.realtime-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.dot-green { background: #10b981; }
+.dot-red { background: #ef4444; }
+.dot-yellow { background: #f59e0b; }
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h1 style="font-size: 1.875rem; font-weight: 700; color: #111827; margin-bottom: 2rem;">
+        Rate Limit Analytics Dashboard
+    </h1>
+
+    <!-- Key Metrics -->
+    <div class="dashboard-grid">
+        <!-- Total Configs -->
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-title">Total Configurations</div>
+                <div class="tooltip">⚙️
+                    <span class="tooltip-text">Active and inactive rate limit configurations</span>
+                </div>
+            </div>
+            <div class="metric-value">{{ total_configs }}</div>
+            <div class="metric-trend trend-neutral">
+                <span>{{ active_configs }} active</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill progress-green" 
+                     style="width: {{ active_configs|default:0|floatformat:0 }}%">
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Hits -->
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-title">Total Requests</div>
+                <div class="realtime-indicator">
+                    <div class="realtime-dot dot-green"></div>
+                    <span>Live</span>
+                </div>
+            </div>
+            <div class="metric-value">{{ total_hits }}</div>
+            <div class="metric-trend trend-up">
+                <span>↑ 15%</span>
+                <span>from yesterday</span>
+            </div>
+        </div>
+
+        <!-- Blocked Requests -->
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-title">Blocked Requests</div>
+                <div class="alert-badge badge-critical">
+                    🔴 {{ blocked_hits }}
+                </div>
+            </div>
+            <div class="metric-value">{{ blocked_hits }}</div>
+            <div class="metric-trend trend-down">
+                <span>↓ 8%</span>
+                <span>block rate decreasing</span>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-title">Recent Activity (1h)</div>
+                <div class="tooltip">⏰
+                    <span class="tooltip-text">Requests in the last hour</span>
+                </div>
+            </div>
+            <div class="metric-value">{{ recent_stats.total|default:0 }}</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Allowed</div>
+                    <div class="stat-value" style="color: #10b981;">
+                        {{ recent_stats.allowed|default:0 }}
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Blocked</div>
+                    <div class="stat-value" style="color: #ef4444;">
+                        {{ recent_stats.blocked|default:0 }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health Distribution -->
+    <div class="chart-container">
+        <div class="chart-title">System Health Distribution</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="health-indicator">
+                    <div class="health-dot health-good"></div>
+                    <span>Good</span>
+                </div>
+                <div class="stat-value">
+                    {{ health_data|length|default:0 }}
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="health-indicator">
+                    <div class="health-dot health-fair"></div>
+                    <span>Fair</span>
+                </div>
+                <div class="stat-value">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="health-indicator">
+                    <div class="health-dot health-poor"></div>
+                    <span>Critical</span>
+                </div>
+                <div class="stat-value">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Blocked Endpoints -->
+    <div class="chart-container">
+        <div class="chart-title">Top Blocked Endpoints</div>
+        <div style="margin-top: 1rem;">
+            {% for endpoint in top_blocked %}
+            <div style="display: flex; justify-content: space-between; align-items: center; 
+                        padding: 0.75rem; border-bottom: 1px solid #e5e7eb;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 32px; height: 32px; background: #fee2e2; 
+                                border-radius: 50%; display: flex; align-items: center; 
+                                justify-content: center; color: #ef4444;">
+                        🚫
+                    </div>
+                    <div>
+                        <div style="font-weight: 500; font-family: monospace; font-size: 0.875rem;">
+                            {{ endpoint.endpoint|truncatechars:40 }}
+                        </div>
+                        <div style="font-size: 0.75rem; color: #6b7280;">
+                            Last blocked: {{ endpoint.last_blocked|timesince }} ago
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <span class="alert-badge badge-critical">
+                        {{ endpoint.count }} blocks
+                    </span>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align: center; padding: 2rem; color: #6b7280;">
+                No blocked endpoints in the last 7 days
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- API Health Overview -->
+    <div class="chart-container">
+        <div class="chart-title">API Health Overview</div>
+        <div style="margin-top: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                <div class="realtime-indicator">
+                    <div class="realtime-dot dot-green"></div>
+                    <span>System Status: Healthy</span>
+                </div>
+                <div class="alert-badge badge-success">
+                    ✓ 95% Uptime
+                </div>
+            </div>
+            
+            <div style="background: #f9fafb; border-radius: 8px; padding: 1rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="font-size: 0.875rem; color: #6b7280;">Overall Health Score:</span>
+                    <span style="font-weight: 600; color: #10b981;">95/100</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill progress-green" style="width: 95%"></div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #6b7280;">Response Time</div>
+                        <div style="font-weight: 600;">120ms</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #6b7280;">Error Rate</div>
+                        <div style="font-weight: 600; color: #10b981;">0.5%</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #6b7280;">Peak Load</div>
+                        <div style="font-weight: 600;">850 req/s</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="chart-container">
+        <div class="chart-title">Quick Actions</div>
+        <div class="quick-actions">
+            <a href="{% url 'admin:rate_limit_simulation' %}" class="action-btn">
+                <div class="action-icon">🔍</div>
+                <div class="action-text">Run Simulation</div>
+            </a>
+            <a href="{% url 'admin:whitelist_manager' %}" class="action-btn">
+                <div class="action-icon">✅</div>
+                <div class="action-text">Manage Whitelist</div>
+            </a>
+            <a href="{% url 'admin:export_analytics' %}" class="action-btn">
+                <div class="action-icon">📊</div>
+                <div class="action-text">Export Analytics</div>
+            </a>
+            <a href="#" onclick="sendNotifications()" class="action-btn">
+                <div class="action-icon">📢</div>
+                <div class="action-text">Send Alerts</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Real-time Monitoring -->
+    <div class="chart-container">
+        <div class="chart-title">Real-time Monitoring</div>
+        <div style="margin-top: 1rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div style="background: #f9fafb; border-radius: 8px; padding: 1rem;">
+                    <div style="font-size: 0.875rem; color: #6b7280;">Active Users</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0;">24</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill progress-green" style="width: 75%"></div>
+                    </div>
+                </div>
+                <div style="background: #f9fafb; border-radius: 8px; padding: 1rem;">
+                    <div style="font-size: 0.875rem; color: #6b7280;">Requests/min</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0;">142</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill progress-yellow" style="width: 60%"></div>
+                    </div>
+                </div>
+                <div style="background: #f9fafb; border-radius: 8px; padding: 1rem;">
+                    <div style="font-size: 0.875rem; color: #6b7280;">Block Rate</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0; color: #10b981;">3.2%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill progress-green" style="width: 32%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extrajs %}
+<script>
+// Real-time updates
+function updateRealTimeStats() {
+    fetch('/admin/rate-limit/realtime-stats/')
+        .then(response => response.json())
+        .then(data => {
+            // Update real-time stats here
+            console.log('Updated real-time stats:', data);
+        });
+}
+
+// Auto-refresh every 30 seconds
+setInterval(updateRealTimeStats, 30000);
+
+// Notification function
+function sendNotifications() {
+    fetch('/admin/rate-limit/send-notifications/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message || 'Notifications sent successfully');
+    });
+}
+
+// Simulation function
+function runSimulation(configId) {
+    fetch(`/admin/rate-limit/simulate/${configId}/`)
+        .then(response => response.json())
+        .then(data => {
+            alert(`Simulation Results:\n\nConfig: ${data.config_name}\nLimit: ${data.limit}\nTotal Requests: ${data.total_requests}\nWould Block: ${data.would_block}\nBlock Percentage: ${data.block_percentage.toFixed(1)}%\nPeriod: ${data.simulation_period}`);
+        });
+}
+
+// Health score calculation
+function calculateHealthScore(blockRate) {
+    if (blockRate >= 30) return 30;
+    if (blockRate >= 20) return 50;
+    if (blockRate >= 10) return 70;
+    if (blockRate >= 5) return 80;
+    return 95;
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    // Tooltip initialization code
+    const tooltips = document.querySelectorAll('.tooltip');
+    tooltips.forEach(tooltip => {
+        tooltip.addEventListener('mouseenter', function() {
+            // Add your tooltip logic here
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

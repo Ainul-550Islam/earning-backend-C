@@ -1,0 +1,89 @@
+{% block extra_js %}
+{{ block.super }}
+<script>
+// SiteSettingsForm - JSON Preview & Dynamic Updates
+(function() {
+    'use strict';
+    
+    function updateJsonPreview(dataType) {
+        const valueField = document.getElementById('id_value');
+        const previewField = document.getElementById('id_json_preview');
+        
+        if (!valueField || !previewField) return;
+        
+        try {
+            let value = valueField.value;
+            
+            if (dataType === 'array' || dataType === 'object') {
+                if (!value || value.trim() === '') {
+                    previewField.value = dataType === 'array' ? '[]' : '{}';
+                } else {
+                    try {
+                        // JSON ফরম্যাট করার চেষ্টা
+                        const parsed = JSON.parse(value);
+                        previewField.value = JSON.stringify(parsed, null, 2);
+                    } catch (e) {
+                        // JSON না হলে আসল মান দেখাও
+                        previewField.value = value;
+                    }
+                }
+            } else {
+                previewField.value = value;
+            }
+        } catch (e) {
+            console.warn('JSON preview update failed:', e);
+            previewField.value = valueField.value || '';
+        }
+    }
+    
+    function setupJsonPreview() {
+        const dataTypeField = document.getElementById('id_data_type');
+        const valueField = document.getElementById('id_value');
+        
+        if (!dataTypeField || !valueField) return;
+        
+        // ইভেন্ট লিসেনার
+        dataTypeField.addEventListener('change', function(e) {
+            updateJsonPreview(e.target.value);
+        });
+        
+        valueField.addEventListener('input', function() {
+            const dataType = dataTypeField.value || 'string';
+            updateJsonPreview(dataType);
+        });
+        
+        valueField.addEventListener('blur', function() {
+            const dataType = dataTypeField.value || 'string';
+            updateJsonPreview(dataType);
+        });
+        
+        // পেজ লোডে প্রথম আপডেট
+        updateJsonPreview(dataTypeField.value || 'string');
+    }
+    
+    // DOM ready হলে সেটআপ করো
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupJsonPreview);
+    } else {
+        setupJsonPreview();
+    }
+})();
+</script>
+
+<!-- Category Suggestions Datalist -->
+<datalist id="category-suggestions">
+    <option value="general">general</option>
+    <option value="payment">payment</option>
+    <option value="email">email</option>
+    <option value="security">security</option>
+    <option value="api">api</option>
+    <option value="seo">seo</option>
+    <option value="social">social</option>
+    <option value="analytics">analytics</option>
+    <option value="cdn">cdn</option>
+    <option value="cache">cache</option>
+    <option value="database">database</option>
+    <option value="feature">feature</option>
+    <option value="maintenance">maintenance</option>
+</datalist>
+{% endblock %}

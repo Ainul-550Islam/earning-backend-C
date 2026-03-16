@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Frequently Asked Questions - Get answers to all your questions about earning, withdrawals, tasks, and more.">
+    <title>{% if category %}{{ category.name }} FAQs{% else %}FAQ Center{% endif %} - {{ site_name }}</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta property="og:title" content="{% if category %}{{ category.name }} FAQs{% else %}FAQ Center{% endif %}">
+    <meta property="og:description" content="Find answers to common questions about {{ site_name }} platform">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta name="twitter:card" content="summary">
+    
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --accent-color: #f72585;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --success-color: #4cc9f0;
+            --warning-color: #ffd166;
+            --border-radius: 12px;
+            --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-color);
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header Styles */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: var(--border-radius);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '❓';
+            position: absolute;
+            top: 50%;
+            right: 10%;
+            font-size: 150px;
+            opacity: 0.1;
+            transform: translateY(-50%);
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            line-height: 1.2;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 25px;
+        }
+        
+        /* Search Bar */
+        .search-container {
+            max-width: 600px;
+            margin: 0 auto 40px;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 18px 25px;
+            padding-left: 60px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1.1rem;
+            background: white;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 15px 40px rgba(67, 97, 238, 0.2);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-color);
+            font-size: 1.2rem;
+        }
+        
+        .clear-search {
+            position: absolute;
+            right: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: none;
+        }
+        
+        /* Category Filter */
+        .category-filter {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+        
+        .category-btn {
+            padding: 12px 25px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            color: #555;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .category-btn:hover,
+        .category-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(67, 97, 238, 0.2);
+        }
+        
+        .category-btn .count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        /* FAQ Grid */
+        .faq-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+        
+        .faq-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .faq-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .faq-card.featured {
+            border-left: 5px solid var(--accent-color);
+        }
+        
+        .faq-card.pinned {
+            border-top: 5px solid var(--warning-color);
+        }
+        
+        .faq-question {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            line-height: 1.4;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .faq-question::before {
+            content: 'Q:';
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        
+        .faq-answer {
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .faq-answer.expanded {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .faq-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .faq-category {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #f0f5ff;
+            color: var(--primary-color);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .faq-stats {
+            display: flex;
+            gap: 15px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .faq-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        /* Toggle Button */
+        .toggle-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .toggle-btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .toggle-btn .icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .toggle-btn.expanded .icon {
+            transform: rotate(180deg);
+        }
+        
+        /* Helpfulness Feedback */
+        .helpfulness-widget {
+            background: #f8f9ff;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-top: 25px;
+            display: none;
+        }
+        
+        .helpfulness-widget.expanded {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .helpfulness-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--dark-color);
+        }
+        
+        .feedback-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .feedback-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: var(--border-radius);
+            background: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .feedback-btn:hover {
+            border-color: var(--primary-color);
+        }
+        
+        .feedback-btn.helpful:hover {
+            background: #e8f7ef;
+            color: #28a745;
+            border-color: #28a745;
+        }
+        
+        .feedback-btn.not-helpful:hover {
+            background: #ffeaea;
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        
+        .feedback-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        /* Featured FAQ Section */
+        .featured-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: var(--border-radius);
+            padding: 40px;
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .section-title::before {
+            content: '⭐';
+            font-size: 1.5rem;
+        }
+        
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 50px 0;
+        }
+        
+        .page-btn {
+            padding: 12px 20px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            color: #555;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .page-btn:hover,
+        .page-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .page-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Contact Section */
+        .contact-section {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 40px;
+            text-align: center;
+            margin-top: 50px;
+            box-shadow: var(--box-shadow);
+        }
+        
+        .contact-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--secondary-color);
+        }
+        
+        .contact-description {
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto 30px;
+            font-size: 1.1rem;
+        }
+        
+        .contact-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 30px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        
+        .contact-btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .header p {
+                font-size: 1.1rem;
+            }
+            
+            .faq-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .category-filter {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .category-btn {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+            
+            .faq-question {
+                font-size: 1.2rem;
+            }
+            
+            .featured-section {
+                padding: 30px 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header {
+                padding: 40px 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .search-input {
+                padding: 15px 20px;
+                padding-left: 50px;
+                font-size: 1rem;
+            }
+            
+            .faq-card {
+                padding: 20px;
+            }
+            
+            .faq-meta {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+        }
+        
+        /* Loading Animation */
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* No Results */
+        .no-results {
+            text-align: center;
+            padding: 50px 20px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+        
+        .no-results h3 {
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+        }
+        
+        .no-results p {
+            color: #666;
+            margin-bottom: 25px;
+        }
+    </style>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // FAQ Toggle Functionality
+            const toggleButtons = document.querySelectorAll('.toggle-btn');
+            toggleButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const faqCard = this.closest('.faq-card');
+                    const answer = faqCard.querySelector('.faq-answer');
+                    const helpfulnessWidget = faqCard.querySelector('.helpfulness-widget');
+                    
+                    // Toggle answer visibility
+                    answer.classList.toggle('expanded');
+                    this.classList.toggle('expanded');
+                    
+                    // Update button text
+                    const icon = this.querySelector('.icon');
+                    const textSpan = this.querySelector('.btn-text');
+                    
+                    if (answer.classList.contains('expanded')) {
+                        icon.textContent = '▲';
+                        textSpan.textContent = 'Hide Answer';
+                        
+                        // Show helpfulness widget
+                        if (helpfulnessWidget) {
+                            helpfulnessWidget.classList.add('expanded');
+                        }
+                        
+                        // Track FAQ view
+                        const faqId = this.dataset.faqId;
+                        if (faqId) {
+                            trackFAQView(faqId);
+                        }
+                    } else {
+                        icon.textContent = '▼';
+                        textSpan.textContent = 'Show Answer';
+                        
+                        // Hide helpfulness widget
+                        if (helpfulnessWidget) {
+                            helpfulnessWidget.classList.remove('expanded');
+                        }
+                    }
+                });
+            });
+            
+            // Helpfulness Feedback
+            const feedbackButtons = document.querySelectorAll('.feedback-btn');
+            feedbackButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const isHelpful = this.classList.contains('helpful-btn');
+                    const faqId = this.dataset.faqId;
+                    
+                    // Visual feedback
+                    feedbackButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Send feedback to server
+                    submitFAQFeedback(faqId, isHelpful);
+                    
+                    // Show thank you message
+                    const widget = this.closest('.helpfulness-widget');
+                    const thankYouMessage = widget.querySelector('.thank-you-message');
+                    if (thankYouMessage) {
+                        thankYouMessage.style.display = 'block';
+                        thankYouMessage.textContent = isHelpful ? 
+                            'Thank you for your feedback! 👍' : 
+                            'Thank you for your feedback! We\'ll work to improve this answer.';
+                        
+                        // Hide buttons
+                        widget.querySelector('.feedback-buttons').style.display = 'none';
+                    }
+                });
+            });
+            
+            // Search Functionality
+            const searchInput = document.querySelector('.search-input');
+            const clearSearchBtn = document.querySelector('.clear-search');
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase().trim();
+                    
+                    // Show/hide clear button
+                    clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
+                    
+                    // Filter FAQs
+                    filterFAQs(searchTerm);
+                });
+                
+                // Debounce search to avoid too many requests
+                let searchTimeout;
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        if (this.value.length >= 2) {
+                            performSearch(this.value);
+                        }
+                    }, 500);
+                });
+            }
+            
+            if (clearSearchBtn) {
+                clearSearchBtn.addEventListener('click', function() {
+                    searchInput.value = '';
+                    this.style.display = 'none';
+                    filterFAQs('');
+                    resetSearchResults();
+                });
+            }
+            
+            // Category Filter
+            const categoryButtons = document.querySelectorAll('.category-btn');
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const category = this.dataset.category;
+                    
+                    // Update active button
+                    categoryButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Filter FAQs by category
+                    filterFAQsByCategory(category);
+                });
+            });
+            
+            // Initialize first category as active
+            if (categoryButtons.length > 0 && !document.querySelector('.category-btn.active')) {
+                categoryButtons[0].click();
+            }
+            
+            // Copy FAQ link
+            const copyLinkButtons = document.querySelectorAll('.copy-link-btn');
+            copyLinkButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const faqUrl = this.dataset.url;
+                    navigator.clipboard.writeText(faqUrl)
+                        .then(() => {
+                            const originalText = this.innerHTML;
+                            this.innerHTML = '✅ Copied!';
+                            setTimeout(() => {
+                                this.innerHTML = originalText;
+                            }, 2000);
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy: ', err);
+                        });
+                });
+            });
+            
+            // Share FAQ
+            const shareButtons = document.querySelectorAll('.share-btn');
+            shareButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const faqUrl = this.dataset.url;
+                    const faqTitle = this.dataset.title;
+                    
+                    if (navigator.share) {
+                        navigator.share({
+                            title: faqTitle,
+                            text: 'Check out this FAQ: ',
+                            url: faqUrl
+                        });
+                    } else {
+                        // Fallback to clipboard
+                        navigator.clipboard.writeText(faqUrl)
+                            .then(() => {
+                                alert('Link copied to clipboard!');
+                            });
+                    }
+                });
+            });
+        });
+        
+        // Function to filter FAQs by search term
+        function filterFAQs(searchTerm) {
+            const faqCards = document.querySelectorAll('.faq-card');
+            let visibleCount = 0;
+            
+            faqCards.forEach(card => {
+                const question = card.querySelector('.faq-question').textContent.toLowerCase();
+                const answer = card.querySelector('.faq-answer').textContent.toLowerCase();
+                const category = card.querySelector('.faq-category').textContent.toLowerCase();
+                
+                const matches = !searchTerm || 
+                    question.includes(searchTerm) || 
+                    answer.includes(searchTerm) ||
+                    category.includes(searchTerm);
+                
+                card.style.display = matches ? 'block' : 'none';
+                if (matches) visibleCount++;
+            });
+            
+            // Show/hide no results message
+            const noResults = document.querySelector('.no-results');
+            if (noResults) {
+                noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+            }
+        }
+        
+        // Function to filter FAQs by category
+        function filterFAQsByCategory(category) {
+            const faqCards = document.querySelectorAll('.faq-card');
+            
+            faqCards.forEach(card => {
+                const cardCategory = card.dataset.category;
+                const matches = !category || category === 'all' || cardCategory === category;
+                
+                card.style.display = matches ? 'block' : 'none';
+                card.style.order = card.classList.contains('featured') ? '-1' : '0';
+            });
+            
+            // Scroll to FAQ section
+            document.querySelector('.faq-grid').scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+        
+        // Function to perform AJAX search
+        function performSearch(query) {
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const faqGrid = document.querySelector('.faq-grid');
+            
+            if (loadingIndicator) loadingIndicator.style.display = 'block';
+            
+            fetch(`/api/v1/cms/search/faqs/?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (loadingIndicator) loadingIndicator.style.display = 'none';
+                    
+                    // Update results
+                    if (data.results && data.results.length > 0) {
+                        updateSearchResults(data.results);
+                    }
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    if (loadingIndicator) loadingIndicator.style.display = 'none';
+                });
+        }
+        
+        // Function to update search results
+        function updateSearchResults(results) {
+            const faqGrid = document.querySelector('.faq-grid');
+            const originalContent = faqGrid.innerHTML;
+            
+            // Store original content
+            if (!faqGrid.dataset.originalContent) {
+                faqGrid.dataset.originalContent = originalContent;
+            }
+            
+            // Clear and rebuild grid with search results
+            faqGrid.innerHTML = '';
+            
+            results.forEach(result => {
+                const faqCard = createFAQCard(result);
+                faqGrid.appendChild(faqCard);
+            });
+        }
+        
+        // Function to reset search results
+        function resetSearchResults() {
+            const faqGrid = document.querySelector('.faq-grid');
+            if (faqGrid.dataset.originalContent) {
+                faqGrid.innerHTML = faqGrid.dataset.originalContent;
+                delete faqGrid.dataset.originalContent;
+                
+                // Reinitialize event listeners
+                setTimeout(() => {
+                    document.dispatchEvent(new Event('DOMContentLoaded'));
+                }, 100);
+            }
+        }
+        
+        // Function to create FAQ card element
+        function createFAQCard(faqData) {
+            const card = document.createElement('div');
+            card.className = 'faq-card';
+            card.dataset.category = faqData.category_id || '';
+            
+            if (faqData.is_featured) card.classList.add('featured');
+            if (faqData.is_pinned) card.classList.add('pinned');
+            
+            card.innerHTML = `
+                <div class="faq-question">${faqData.question}</div>
+                <div class="faq-answer">${faqData.short_answer || faqData.detailed_answer || ''}</div>
+                
+                <div class="faq-meta">
+                    <div>
+                        <span class="faq-category">${faqData.category || 'General'}</span>
+                    </div>
+                    <div class="faq-stats">
+                        <div class="faq-stat">👁️ ${faqData.view_count || 0}</div>
+                        <div class="faq-stat">👍 ${faqData.helpful_count || 0}</div>
+                    </div>
+                </div>
+                
+                <button class="toggle-btn" data-faq-id="${faqData.id}">
+                    <span class="icon">▼</span>
+                    <span class="btn-text">Show Answer</span>
+                </button>
+                
+                <div class="helpfulness-widget">
+                    <div class="helpfulness-title">Was this helpful?</div>
+                    <div class="feedback-buttons">
+                        <button class="feedback-btn helpful-btn" data-faq-id="${faqData.id}">
+                            👍 Yes
+                        </button>
+                        <button class="feedback-btn not-helpful-btn" data-faq-id="${faqData.id}">
+                            👎 No
+                        </button>
+                    </div>
+                    <div class="thank-you-message" style="display: none;"></div>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        // Function to track FAQ view
+        function trackFAQView(faqId) {
+            fetch(`/api/v1/cms/faqs/${faqId}/increment_view/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            }).catch(error => console.error('Error tracking view:', error));
+        }
+        
+        // Function to submit FAQ feedback
+        function submitFAQFeedback(faqId, isHelpful) {
+            fetch(`/api/v1/cms/faqs/${faqId}/feedback/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    is_helpful: isHelpful
+                })
+            }).catch(error => console.error('Error submitting feedback:', error));
+        }
+        
+        // Utility function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header">
+            <h1>
+                {% if category %}
+                    {{ category.name }} FAQs
+                {% elif search_query %}
+                    Search Results for "{{ search_query }}"
+                {% else %}
+                    How Can We Help?
+                {% endif %}
+            </h1>
+            
+            <p>
+                {% if category %}
+                    Find answers to frequently asked questions about {{ category.name|lower }}
+                {% elif search_query %}
+                    {{ faqs|length }} results found for your search
+                {% else %}
+                    Get instant answers to your questions about earning, withdrawals, tasks, and more.
+                {% endif %}
+            </p>
+            
+            <!-- Search Bar -->
+            <div class="search-container">
+                <div class="search-icon">🔍</div>
+                <input type="text" 
+                       class="search-input" 
+                       placeholder="Search for answers..."
+                       value="{{ search_query|default:'' }}"
+                       aria-label="Search FAQ">
+                <button class="clear-search">✕</button>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="category-filter">
+                <button class="category-btn {% if not category %}active{% endif %}" data-category="all">
+                    📚 All FAQs
+                    <span class="count">{{ total_faqs|default:0 }}</span>
+                </button>
+                
+                {% for cat in categories %}
+                <button class="category-btn {% if category and category.id == cat.id %}active{% endif %}" 
+                        data-category="{{ cat.id }}">
+                    {% if cat.icon %}
+                        {{ cat.icon }}
+                    {% else %}
+                        📁
+                    {% endif %}
+                    {{ cat.name }}
+                    <span class="count">{{ cat.faq_count }}</span>
+                </button>
+                {% endfor %}
+            </div>
+        </header>
+        
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Searching FAQs...</p>
+        </div>
+        
+        <!-- Featured FAQs Section -->
+        {% if not search_query and not category %}
+        <div class="featured-section">
+            <h2 class="section-title">Featured Questions</h2>
+            <div class="faq-grid">
+                {% for faq in featured_faqs|slice:":6" %}
+                <div class="faq-card featured" data-category="{{ faq.category.id|default:'general' }}">
+                    <div class="faq-question">{{ faq.question }}</div>
+                    <div class="faq-answer">{{ faq.short_answer|default:faq.detailed_answer|truncatechars:200 }}</div>
+                    
+                    <div class="faq-meta">
+                        <div>
+                            <span class="faq-category">{{ faq.category.name|default:'General' }}</span>
+                        </div>
+                        <div class="faq-stats">
+                            <div class="faq-stat">👁️ {{ faq.view_count|default:0 }}</div>
+                            <div class="faq-stat">👍 {{ faq.helpful_count|default:0 }}</div>
+                        </div>
+                    </div>
+                    
+                    <button class="toggle-btn" data-faq-id="{{ faq.id }}">
+                        <span class="icon">▼</span>
+                        <span class="btn-text">Show Answer</span>
+                    </button>
+                    
+                    <div class="helpfulness-widget">
+                        <div class="helpfulness-title">Was this helpful?</div>
+                        <div class="feedback-buttons">
+                            <button class="feedback-btn helpful-btn" data-faq-id="{{ faq.id }}">
+                                👍 Yes
+                            </button>
+                            <button class="feedback-btn not-helpful-btn" data-faq-id="{{ faq.id }}">
+                                👎 No
+                            </button>
+                        </div>
+                        <div class="thank-you-message" style="display: none;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Main FAQ Grid -->
+        <div class="faq-grid" id="faqGrid">
+            {% if faqs %}
+                {% for faq in faqs %}
+                <div class="faq-card {% if faq.is_featured %}featured{% endif %} {% if faq.is_pinned %}pinned{% endif %}" 
+                     data-category="{{ faq.category.id|default:'general' }}">
+                    <div class="faq-question">{{ faq.question }}</div>
+                    <div class="faq-answer">{{ faq.detailed_answer|safe }}</div>
+                    
+                    <div class="faq-meta">
+                        <div>
+                            <span class="faq-category">{{ faq.category.name|default:'General' }}</span>
+                            {% if faq.tags %}
+                            <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px;">
+                                {% for tag in faq.tags|slice:":3" %}
+                                <span style="background: #f0f0f0; padding: 3px 10px; border-radius: 15px; font-size: 0.8rem; color: #666;">
+                                    #{{ tag }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="faq-stats">
+                            <div class="faq-stat" title="Views">👁️ {{ faq.view_count|default:0 }}</div>
+                            <div class="faq-stat" title="Helpful">👍 {{ faq.helpful_count|default:0 }}</div>
+                            {% if faq.helpfulness_score %}
+                            <div class="faq-stat" title="Helpfulness Score">
+                                ⭐ {{ faq.helpfulness_score }}%
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <button class="toggle-btn" data-faq-id="{{ faq.id }}">
+                        <span class="icon">▼</span>
+                        <span class="btn-text">Show Answer</span>
+                    </button>
+                    
+                    <div class="helpfulness-widget">
+                        <div class="helpfulness-title">Was this helpful?</div>
+                        <div class="feedback-buttons">
+                            <button class="feedback-btn helpful-btn" data-faq-id="{{ faq.id }}">
+                                👍 Yes
+                            </button>
+                            <button class="feedback-btn not-helpful-btn" data-faq-id="{{ faq.id }}">
+                                👎 No
+                            </button>
+                        </div>
+                        <div class="thank-you-message" style="display: none;"></div>
+                        
+                        <div style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+                            <button class="copy-link-btn" data-url="{{ request.build_absolute_uri }}faqs/{{ faq.slug }}/" 
+                                    style="background: none; border: none; color: var(--primary-color); cursor: pointer; margin-right: 15px;">
+                                🔗 Copy Link
+                            </button>
+                            <button class="share-btn" data-url="{{ request.build_absolute_uri }}faqs/{{ faq.slug }}/" 
+                                    data-title="{{ faq.question }}"
+                                    style="background: none; border: none; color: var(--primary-color); cursor: pointer;">
+                                📤 Share
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <!-- No Results Message -->
+                <div class="no-results" style="grid-column: 1 / -1;">
+                    <h3>No FAQs found</h3>
+                    <p>
+                        {% if search_query %}
+                            We couldn't find any FAQs matching "{{ search_query }}". Try different keywords or browse by category.
+                        {% else %}
+                            No FAQs are available in this category yet. Check back soon!
+                        {% endif %}
+                    </p>
+                    {% if search_query %}
+                    <button onclick="document.querySelector('.search-input').value = ''; document.querySelector('.clear-search').click();" 
+                            class="btn btn-primary" style="padding: 12px 25px; background: var(--primary-color); color: white; border: none; border-radius: var(--border-radius); cursor: pointer;">
+                        Clear Search
+                    </button>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj and page_obj.paginator.num_pages > 1 %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <button class="page-btn" onclick="window.location.href='?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}'">
+                ← Previous
+            </button>
+            {% else %}
+            <button class="page-btn disabled">← Previous</button>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if num == page_obj.number %}
+                <button class="page-btn active">{{ num }}</button>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <button class="page-btn" onclick="window.location.href='?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}'">
+                    {{ num }}
+                </button>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <button class="page-btn" onclick="window.location.href='?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}'">
+                Next →
+            </button>
+            {% else %}
+            <button class="page-btn disabled">Next →</button>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Contact Section -->
+        <div class="contact-section">
+            <h2 class="contact-title">Still have questions?</h2>
+            <p class="contact-description">
+                Can't find what you're looking for? Our support team is here to help you with any questions or issues.
+            </p>
+            <a href="{% url 'contact' %}" class="contact-btn">
+                📞 Contact Support
+            </a>
+            
+            <div style="margin-top: 30px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                <a href="{% url 'help-center' %}" style="color: var(--primary-color); text-decoration: none;">
+                    🏠 Help Center
+                </a>
+                <a href="{% url 'knowledge-base' %}" style="color: var(--primary-color); text-decoration: none;">
+                    📚 Knowledge Base
+                </a>
+                <a href="{% url 'blog-list' %}" style="color: var(--primary-color); text-decoration: none;">
+                    ✍️ Blog & Tutorials
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

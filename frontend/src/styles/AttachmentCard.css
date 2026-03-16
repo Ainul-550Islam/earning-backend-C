@@ -1,0 +1,87 @@
+/* AttachmentCard.css — Cyberpunk attachment cards */
+
+.ac-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.ac-root { border-radius: 10px; overflow: hidden; max-width: 300px; }
+
+/* ── Image ────────────────────────────────────────────────────── */
+.ac-root--image { background: transparent; }
+.ac-image-wrap  { display: block; text-decoration: none; position: relative; }
+.ac-image-skeleton {
+  width: 240px; height: 160px; border-radius: 10px;
+  background: linear-gradient(90deg, rgba(0,243,255,0.05) 25%, rgba(0,243,255,0.1) 50%, rgba(0,243,255,0.05) 75%);
+  background-size: 200% 100%;
+  animation: ac-shimmer 1.5s infinite;
+}
+@keyframes ac-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.ac-image {
+  display: none; max-width: 260px; max-height: 220px;
+  border-radius: 10px; object-fit: cover;
+  border: 1px solid rgba(0,243,255,0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: zoom-in;
+}
+.ac-image--loaded { display: block; }
+.ac-image:hover   { transform: scale(1.02); box-shadow: 0 0 16px rgba(0,243,255,0.3); }
+.ac-image-error {
+  padding: 12px 20px; color: rgba(255,255,255,0.4);
+  font-size: 0.8rem; font-family: 'Rajdhani', sans-serif;
+  background: rgba(255,255,255,0.03); border-radius: 10px;
+  border: 1px dashed rgba(255,255,255,0.1);
+}
+.ac-image-name {
+  font-size: 0.65rem; color: rgba(255,255,255,0.35);
+  padding: 3px 2px 0; font-family: 'Rajdhani', sans-serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px;
+}
+
+/* ── Video ────────────────────────────────────────────────────── */
+.ac-root--video { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,0,255,0.2); }
+.ac-video-wrap  { padding: 8px; }
+.ac-video {
+  width: 100%; max-width: 280px; border-radius: 8px; display: block;
+  outline: none;
+}
+.ac-video-error {
+  display: none; align-items: center; gap: 8px; padding: 10px;
+  color: rgba(255,255,255,0.5); font-size: 0.8rem;
+}
+.ac-video-error a { color: #ff00ff; text-decoration: none; }
+.ac-media-name {
+  font-size: 0.65rem; color: rgba(255,255,255,0.4);
+  padding: 4px 2px 0; font-family: 'Rajdhani', sans-serif;
+}
+
+/* ── Audio ────────────────────────────────────────────────────── */
+.ac-root--audio { background: rgba(0,0,0,0.3); border: 1px solid rgba(0,255,136,0.2); border-radius: 10px; }
+.ac-audio-wrap  { padding: 10px 12px; }
+.ac-audio-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.ac-audio-icon { font-size: 1.1rem; }
+.ac-audio-name {
+  flex: 1; font-size: 0.78rem; color: #e0e0e0;
+  font-family: 'Rajdhani', sans-serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ac-audio-size { font-size: 0.65rem; color: rgba(255,255,255,0.35); flex-shrink: 0; }
+.ac-audio {
+  width: 100%; height: 32px;
+  filter: hue-rotate(120deg) saturate(0.8) brightness(0.9);
+}
+
+/* ── Document ─────────────────────────────────────────────────── */
+.ac-root--document { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,215,0,0.2); border-radius: 10px; }
+.ac-doc-wrap {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; text-decoration: none;
+  transition: background 0.2s;
+}
+.ac-doc-wrap:hover { background: rgba(255,215,0,0.05); }
+.ac-doc-icon  { font-size: 1.6rem; flex-shrink: 0; }
+.ac-doc-info  { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ac-doc-name  {
+  font-size: 0.78rem; color: #e0e0e0; font-family: 'Rajdhani', sans-serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ac-doc-meta  { font-size: 0.65rem; color: rgba(255,215,0,0.5); }
+.ac-doc-dl    { font-size: 1rem; color: rgba(255,215,0,0.6); flex-shrink: 0; }

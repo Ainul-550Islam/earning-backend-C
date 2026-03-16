@@ -1,0 +1,52 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+
+
+
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Rajdhani', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: #050510 !important;
+  background-image:
+    radial-gradient(ellipse at 10% 50%, rgba(0, 50, 130, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 90% 10%, rgba(90, 0, 130, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(0, 20, 80, 0.18) 0%, transparent 50%) !important;
+  background-attachment: fixed;
+  color: #ffffff;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,243,255,0.20); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,243,255,0.50); }
+
+/* Font utilities */
+.font-cyber { font-family: 'Orbitron', sans-serif !important; }
+.font-body  { font-family: 'Rajdhani', sans-serif !important; }
+
+/* Neon colors (used inline via Tailwind + CSS) */
+.text-neon-cyan  { color: #00f3ff !important; }
+.text-neon-pink  { color: #ff00ff !important; }
+.text-neon-gold  { color: #ffd700 !important; }
+.text-neon-lime  { color: #00ff00 !important; }
+.text-neon-red   { color: #ff3333 !important; }
+
+/* Admin layout — content beside fixed sidebar */
+.admin-content {
+  margin-left: 256px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

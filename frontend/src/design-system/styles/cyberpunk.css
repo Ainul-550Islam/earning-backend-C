@@ -1,0 +1,108 @@
+/* src/design-system/styles/cyberpunk.css */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --neon-cyan: #00f3ff;
+  --neon-pink: #ff00ff;
+  --neon-gold: #ffd700;
+  --neon-lime: #00ff00;
+  --bg-dark: #050510;
+}
+
+/* ── Base ── */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--bg-dark);
+  background-image:
+    radial-gradient(ellipse at 15% 50%, rgba(0, 60, 120, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse at 85% 20%, rgba(80, 0, 120, 0.18) 0%, transparent 60%);
+  color: #ffffff;
+  font-family: 'Rajdhani', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0, 243, 255, 0.25); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
+
+/* ── Neon Text Glow ── */
+.text-glow-cyan  { text-shadow: 0 0 5px var(--neon-cyan),  0 0 12px var(--neon-cyan); }
+.text-glow-pink  { text-shadow: 0 0 5px var(--neon-pink),  0 0 12px var(--neon-pink); }
+.text-glow-gold  { text-shadow: 0 0 5px var(--neon-gold),  0 0 12px var(--neon-gold); }
+.text-glow-lime  { text-shadow: 0 0 5px var(--neon-lime),  0 0 12px var(--neon-lime); }
+
+/* ── Glass Panel ── */
+.glass-panel {
+  background: rgba(10, 10, 26, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+/* ── Neon Border Glow (card edges) ── */
+.neon-border-cyan { border-color: rgba(0, 243, 255, 0.35) !important; box-shadow: 0 0 12px rgba(0,243,255,0.15), inset 0 0 12px rgba(0,243,255,0.05); }
+.neon-border-pink { border-color: rgba(255, 0, 255, 0.35) !important; box-shadow: 0 0 12px rgba(255,0,255,0.15), inset 0 0 12px rgba(255,0,255,0.05); }
+.neon-border-gold { border-color: rgba(255, 215, 0, 0.35) !important; box-shadow: 0 0 12px rgba(255,215,0,0.15), inset 0 0 12px rgba(255,215,0,0.05); }
+.neon-border-lime { border-color: rgba(0, 255, 0, 0.35) !important; box-shadow: 0 0 12px rgba(0,255,0,0.15), inset 0 0 12px rgba(0,255,0,0.05); }
+
+/* ── Animated border gradient ── */
+.neon-border-animation {
+  position: relative;
+}
+.neon-border-animation::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(45deg, var(--neon-cyan), transparent, var(--neon-pink), transparent);
+  background-size: 400% 400%;
+  z-index: -1;
+  border-radius: 13px;
+  animation: borderGlow 8s ease infinite;
+  opacity: 0.5;
+}
+@keyframes borderGlow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Glitch ── */
+@keyframes glitch {
+  0%   { transform: translate(0); }
+  20%  { transform: translate(-2px, 2px); }
+  40%  { transform: translate(-2px, -2px); }
+  60%  { transform: translate(2px, 2px); }
+  80%  { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
+}
+.glitch-effect:hover { animation: glitch 0.3s infinite; }
+
+/* ── Scan line overlay (optional atmosphere) ── */
+.scanlines::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Admin Layout fix: content beside sidebar ── */
+.admin-content {
+  margin-left: 256px; /* w-64 = 16rem = 256px */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
