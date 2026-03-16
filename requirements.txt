@@ -188,4 +188,6 @@ zope.interface==8.2
 zopfli==0.4.0
 gunicorn==21.2.0
 whitenoise==6.6.0
-reportlab
+reportlab==4.2.5
+weasyprint
+cairocffi
