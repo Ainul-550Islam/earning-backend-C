@@ -160,7 +160,9 @@ SIMPLE_JWT = {
 }
 
 # ==================== REDIS ====================
-REDIS_URL = env('REDIS_URL', default=None)
+import os as _os
+REDIS_URL = _os.environ.get('REDIS_URL') or env('REDIS_URL', default=None)
+print(f'[SETTINGS DEBUG] REDIS_URL={REDIS_URL}')
 
 if not REDIS_URL:
     REDIS_HOST = env('REDIS_HOST', default='localhost')
