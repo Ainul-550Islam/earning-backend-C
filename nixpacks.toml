@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python311"]
+nixPkgs = ["python311", "python311Packages.pip"]
 apt = ["libpq-dev", "gcc", "libcairo2-dev", "pkg-config", "python3-dev"]
 
 [phases.install]
