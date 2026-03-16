@@ -160,15 +160,18 @@ SIMPLE_JWT = {
 }
 
 # ==================== REDIS ====================
-REDIS_HOST = env('REDIS_HOST', default='localhost')
-REDIS_PORT = env.int('REDIS_PORT', default=6379)
-REDIS_DB = env.int('REDIS_DB', default=0)
-REDIS_PASSWORD = env('REDIS_PASSWORD', default=None)
+REDIS_URL = env('REDIS_URL', default=None)
 
-if REDIS_PASSWORD:
-    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-else:
-    REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+if not REDIS_URL:
+    REDIS_HOST = env('REDIS_HOST', default='localhost')
+    REDIS_PORT = env.int('REDIS_PORT', default=6379)
+    REDIS_DB = env.int('REDIS_DB', default=0)
+    REDIS_PASSWORD = env('REDIS_PASSWORD', default=None)
+
+    if REDIS_PASSWORD:
+        REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+    else:
+        REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
 # ==================== CACHE ====================
 CACHES = {
