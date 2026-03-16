@@ -31,13 +31,26 @@ class CacheManager:
     
     def _load_configuration(self):
         """Load cache configuration from environment"""
+        redis_url = os.getenv('REDIS_URL')
+        if redis_url:
+            from urllib.parse import urlparse
+            parsed = urlparse(redis_url)
+            redis_host = parsed.hostname or 'localhost'
+            redis_port = parsed.port or 6379
+            redis_db = int((parsed.path or '/0').lstrip('/') or 0)
+            redis_password = parsed.password
+        else:
+            redis_host = os.getenv('REDIS_HOST', 'localhost')
+            redis_port = int(os.getenv('REDIS_PORT', 6379))
+            redis_db = int(os.getenv('REDIS_DB', 0))
+            redis_password = os.getenv('REDIS_PASSWORD')
         self.config = {
             'default_backend': os.getenv('CACHE_BACKEND', 'redis'),
             'redis': {
-                'host': os.getenv('REDIS_HOST', 'localhost'),
-                'port': int(os.getenv('REDIS_PORT', 6379)),
-                'db': int(os.getenv('REDIS_DB', 0)),
-                'password': os.getenv('REDIS_PASSWORD'),
+                'host': redis_host,
+                'port': redis_port,
+                'db': redis_db,
+                'password': redis_password,
                 'decode_responses': os.getenv('REDIS_DECODE_RESPONSES', 'False').lower() == 'true',
                 'max_connections': int(os.getenv('REDIS_MAX_CONNECTIONS', 50)),
                 'use_cluster': os.getenv('REDIS_CLUSTER', 'False').lower() == 'true',
