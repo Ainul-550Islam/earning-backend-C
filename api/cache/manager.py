@@ -4,9 +4,9 @@ Cache Manager - Centralized cache service management
 
 import os
 from typing import Dict, Any, Optional
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
 class CacheManager:
     """
