@@ -126,7 +126,6 @@ psycopg2-binary==2.9.11
 py-ubjson==0.16.1
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
-pycairo==1.29.0
 pycld2==0.42
 pycparser==2.23
 pydyf==0.12.1
