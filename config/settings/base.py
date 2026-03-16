@@ -184,15 +184,15 @@ CACHES = {
     }
 }
 
-# Development এ cache override
-if DEBUG:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "unique-snowflake",
-        }
-    }
+# # Development এ cache override
+# if DEBUG:
+#     CACHES = {
+#         'default': {
+#             'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+#             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+#             "LOCATION": "unique-snowflake",
+#         }
+#     }
 
 # ==================== CELERY ====================
 CELERY_BROKER_URL = REDIS_URL
