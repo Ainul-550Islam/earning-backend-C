@@ -146,10 +146,8 @@ pytz==2025.2
 PyYAML==6.0.3
 redis==7.0.0
 regex==2026.1.15
-reportlab==4.4.9
 requests==2.32.5
 requests-oauthlib==2.0.0
-rlPyCairo==0.4.0
 rsa==4.9.1
 s3transfer==0.16.0
 scikit-learn==1.8.0
@@ -162,7 +160,6 @@ slack_sdk==3.39.0
 soupsieve==2.8.3
 sqlparse==0.5.5
 stripe==14.3.0
-svglib==1.6.0
 tablib==3.9.0
 threadpoolctl==3.6.0
 tinycss2==1.5.1
@@ -183,11 +180,9 @@ urllib3==2.6.3
 user-agents==2.2.0
 vine==5.1.0
 wcwidth==0.2.14
-weasyprint==68.0
 webencodings==0.5.1
 Werkzeug==3.1.5
 wrapt==2.1.0
-xhtml2pdf==0.2.17
 yarl==1.22.0
 zope.interface==8.2
 zopfli==0.4.0
