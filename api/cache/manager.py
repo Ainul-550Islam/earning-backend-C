@@ -30,10 +30,17 @@ class CacheManager:
             self._initialize_services()
     
     def _load_configuration(self):
+        """Load cache configuration from environment - Bulletproof version"""
         import os
-        print(f"DEBUG REDIS_URL: {os.environ.get(chr(82)+chr(69)+chr(68)+chr(73)+chr(83)+chr(95)+chr(85)+chr(82)+chr(76))}")
-        """Load cache configuration from environment"""
-        redis_url = os.getenv('REDIS_URL')
+        # Try every possible way to get Redis URL
+        redis_url = (
+            os.environ.get('REDIS_URL') or
+            os.environ.get('redis_url') or
+            None
+        )
+        print(f"[CACHE MANAGER] REDIS_URL={redis_url}")
+        print(f"[CACHE MANAGER] ENV KEYS WITH REDIS: {[k for k in os.environ if 'REDIS' in k.upper()]}")
+
         if redis_url:
             from urllib.parse import urlparse
             parsed = urlparse(redis_url)
@@ -42,41 +49,46 @@ class CacheManager:
             redis_db = int((parsed.path or '/0').lstrip('/') or 0)
             redis_password = parsed.password
         else:
-            redis_host = os.getenv('REDIS_HOST', 'localhost')
-            redis_port = int(os.getenv('REDIS_PORT', 6379))
-            redis_db = int(os.getenv('REDIS_DB', 0))
-            redis_password = os.getenv('REDIS_PASSWORD')
+            redis_host = os.environ.get('REDIS_HOST', 'localhost')
+            redis_port = int(os.environ.get('REDIS_PORT', 6379))
+            redis_db = int(os.environ.get('REDIS_DB', 0))
+            redis_password = os.environ.get('REDIS_PASSWORD')
+            if redis_password:
+                redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
+            else:
+                redis_url = f"redis://{redis_host}:{redis_port}/{redis_db}"
+
+        print(f"[CACHE MANAGER] Final REDIS host={redis_host} port={redis_port}")
+
         self.config = {
-            'default_backend': os.getenv('CACHE_BACKEND', 'redis'),
+            'default_backend': os.environ.get('CACHE_BACKEND', 'redis'),
             'redis': {
                 'host': redis_host,
                 'port': redis_port,
                 'db': redis_db,
                 'password': redis_password,
-                'decode_responses': os.getenv('REDIS_DECODE_RESPONSES', 'False').lower() == 'true',
-                'max_connections': int(os.getenv('REDIS_MAX_CONNECTIONS', 50)),
-                'use_cluster': os.getenv('REDIS_CLUSTER', 'False').lower() == 'true',
-                'sentinel_master': os.getenv('REDIS_SENTINEL_MASTER'),
-                'sentinel_nodes': self._parse_sentinel_nodes(os.getenv('REDIS_SENTINEL_NODES'))
+                'url': redis_url,
+                'decode_responses': os.environ.get('REDIS_DECODE_RESPONSES', 'False').lower() == 'true',
+                'max_connections': int(os.environ.get('REDIS_MAX_CONNECTIONS', 50)),
+                'use_cluster': os.environ.get('REDIS_CLUSTER', 'False').lower() == 'true',
+                'sentinel_master': os.environ.get('REDIS_SENTINEL_MASTER'),
+                'sentinel_nodes': self._parse_sentinel_nodes(os.environ.get('REDIS_SENTINEL_NODES'))
             },
             'memcached': {
-                'servers': os.getenv('MEMCACHED_SERVERS', 'localhost:11211').split(','),
-                'debug': os.getenv('MEMCACHED_DEBUG', 'False').lower() == 'true',
-                'socket_timeout': float(os.getenv('MEMCACHED_SOCKET_TIMEOUT', 3.0)),
-                'connect_timeout': float(os.getenv('MEMCACHED_CONNECT_TIMEOUT', 3.0))
+                'servers': os.environ.get('MEMCACHED_SERVERS', 'localhost:11211').split(','),
             },
             'lru': {
-                'max_size': int(os.getenv('LRU_CACHE_SIZE', 1000)),
-                'default_ttl': int(os.getenv('LRU_CACHE_TTL', 300))
+                'max_size': int(os.environ.get('LRU_CACHE_SIZE', 1000)),
+                'default_ttl': int(os.environ.get('LRU_CACHE_TTL', 300))
             },
             'ttl': {
-                'max_size': int(os.getenv('TTL_CACHE_SIZE', 1000)),
-                'default_ttl': int(os.getenv('TTL_CACHE_TTL', 300))
+                'max_size': int(os.environ.get('TTL_CACHE_SIZE', 1000)),
+                'default_ttl': int(os.environ.get('TTL_CACHE_TTL', 300))
             }
         }
-        
         self._default_backend = self.config['default_backend']
-    
+
+
     def _parse_sentinel_nodes(self, nodes_str: Optional[str]) -> Optional[list]:
         """Parse Redis sentinel nodes from string"""
         if not nodes_str:
@@ -112,17 +124,34 @@ class CacheManager:
             from .services import RedisService
             
             redis_config = self.config['redis']
-            redis_service = RedisService(
-                host=redis_config['host'],
-                port=redis_config['port'],
-                db=redis_config['db'],
-                password=redis_config['password'],
-                decode_responses=redis_config['decode_responses'],
-                max_connections=redis_config['max_connections'],
-                use_cluster=redis_config['use_cluster'],
-                sentinel_master=redis_config['sentinel_master'],
-                sentinel_nodes=redis_config['sentinel_nodes']
-            )
+            import os
+            redis_url = redis_config.get('url') or os.environ.get('REDIS_URL')
+            if redis_url:
+                import redis as redis_lib
+                client = redis_lib.from_url(redis_url, decode_responses=redis_config['decode_responses'])
+                redis_service = RedisService(
+                    host=redis_config['host'],
+                    port=redis_config['port'],
+                    db=redis_config['db'],
+                    password=redis_config['password'],
+                    decode_responses=redis_config['decode_responses'],
+                    max_connections=redis_config['max_connections'],
+                )
+                redis_service._client = client
+                client.ping()
+                print(f"[CACHE MANAGER] Redis connected via URL!")
+            else:
+                redis_service = RedisService(
+                    host=redis_config['host'],
+                    port=redis_config['port'],
+                    db=redis_config['db'],
+                    password=redis_config['password'],
+                    decode_responses=redis_config['decode_responses'],
+                    max_connections=redis_config['max_connections'],
+                    use_cluster=redis_config['use_cluster'],
+                    sentinel_master=redis_config['sentinel_master'],
+                    sentinel_nodes=redis_config['sentinel_nodes']
+                )
             
             self._services['redis'] = redis_service
             print("Redis cache service initialized")
