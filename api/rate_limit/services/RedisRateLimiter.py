@@ -20,12 +20,15 @@ class RedisRateLimiter:
             if hasattr(cache, 'client'):
                 return cache.client.get_client()
             
-            # Fallback to direct Redis connection
+            # Use REDIS_URL if available
+            redis_url = getattr(settings, 'REDIS_URL', None)
+            if redis_url:
+                return redis.from_url(redis_url, decode_responses=True)
             return redis.Redis(
-                host=settings.REDIS_HOST,
-                port=settings.REDIS_PORT,
-                db=settings.REDIS_DB,
-                password=settings.REDIS_PASSWORD,
+                host=getattr(settings, 'REDIS_HOST', 'localhost'),
+                port=getattr(settings, 'REDIS_PORT', 6379),
+                db=getattr(settings, 'REDIS_DB', 0),
+                password=getattr(settings, 'REDIS_PASSWORD', None),
                 decode_responses=True
             )
         except:
