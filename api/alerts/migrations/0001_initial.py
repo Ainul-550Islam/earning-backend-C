@@ -457,7 +457,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='alertrule',
-            index=django.contrib.postgres.indexes.GinIndex(fields=['name'], name='rule_name_gin_idx'),
+            index=models.Index(fields=['name'], name='rule_name_gin_idx'),
         ),
         migrations.AddIndex(
             model_name='alertlog',
@@ -477,7 +477,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='alertlog',
-            index=django.contrib.postgres.indexes.GinIndex(fields=['details'], name='details_gin_idx'),
+            index=models.Index(fields=['details'], name='details_gin_idx'),
         ),
         migrations.AddIndex(
             model_name='alertgroup',
@@ -513,7 +513,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='alertrulehistory',
-            index=django.contrib.postgres.indexes.GinIndex(fields=['changed_fields'], name='changed_fields_gin_idx'),
+            index=models.Index(fields=['changed_fields'], name='changed_fields_gin_idx'),
         ),
         migrations.AddIndex(
             model_name='alertschedule',
