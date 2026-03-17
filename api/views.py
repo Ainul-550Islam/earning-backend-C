@@ -7,6 +7,7 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.conf import settings
 import hashlib
+import os
 import hmac
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
