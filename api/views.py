@@ -134,14 +134,20 @@ def forgot_password(request):
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         reset_url = f"https://earning-frontend-v2.vercel.app/reset-password/{uid}/{token}/"
-        from django.core.mail import send_mail
-        send_mail(
-            subject='Password Reset Request',
-            message=f'Click the link to reset your password:\n\n{reset_url}',
-            from_email=None,
-            recipient_list=[email],
-            fail_silently=True,
-        )
+        import threading
+        def send_email():
+            from django.core.mail import send_mail
+            try:
+                send_mail(
+                    subject='Password Reset Request',
+                    message=f'Click the link to reset your password:\n\n{reset_url}',
+                    from_email=None,
+                    recipient_list=[email],
+                    fail_silently=True,
+                )
+            except Exception:
+                pass
+        threading.Thread(target=send_email).start()
         return Response({'message': 'Password reset email sent!', 'reset_url': reset_url})
     except User.DoesNotExist:
         return Response({'message': 'Password reset email sent!'})
