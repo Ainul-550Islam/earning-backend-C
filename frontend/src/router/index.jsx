@@ -54,6 +54,7 @@ const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
   { path: '/signup', element: <Signup /> },
   { path: '/forgot-password', element: <ForgotPassword /> },
+  { path: '/reset-password/:uid/:token', element: <ResetPassword /> },
   { path: '/postback', element: <ProtectedRoute/>, children: [{ index: true, element: <PostbackDashboard/> }] },
   {
     path: '/',
