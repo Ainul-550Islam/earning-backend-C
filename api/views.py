@@ -134,20 +134,20 @@ def forgot_password(request):
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         reset_url = f"https://earning-frontend-v2.vercel.app/reset-password/{uid}/{token}/"
-        from django.core.mail import send_mail
-        newline = chr(10)
-        email_message = "Click the link to reset your password:" + newline + newline + str(reset_url)
-        try:
-            send_mail(
-                subject="Password Reset Request",
-                message=email_message,
-                from_email=None,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-        except Exception as e:
-            print("EMAIL ERROR: " + str(e), flush=True)
-            raise e
+        import requests
+        brevo_api_key = os.environ.get("BREVO_API_KEY", "")
+        response = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={"api-key": brevo_api_key, "Content-Type": "application/json"},
+            json={
+                "sender": {"name": "Earning App", "email": "balal10islam@gmail.com"},
+                "to": [{"email": email}],
+                "subject": "Password Reset Request",
+                "textContent": "Click the link:\n\n" + str(reset_url),
+            },
+            timeout=10
+        )
+        print("BREVO STATUS: " + str(response.status_code), flush=True)
         return Response({'message': 'Password reset email sent!', 'reset_url': reset_url})
     except User.DoesNotExist:
         return Response({'message': 'Password reset email sent!'})
