@@ -4,7 +4,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import axios from 'axios';
 
-const UPLOAD_URL   = 'import.meta.env.VITE_API_BASE_URL + '/messaging/upload/'';
+const UPLOAD_URL   = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api') + '/messaging/upload/';
 const ACCEPT_TYPES = [
   'image/jpeg','image/png','image/gif','image/webp',
   'video/mp4','video/webm','video/quicktime',

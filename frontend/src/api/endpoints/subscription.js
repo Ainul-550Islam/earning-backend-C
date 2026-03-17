@@ -3,7 +3,7 @@
  * Complete Subscription API endpoints
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/subscription';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api');
 
 // ============================================================================
 // SUBSCRIPTION ENDPOINTS
