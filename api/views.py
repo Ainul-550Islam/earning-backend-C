@@ -140,7 +140,7 @@ def forgot_password(request):
             message=f'Click the link to reset your password:\n\n{reset_url}',
             from_email=None,
             recipient_list=[email],
-            fail_silently=False,
+            fail_silently=True,
         )
         return Response({'message': 'Password reset email sent!', 'reset_url': reset_url})
     except User.DoesNotExist:
