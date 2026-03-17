@@ -119,6 +119,58 @@ def login(request):
 
 
 
+@api_view(['POST'])
+def forgot_password(request):
+    email = request.data.get('email')
+    if not email:
+        return Response({'error': 'Email is required'}, status=400)
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = User.objects.get(email=email)
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        reset_url = f"https://earning-frontend-v2.vercel.app/reset-password/{uid}/{token}/"
+        from django.core.mail import send_mail
+        send_mail(
+            'Password Reset Request',
+            f'Click the link to reset your password: {reset_url}',
+            'noreply@earningplatform.com',
+            [email],
+            fail_silently=False,
+        )
+        return Response({'message': 'Password reset email sent!'})
+    except User.DoesNotExist:
+        return Response({'message': 'Password reset email sent!'})
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['POST'])
+def reset_password_confirm(request):
+    uid = request.data.get('uid')
+    token = request.data.get('token')
+    password = request.data.get('password')
+    if not all([uid, token, password]):
+        return Response({'error': 'All fields required'}, status=400)
+    try:
+        from django.contrib.auth import get_user_model
+        from django.utils.http import urlsafe_base64_decode
+        from django.utils.encoding import force_str
+        from django.contrib.auth.tokens import default_token_generator
+        User = get_user_model()
+        user_id = force_str(urlsafe_base64_decode(uid))
+        user = User.objects.get(pk=user_id)
+        if default_token_generator.check_token(user, token):
+            user.set_password(password)
+            user.save()
+            return Response({'message': 'Password reset successful!'})
+        return Response({'error': 'Invalid or expired token'}, status=400)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
 @api_view(['GET'])
 def get_user_info(request):
     user = request.user
