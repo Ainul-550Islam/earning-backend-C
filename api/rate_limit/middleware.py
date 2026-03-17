@@ -47,7 +47,7 @@ class RateLimitMiddleware(MiddlewareMixin):
         
         # Skip if service not initialized
         # Exempt auth endpoints from rate limiting
-        exempt_paths = ['/api/auth/login/', '/api/auth/register/', '/api/auth/token/']
+        exempt_paths = ['/api/auth/login/', '/api/auth/register/', '/api/auth/token/', '/api/login/', '/login/']
         if any(request.path.startswith(p) for p in exempt_paths):
             return self.get_response(request)
 
@@ -223,7 +223,7 @@ class EarningTaskRateLimitMiddleware(MiddlewareMixin):
         
         # Skip if service not initialized
         # Exempt auth endpoints from rate limiting
-        exempt_paths = ['/api/auth/login/', '/api/auth/register/', '/api/auth/token/']
+        exempt_paths = ['/api/auth/login/', '/api/auth/register/', '/api/auth/token/', '/api/login/', '/login/']
         if any(request.path.startswith(p) for p in exempt_paths):
             return self.get_response(request)
 
