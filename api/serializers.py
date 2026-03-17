@@ -182,7 +182,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         referred_by_code = validated_data.pop('referred_by_code', None)
         
         user = User.objects.create_user(**validated_data)
-        user.generate_referral_code()
         
         # Create wallet
         Wallet.objects.create(user=user)
