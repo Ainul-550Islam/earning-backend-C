@@ -3,18 +3,15 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        configure: (proxy) => {
-          proxy.on('proxyRes', (proxyRes, req) => {
-            // Redirect block করো — 302 কে 401 তে convert করো
-            if (proxyRes.statusCode === 302 || proxyRes.statusCode === 301) {
-              proxyRes.statusCode = 401;
-            }
-          });
+  build: {
+    chunkSizeWarningLimit: 3000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          charts: ['recharts'],
+          motion: ['framer-motion'],
+          query: ['@tanstack/react-query'],
         }
       }
     }

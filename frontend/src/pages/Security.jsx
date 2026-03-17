@@ -6,7 +6,7 @@ import {
   useUserBans, useIPBlacklist, useSessions, useAuditTrail,
 } from '../hooks/useSecurity';
 import securityAPI from '../api/endpoints/security';
-import '../styles/Security.css';
+import '../styles/security.css';
 
 // ── Helpers ────────────────────────────────────────────────
 const errMsg = e => {

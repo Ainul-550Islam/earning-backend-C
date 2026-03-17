@@ -10,7 +10,7 @@ import {
   useUserProfiles,
 } from '../hooks/useRateLimit';
 import rateLimitAPI from '../api/endpoints/rateLimit';
-import '../styles/RateLimit.css';
+import '../styles/ratelimit.css';
 
 // ── Helpers ───────────────────────────────────────────────────────
 const errMsg = e => {

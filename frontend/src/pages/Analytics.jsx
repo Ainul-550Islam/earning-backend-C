@@ -10,7 +10,7 @@ import {
   PolarAngleAxis, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import '../styles/analytics.css';
+import '../styles/Analytics.css';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const BASE           = '/api/analytics';
@@ -1441,7 +1441,7 @@ export default AnalyticsWithManagement;
 //   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
 //   Tooltip, Legend, ResponsiveContainer,
 // } from 'recharts';
-// import '../styles/analytics.css';
+// import '../styles/Analytics.css';
 
 // const BASE           = '/api/analytics';
 // const THEME_COUNT    = 6;

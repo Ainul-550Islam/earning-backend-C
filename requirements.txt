@@ -191,3 +191,5 @@ whitenoise==6.6.0
 reportlab==4.2.5
 weasyprint
 cairocffi
+social-auth-app-django==5.4.2
+social-auth-core==4.5.4
