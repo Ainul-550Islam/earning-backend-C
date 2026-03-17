@@ -138,7 +138,13 @@ def forgot_password(request):
         try:
             send_mail(
                 subject="Password Reset Request",
-                message=f"Click the link to reset your password:
+                message='Click the link to reset your password:
+
+' + str(reset_url),
+
+" + str(reset_url),
+
+" + reset_url,
 
 {reset_url}",
                 from_email=None,
