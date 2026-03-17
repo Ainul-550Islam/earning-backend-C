@@ -15,6 +15,7 @@ import KYC               from '../pages/KYC';
 import Login from '../pages/Login';
 import Signup from '../pages/Signup';
 import ForgotPassword from '../pages/ForgotPassword';
+import ResetPassword from '../pages/ResetPassword';
 import PostbackDashboard from '../pages/PostbackDashboard';
 import CMSPage           from '../pages/CMS';
 import Backup            from '../pages/Backup';
