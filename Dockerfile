@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+RUN find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; true
 RUN pip install --no-cache-dir -r requirements.txt
 RUN echo "cache-bust-$(date +%s)"
 
