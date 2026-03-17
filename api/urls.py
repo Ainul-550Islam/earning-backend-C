@@ -40,6 +40,8 @@ urlpatterns = [
     path('auth/signup/', views.signup),
     path('auth/login/', views.login),          
     path('auth/refresh/', views.refresh_token),
+    path('auth/password/reset/', views.forgot_password),
+    path('auth/password/reset/confirm/', views.reset_password_confirm),
     
     # --- Profile (ইউজার প্রোফাইল) ---
     path('profile/', views.get_profile),
