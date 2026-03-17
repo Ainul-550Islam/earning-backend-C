@@ -49,6 +49,21 @@ class RedisService(CacheService):
             sentinel_master: Sentinel master name
             sentinel_nodes: List of sentinel nodes as (host, port) tuples
         """
+        import os as _os
+        _redis_url = _os.environ.get('REDIS_URL')
+        if _redis_url and not host:
+            from urllib.parse import urlparse
+            _p = urlparse(_redis_url)
+            host = _p.hostname or 'localhost'
+            port = _p.port or 6379
+            db = int((_p.path or '/0').lstrip('/') or 0)
+            password = _p.password
+            print(f"[RedisService] REDIS_URL host={host} port={port}")
+        else:
+            host = host or _os.environ.get('REDIS_HOST', 'localhost')
+            port = port or int(_os.environ.get('REDIS_PORT', 6379))
+            password = password or _os.environ.get('REDIS_PASSWORD')
+            print(f"[RedisService] ENV host={host} port={port}")
         self.config = {
             'host': host,
             'port': port,
