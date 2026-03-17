@@ -24,7 +24,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'social_django',
+    # 'social_django',
     'django.contrib.sites',
 
     # Third-party apps
@@ -494,7 +494,7 @@ LOGGING = {
 #     'django.contrib.sessions',
 #     'django.contrib.messages',
 #     'django.contrib.staticfiles',
-#     'social_django',
+#     # 'social_django',
 
 #     'rest_framework',
 #     'rest_framework.authtoken',
