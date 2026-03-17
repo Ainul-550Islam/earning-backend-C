@@ -51,6 +51,22 @@ if _redis_url:
     CELERY_RESULT_BACKEND = _redis_url
 print(f'[PRODUCTION DEBUG] REDIS_URL={_redis_url}')
 
+# Reduce logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'ERROR',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'ERROR',
+    },
+}
+
 # CORS
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 CORS_ALLOW_CREDENTIALS = True
