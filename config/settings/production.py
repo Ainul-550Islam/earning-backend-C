@@ -71,4 +71,5 @@ CSRF_TRUSTED_ORIGINS = ['https://earning-backend-c-production.up.railway.app']
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGIN_REGEXES = [r"https://.*\.vercel\.app"]
 CORS_ALLOW_CREDENTIALS = True
