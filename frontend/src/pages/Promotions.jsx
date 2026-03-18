@@ -1,3 +1,4 @@
+const _BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace('/api','');
 // src/pages/Promotions.jsx
 // EarnNexus — Promotions Management Page
 // Real API calls via React Query + axios
@@ -13,7 +14,7 @@ import "../styles/promotions.css";
 // ============================================================
 import axios from "axios";
 
-const API = axios.create({ baseURL: "/api" });
+const API = axios.create({ baseURL: (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api") });
 
 // Attach access token from localStorage/sessionStorage
 API.interceptors.request.use(cfg => {

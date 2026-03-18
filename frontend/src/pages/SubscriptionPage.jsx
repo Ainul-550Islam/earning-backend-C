@@ -10,10 +10,11 @@ const getToken = () =>
   localStorage.getItem("access_token") ||
   localStorage.getItem("token") || "";
 
+const _BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace('/api','');
 const api = async (path, opts = {}) => {
   const token = getToken();
   const isFormData = opts.body instanceof FormData;
-  const res = await fetch(`/api/subscriptions${path}`, {
+  const res = await fetch(`${_BASE}/api/subscriptions${path}`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(!isFormData ? { "Content-Type": "application/json" } : {}),

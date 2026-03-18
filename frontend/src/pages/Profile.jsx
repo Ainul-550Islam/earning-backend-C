@@ -1,3 +1,4 @@
+const _BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace('/api','');
 // src/pages/Profile.jsx
 import React, { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -56,7 +57,7 @@ export default function Profile() {
   }, []);
 
   React.useEffect(() => {
-    fetch('/api/auth/profile/', { headers: authHeaders() })
+    fetch(_BASE+'/api/auth/profile/', { headers: authHeaders() })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const d = data.data || data;
@@ -91,7 +92,7 @@ export default function Profile() {
       formData.append('address', form.location);
       formData.append('city', form.location);
       if (fileRef.current?.files?.[0]) formData.append('avatar', fileRef.current.files[0]);
-      const res = await fetch('/api/auth/profile/update_profile/', {
+      const res = await fetch(_BASE+'/api/auth/profile/update_profile/', {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('adminAccessToken') || localStorage.getItem('access_token') || ''}` },
         body: formData,
