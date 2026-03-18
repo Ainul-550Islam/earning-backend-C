@@ -1,3 +1,5 @@
+from urllib import request
+
 from rest_framework_simplejwt.authentication import JWTAuthentication
 try:
     from api.audit_logs.models import AuditLog, AuditLogAction
@@ -146,23 +148,21 @@ class AutoRegisterView(APIView):
         user = User.objects.create(
             is_vpn_allowed=False
         )
-        # Save device info separately
-        from .models import UserDevice, UserAccountLink
-        UserDevice.objects.create(
-            user=user,
-            device_id=device_id,
-        )
-        user.last_login_ip = ip_address or '0.0.0.0'
-        user.save()
-        # Update device info
+        from .models import UserDevice
         device_model = request.data.get('device_model')
         device_brand = request.data.get('device_brand')
         os_version = request.data.get('os_version')
         app_version = request.data.get('app_version')
-        
-        device = user.devices.first()
-        device.device_model = device_model
-        device.device_brand = device_brand
+        device = UserDevice.objects.create(
+            user=user,
+            device_id=device_id,
+            device_model=device_model,
+            device_brand=device_brand,
+            os_version=os_version,
+            app_version=app_version,
+        )
+        user.last_login_ip = ip_address or '0.0.0.0'
+        user.save()
         device.os_version = os_version
         device.app_version = app_version
         device.is_vpn_detected = is_vpn
