@@ -142,6 +142,11 @@ def google_callback(request):
 
     logger.info(f"[OAUTH] Login successful: {email} (new={created})")
 
+    intent = request.GET.get("intent", "login")
+
+    if intent == "signup" and not created:
+        return redirect(FRONTEND_URL + "/login?error=email_already_registered")
+
     return redirect(
-        FRONTEND_URL + "/oauth-callback?access=" + access_jwt + "&refresh=" + refresh_jwt
+        FRONTEND_URL + "/oauth-callback?access=" + access_jwt + "&refresh=" + refresh_jwt + "&new_user=" + str(created).lower()
     )
