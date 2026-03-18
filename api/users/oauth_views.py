@@ -1,15 +1,17 @@
 import requests
 from django.shortcuts import redirect
-from django.contrib.auth import login
+from django.contrib.auth import get_user_model
 from django.conf import settings
-from social_django.utils import load_backend, load_strategy
+from rest_framework_simplejwt.tokens import RefreshToken
 
+User = get_user_model()
 REDIRECT_URI = 'https://earning-backend-c-production.up.railway.app/auth/social/complete/google-oauth2/'
+FRONTEND_URL = 'https://earning-frontend-v2.vercel.app'
 
 def google_callback(request):
     code = request.GET.get('code')
     if not code:
-        return redirect('https://earning-frontend-v2.vercel.app/login?error=no_code')
+        return redirect(f'{FRONTEND_URL}/login?error=no_code')
     
     token_response = requests.post('https://oauth2.googleapis.com/token', data={
         'client_id': settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY,
@@ -20,29 +22,29 @@ def google_callback(request):
     })
     
     if token_response.status_code != 200:
-        return redirect(f'https://earning-frontend-v2.vercel.app/login?error=token_failed&detail={token_response.text}')
+        return redirect(f'{FRONTEND_URL}/login?error=token_failed')
     
-    token_data = token_response.json()
-    access_token = token_data.get('access_token')
+    access_token = token_response.json().get('access_token')
     
-    user_response = requests.get('https://www.googleapis.com/oauth2/v2/userinfo',
+    user_info = requests.get('https://www.googleapis.com/oauth2/v2/userinfo',
         headers={'Authorization': f'Bearer {access_token}'}
+    ).json()
+    
+    email = user_info.get('email')
+    if not email:
+        return redirect(f'{FRONTEND_URL}/login?error=no_email')
+    
+    user, created = User.objects.get_or_create(
+        email=email,
+        defaults={
+            'username': email.split('@')[0],
+            'first_name': user_info.get('given_name', ''),
+            'last_name': user_info.get('family_name', ''),
+        }
     )
     
-    if user_response.status_code != 200:
-        return redirect('https://earning-frontend-v2.vercel.app/login?error=user_info_failed')
+    refresh = RefreshToken.for_user(user)
+    access = str(refresh.access_token)
+    refresh_token = str(refresh)
     
-    user_data = user_response.json()
-    
-    strategy = load_strategy(request)
-    backend = load_backend(strategy, 'google-oauth2', redirect_uri=REDIRECT_URI)
-    
-    try:
-        user = backend.do_auth(access_token, response=user_data)
-        if user:
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            return redirect('https://earning-frontend-v2.vercel.app/dashboard')
-    except Exception as e:
-        return redirect(f'https://earning-frontend-v2.vercel.app/login?error={str(e)}')
-    
-    return redirect('https://earning-frontend-v2.vercel.app/login?error=auth_failed')
+    return redirect(f'{FRONTEND_URL}/dashboard?access={access}&refresh={refresh_token}')
