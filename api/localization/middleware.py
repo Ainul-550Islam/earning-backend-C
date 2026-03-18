@@ -507,9 +507,10 @@ class SecurityHeadersMiddleware(BaseMiddleware):
             # Content Security Policy
             if not response.has_header('Content-Security-Policy'):
                 response['Content-Security-Policy'] = (
-                    "default-src 'self'; "
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-                    "style-src 'self' 'unsafe-inline';"
+                    "default-src 'self' cdn.jsdelivr.net; "
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net; "
+                    "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
+                    "img-src 'self' cdn.jsdelivr.net data:;"
                 )
             
             # X-Content-Type-Options
