@@ -1219,3 +1219,6 @@ USE_X_FORWARDED_PORT = True
 # Use Redis for sessions (fix OAuth state)
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
+
+# Explicitly set OAuth redirect URI
+SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'https://earning-backend-c-production.up.railway.app/auth/social/complete/google-oauth2/'
