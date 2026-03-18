@@ -105,7 +105,7 @@ class AutoRegisterView(APIView):
             existing_user.save()
             
             # Update device info
-            device = existing_user.device
+            device = existing_user.devices.first()
             device.total_logins += 1
             device.save()
             
@@ -160,7 +160,7 @@ class AutoRegisterView(APIView):
         os_version = request.data.get('os_version')
         app_version = request.data.get('app_version')
         
-        device = user.device
+        device = user.devices.first()
         device.device_model = device_model
         device.device_brand = device_brand
         device.os_version = os_version
