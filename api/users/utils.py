@@ -89,7 +89,6 @@ def get_location_from_ip(ip_address):
     except:
         return {}
 
-
 def check_multiple_accounts(ip_address, device_id, max_accounts=2):
     """
     Check if there are multiple accounts from same IP or Device
@@ -97,14 +96,20 @@ def check_multiple_accounts(ip_address, device_id, max_accounts=2):
     """
     from .models import User
     
-    # Check same IP
-    ip_count = User.objects.filter(registration_ip=ip_address).count()
-    if ip_count >= max_accounts:
-        return True, f"Multiple accounts detected from IP: {ip_address}"
+    # Check same IP (Resilient - field may not exist in DB yet)
+    try:
+        ip_count = User.objects.filter(registration_ip=ip_address).count()
+        if ip_count >= max_accounts:
+            return True, f"Multiple accounts detected from IP: {ip_address}"
+    except Exception:
+        ip_count = 0
     
-    # Check same device (should not happen as device_id is unique)
-    device_count = User.objects.filter(device_id=device_id).count()
-    if device_count >= 1:
-        return True, f"Account already exists for this device"
+    # Check same device
+    try:
+        device_count = User.objects.filter(device_id=device_id).count()
+        if device_count >= 1:
+            return True, f"Account already exists for this device"
+    except Exception:
+        pass
     
     return False, "OK"
