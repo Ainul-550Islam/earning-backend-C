@@ -13,4 +13,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 RUN find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; true
 RUN find . -name "*.pyc" -delete 2>/dev/null; true
-CMD python manage.py migrate --no-input && python create_admin.py && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120 --workers 2
+CMD ["sh", "-c", "python manage.py migrate --no-input && python manage.py fix_arrays && python create_admin.py && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --log-level debug"]
