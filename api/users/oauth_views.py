@@ -88,11 +88,21 @@ def get_or_create_user(email, user_info):
             return user, False
 
 def google_login(request):
-    """Store intent in session before redirecting to Google."""
-    intent = request.session.pop("oauth_intent", "login")
+    """Redirect to Google with intent encoded in state."""
+    import urllib.parse
+    intent = request.GET.get("intent", "login")
     request.session["oauth_intent"] = intent
-    from social_django.views import auth
-    return auth(request, "google-oauth2")
+    request.session.save()
+    
+    params = urllib.parse.urlencode({
+        "client_id": settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY,
+        "redirect_uri": "https://earning-backend-c-production.up.railway.app/auth/social/complete/google-oauth2/",
+        "response_type": "code",
+        "scope": "email profile openid",
+        "prompt": "select_account",
+        "state": intent,
+    })
+    return redirect("https://accounts.google.com/o/oauth2/auth?" + params)
 
 def google_callback(request):
     """Main Google OAuth2 callback handler."""
@@ -149,7 +159,8 @@ def google_callback(request):
 
     logger.info(f"[OAUTH] Login successful: {email} (new={created})")
 
-    intent = request.session.pop("oauth_intent", "login")
+    raw_state = request.GET.get("state", "")
+    intent = raw_state if raw_state in ("login", "signup") else request.session.pop("oauth_intent", "login")
 
     if intent == "signup" and not created:
         return redirect(FRONTEND_URL + "/login?error=email_already_registered")
