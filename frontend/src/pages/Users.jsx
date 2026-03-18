@@ -109,7 +109,7 @@ const CreateUserModal = ({ onClose, onCreated }) => {
     }
     setLoading(true);
     try {
-      const res = await apiFetch('/api/users/', {
+      const res = await apiFetch('/api/auth/register/', {
         method: 'POST',
         body: JSON.stringify(form),
       });
