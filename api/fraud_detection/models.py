@@ -176,7 +176,7 @@ class FraudPattern(TimeStampedModel):
     
     # Pattern data
     pattern_data = models.TextField(default='{}')  # JSON representation of pattern
-    features = ArrayField(models.CharField(max_length=100), default=get_default_list)  # Key features of the pattern
+    features = ArrayField(models.CharField(max_length=100), default=list)  # Key features of the pattern
     
     # Statistics
     occurrence_count = models.IntegerField(default=0)
@@ -206,7 +206,7 @@ class UserRiskProfile(TimeStampedModel):
     
     # Risk factors
     risk_factors = models.TextField(default='{}')  # {factor: score}
-    warning_flags = ArrayField(models.CharField(max_length=50), default=get_default_list)
+    warning_flags = ArrayField(models.CharField(max_length=50), default=list)
     
     # Statistics
     total_fraud_attempts = models.IntegerField(default=0)
@@ -326,7 +326,7 @@ class IPReputation(TimeStampedModel):
     isp = models.CharField(max_length=255, blank=True)
     
     # Threat intelligence
-    threat_types = ArrayField(models.CharField(max_length=50), default=get_default_list)
+    threat_types = ArrayField(models.CharField(max_length=50), default=list)
     last_threat_check = models.DateTimeField(null=True, blank=True)
     
     class Meta:
