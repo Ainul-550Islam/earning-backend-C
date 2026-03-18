@@ -47,4 +47,4 @@ def google_callback(request):
     access = str(refresh.access_token)
     refresh_token = str(refresh)
     
-    return redirect(f'{FRONTEND_URL}/dashboard?access={access}&refresh={refresh_token}')
+    return redirect(f'{FRONTEND_URL}/oauth-callback?access={access}&refresh={refresh_token}')
