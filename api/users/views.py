@@ -145,7 +145,7 @@ class AutoRegisterView(APIView):
         # Create new user
         user = User.objects.create(
             device_id=device_id,
-            registration_ip=ip_address,
+
             is_vpn_allowed=False
         )
         
