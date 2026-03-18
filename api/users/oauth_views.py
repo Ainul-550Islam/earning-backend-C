@@ -32,7 +32,7 @@ def check_fraud_multiple_accounts(request, user, email):
         ip = request.META.get("REMOTE_ADDR", "")
 
         device, created = DeviceFingerprint.objects.get_or_create(
-            fingerprint=fingerprint,
+            device_hash=fingerprint,
             defaults={"ip_address": ip, "user": user}
         )
 
