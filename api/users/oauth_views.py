@@ -21,8 +21,10 @@ def google_callback(request):
         'redirect_uri': REDIRECT_URI,
     })
     
+    error_detail = token_response.text[:200]
+    
     if token_response.status_code != 200:
-        return redirect(f'{FRONTEND_URL}/login?error=token_failed')
+        return redirect(f'{FRONTEND_URL}/login?error=token_failed&detail={error_detail}&status={token_response.status_code}')
     
     access_token = token_response.json().get('access_token')
     
