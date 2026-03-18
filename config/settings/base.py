@@ -1225,3 +1225,6 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'https://earning-backend-c-production.u
 
 # Override Google backend
 SOCIAL_AUTH_GOOGLE_OAUTH2_BACKEND_CLASS = 'api.users.google_backend.CustomGoogleOAuth2'
+
+# Force Google account selection screen
+SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {'prompt': 'select_account'}

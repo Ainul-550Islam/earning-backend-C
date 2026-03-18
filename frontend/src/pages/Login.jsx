@@ -13,6 +13,16 @@ const Login = () => {
   const [showPass, setShowPass] = useState(false);
   const [remember, setRemember] = useState(true);
   const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    if (error === 'email_already_registered') {
+      toast.error('This Gmail is already registered! Please login instead.');
+    } else if (error === 'token_failed') {
+      toast.error('Google login failed. Please try again.');
+    }
+  }, []);
   const navigate = useNavigate();
 
   useEffect(() => { setTimeout(() => setMounted(true), 80); }, []);
@@ -40,7 +50,7 @@ const Login = () => {
 
   const handleGoogleLogin = () => {
     const backendURL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8000';
-    window.location.href = `${backendURL}/auth/social/login/google-oauth2/`;
+    window.location.href = `${backendURL}/auth/social/login/google-oauth2/?prompt=select_account`;
   };
 
   return (

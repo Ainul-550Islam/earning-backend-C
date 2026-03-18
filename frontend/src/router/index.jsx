@@ -13,6 +13,7 @@ import FraudDetection    from '../pages/FraudDetection';
 import Settings          from '../pages/AdminPanel';
 import KYC               from '../pages/KYC';
 import Login from '../pages/Login';
+import OAuthCallback from '../pages/OAuthCallback';
 import Signup from '../pages/Signup';
 import ForgotPassword from '../pages/ForgotPassword';
 import ResetPassword from '../pages/ResetPassword';
@@ -52,6 +53,7 @@ import Subscriptions    from '../pages/SubscriptionPage';
 
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
+  { path: '/oauth-callback', element: <OAuthCallback /> },
   { path: '/signup', element: <Signup /> },
   { path: '/forgot-password', element: <ForgotPassword /> },
   { path: '/reset-password/:uid/:token', element: <ResetPassword /> },
