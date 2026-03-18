@@ -156,17 +156,12 @@ class AutoRegisterView(APIView):
         device = UserDevice.objects.create(
             user=user,
             device_id=device_id,
-            device_model=device_model,
-            device_brand=device_brand,
-            os_version=os_version,
-            app_version=app_version,
+            device_name=device_model or 'Unknown',
+            device_type='android',
         )
         user.last_login_ip = ip_address or '0.0.0.0'
         user.save()
-        device.os_version = os_version
-        device.app_version = app_version
-        device.is_vpn_detected = is_vpn
-        device.total_logins = 1
+        # device info saved on create
         
         # Get location from IP
         location = get_location_from_ip(ip_address)
