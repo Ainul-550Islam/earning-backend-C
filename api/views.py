@@ -613,7 +613,6 @@ def register_user(request):
             notification_type='SUCCESS',
             title='Welcome to Earning Pro!',
             message='Your account has been created successfully. Start earning now!',
-            icon='[DONE]'
         )
         
         return Response({
