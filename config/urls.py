@@ -1,4 +1,5 @@
 from django.contrib import admin
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from django.urls import path, include
 from admob_ssv.views import AdmobSSVView
 from django.conf import settings
@@ -21,6 +22,9 @@ urlpatterns = [
 
     # ── Django Admin ────────────────────────────────────────────────────
     path('admin/',          admin.site.urls),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('task-admin/',     admin_site.urls),
     path('api/cms-admin/',  cms_admin_site.urls),
     path('api/security-admin/', security_admin_site.urls),
