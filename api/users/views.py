@@ -145,9 +145,19 @@ class AutoRegisterView(APIView):
             )
         
         # Create new user
+        import uuid
+        username = request.data.get('username') or f"user_{str(uuid.uuid4())[:8]}"
+        email = request.data.get('email') or ''
+        phone = request.data.get('phone') or ''
+        password = request.data.get('password') or str(uuid.uuid4())
         user = User.objects.create(
+            username=username,
+            email=email,
+            phone=phone,
             is_vpn_allowed=False
         )
+        user.set_password(password)
+        user.save()
         from .models import UserDevice
         device_model = request.data.get('device_model')
         device_brand = request.data.get('device_brand')
