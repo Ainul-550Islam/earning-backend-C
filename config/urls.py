@@ -28,7 +28,7 @@ urlpatterns = [
     # ── Main API router ─────────────────────────────────────────────────
     # ✅ FIXED: was duplicated (appeared twice) — keep only once
     path('api/', include('api.urls')),
-    # path('auth/social/', include('social_django.urls', namespace='social')),
+    path('auth/social/', include('social_django.urls', namespace='social')),
 
     # ── Auth / Users ────────────────────────────────────────────────────
         path('api/users/dashboard-stats/', __import__('api.users.views', fromlist=['AdminUserViewSet']).AdminUserViewSet.as_view({'get': 'system_statistics'})),
