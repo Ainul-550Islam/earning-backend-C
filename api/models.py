@@ -1855,8 +1855,8 @@ class Wallet(models.Model):
     
     def add_funds(self, amount, description=""):
         """Add funds to wallet"""
-        self.available_balance += Decimal(str(amount))
-        self.lifetime_earnings += Decimal(str(amount))
+        self.available_balance = Decimal(str(self.available_balance)) + Decimal(str(amount))
+        self.lifetime_earnings = Decimal(str(self.lifetime_earnings)) + Decimal(str(amount))
         self.save()
         
         Transaction.objects.create(
