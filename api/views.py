@@ -151,7 +151,7 @@ def forgot_password(request):
         print("BREVO STATUS: " + str(response.status_code), flush=True)
         return Response({'message': 'Password reset email sent!', 'reset_url': reset_url})
     except User.DoesNotExist:
-        return Response({'message': 'Password reset email sent!'})
+        return Response({'error': 'No account found with this email address.'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
