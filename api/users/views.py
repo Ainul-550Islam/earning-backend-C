@@ -145,10 +145,9 @@ class AutoRegisterView(APIView):
         # Create new user
         user = User.objects.create(
             device_id=device_id,
-
+            registration_ip=ip_address or '0.0.0.0',
             is_vpn_allowed=False
         )
-        
         # Update device info
         device_model = request.data.get('device_model')
         device_brand = request.data.get('device_brand')
