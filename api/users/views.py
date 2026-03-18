@@ -144,9 +144,17 @@ class AutoRegisterView(APIView):
         
         # Create new user
         user = User.objects.create(
-            device_id=device_id,
-            registration_ip=ip_address or '0.0.0.0',
             is_vpn_allowed=False
+        )
+        # Save device info separately
+        from .models import UserDevice, UserAccountLink
+        UserDevice.objects.create(
+            user=user,
+            device_id=device_id,
+        )
+        UserAccountLink.objects.create(
+            user=user,
+            registration_ip=ip_address or '0.0.0.0',
         )
         # Update device info
         device_model = request.data.get('device_model')
