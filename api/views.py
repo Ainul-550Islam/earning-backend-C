@@ -610,7 +610,7 @@ def register_user(request):
         # Create welcome notification
         Notification.objects.create(
             user=user,
-            notification_type='SUCCESS',
+            notification_type='announcement',
             title='Welcome to Earning Pro!',
             message='Your account has been created successfully. Start earning now!',
         )
@@ -803,7 +803,7 @@ class UserOfferViewSet(viewsets.ModelViewSet):
             # Create notification
             Notification.objects.create(
                 user=user_offer.user,
-                notification_type='SUCCESS',
+                notification_type='announcement',
                 title='Offer Completed!',
                 message=f'You earned ${user_offer.reward_earned} from "{user_offer.offer.title}"',
                 icon='[MONEY]'
@@ -914,7 +914,7 @@ class WithdrawalViewSet(viewsets.ModelViewSet):
             # Create notification
             Notification.objects.create(
                 user=withdrawal.user,
-                notification_type='SUCCESS',
+                notification_type='announcement',
                 title='Withdrawal Approved',
                 message=f'Your withdrawal of ${withdrawal.amount} has been processed',
                 icon='[OK]'
