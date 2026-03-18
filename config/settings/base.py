@@ -165,7 +165,7 @@ SIMPLE_JWT = {
 # ==================== SOCIAL AUTH ====================
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'api.users.google_backend.CustomGoogleOAuth2',
+    'social_core.backends.google.GoogleOAuth2',
 ]
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', '')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET', '')
@@ -1222,3 +1222,6 @@ SESSION_CACHE_ALIAS = 'default'
 
 # Explicitly set OAuth redirect URI
 SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URI = 'https://earning-backend-c-production.up.railway.app/auth/social/complete/google-oauth2/'
+
+# Override Google backend
+SOCIAL_AUTH_GOOGLE_OAUTH2_BACKEND_CLASS = 'api.users.google_backend.CustomGoogleOAuth2'
