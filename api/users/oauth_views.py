@@ -36,14 +36,21 @@ def google_callback(request):
     if not email:
         return redirect(f'{FRONTEND_URL}/login?error=no_email')
     
-    user, created = User.objects.get_or_create(
-        email=email,
-        defaults={
-            'username': email.split('@')[0],
-            'first_name': user_info.get('given_name', ''),
-            'last_name': user_info.get('family_name', ''),
-        }
-    )
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        base_username = email.split('@')[0]
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f'{base_username}{counter}'
+            counter += 1
+        user = User.objects.create_user(
+            email=email,
+            username=username,
+            first_name=user_info.get('given_name', ''),
+            last_name=user_info.get('family_name', ''),
+        )
     
     refresh = RefreshToken.for_user(user)
     access = str(refresh.access_token)
