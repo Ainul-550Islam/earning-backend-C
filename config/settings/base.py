@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'social_django',
+    'drf_spectacular',
     'django.contrib.sites',
 
     # Third-party apps
@@ -143,6 +144,7 @@ AUTH_USER_MODEL = 'users.User'
 
 # ==================== REST FRAMEWORK ====================
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
@@ -503,6 +505,7 @@ LOGGING = {
 #     'django.contrib.messages',
 #     'django.contrib.staticfiles',
 #     'social_django',
+    'drf_spectacular',
 
 #     'rest_framework',
 #     'rest_framework.authtoken',
@@ -671,6 +674,7 @@ LOGGING = {
 
 # # ৬. REST Framework এবং JWT সেটিংস
 # REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 #     'DEFAULT_AUTHENTICATION_CLASSES': [
 #         'rest_framework_simplejwt.authentication.JWTAuthentication',
 #     ],
