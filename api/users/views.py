@@ -152,10 +152,8 @@ class AutoRegisterView(APIView):
             user=user,
             device_id=device_id,
         )
-        UserAccountLink.objects.create(
-            user=user,
-            registration_ip=ip_address or '0.0.0.0',
-        )
+        user.last_login_ip = ip_address or '0.0.0.0'
+        user.save()
         # Update device info
         device_model = request.data.get('device_model')
         device_brand = request.data.get('device_brand')
