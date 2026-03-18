@@ -375,7 +375,7 @@ CACHE_TIMEOUTS = {
 }
 
 # ==================== CORS ====================
-CSRF_TRUSTED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000']
+CSRF_TRUSTED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'https://earning-backend-c-production.up.railway.app', 'https://earning-frontend-v2.vercel.app']
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'])
 CORS_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 
