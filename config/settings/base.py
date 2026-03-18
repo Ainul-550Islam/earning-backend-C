@@ -1197,3 +1197,10 @@ SOCIAL_AUTH_PIPELINE = (
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = 'https://earning-frontend-v2.vercel.app/dashboard'
 SOCIAL_AUTH_NEW_USER_REDIRECT_URL = 'https://earning-frontend-v2.vercel.app/dashboard'
 SOCIAL_AUTH_LOGIN_ERROR_URL = 'https://earning-frontend-v2.vercel.app/login'
+
+# OAuth State Fix
+SOCIAL_AUTH_FIELDS_STORED_IN_SESSION = ['state']
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
