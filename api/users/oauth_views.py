@@ -87,6 +87,13 @@ def get_or_create_user(email, user_info):
             logger.warning(f"[OAUTH] Race condition handled for: {email}")
             return user, False
 
+def google_login(request):
+    """Store intent in session before redirecting to Google."""
+    intent = request.session.pop("oauth_intent", "login")
+    request.session["oauth_intent"] = intent
+    from social_django.views import auth
+    return auth(request, "google-oauth2")
+
 def google_callback(request):
     """Main Google OAuth2 callback handler."""
     code = request.GET.get("code")
@@ -142,7 +149,7 @@ def google_callback(request):
 
     logger.info(f"[OAUTH] Login successful: {email} (new={created})")
 
-    intent = request.GET.get("intent", "login")
+    intent = request.session.pop("oauth_intent", "login")
 
     if intent == "signup" and not created:
         return redirect(FRONTEND_URL + "/login?error=email_already_registered")
