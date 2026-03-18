@@ -1,3 +1,4 @@
+from decimal import Decimal
 # profile/serializers.py
 from rest_framework import serializers
 from api.wallet.models import Wallet
@@ -200,12 +201,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 
                 # Bonus for both
                 referrer.wallet.add_funds(5.00, "New referral bonus")
-                user.wallet.add_funds(1.00, "Welcome bonus")
+                user.wallet.add_funds(Decimal("1.00"), "Welcome bonus")
             except User.DoesNotExist:
                 pass
         else:
             # Welcome bonus
-            user.wallet.add_funds(1.00, "Welcome bonus")
+            user.wallet.add_funds(Decimal("1.00"), "Welcome bonus")
         
         return user
 
