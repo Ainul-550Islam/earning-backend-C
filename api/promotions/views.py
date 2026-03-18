@@ -508,7 +508,7 @@ class ReferralCommissionLogViewSet(
 # =============================================================================
 
 class BlacklistViewSet(viewsets.ModelViewSet):
-    queryset           = Blacklist.objects.select_related('added_by')
+    queryset           = Blacklist.objects.select_related('added_by').order_by('-id')
     serializer_class   = BlacklistSerializer
     permission_classes = [CanManageBlacklist]
     filterset_class    = BlacklistFilter
@@ -528,7 +528,7 @@ class BlacklistViewSet(viewsets.ModelViewSet):
 
 
 class FraudReportViewSet(viewsets.ModelViewSet):
-    queryset           = FraudReport.objects.select_related('user', 'submission', 'reviewed_by_admin')
+    queryset           = FraudReport.objects.select_related('user', 'submission', 'reviewed_by_admin').order_by('-id')
     serializer_class   = FraudReportSerializer
     permission_classes = [IsAdminUser]
     filterset_class    = FraudReportFilter
