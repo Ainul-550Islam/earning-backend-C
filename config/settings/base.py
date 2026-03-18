@@ -1178,3 +1178,6 @@ try:
     psycopg2.extensions.register_adapter(list, lambda l: psycopg2.extras.Json(l, dumps=lambda o: json.dumps(o, cls=GlobalSafeEncoder)))
 except Exception:
     pass
+
+# Force HTTPS for social auth
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
