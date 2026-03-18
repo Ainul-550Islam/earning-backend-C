@@ -505,7 +505,6 @@ LOGGING = {
 #     'django.contrib.messages',
 #     'django.contrib.staticfiles',
 #     'social_django',
-    'drf_spectacular',
 
 #     'rest_framework',
 #     'rest_framework.authtoken',
@@ -674,7 +673,6 @@ LOGGING = {
 
 # # ৬. REST Framework এবং JWT সেটিংস
 # REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 #     'DEFAULT_AUTHENTICATION_CLASSES': [
 #         'rest_framework_simplejwt.authentication.JWTAuthentication',
 #     ],
