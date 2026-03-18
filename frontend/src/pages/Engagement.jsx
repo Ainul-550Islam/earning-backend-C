@@ -1,3 +1,4 @@
+const _BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace('/api','');
 // src/pages/Engagement.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import '../styles/engagement.css';
@@ -175,7 +176,7 @@ export default function EngagementPage() {
   const h = { 'Authorization': `Bearer ${token}` };
   
   // Leaderboard
-  fetch('/api/engagement/leaderboard/', { headers: h })
+  fetch(_BASE+'/api/engagement/leaderboard/', { headers: h })
     .then(r => r.ok ? r.json() : null)
     .then(data => {
       if (!data) return;

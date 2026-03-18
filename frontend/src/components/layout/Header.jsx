@@ -1,3 +1,4 @@
+const _BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace('/api','');
 // src/components/layout/Header.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -51,8 +52,8 @@ export default function Header({ user, onLogout }) {
     const headers = { 'Authorization': `Bearer ${t}` };
 
     Promise.all([
-      fetch('/api/notifications/notifications/?page_size=8&ordering=-created_at', { headers }),
-      fetch('/api/notifications/unread-count/', { headers }),
+      fetch(_BASE+'/api/notifications/notifications/?page_size=8&ordering=-created_at', { headers }),
+      fetch(_BASE+'/api/notifications/unread-count/', { headers }),
     ])
       .then(([r1, r2]) => Promise.all([
         r1.ok ? r1.json() : null,

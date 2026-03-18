@@ -1,3 +1,4 @@
+const _BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace('/api','');
 // pages/Tasks.jsx — Ultra Professional Tasks Dashboard
 // Real API connected · Full CRUD · Holographic Glowing Cards
 
@@ -1094,7 +1095,7 @@ export default function TasksDashboard() {
 //   const token = localStorage.getItem('adminAccessToken') || localStorage.getItem('access_token') || '';
 //   const h = { 'Authorization': `Bearer ${token}` };
 
-//   fetch('/api/tasks/tasks/?page_size=10', { headers: h })
+//   fetch(_BASE+'/api/tasks/tasks/?page_size=10', { headers: h })
 //     .then(r => r.ok ? r.json() : null)
 //     .then(data => {
 //       if (!data) return;
@@ -1108,7 +1109,7 @@ export default function TasksDashboard() {
 //       })));
 //     }).catch(() => {});
 
-//   fetch('/api/tasks/statistics/', { headers: h })
+//   fetch(_BASE+'/api/tasks/statistics/', { headers: h })
 //     .then(r => r.ok ? r.json() : null)
 //     .then(data => {
 //       if (!data) return;

@@ -1,3 +1,4 @@
+const _BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace('/api','');
 // src/components/layout/AdminLayout.jsx
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -13,7 +14,7 @@ const AdminLayout = () => {
 
   const fetchUser = () => {
     const token = localStorage.getItem('adminAccessToken') || localStorage.getItem('access_token') || '';
-    fetch('/api/auth/profile/my_profile/', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(_BASE+'/api/auth/profile/my_profile/', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!data) return;
@@ -115,7 +116,7 @@ export default AdminLayout;
 
 //   useEffect(() => {
 //     const token = localStorage.getItem('adminAccessToken') || localStorage.getItem('access_token') || '';
-//     fetch('/api/auth/profile/my_profile/', { headers: { 'Authorization': `Bearer ${token}` } })
+//     fetch(_BASE+'/api/auth/profile/my_profile/', { headers: { 'Authorization': `Bearer ${token}` } })
 //       .then(r => r.ok ? r.json() : null)
 //       .then(data => {
 //         const d = data.data || data;
@@ -150,7 +151,7 @@ export default AdminLayout;
 //   useEffect(() => {
 //     const refresh = () => {
 //       const token = localStorage.getItem('adminAccessToken') || localStorage.getItem('access_token') || '';
-//       fetch('/api/auth/profile/my_profile/', { headers: { 'Authorization': 'Bearer ' + token } })
+//       fetch(_BASE+'/api/auth/profile/my_profile/', { headers: { 'Authorization': 'Bearer ' + token } })
 //         .then(r => r.ok ? r.json() : null)
 //         .then(data => {
 //           const d = data.data || data;

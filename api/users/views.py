@@ -97,7 +97,7 @@ class AutoRegisterView(APIView):
         user_agent = get_user_agent(request)
         
         # Check if user already exists
-        existing_user = User.objects.filter(device_id=device_id).first()
+        existing_user = None  # device_id field removed
         
         if existing_user:
             # Update last login

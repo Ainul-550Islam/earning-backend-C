@@ -16,8 +16,9 @@ import toast from 'react-hot-toast';
    API HELPERS  (real API — unchanged)
 ══════════════════════════════════ */
 const getToken = () => localStorage.getItem('adminAccessToken');
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 const apiFetch = (url, opts = {}) =>
-  fetch(url, {
+  fetch(BASE_URL.replace('/api', '') + url, {
     headers: {
       Authorization: `Bearer ${getToken()}`,
       'Content-Type': 'application/json',
@@ -98,7 +99,7 @@ const VSlider = ({ defaultVal = 55 }) => {
    CREATE USER MODAL
 ══════════════════════════════════ */
 const CreateUserModal = ({ onClose, onCreated }) => {
-  const [form, setForm] = useState({ phone: '', email: '', password: '', username: '' });
+  const [form, setForm] = useState({ phone: '', email: '', password: '', username: '', device_id: 'admin-created-' + Date.now() });
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
