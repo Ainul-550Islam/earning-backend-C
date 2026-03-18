@@ -265,7 +265,7 @@ class UserAccountLink(models.Model):
 
     
     # Registration details
-    registration_ip = models.GenericIPAddressField()
+    registration_ip = models.GenericIPAddressField(blank=True, null=True)
     registration_date = models.DateTimeField(auto_now_add=True)
     
     # Risk assessment
