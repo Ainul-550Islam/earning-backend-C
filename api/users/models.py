@@ -900,6 +900,7 @@ class User(AbstractUser):
     
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
+    is_vpn_allowed = models.BooleanField(default=False)
     last_activity = models.DateTimeField(auto_now=True)
     
     # টাইমস্ট্যাম্প
