@@ -8755,7 +8755,7 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
         fields = [
             # Core fields
             'id', 'name', 'description', 'rule_type', 'action_type',
-            'priority', 'is_active', 'is_automatic',
+            'priority', 'is_active',
             
             # Conditions and parameters
             'conditions', 'parameters', 'patterns',
