@@ -48,8 +48,8 @@ urlpatterns = [
     path('', include(router.urls)),
 
     # Device Special Endpoints
-    path('devices/<int:device_id>/blacklist/', DeviceInfoViewSet.as_view({'post': 'blacklist'}),     name='device-blacklist'),
-    path('devices/<int:device_id>/whitelist/', DeviceInfoViewSet.as_view({'post': 'whitelist'}),     name='device-whitelist'),
+    path('devices/<int:device_id>/blacklist/', DeviceInfoViewSet.as_view({'post': 'blacklist_device'}),     name='device-blacklist'),
+    path('devices/<int:device_id>/whitelist/', DeviceInfoViewSet.as_view({'post': 'whitelist_device'}),     name='device-whitelist'),
     path('devices/<int:device_id>/trust/',     DeviceInfoViewSet.as_view({'post': 'toggle_trust'}),  name='device-trust'),
     path('devices/analytics/overview/',        DeviceInfoViewSet.as_view({'get': 'analytics'}),      name='device-analytics'),
 
