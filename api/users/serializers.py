@@ -188,8 +188,8 @@ class PasswordResetSerializer(serializers.Serializer):
 class KYCVerificationSerializer(BaseSerializer):
     class Meta:
         model = KYCVerification  # [OK] আপনার model import করতে হবে
-        fields = ['id', 'document_type', 'document_front', 'document_back', 
-                 'selfie_photo', 'verification_status', 'submitted_at', 
+        fields = ['id', 'document_type', 'front_image', 'back_image', 
+                 'selfie_image', 'verification_status', 'submitted_at', 
                  'reviewed_at', 'rejection_reason']
         read_only_fields = ['id', 'submitted_at', 'reviewed_at', 'verification_status']
 
