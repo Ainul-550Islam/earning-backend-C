@@ -85,7 +85,7 @@ class NotificationSerializer(BaseSerializer):
     allow_null=True
     
 )
-    time_ago = TimeAgoField(source='created_at', read_only=True)
+
     is_expired = serializers.BooleanField(read_only=True)
     formatted_age = serializers.CharField(source='get_formatted_age', read_only=True)
     icon_url = serializers.SerializerMethodField()
@@ -1102,7 +1102,7 @@ class DeviceTokenSerializer(BaseSerializer):
     
     # Computed fields
     delivery_rate = serializers.SerializerMethodField()
-    last_active_ago = TimeAgoField(source='last_active', read_only=True)
+
     
     class Meta:
         model = DeviceToken
@@ -1481,7 +1481,7 @@ class NotificationRuleSerializer(BaseSerializer):
     
     # Computed fields
     can_execute = serializers.BooleanField(read_only=True)
-    last_triggered_ago = TimeAgoField(source='last_triggered', read_only=True)
+
     
     class Meta:
         model = NotificationRule
