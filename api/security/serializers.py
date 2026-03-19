@@ -12548,4 +12548,4 @@ class AuditTrailListSerializer(serializers.ModelSerializer):
         try:
             return obj.user.username if obj.user else 'Anonymous'
         except Exception:
-            return 'Unknown'
+            return 'Unknown'# trigger
