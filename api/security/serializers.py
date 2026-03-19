@@ -748,8 +748,8 @@ class SecurityLogAPIView(BaseAPIView):
             filters = Q()
             
             # User filter
-            if request.GET.get('user_id'):
-                filters &= Q(user_id=request.GET.get('user_id'))
+            if request.GET.get('user'):
+                filters &= Q(user_id=request.GET.get('user'))
             
             # Security type filter
             if request.GET.get('security_type'):
@@ -853,7 +853,7 @@ class SecurityLogAPIView(BaseAPIView):
             
             # Create log
             log = SecurityLog.objects.create(
-                user=data.get('user_id') and request.user.__class__.objects.filter(id=data['user_id']).first(),
+                user=data.get('user') and request.user.__class__.objects.filter(id=data['user']).first(),
                 security_type=data['security_type'],
                 severity=data.get('severity', 'medium'),
                 ip_address=data.get('ip_address', self._get_client_ip(request)),
@@ -913,7 +913,7 @@ class RiskScoreView(BaseAPIView):
     def get(self, request):
         """Get user's risk score"""
         try:
-            user_id = request.GET.get('user_id', request.user.id)
+            user_id = request.GET.get('user', request.user.id)
             
             # Permission check
             if str(user_id) != str(request.user.id) and not request.user.is_staff:
@@ -1380,8 +1380,8 @@ class AuditTrailView(BaseAPIView):
             filters = Q()
             
             # User filter
-            if request.GET.get('user_id'):
-                filters &= Q(user_id=request.GET.get('user_id'))
+            if request.GET.get('user'):
+                filters &= Q(user_id=request.GET.get('user'))
             
             # Action type filter
             if request.GET.get('action_type'):
@@ -3274,7 +3274,7 @@ class ClickTrackerSerializer(DefensiveSerializerMixin, serializers.ModelSerializ
     class Meta:
         model = ClickTracker
         fields = [
-            'id', 'user_id', 'user_info', 'action_type', 'ip_address',
+            'id', 'user', 'user_info', 'action_type', 'ip_address',
             'user_agent', 'device_info', 'metadata', 'referer', 'page_url',
             'element_id', 'session_id', 'is_suspicious', 'risk_score',
             'clicked_at', 'time_since_click', 'risk_assessment'
@@ -3418,7 +3418,7 @@ class ClickTrackerSerializer(DefensiveSerializerMixin, serializers.ModelSerializ
                 errors['metadata'] = "Metadata must be a valid JSON object"
             
             # User validation
-            user_id = self.safe_get(data, 'user_id')
+            user_id = self.safe_get(data, 'user')
             if user_id is not None:
                 from django.contrib.auth import get_user_model
                 User = get_user_model()
@@ -3426,11 +3426,11 @@ class ClickTrackerSerializer(DefensiveSerializerMixin, serializers.ModelSerializ
                     user = User.objects.get(id=user_id)
                     data['user'] = user
                 except User.DoesNotExist:
-                    errors['user_id'] = f"User with ID {user_id} does not exist"
+                    errors['user'] = f"User with ID {user_id} does not exist"
             
             # Remove user_id from data as we've converted to user object
-            if 'user_id' in data:
-                del data['user_id']
+            if 'user' in data:
+                del data['user']
             
         except Exception as e:
             logger.error(f"Unexpected validation error in ClickTrackerSerializer: {e}")
@@ -3944,7 +3944,7 @@ class DeviceInfoSerializer(
     class Meta:
         model = DeviceInfo
         fields = [
-            'id', 'user_id', 'username', 'user_email', 
+            'id', 'user', 'username', 'user_email', 
             'device_id', 'device_id_hash', 'raw_device_id',
             'device_model', 'device_brand', 'android_version', 'app_version',
             'is_rooted', 'is_emulator', 'last_ip', 'is_vpn', 'is_proxy',
@@ -4398,23 +4398,23 @@ class DeviceInfoSerializer(
                 errors['trust_level'] = "Trust level must be 1 (Low), 2 (Medium), or 3 (High)"
             
             # Validate user_id
-            user_id = data.get('user_id')
+            user_id = data.get('user')
             if user_id is not None:
                 try:
                     user = User.objects.get(id=user_id)
                     validated_data['user'] = user
                 except User.DoesNotExist:
-                    errors['user_id'] = f"User with ID {user_id} does not exist"
+                    errors['user'] = f"User with ID {user_id} does not exist"
                 except Exception as e:
-                    errors['user_id'] = f"Error validating user: {str(e)}"
+                    errors['user'] = f"Error validating user: {str(e)}"
             
             # Process raw_device_id
             if 'raw_device_id' in validated_data:
                 validated_data['device_id'] = validated_data.pop('raw_device_id')
             
             # Remove user_id from data as we've converted to user object
-            if 'user_id' in validated_data:
-                del validated_data['user_id']
+            if 'user' in validated_data:
+                del validated_data['user']
             
         except Exception as e:
             self.log_error('validate', e, {'data': str(data)[:200]})
@@ -4854,8 +4854,8 @@ class SecurityLogSerializer(NullSafeSerializerMixin, serializers.ModelSerializer
     class Meta:
         model = SecurityLog
         fields = [
-            'id', 'user_id', 'user_info', 'security_type', 'severity',
-            'ip_address', 'user_agent', 'device_info_id', 'device_info_summary',
+            'id', 'user', 'user_info', 'security_type', 'severity',
+            'ip_address', 'user_agent', 'device_info', 'device_info_summary',
             'description', 'metadata', 'action_taken', 'risk_score',
             'resolved', 'resolved_at', 'resolved_by', 'created_at',
             'time_elapsed', 'action_recommendations'
@@ -4991,7 +4991,7 @@ class SecurityLogSerializer(NullSafeSerializerMixin, serializers.ModelSerializer
                 errors['metadata'] = "Metadata must be a valid JSON object"
             
             # Validate user_id
-            user_id = data.get('user_id')
+            user_id = data.get('user')
             if user_id is not None:
                 from django.contrib.auth import get_user_model
                 User = get_user_model()
@@ -4999,22 +4999,22 @@ class SecurityLogSerializer(NullSafeSerializerMixin, serializers.ModelSerializer
                     user = User.objects.get(id=user_id)
                     data['user'] = user
                 except User.DoesNotExist:
-                    errors['user_id'] = f"User with ID {user_id} does not exist"
+                    errors['user'] = f"User with ID {user_id} does not exist"
             
             # Validate device_info_id
-            device_info_id = data.get('device_info_id')
+            device_info_id = data.get('device_info')
             if device_info_id is not None:
                 try:
                     device_info = DeviceInfo.objects.get(id=device_info_id)
                     data['device_info'] = device_info
                 except DeviceInfo.DoesNotExist:
-                    errors['device_info_id'] = f"DeviceInfo with ID {device_info_id} does not exist"
+                    errors['device_info'] = f"DeviceInfo with ID {device_info_id} does not exist"
             
             # Remove ID fields from data as we've converted to objects
-            if 'user_id' in data:
-                del data['user_id']
-            if 'device_info_id' in data:
-                del data['device_info_id']
+            if 'user' in data:
+                del data['user']
+            if 'device_info' in data:
+                del data['device_info']
             
             # Auto-set severity for critical security types
             if security_type in ['unauthorized_access', 'session_hijack'] and severity not in ['high', 'critical']:
@@ -5314,10 +5314,10 @@ class DefensiveUserBanMixin:
             User = get_user_model()
             return User.objects.get(id=user_id)
         except User.DoesNotExist:
-            raise ValidationError({'user_id': f'User with ID {user_id} does not exist'})
+            raise ValidationError({'user': f'User with ID {user_id} does not exist'})
         except Exception as e:
             logger.error(f"Error getting user {user_id}: {e}")
-            raise ValidationError({'user_id': 'Error retrieving user information'})
+            raise ValidationError({'user': 'Error retrieving user information'})
     
     def validate_ban_consistency(self, data: Dict[str, Any]) -> None:
         """Validate ban consistency rules"""
@@ -5362,7 +5362,7 @@ class DefensiveUserBanMixin:
             if existing_bans.exists():
                 ban_ids = list(existing_bans.values_list('id', flat=True)[:5])
                 raise ValidationError({
-                    'user_id': f'User already has active ban(s): {ban_ids}'
+                    'user': f'User already has active ban(s): {ban_ids}'
                 })
                 
         except ValidationError:
@@ -5411,7 +5411,7 @@ class UserBanSerializer(DefensiveUserBanMixin, serializers.ModelSerializer):
     class Meta:
         model = UserBan
         fields = [
-            'id', 'user_id', 'user_info', 'reason', 'is_permanent',
+            'id', 'user', 'user_info', 'reason', 'is_permanent',
             'banned_until', 'banned_at', 'is_active_ban',
             'ban_status', 'remaining_time', 'is_currently_active'
         ]
@@ -5446,7 +5446,7 @@ class UserBanSerializer(DefensiveUserBanMixin, serializers.ModelSerializer):
             return None
         except Exception as e:
             logger.error(f"Error getting user info for ban {obj.id}: {e}")
-            return {'error': 'user_info_unavailable', 'user_id': obj.user_id}
+            return {'error': 'user_info_unavailable', 'user': obj.user_id}
     
     def get_ban_status(self, obj: UserBan) -> str:
         """Get human-readable ban status"""
@@ -5496,9 +5496,9 @@ class UserBanSerializer(DefensiveUserBanMixin, serializers.ModelSerializer):
         
         try:
             # Validate user_id
-            user_id = data.get('user_id')
+            user_id = data.get('user')
             if not user_id:
-                errors['user_id'] = "User ID is required"
+                errors['user'] = "User ID is required"
             else:
                 try:
                     user = self.safe_get_user(user_id)
@@ -5506,7 +5506,7 @@ class UserBanSerializer(DefensiveUserBanMixin, serializers.ModelSerializer):
                     
                     # Check if trying to ban admin/staff
                     if user.is_staff or user.is_superuser:
-                        errors['user_id'] = "Cannot ban staff or superusers"
+                        errors['user'] = "Cannot ban staff or superusers"
                         
                 except ValidationError as e:
                     errors.update(e.detail)
@@ -5518,8 +5518,8 @@ class UserBanSerializer(DefensiveUserBanMixin, serializers.ModelSerializer):
                 errors.update(e.detail)
             
             # Remove user_id from data as we've converted to user object
-            if 'user_id' in data:
-                del data['user_id']
+            if 'user' in data:
+                del data['user']
             
             # Check for existing bans (only for new bans, not updates)
             if not self.instance and 'user' in data:
@@ -5807,13 +5807,13 @@ class UserBanCreateSerializer(DefensiveUserBanMixin, serializers.Serializer):
         
         try:
             # Get user
-            user_id = data['user_id']
+            user_id = data['user']
             user = self.safe_get_user(user_id)
             data['user'] = user
             
             # Check if user is staff/admin
             if user.is_staff or user.is_superuser:
-                errors['user_id'] = "Cannot ban staff or superusers"
+                errors['user'] = "Cannot ban staff or superusers"
             
             # Validate ban type consistency
             ban_type = data['ban_type']
@@ -6060,7 +6060,7 @@ class IPBlacklistSerializer(DefensiveIPBlacklistMixin, serializers.ModelSerializ
             'max_requests_per_minute', 'detection_method', 'confidence_score',
             'attack_count', 'last_attempt', 'first_seen', 'country_code',
             'country_name', 'city', 'isp', 'asn', 'organization',
-            'threat_intel_data', 'reported_by_id', 'auto_blocked_by', 'notes',
+            'threat_intel_data', 'reported_by', 'auto_blocked_by', 'notes',
             'block_status', 'remaining_time', 'is_currently_blocked', 'network_info'
         ]
         read_only_fields = [
@@ -6213,7 +6213,7 @@ class IPBlacklistSerializer(DefensiveIPBlacklistMixin, serializers.ModelSerializ
                 errors['detection_method'] = f"Invalid detection method. Must be one of: {', '.join(valid_methods)}"
             
             # Validate reported_by_id
-            reported_by_id = data.get('reported_by_id')
+            reported_by_id = data.get('reported_by')
             if reported_by_id is not None:
                 try:
                     user = self.safe_get_user(reported_by_id)
@@ -6222,8 +6222,8 @@ class IPBlacklistSerializer(DefensiveIPBlacklistMixin, serializers.ModelSerializ
                     errors.update(e.detail)
             
             # Remove reported_by_id from data as we've converted to user object
-            if 'reported_by_id' in data:
-                del data['reported_by_id']
+            if 'reported_by' in data:
+                del data['reported_by']
             
             # Validate block consistency
             try:
@@ -6563,7 +6563,7 @@ class IPBlacklistCreateSerializer(DefensiveIPBlacklistMixin, serializers.Seriali
                     errors['duration_hours'] = "Duration must be positive"
             
             # Validate reported_by_id
-            reported_by_id = data.get('reported_by_id')
+            reported_by_id = data.get('reported_by')
             if reported_by_id is not None:
                 try:
                     user = self.safe_get_user(reported_by_id)
@@ -6572,8 +6572,8 @@ class IPBlacklistCreateSerializer(DefensiveIPBlacklistMixin, serializers.Seriali
                     errors.update(e.detail)
             
             # Remove reported_by_id from data as we've converted to user object
-            if 'reported_by_id' in data:
-                del data['reported_by_id']
+            if 'reported_by' in data:
+                del data['reported_by']
             
             # Check for existing blocks
             try:
@@ -6679,10 +6679,10 @@ class DefensiveRiskScoreMixin:
             User = get_user_model()
             return User.objects.get(id=user_id)
         except User.DoesNotExist:
-            raise ValidationError({'user_id': f'User with ID {user_id} does not exist'})
+            raise ValidationError({'user': f'User with ID {user_id} does not exist'})
         except Exception as e:
             logger.error(f"Error getting user {user_id}: {e}")
-            raise ValidationError({'user_id': 'Error retrieving user information'})
+            raise ValidationError({'user': 'Error retrieving user information'})
     
     @staticmethod
     def calculate_risk_level(score: int) -> str:
@@ -6787,7 +6787,7 @@ class RiskScoreSerializer(DefensiveRiskScoreMixin, serializers.ModelSerializer):
     class Meta:
         model = RiskScore
         fields = [
-            'id', 'user_id', 'user_info', 'current_score', 'previous_score',
+            'id', 'user', 'user_info', 'current_score', 'previous_score',
             'login_frequency', 'device_diversity', 'location_diversity',
             'failed_login_attempts', 'suspicious_activities', 'vpn_usage_count',
             'last_login_time', 'last_suspicious_activity', 'calculated_at',
@@ -6832,7 +6832,7 @@ class RiskScoreSerializer(DefensiveRiskScoreMixin, serializers.ModelSerializer):
             return None
         except Exception as e:
             logger.error(f"Error getting user info for risk score {obj.id}: {e}")
-            return {'error': 'user_info_unavailable', 'user_id': obj.user_id}
+            return {'error': 'user_info_unavailable', 'user': obj.user_id}
     
     def get_risk_level(self, obj: RiskScore) -> str:
         """Get human-readable risk level"""
@@ -6966,9 +6966,9 @@ class RiskScoreSerializer(DefensiveRiskScoreMixin, serializers.ModelSerializer):
         
         try:
             # Validate user_id
-            user_id = data.get('user_id')
+            user_id = data.get('user')
             if not user_id:
-                errors['user_id'] = "User ID is required"
+                errors['user'] = "User ID is required"
             else:
                 try:
                     user = self.safe_get_user(user_id)
@@ -6983,8 +6983,8 @@ class RiskScoreSerializer(DefensiveRiskScoreMixin, serializers.ModelSerializer):
                 errors.update(e.detail)
             
             # Remove user_id from data as we've converted to user object
-            if 'user_id' in data:
-                del data['user_id']
+            if 'user' in data:
+                del data['user']
             
         except Exception as e:
             logger.error(f"Unexpected validation error in RiskScoreSerializer: {e}")
@@ -7411,7 +7411,7 @@ class AppVersionSerializer(serializers.ModelSerializer):
             'is_currently_active',
             'supported_platforms',
             'created_by',
-            'created_by_id',
+            'created_by',
             'notes',
             'created_at',
             'updated_at'
@@ -7799,7 +7799,7 @@ class WithdrawalProtectionSerializer(serializers.ModelSerializer):
         model = WithdrawalProtection
         fields = [
             'id',
-            'user', 'user_detail', 'user_id',
+            'user', 'user_detail', 'user',
             'is_active',
             'protection_level', 'protection_level_display',
             'daily_limit', 'weekly_limit', 'monthly_limit',
@@ -7817,7 +7817,7 @@ class WithdrawalProtectionSerializer(serializers.ModelSerializer):
             'notify_on_suspicious_activity',
             'total_withdrawals', 'total_withdrawal_amount', 'last_withdrawal_at',
             'custom_rules', 'exceptions',
-            'created_by', 'created_by_detail', 'created_by_id',
+            'created_by', 'created_by_detail', 'created_by',
             'notes',
             'daily_remaining', 'weekly_remaining', 'monthly_remaining',
             'created_at', 'updated_at'
@@ -7835,8 +7835,8 @@ class WithdrawalProtectionSerializer(serializers.ModelSerializer):
         # Graceful Degradation: Handle missing User model
         try:
             User = get_user_model()
-            self.fields['user_id'].queryset = User.objects.all()
-            self.fields['created_by_id'].queryset = User.objects.all()
+            self.fields['user'].queryset = User.objects.all()
+            self.fields['created_by'].queryset = User.objects.all()
         except Exception as e:
             logger.warning(f"Could not set user queryset: {e}")
             # Don't break if user model not available
@@ -9202,7 +9202,7 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
                 return {}
             
             # Copy safe values
-            safe_test_data['user_id'] = test_data.get('user_id')
+            safe_test_data['user'] = test_data.get('user')
             safe_test_data['ip_address'] = test_data.get('ip_address', '')
             safe_test_data['user_agent'] = test_data.get('user_agent', '')
             safe_test_data['activity_count'] = self._safe_int_get(test_data, 'activity_count', 0, 0, 1000)
@@ -9456,7 +9456,7 @@ class AutoBlockRuleTestSerializer(serializers.Serializer):
         
         try:
             # Copy safe values with defaults
-            safe_data['user_id'] = value.get('user_id')
+            safe_data['user'] = value.get('user')
             safe_data['ip_address'] = value.get('ip_address', '127.0.0.1')
             safe_data['user_agent'] = value.get('user_agent', '')
             safe_data['device_id'] = value.get('device_id', '')

@@ -54,9 +54,9 @@ class RateLimitLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = RateLimitLog
         fields = [
-            'id', 'user', 'user_username', 'ip_address', 'endpoint',
-            'request_method', 'config', 'config_name', 'status',
-            'requests_count', 'task_id', 'offer_id', 'referral_code',
+            'id', 'user', 'ip_address', 'endpoint',
+            'request_method', 'status',
+            'requests_count',
             'timestamp', 'created_at'
         ]
         read_only_fields = ['created_at']
@@ -69,7 +69,7 @@ class UserRateLimitProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserRateLimitProfile
         fields = [
-            'id', 'user', 'username', 'email', 'is_premium',
+            'id', 'user', 'email', 'is_premium',
             'premium_until', 'custom_daily_limit', 'custom_hourly_limit',
             'total_requests', 'blocked_requests', 'last_request_at',
             'created_at', 'updated_at'

@@ -64,15 +64,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = [
             'profile_id', 'user', 'profile_picture', 'phone_number',
             'date_of_birth', 'gender', 'address', 'city', 'state',
-            'zip_code', 'country', 'total_points', 'total_earnings',
+            'zip_code', 'country', 'total_points',
             'total_withdrawn', 'available_balance', 'referral_code',
             'referred_by_code', 'email_verified', 'phone_verified',
             'identity_verified', 'account_status', 'is_premium',
             'is_affiliate', 'email_notifications', 'is_active',
-            'created_at', 'updated_at', 'last_login_at'
+            'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'profile_id', 'total_points', 'total_earnings',
+            'profile_id', 'total_points',
             'total_withdrawn', 'email_verified', 'phone_verified',
             'identity_verified', 'created_at', 'updated_at',
             'last_login_at'
@@ -213,7 +213,7 @@ class ReferralSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserProfile
-        fields = ['username', 'email', 'joined_at', 'total_earnings', 'is_active']
+        fields = ['username', 'email', 'is_active']
 
 
 class StatsSerializer(serializers.Serializer):
