@@ -1230,3 +1230,13 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_BACKEND_CLASS = 'api.users.google_backend.CustomGoogle
 
 # Force Google account selection screen
 SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {'prompt': 'select_account'}
+
+# DRF Spectacular Settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Earning Platform API',
+    'DESCRIPTION': 'API documentation',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'POSTPROCESSING_HOOKS': [],
+    'DISABLE_ERRORS_AND_WARNINGS': True,
+}
