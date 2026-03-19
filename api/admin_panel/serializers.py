@@ -208,7 +208,6 @@ class ReferralSerializer(serializers.ModelSerializer):
     """Serializer for referral information"""
     username = serializers.CharField(source='user.username')
     email = serializers.CharField(source='user.email')
-    joined_at = serializers.DateTimeField(source='created_at')
     is_active = serializers.BooleanField()
     
     class Meta:
