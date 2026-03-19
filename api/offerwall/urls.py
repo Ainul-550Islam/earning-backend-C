@@ -40,7 +40,6 @@ urlpatterns = [
     path('offers/trending/',          OfferViewSet.as_view({'get': 'trending'}),               name='offer-trending'),
     path('offers/recommended/',       OfferViewSet.as_view({'get': 'recommended'}),            name='offer-recommended'),
     path('conversions/stats/',        OfferConversionViewSet.as_view({'get': 'stats'}),        name='conversion-stats'),
-    path('conversions/bulk_approve/', OfferConversionViewSet.as_view({'post': 'bulk_approve'}),name='conversion-bulk-approve'),
     path('clicks/stats/',             OfferClickViewSet.as_view({'get': 'stats'}),             name='click-stats'),
 
     # Router URLs — handles /{pk}/, /{pk}/sync/, /{pk}/stats/ via @action decorators
