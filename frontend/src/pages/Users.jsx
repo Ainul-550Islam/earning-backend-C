@@ -111,7 +111,7 @@ const CreateUserModal = ({ onClose, onCreated }) => {
     try {
       const res = await apiFetch('/api/auth/register/', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify({...form, password_confirm: form.password}),
       });
       if (res.user_id || res.message) {
         toast.success('✅ User created successfully!');
@@ -194,7 +194,7 @@ const EditUserModal = ({ user, onClose, onUpdated }) => {
     try {
       const res = await apiFetch(`/api/users/${user.id}/`, {
         method: 'PATCH',
-        body: JSON.stringify(form),
+        body: JSON.stringify({...form, password_confirm: form.password}),
       });
       if (res.id || res.username) {
         toast.success('✅ User updated successfully!');
