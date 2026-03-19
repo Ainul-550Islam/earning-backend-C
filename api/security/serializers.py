@@ -3415,7 +3415,7 @@ class ClickTrackerSerializer(DefensiveSerializerMixin, serializers.ModelSerializ
                 errors['metadata'] = "Metadata must be a valid JSON object"
             
             # User validation
-                    if user_id is not None:
+            if user_id is not None:
                 from django.contrib.auth import get_user_model
                 User = get_user_model()
                 try:
