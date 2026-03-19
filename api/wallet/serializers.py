@@ -342,7 +342,7 @@ class WithdrawalSerializer(serializers.ModelSerializer):
             'payment_method', 'payment_method_display',
             'amount', 'fee', 'net_amount',
             'status', 'status_display',
-            'transaction', 'processed_by', 'processed_at',
+            'WalletTransaction', 'processed_by', 'processed_at',
             'rejection_reason', 'rejected_at',
             'gateway_reference', 'gateway_response',
             'processing_fee_percentage', 'created_at', 'updated_at'
