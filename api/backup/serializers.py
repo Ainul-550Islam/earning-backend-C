@@ -52,3 +52,24 @@ class BackupProgressSerializer(serializers.Serializer):
     progress = serializers.FloatField()
     status = serializers.CharField()
     message = serializers.CharField(required=False)
+
+class BackupTaskRequestSerializer(serializers.Serializer):
+    backup_type = serializers.CharField(max_length=50, required=False)
+    storage_type = serializers.CharField(max_length=50, required=False)
+    name = serializers.CharField(max_length=255, required=False)
+    description = serializers.CharField(required=False)
+
+class RestoreRequestSerializer(serializers.Serializer):
+    backup_id = serializers.UUIDField()
+    restore_point = serializers.DateTimeField(required=False)
+    tables_to_restore = serializers.ListField(child=serializers.CharField(), required=False)
+
+class HealthCheckSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    message = serializers.CharField(required=False)
+    details = serializers.DictField(required=False)
+
+class MaintenanceModeSerializer(serializers.Serializer):
+    enabled = serializers.BooleanField()
+    message = serializers.CharField(required=False)
+    estimated_duration = serializers.IntegerField(required=False)
