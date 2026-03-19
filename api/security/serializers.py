@@ -8715,29 +8715,23 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
     
     # ============ COMPUTED FIELDS (READ-ONLY) ============
     
-    rule_effectiveness = serializers.SerializerMethodField(
         help_text="Effectiveness metrics of the rule"
     )
     
-    last_triggered_formatted = serializers.SerializerMethodField(
         help_text="Formatted last triggered timestamp"
     )
     
-    is_expired = serializers.SerializerMethodField(
         help_text="Whether the rule has expired"
     )
     
-    trigger_count_today = serializers.SerializerMethodField(
         help_text="Number of triggers today"
     )
     
     # ============ RELATED FIELDS (SAFE ACCESS) ============
     
-    created_by_username = serializers.SerializerMethodField(
         help_text="Username of rule creator"
     )
     
-    updated_by_username = serializers.SerializerMethodField(
         help_text="Username of last updater"
     )
     
@@ -8767,27 +8761,14 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             'action_duration_hours',
             
             # Monitoring
-            'trigger_count', 'last_triggered', 'success_count',
-            'false_positive_count', 'total_processed',
             
             # Metadata
-            'created_by', 'created_by_username', 'created_at',
-            'updated_by', 'updated_by_username', 'updated_at',
-            'metadata', 'tags', 'version',
             
             # Computed fields
-            'rule_effectiveness', 'last_triggered_formatted',
-            'is_expired', 'trigger_count_today',
             
             # Validation fields
-            'test_data'
         ]
         read_only_fields = [
-            'id', 'created_at', 'updated_at', 'trigger_count',
-            'last_triggered', 'success_count', 'false_positive_count',
-            'total_processed', 'created_by_username', 'updated_by_username',
-            'rule_effectiveness', 'last_triggered_formatted',
-            'is_expired', 'trigger_count_today'
         ]
     
     def __init__(self, *args, **kwargs):
@@ -8804,34 +8785,23 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
     
     # ============ SAFE GETTER METHODS ============
     
-    def get_created_by_username(self, obj) -> str:
         """Get creator username safely using getattr()"""
         try:
-            created_by = getattr(obj, 'created_by', None)
             if created_by:
                 return getattr(created_by, 'username', 'System')
         except Exception:
             pass
         return 'System'  # Null Object Pattern
     
-    def get_updated_by_username(self, obj) -> str:
         """Get updater username safely using getattr()"""
         try:
-            updated_by = getattr(obj, 'updated_by', None)
-            if updated_by:
-                return getattr(updated_by, 'username', 'System')
         except Exception:
             pass
         return 'System'  # Null Object Pattern
     
-    def get_rule_effectiveness(self, obj) -> Dict[str, Any]:
         """Calculate rule effectiveness with defensive coding"""
         try:
-            total_processed = getattr(obj, 'total_processed', 0)
-            success_count = getattr(obj, 'success_count', 0)
-            false_positive_count = getattr(obj, 'false_positive_count', 0)
             
-            if total_processed == 0:
                 return {
                     'success_rate': 0.0,
                     'false_positive_rate': 0.0,
@@ -8839,8 +8809,6 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
                     'confidence_level': 'low'
                 }
             
-            success_rate = (success_count / total_processed) * 100
-            false_positive_rate = (false_positive_count / total_processed) * 100
             
             # Calculate effectiveness score
             effectiveness_score = max(0, min(100, success_rate - false_positive_rate))
@@ -8858,7 +8826,6 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
                 'false_positive_rate': round(false_positive_rate, 2),
                 'effectiveness_score': round(effectiveness_score, 2),
                 'confidence_level': confidence,
-                'total_evaluations': total_processed
             }
             
         except Exception as e:
@@ -8871,21 +8838,15 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
                 'error': True
             }
     
-    def get_last_triggered_formatted(self, obj) -> Optional[str]:
         """Format last triggered timestamp safely"""
         try:
-            last_triggered = getattr(obj, 'last_triggered', None)
-            if last_triggered:
-                return last_triggered.isoformat()
         except Exception:
             pass
         return None
     
-    def get_is_expired(self, obj) -> bool:
         """Check if rule has expired safely"""
         try:
             # Check if rule has expiration
-            metadata = getattr(obj, 'metadata', {})
             if isinstance(metadata, dict) and 'expires_at' in metadata:
                 expires_at = metadata.get('expires_at')
                 if expires_at:
@@ -8896,11 +8857,9 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             pass
         return False
     
-    def get_trigger_count_today(self, obj) -> int:
         """Get trigger count for today (simulated)"""
         try:
             # In real implementation, you would query actual triggers for today
-            total_count = getattr(obj, 'trigger_count', 0)
             # Simulate: assume 10% of total triggers today
             return max(0, int(total_count * 0.1))
         except Exception:
@@ -9073,7 +9032,6 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             
             safe_thresholds['min_confidence'] = self._safe_float_get(thresholds, 'min_confidence', 70.0, 0.0, 100.0)
             safe_thresholds['max_false_positives'] = self._safe_int_get(thresholds, 'max_false_positives', 10, 0, 1000)
-            safe_thresholds['min_trigger_count'] = self._safe_int_get(thresholds, 'min_trigger_count', 1, 1, 1000)
             safe_thresholds['review_after'] = self._safe_int_get(thresholds, 'review_after', 100, 1, 10000)
             
         except Exception as e:
@@ -9306,7 +9264,6 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
         return {
             'min_confidence': 70.0,
             'max_false_positives': 10,
-            'min_trigger_count': 1,
             'review_after': 100
         }
     
@@ -9357,7 +9314,6 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
                 validated_data['created_by'] = request.user
             
             # Set initial monitoring values
-            validated_data['trigger_count'] = 0
             validated_data['success_count'] = 0
             validated_data['false_positive_count'] = 0
             validated_data['total_processed'] = 0
@@ -9507,7 +9463,6 @@ class AutoBlockRuleListSerializer(serializers.ModelSerializer):
         model = 'security.AutoBlockRule'
         fields = [
             'id', 'name', 'rule_type', 'action_type', 'priority',
-            'is_active', 'trigger_count', 'last_triggered',
             'effectiveness', 'status', 'created_at'
         ]
     
