@@ -7,7 +7,6 @@ User = get_user_model()
 
 
 class RateLimitConfigSerializer(serializers.ModelSerializer):
-    user_username = serializers.CharField(source='user.username', read_only=True)
     
     class Meta:
         model = RateLimitConfig
@@ -48,8 +47,6 @@ class RateLimitConfigCreateSerializer(serializers.ModelSerializer):
 
 
 class RateLimitLogSerializer(serializers.ModelSerializer):
-    user_username = serializers.CharField(source='user.username', read_only=True)
-    config_name = serializers.CharField(source='config.name', read_only=True)
     
     class Meta:
         model = RateLimitLog
@@ -63,8 +60,6 @@ class RateLimitLogSerializer(serializers.ModelSerializer):
 
 
 class UserRateLimitProfileSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
-    email = serializers.CharField(source='user.email', read_only=True)
     
     class Meta:
         model = UserRateLimitProfile
