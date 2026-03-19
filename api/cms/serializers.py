@@ -14,14 +14,14 @@ class ContentCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ContentCategory
         fields = [
-            'id', 'uuid', 'name', 'slug', 'description', 'category_type',
+            'id', 'name', 'slug', 'description', 'category_type',
             'icon', 'thumbnail', 'order', 'is_active', 'show_in_menu',
             'show_in_footer', 'show_in_app', 'parent', 'breadcrumbs',
             'seo_title', 'seo_description', 'seo_keywords',
             'min_reward', 'max_reward', 'reward_currency',
             'content_count', 'total_views', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['uuid', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
     
     def get_breadcrumbs(self, obj):
         return obj.get_breadcrumbs()
@@ -113,7 +113,7 @@ class FAQCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = FAQCategory
         fields = [
-            'id', 'uuid', 'name', 'slug', 'description', 'icon', 'order',
+            'id', 'name', 'slug', 'description', 'icon', 'order',
             'is_active', 'faq_type', 'faq_count', 'total_views',
             'created_at', 'updated_at'
         ]
