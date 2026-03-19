@@ -1,11 +1,6 @@
+# Simple replacement serializers for backup app
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
-from .models import (
-    Backup, BackupSchedule, BackupLog, BackupStorageLocation,
-    DeltaBackupTracker, RetentionPolicy, BackupNotificationConfig
-)
-
-User = get_user_model()
+from .models import Backup, BackupLog, BackupSchedule, BackupStorageLocation, DeltaBackupTracker
 
 class BackupStorageLocationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -27,28 +22,7 @@ class BackupSerializer(serializers.ModelSerializer):
         model = Backup
         fields = ['id', 'backup_id', 'name', 'description', 'backup_type', 'status', 'storage_type', 'file_path', 'file_size', 'file_hash', 'encryption_type', 'encryption_key', 'compression_type', 'original_size', 'compressed_size', 'database_engine', 'database_name', 'row_count', 'start_time', 'end_time', 'duration', 'created_at', 'updated_at']
 
-class BackupRestorationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Backup
-        fields = ['id', 'backup_id', 'name', 'backup_type', 'status', 'start_time', 'end_time', 'created_at']
-
-class RetentionPolicySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = RetentionPolicy
-        fields = ['id', 'name', 'is_active', 'daily_keep_days', 'weekly_keep_weeks', 'monthly_keep_months', 'yearly_keep_years', 'auto_cleanup', 'dry_run', 'created_at', 'updated_at']
-
-class BackupNotificationConfigSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BackupNotificationConfig
-        fields = ['id', 'name', 'notify_on_failure', 'notify_on_warning', 'created_by', 'created_at', 'updated_at']
-
 class DeltaBackupTrackerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeltaBackupTracker
         fields = ['id', 'base_backup', 'total_size', 'compressed_size', 'avg_delta_size', 'max_delta_size', 'needs_consolidation', 'last_consolidation', 'created_at', 'updated_at']
-
-class BackupProgressSerializer(serializers.Serializer):
-    backup_id = serializers.UUIDField()
-    progress = serializers.FloatField()
-    status = serializers.CharField()
-    message = serializers.CharField(required=False)
