@@ -64,7 +64,7 @@ class UserRateLimitProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserRateLimitProfile
         fields = [
-            'id', 'user', 'email', 'is_premium',
+            'id', 'user', 'is_premium',
             'premium_until', 'custom_daily_limit', 'custom_hourly_limit',
             'total_requests', 'blocked_requests', 'last_request_at',
             'created_at', 'updated_at'
