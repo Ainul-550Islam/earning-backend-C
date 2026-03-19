@@ -429,7 +429,7 @@ class WalletWebhookLogSerializer(serializers.ModelSerializer):
             'event_type', 'payload', 'headers',
             'is_processed', 'is_successful',
             'processing_error', 'reference_id',
-            'transaction_reference', 'received_at',
+            'received_at',
             'processed_at'
         ]
         read_only_fields = ['received_at', 'processed_at']
