@@ -913,8 +913,7 @@ class RiskScoreView(BaseAPIView):
     def get(self, request):
         """Get user's risk score"""
         try:
-            user_id = request.GET.get('user', request.user.id)
-            
+                    
             # Permission check
             if str(user_id) != str(request.user.id) and not request.user.is_staff:
                 return Response({
@@ -924,8 +923,7 @@ class RiskScoreView(BaseAPIView):
             
             # Get or create risk score
             risk_score, created = RiskScore.objects.get_or_create(
-                user_id=user_id,
-                defaults={
+                            defaults={
                     'current_score': 50,
                     'previous_score': 50
                 }
@@ -3248,7 +3246,6 @@ class DefensiveSerializerMixin:
 class ClickTrackerSerializer(DefensiveSerializerMixin, serializers.ModelSerializer):
     """Defensive serializer for ClickTracker with comprehensive validation"""
     
-    user_id = serializers.IntegerField(
         write_only=True, 
         required=False, 
         allow_null=True,
@@ -3418,8 +3415,7 @@ class ClickTrackerSerializer(DefensiveSerializerMixin, serializers.ModelSerializ
                 errors['metadata'] = "Metadata must be a valid JSON object"
             
             # User validation
-            user_id = self.safe_get(data, 'user')
-            if user_id is not None:
+                    if user_id is not None:
                 from django.contrib.auth import get_user_model
                 User = get_user_model()
                 try:
@@ -3790,8 +3786,7 @@ class AuditLoggerMixin:
     def log_creation(self, instance, user=None, extra=None):
         """Log instance creation"""
         try:
-            user_id = getattr(user, 'id', user) if user else None
-            logger.info(
+                    logger.info(
                 f"CREATED: {instance.__class__.__name__}(id={getattr(instance, 'id', None)}) "
                 f"by user={user_id}, extra={extra or {}}"
             )
@@ -3801,8 +3796,7 @@ class AuditLoggerMixin:
     def log_update(self, instance, user=None, changes=None):
         """Log instance update"""
         try:
-            user_id = getattr(user, 'id', user) if user else None
-            logger.info(
+                    logger.info(
                 f"UPDATED: {instance.__class__.__name__}(id={getattr(instance, 'id', None)}) "
                 f"by user={user_id}, changes={changes or 'unknown'}"
             )
@@ -3913,7 +3907,6 @@ class DeviceInfoSerializer(
     )
     
     # Write-only fields for creation
-    user_id = serializers.IntegerField(
         write_only=True,
         required=False,
         allow_null=True,
@@ -4398,8 +4391,7 @@ class DeviceInfoSerializer(
                 errors['trust_level'] = "Trust level must be 1 (Low), 2 (Medium), or 3 (High)"
             
             # Validate user_id
-            user_id = data.get('user')
-            if user_id is not None:
+                    if user_id is not None:
                 try:
                     user = User.objects.get(id=user_id)
                     validated_data['user'] = user
@@ -4837,14 +4829,12 @@ class SecurityLogSerializer(NullSafeSerializerMixin, serializers.ModelSerializer
     )
     
     # Write-only fields
-    user_id = serializers.CharField(
         write_only=True,
         required=False,
         allow_null=True,
         help_text="User ID (optional)"
     )
     
-    device_info_id = serializers.CharField(
         write_only=True,
         required=False,
         allow_null=True,
@@ -4991,8 +4981,7 @@ class SecurityLogSerializer(NullSafeSerializerMixin, serializers.ModelSerializer
                 errors['metadata'] = "Metadata must be a valid JSON object"
             
             # Validate user_id
-            user_id = data.get('user')
-            if user_id is not None:
+                    if user_id is not None:
                 from django.contrib.auth import get_user_model
                 User = get_user_model()
                 try:
@@ -5002,8 +4991,7 @@ class SecurityLogSerializer(NullSafeSerializerMixin, serializers.ModelSerializer
                     errors['user'] = f"User with ID {user_id} does not exist"
             
             # Validate device_info_id
-            device_info_id = data.get('device_info')
-            if device_info_id is not None:
+                    if device_info_id is not None:
                 try:
                     device_info = DeviceInfo.objects.get(id=device_info_id)
                     data['device_info'] = device_info
@@ -5352,8 +5340,7 @@ class DefensiveUserBanMixin:
         """Check for existing active bans with defensive coding"""
         try:
             existing_bans = UserBan.objects.filter(
-                user_id=user_id,
-                is_active_ban=True
+                            is_active_ban=True
             )
             
             if exclude_ban_id:
@@ -5380,7 +5367,6 @@ class UserBanSerializer(DefensiveUserBanMixin, serializers.ModelSerializer):
     """
     
     # Write-only field for user creation
-    user_id = serializers.IntegerField(
         write_only=True,
         required=True,
         help_text="ID of the user to ban"
@@ -5496,8 +5482,7 @@ class UserBanSerializer(DefensiveUserBanMixin, serializers.ModelSerializer):
         
         try:
             # Validate user_id
-            user_id = data.get('user')
-            if not user_id:
+                    if not user_id:
                 errors['user'] = "User ID is required"
             else:
                 try:
@@ -5768,7 +5753,6 @@ class UserBanUpdateSerializer(DefensiveUserBanMixin, serializers.ModelSerializer
 class UserBanCreateSerializer(DefensiveUserBanMixin, serializers.Serializer):
     """Specialized serializer for creating bans with defensive validation"""
     
-    user_id = serializers.IntegerField(
         required=True,
         help_text="ID of user to ban"
     )
@@ -5807,8 +5791,7 @@ class UserBanCreateSerializer(DefensiveUserBanMixin, serializers.Serializer):
         
         try:
             # Get user
-            user_id = data['user']
-            user = self.safe_get_user(user_id)
+                    user = self.safe_get_user(user_id)
             data['user'] = user
             
             # Check if user is staff/admin
@@ -6023,7 +6006,6 @@ class IPBlacklistSerializer(DefensiveIPBlacklistMixin, serializers.ModelSerializ
     """
     
     # Write-only fields
-    reported_by_id = serializers.IntegerField(
         write_only=True,
         required=False,
         allow_null=True,
@@ -6213,8 +6195,7 @@ class IPBlacklistSerializer(DefensiveIPBlacklistMixin, serializers.ModelSerializ
                 errors['detection_method'] = f"Invalid detection method. Must be one of: {', '.join(valid_methods)}"
             
             # Validate reported_by_id
-            reported_by_id = data.get('reported_by')
-            if reported_by_id is not None:
+                    if reported_by_id is not None:
                 try:
                     user = self.safe_get_user(reported_by_id)
                     data['reported_by'] = user
@@ -6522,7 +6503,6 @@ class IPBlacklistCreateSerializer(DefensiveIPBlacklistMixin, serializers.Seriali
         help_text="Maximum allowed requests per minute (0=complete block)"
     )
     
-    reported_by_id = serializers.IntegerField(
         required=False,
         allow_null=True,
         help_text="ID of user who reported this IP"
@@ -6563,8 +6543,7 @@ class IPBlacklistCreateSerializer(DefensiveIPBlacklistMixin, serializers.Seriali
                     errors['duration_hours'] = "Duration must be positive"
             
             # Validate reported_by_id
-            reported_by_id = data.get('reported_by')
-            if reported_by_id is not None:
+                    if reported_by_id is not None:
                 try:
                     user = self.safe_get_user(reported_by_id)
                     data['reported_by'] = user
@@ -6751,7 +6730,6 @@ class RiskScoreSerializer(DefensiveRiskScoreMixin, serializers.ModelSerializer):
     """
     
     # Write-only field for user creation
-    user_id = serializers.IntegerField(
         write_only=True,
         required=True,
         help_text="ID of the user"
@@ -6966,8 +6944,7 @@ class RiskScoreSerializer(DefensiveRiskScoreMixin, serializers.ModelSerializer):
         
         try:
             # Validate user_id
-            user_id = data.get('user')
-            if not user_id:
+                    if not user_id:
                 errors['user'] = "User ID is required"
             else:
                 try:
@@ -7381,7 +7358,6 @@ class AppVersionSerializer(serializers.ModelSerializer):
     )
     
     # For writing
-    created_by_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),  # Assuming User model
         source='created_by',
         write_only=True,
@@ -7736,7 +7712,6 @@ class WithdrawalProtectionSerializer(serializers.ModelSerializer):
     
     
     # For writing (with defensive error handling)
-    user_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
         source='user',
         write_only=True,
@@ -7760,7 +7735,6 @@ class WithdrawalProtectionSerializer(serializers.ModelSerializer):
         
         
         # For writing (Bulletproof with Defensive error handling)
-    created_by_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
         source='created_by',
         write_only=True,
@@ -9096,8 +9070,7 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             
             for user in users[:100]:  # Limit to 100 users
                 try:
-                    user_id = int(user)
-                    if user_id > 0:
+                                    if user_id > 0:
                         safe_users.append(user_id)
                 except (ValueError, TypeError):
                     pass
