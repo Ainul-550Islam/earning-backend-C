@@ -150,7 +150,7 @@ class NotificationSerializer(BaseSerializer):
             'cost_currency', 'variant', 'priority_boost',
             
             # Computed fields
-            'time_ago', 'formatted_age', 'is_expired', 'icon_url',
+            'formatted_age', 'is_expired', 'icon_url',
             'priority_score', 'requires_immediate_attention',
             'thread_depth', 'analytics_summary', 'preview',
             
@@ -175,7 +175,7 @@ class NotificationSerializer(BaseSerializer):
             'delivery_error', 'engagement_score', 'open_rate',
             'click_through_rate', 'conversion_rate', 'is_sent',
             'is_delivered', 'created_by', 'modified_by', 'deleted_by',
-            'version', 'time_ago', 'formatted_age', 'is_expired',
+            'version', 'formatted_age', 'is_expired',
             'priority_score', 'requires_immediate_attention',
             'thread_depth', 'reply_count', 'analytics_summary',
             'preview',
@@ -1133,12 +1133,12 @@ class DeviceTokenSerializer(BaseSerializer):
             'created_at', 'updated_at',
             
             # Computed fields
-            'delivery_rate', 'last_active_ago',
+            'delivery_rate',
         ]
         read_only_fields = [
             'id', 'user', 'push_sent', 'push_delivered', 'push_failed',
             'last_push_sent', 'created_at', 'updated_at', 'last_active',
-            'delivery_rate', 'last_active_ago',
+            'delivery_rate',
         ]
     
     def get_delivery_rate(self, obj):
@@ -1517,12 +1517,12 @@ class NotificationRuleSerializer(BaseSerializer):
             'created_by',
             
             # Computed fields
-            'can_execute', 'last_triggered_ago',
+            'can_execute',
         ]
         read_only_fields = [
             'id', 'last_triggered', 'trigger_count', 'success_count',
             'failure_count', 'created_at', 'updated_at', 'created_by',
-            'can_execute', 'last_triggered_ago',
+            'can_execute',
         ]
 
 
