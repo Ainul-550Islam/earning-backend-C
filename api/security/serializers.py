@@ -5416,7 +5416,7 @@ class UserBanSerializer(DefensiveUserBanMixin, serializers.ModelSerializer):
         fields = [
             'id', 'user', 'user_info', 'reason', 'is_permanent',
             'banned_until', 'banned_at', 'is_active_ban',
-            'ban_status', 'remaining_time', 'is_currently_active'
+            'ban_status', 'remaining_time', 'is_currently_active',
             'user_id',
         ]
         read_only_fields = [
