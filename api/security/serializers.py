@@ -8758,16 +8758,13 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             'priority', 'is_active',
             
             # Conditions and parameters
-            'conditions', 'parameters', 'patterns',
-            'thresholds', 'cooldown_period',
+            'threshold_value', 'time_window_minutes',
             
             # Scope and targeting
-            'target_users', 'target_ips', 'target_user_agents',
-            'excluded_users', 'excluded_ips', 'excluded_user_agents',
-            'scope',
+            'apply_to_all_users',
             
             # Execution
-            'action_duration', 'notify_on_trigger', 'notification_channels',
+            'action_duration_hours',
             'require_approval', 'approval_threshold',
             
             # Monitoring
