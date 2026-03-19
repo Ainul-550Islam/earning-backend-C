@@ -1316,6 +1316,18 @@ class TranslationViewSet(viewsets.ModelViewSet):
         
         return queryset.select_related('key', 'language')
     
+
+    @action(detail=False, methods=['post'])
+    def export(self, request):
+        """Export translations"""
+        from django.http import JsonResponse
+        language_code = request.data.get('language', None)
+        queryset = self.get_queryset()
+        if language_code:
+            queryset = queryset.filter(language__code=language_code)
+        data = list(queryset.values('key__key', 'language__code', 'value'))
+        return Response({'translations': data, 'count': len(data)})
+
     @action(detail=False, methods=['get'])
     def by_language(self, request):
         """
@@ -1388,6 +1400,14 @@ class TranslationKeyViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(category=category)
         return queryset
     
+    @action(detail=False, methods=['post'])
+    def export(self, request):
+        """Export translations to JSON"""
+        language = request.data.get('language', 'en')
+        queryset = self.get_queryset().filter(language__code=language)
+        data = {item.key: item.value for item in queryset}
+        return Response({'language': language, 'translations': data})
+
     @action(detail=False, methods=['get'])
     def by_category(self, request):
         """
