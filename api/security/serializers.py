@@ -3277,7 +3277,7 @@ class ClickTrackerSerializer(DefensiveSerializerMixin, serializers.ModelSerializ
             'id', 'user', 'user_info', 'action_type', 'ip_address',
             'user_agent', 'device_info', 'metadata', 'referer', 'page_url',
             'element_id', 'session_id', 'is_suspicious', 'risk_score',
-            'clicked_at', 'time_since_click', 'risk_assessment'
+            'clicked_at', 'time_since_click', 'risk_assessment',
             'user_id',
         ]
         read_only_fields = [
@@ -4860,7 +4860,7 @@ class SecurityLogSerializer(NullSafeSerializerMixin, serializers.ModelSerializer
             'ip_address', 'user_agent', 'device_info', 'device_info_summary',
             'description', 'metadata', 'action_taken', 'risk_score',
             'resolved', 'resolved_at', 'resolved_by', 'created_at',
-            'time_elapsed', 'action_recommendations'
+            'time_elapsed', 'action_recommendations',
             'user_id', 'device_info_id',
         ]
         read_only_fields = [
@@ -6795,7 +6795,7 @@ class RiskScoreSerializer(DefensiveRiskScoreMixin, serializers.ModelSerializer):
             'login_frequency', 'device_diversity', 'location_diversity',
             'failed_login_attempts', 'suspicious_activities', 'vpn_usage_count',
             'last_login_time', 'last_suspicious_activity', 'calculated_at',
-            'risk_level', 'score_change', 'risk_indicators', 'recommendations'
+            'risk_level', 'score_change', 'risk_indicators', 'recommendations',
             'user_id',
         ]
         read_only_fields = [
@@ -7419,7 +7419,7 @@ class AppVersionSerializer(serializers.ModelSerializer):
             'created_by',
             'notes',
             'created_at',
-            'updated_at'
+            'updated_at',
             'created_by_id',
         ]
         read_only_fields = [
