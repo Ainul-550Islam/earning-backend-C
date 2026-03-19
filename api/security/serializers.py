@@ -3952,7 +3952,8 @@ class DeviceInfoSerializer(
             'fingerprint', 'risk_score', 'is_trusted', 'trust_level',
             'created_at', 'updated_at', 'last_activity',
             'device_status', 'security_assessment', 'is_suspicious', 
-            'risk_level_display', 'security_flags', 'duplicate_count'
+            'risk_level_display', 'security_flags', 'duplicate_count',
+            'user_id',
         ]
         read_only_fields = [
             'id', 'device_id_hash', 'created_at', 'updated_at', 'last_activity',
