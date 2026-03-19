@@ -35,7 +35,7 @@ class BackupRestorationSerializer(serializers.ModelSerializer):
 class RetentionPolicySerializer(serializers.ModelSerializer):
     class Meta:
         model = RetentionPolicy
-        fields = ['id', 'name', 'is_active', 'daily_keep_days', 'weekly_keep_weeks', 'monthly_keep_months', 'yearly_keep_years', 'auto_cleanup', 'dry_run', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'keep_all', 'keep_weekly', 'keep_monthly', 'keep_yearly', 'created_by', 'created_at', 'updated_at']
 
 class BackupNotificationConfigSerializer(serializers.ModelSerializer):
     class Meta:
@@ -45,7 +45,7 @@ class BackupNotificationConfigSerializer(serializers.ModelSerializer):
 class DeltaBackupTrackerSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeltaBackupTracker
-        fields = ['id', 'base_backup', 'total_size', 'compressed_size', 'avg_delta_size', 'max_delta_size', 'needs_consolidation', 'last_consolidation', 'created_at', 'updated_at']
+        fields = ['id', 'parent_backup', 'child_backup']
 
 class BackupProgressSerializer(serializers.Serializer):
     backup_id = serializers.UUIDField()
