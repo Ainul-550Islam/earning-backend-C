@@ -146,7 +146,7 @@ class BackupSerializer(serializers.ModelSerializer):
             'file_size', 'file_size_human', 'file_hash',
             
             # Security
-            'encryption_type', 'encryption_type_display', 'encryption_key_id', 'is_encrypted',
+            'encryption_type', 'encryption_type_display', 'encryption_key', 'is_encrypted',
             'compression_type', 'compression_type_display', 'compression_ratio',
             'original_size', 'compressed_size',
             
