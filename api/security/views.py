@@ -70,7 +70,7 @@ from .models import (
 )
 
 from .serializers import (
-    DeviceInfoSerializer, SecurityLogSerializer, UserBanSerializer,
+    DeviceInfoSerializer, SecurityLogSerializer, UserBanSerializer, UserBanListSerializer, UserBanUpdateSerializer, UserBanCreateSerializer,
     ClickTrackerSerializer, AppVersionSerializer,
     IPBlacklistSerializer, WithdrawalProtectionSerializer, RiskScoreSerializer,
     SecurityDashboardSerializer,
