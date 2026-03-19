@@ -3246,9 +3246,9 @@ class DefensiveSerializerMixin:
 class ClickTrackerSerializer(DefensiveSerializerMixin, serializers.ModelSerializer):
     """Defensive serializer for ClickTracker with comprehensive validation"""
     
-        write_only=True, 
-        required=False, 
-        allow_null=True,
+    user_id = serializers.IntegerField(
+        write_only=True,
+        required=False,
         help_text="User ID (optional for anonymous clicks)"
     )
     
