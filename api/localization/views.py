@@ -1319,14 +1319,33 @@ class TranslationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def export(self, request):
-        """Export translations"""
-        from django.http import JsonResponse
+        """Export translations to JSON"""
         language_code = request.data.get('language', None)
         queryset = self.get_queryset()
         if language_code:
             queryset = queryset.filter(language__code=language_code)
         data = list(queryset.values('key__key', 'language__code', 'value'))
         return Response({'translations': data, 'count': len(data)})
+
+    @action(detail=False, methods=['post'])
+    def import_translations(self, request):
+        """Import translations from JSON"""
+        translations = request.data.get('translations', [])
+        imported = 0
+        for item in translations:
+            try:
+                obj = self.get_queryset().filter(
+                    key__key=item.get('key'),
+                    language__code=item.get('language')
+                ).first()
+                if obj:
+                    obj.value = item.get('value', '')
+                    obj.save()
+                    imported += 1
+            except Exception:
+                pass
+        return Response({'imported': imported, 'message': f'{imported} translations imported'})
+
 
     @action(detail=False, methods=['get'])
     def by_language(self, request):
