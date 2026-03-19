@@ -1040,3 +1040,101 @@ class SystemHealthView(generics.GenericAPIView):
             health_status['status'] = 'degraded'
         
         return Response(health_status)
+
+# ── Endpoint Toggle API ────────────────────────────────────────────────────
+from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.core.cache import cache
+from .endpoint_toggle import EndpointToggle
+
+
+class EndpointToggleSerializer:
+    pass
+
+
+from rest_framework import serializers as drf_serializers
+
+class EndpointToggleSerializer(drf_serializers.ModelSerializer):
+    class Meta:
+        model = EndpointToggle
+        fields = '__all__'
+
+
+class EndpointToggleViewSet(viewsets.ModelViewSet):
+    queryset = EndpointToggle.objects.all().order_by('group', 'path')
+    serializer_class = EndpointToggleSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    @action(detail=False, methods=['post'])
+    def bulk_toggle(self, request):
+        """Toggle multiple endpoints at once"""
+        toggles = request.data.get('toggles', [])
+        for item in toggles:
+            EndpointToggle.objects.update_or_create(
+                path=item['path'],
+                method=item.get('method', 'ALL'),
+                defaults={
+                    'is_enabled': item['is_enabled'],
+                    'group': item.get('group', 'other'),
+                    'label': item.get('label', ''),
+                    'disabled_message': item.get('message', 'Feature temporarily disabled.'),
+                }
+            )
+        cache.clear()
+        return Response({'success': True, 'updated': len(toggles)})
+
+    @action(detail=False, methods=['get'])
+    def by_group(self, request):
+        """Get toggles grouped by category"""
+        toggles = EndpointToggle.objects.all()
+        groups = {}
+        for t in toggles:
+            if t.group not in groups:
+                groups[t.group] = []
+            groups[t.group].append({
+                'id': t.id,
+                'path': t.path,
+                'method': t.method,
+                'label': t.label,
+                'is_enabled': t.is_enabled,
+                'disabled_message': t.disabled_message,
+            })
+        return Response(groups)
+
+    @action(detail=False, methods=['post'])
+    def toggle_group(self, request):
+        """Enable/disable entire group"""
+        group = request.data.get('group')
+        is_enabled = request.data.get('is_enabled', True)
+        count = EndpointToggle.objects.filter(group=group).update(is_enabled=is_enabled)
+        cache.clear()
+        return Response({'success': True, 'updated': count})
+
+    @action(detail=False, methods=['post'])
+    def seed_from_schema(self, request):
+        """Auto-create toggles from API schema"""
+        try:
+            from drf_spectacular.generators import SchemaGenerator
+            generator = SchemaGenerator()
+            schema = generator.get_schema()
+            paths = schema.get('paths', {})
+            created = 0
+            for path, methods in paths.items():
+                for method in methods.keys():
+                    if method.upper() in ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']:
+                        group = path.split('/')[2] if len(path.split('/')) > 2 else 'other'
+                        _, c = EndpointToggle.objects.get_or_create(
+                            path=path,
+                            method=method.upper(),
+                            defaults={
+                                'group': group,
+                                'label': f"{method.upper()} {path}",
+                                'is_enabled': True,
+                            }
+                        )
+                        if c:
+                            created += 1
+            return Response({'success': True, 'created': created})
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)

@@ -8,6 +8,7 @@ from .views import (
 router = DefaultRouter()
 router.register(r'dashboard',          AdminPanelViewSet,       basename='admin-dashboard')
 router.register(r'actions',            AdminActionViewSet,      basename='admin-actions')
+router.register(r'endpoint-toggles', EndpointToggleViewSet, basename='endpoint-toggle')
 router.register(r'settings',           SystemSettingsViewSet,   basename='system-settings')
 router.register(r'reports',            ReportViewSet,           basename='reports')
 router.register(r'site-contents',      SiteContentViewSet,      basename='site-contents')      # Fix 12
@@ -56,6 +57,7 @@ urlpatterns = [
 # from django.urls import path, include
 # from rest_framework.routers import DefaultRouter
 # from . import views
+from .views import EndpointToggleViewSet
 # # from .views import AdminPanelViewSet, AdminActionViewSet, SystemSettingsViewSet, ReportViewSet
 # # from api.admin_panel.views import UserProfileViewSet
 # from .views import (
@@ -66,7 +68,8 @@ urlpatterns = [
 # router = DefaultRouter()
 # router.register(r'dashboard', AdminPanelViewSet, basename='admin-dashboard')
 # router.register(r'actions', AdminActionViewSet, basename='admin-actions')
-# router.register(r'settings', SystemSettingsViewSet, basename='system-settings')
+# router.register(r'endpoint-toggles', EndpointToggleViewSet, basename='endpoint-toggle')
+router.register(r'settings', SystemSettingsViewSet, basename='system-settings')
 # router.register(r'reports', ReportViewSet, basename='reports')
 # router.register(r'contents', views.SiteContentViewSet, basename='contents')
 
