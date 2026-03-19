@@ -2,10 +2,12 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     AdminPanelViewSet, AdminActionViewSet, SystemSettingsViewSet,
-    ReportViewSet, SiteContentViewSet, SiteNotificationViewSet, SystemHealthView
+    ReportViewSet, SiteContentViewSet, SiteNotificationViewSet, SystemHealthView,
+    EndpointToggleViewSet
 )
 
 router = DefaultRouter()
+router.register(r'endpoint-toggles', EndpointToggleViewSet, basename='endpoint-toggle')
 router.register(r'dashboard',          AdminPanelViewSet,       basename='admin-dashboard')
 router.register(r'actions',            AdminActionViewSet,      basename='admin-actions')
 router.register(r'endpoint-toggles', EndpointToggleViewSet, basename='endpoint-toggle')
@@ -66,7 +68,8 @@ from .views import EndpointToggleViewSet
 # )
 
 # router = DefaultRouter()
-# router.register(r'dashboard', AdminPanelViewSet, basename='admin-dashboard')
+# router.register(r'endpoint-toggles', EndpointToggleViewSet, basename='endpoint-toggle')
+router.register(r'dashboard', AdminPanelViewSet, basename='admin-dashboard')
 # router.register(r'actions', AdminActionViewSet, basename='admin-actions')
 # router.register(r'endpoint-toggles', EndpointToggleViewSet, basename='endpoint-toggle')
 router.register(r'settings', SystemSettingsViewSet, basename='system-settings')
