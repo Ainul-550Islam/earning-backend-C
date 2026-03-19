@@ -633,7 +633,7 @@ class DeviceFingerprintSerializer(serializers.ModelSerializer):
             'id', 'user', 'fingerprint_hash',
             'device_type', 'os', 'os_version',
             'browser', 'browser_version',
-            'screen_resolution', 'timezone', 'language',
+            'screen_resolution',
             'first_seen', 'last_seen',
             'is_flagged', 'flag_reason', 'linked_account_count',
         ]
