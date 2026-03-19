@@ -6065,7 +6065,7 @@ class IPBlacklistSerializer(DefensiveIPBlacklistMixin, serializers.ModelSerializ
             'attack_count', 'last_attempt', 'first_seen', 'country_code',
             'country_name', 'city', 'isp', 'asn', 'organization',
             'threat_intel_data', 'reported_by', 'auto_blocked_by', 'notes',
-            'block_status', 'remaining_time', 'is_currently_blocked', 'network_info'
+            'block_status', 'remaining_time', 'is_currently_blocked', 'network_info',
             'reported_by_id',
         ]
         read_only_fields = [
