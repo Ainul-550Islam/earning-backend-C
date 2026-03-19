@@ -8765,7 +8765,6 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             
             # Execution
             'action_duration_hours',
-            'require_approval', 'approval_threshold',
             
             # Monitoring
             'trigger_count', 'last_triggered', 'success_count',
