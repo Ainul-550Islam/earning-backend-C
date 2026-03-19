@@ -1242,11 +1242,3 @@ SPECTACULAR_SETTINGS = {
     'IGNORE_SCHEMA_GENERATION_ERRORS': True,
 }
 
-# Schema error logging
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'Earning Backend API',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-    'POSTPROCESSING_HOOKS': [],
-    'DISABLE_ERRORS_AND_WARNINGS': False,
-}
