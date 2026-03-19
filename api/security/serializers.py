@@ -3278,6 +3278,7 @@ class ClickTrackerSerializer(DefensiveSerializerMixin, serializers.ModelSerializ
             'user_agent', 'device_info', 'metadata', 'referer', 'page_url',
             'element_id', 'session_id', 'is_suspicious', 'risk_score',
             'clicked_at', 'time_since_click', 'risk_assessment'
+            'user_id',
         ]
         read_only_fields = [
             'id', 'user_info', 'is_suspicious', 'risk_score', 
@@ -4859,6 +4860,7 @@ class SecurityLogSerializer(NullSafeSerializerMixin, serializers.ModelSerializer
             'description', 'metadata', 'action_taken', 'risk_score',
             'resolved', 'resolved_at', 'resolved_by', 'created_at',
             'time_elapsed', 'action_recommendations'
+            'user_id', 'device_info_id',
         ]
         read_only_fields = [
             'id', 'user_info', 'device_info_summary', 'risk_score',
@@ -5414,6 +5416,7 @@ class UserBanSerializer(DefensiveUserBanMixin, serializers.ModelSerializer):
             'id', 'user', 'user_info', 'reason', 'is_permanent',
             'banned_until', 'banned_at', 'is_active_ban',
             'ban_status', 'remaining_time', 'is_currently_active'
+            'user_id',
         ]
         read_only_fields = [
             'id', 'user_info', 'banned_at', 'ban_status',
@@ -6062,6 +6065,7 @@ class IPBlacklistSerializer(DefensiveIPBlacklistMixin, serializers.ModelSerializ
             'country_name', 'city', 'isp', 'asn', 'organization',
             'threat_intel_data', 'reported_by', 'auto_blocked_by', 'notes',
             'block_status', 'remaining_time', 'is_currently_blocked', 'network_info'
+            'reported_by_id',
         ]
         read_only_fields = [
             'id', 'last_attempt', 'first_seen', 'block_status',
@@ -6792,6 +6796,7 @@ class RiskScoreSerializer(DefensiveRiskScoreMixin, serializers.ModelSerializer):
             'failed_login_attempts', 'suspicious_activities', 'vpn_usage_count',
             'last_login_time', 'last_suspicious_activity', 'calculated_at',
             'risk_level', 'score_change', 'risk_indicators', 'recommendations'
+            'user_id',
         ]
         read_only_fields = [
             'id', 'user_info', 'calculated_at', 'risk_level',
@@ -7415,6 +7420,7 @@ class AppVersionSerializer(serializers.ModelSerializer):
             'notes',
             'created_at',
             'updated_at'
+            'created_by_id',
         ]
         read_only_fields = [
             'is_currently_active',
@@ -7821,6 +7827,7 @@ class WithdrawalProtectionSerializer(serializers.ModelSerializer):
             'notes',
             'daily_remaining', 'weekly_remaining', 'monthly_remaining',
             'created_at', 'updated_at'
+            'user_id', 'created_by_id',
         ]
         read_only_fields = [
             'daily_remaining', 'weekly_remaining', 'monthly_remaining',
