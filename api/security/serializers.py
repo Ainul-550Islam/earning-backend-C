@@ -6076,7 +6076,6 @@ class IPBlacklistSerializer(DefensiveIPBlacklistMixin, serializers.ModelSerializ
             'reason': {
                 'default': 'Suspicious activity detected',
                 'allow_blank': False,
-                'required': True
             },
             'threat_level': {'default': 'medium'},
             'threat_type': {'default': 'suspicious_pattern'},
