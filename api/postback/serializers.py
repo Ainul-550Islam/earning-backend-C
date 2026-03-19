@@ -51,7 +51,7 @@ class NetworkPostbackConfigWriteSerializer(serializers.ModelSerializer):
             "rate_limit_per_minute", "contact_email", "notes", "metadata",
         ]
         extra_kwargs = {
-            "secret_key": {"write_only": True, "required": True, "allow_blank": True},
+            "secret_key": {"write_only": True, "allow_blank": True},
         }
 
     def validate_ip_whitelist(self, value):
