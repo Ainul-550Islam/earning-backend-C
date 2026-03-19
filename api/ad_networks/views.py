@@ -2184,8 +2184,7 @@ class OfferConversionAdminSerializer(drf_serializers.ModelSerializer):
 class OfferWallAdminSerializer(drf_serializers.ModelSerializer):
     class Meta:
         model  = OfferWall
-        fields = ['id','name','slug','wall_type','is_active','is_default','title','description','created_at']
-        extra_kwargs = {'slug':{'required':False},'title':{'required':False},'description':{'required':False}}
+        fields = ['id','name','slug','wall_type','is_active','is_default','description','created_at']
 
 
 class BlacklistedIPSerializer(drf_serializers.ModelSerializer):
