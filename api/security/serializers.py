@@ -8758,8 +8758,8 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             'priority', 'is_active',
             
             # Conditions and parameters
-            'parameters', 'patterns',
-            'thresholds', 'cooldown_period',
+            # 'parameters', 'patterns',  # removed: not in model
+            # 'thresholds', 'cooldown_period',  # removed: not in model
             
             # Scope and targeting
             'target_users', 'target_ips', 'target_user_agents',
@@ -8930,7 +8930,7 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             validated_data['is_automatic'] = attrs.get(True)
             
             # Conditions and parameters with safe defaults
-            validated_data['parameters'] = self._validate_parameters(attrs.get('parameters', {}))
+            # validated_data['parameters'] = ...  # field removed
             validated_data['patterns'] = self._validate_patterns(attrs.get('patterns', []))
             validated_data['thresholds'] = self._validate_thresholds(attrs.get('thresholds', {}))
             validated_data['cooldown_period'] = self._safe_int_get(attrs, 'cooldown_period', 300, 0, 86400)
