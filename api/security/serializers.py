@@ -8758,7 +8758,7 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             'priority', 'is_active',
             
             # Conditions and parameters
-            'conditions', 'parameters', 'patterns',
+            'parameters', 'patterns',
             'thresholds', 'cooldown_period',
             
             # Scope and targeting
@@ -8930,7 +8930,6 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             validated_data['is_automatic'] = attrs.get(True)
             
             # Conditions and parameters with safe defaults
-            validated_data['conditions'] = self._validate_conditions(attrs.get('conditions', {}))
             validated_data['parameters'] = self._validate_parameters(attrs.get('parameters', {}))
             validated_data['patterns'] = self._validate_patterns(attrs.get('patterns', []))
             validated_data['thresholds'] = self._validate_thresholds(attrs.get('thresholds', {}))
@@ -9749,7 +9748,6 @@ class FraudPatternSerializer(serializers.ModelSerializer):
             validated_data['description'] = attrs.get('description', '').strip()
             
             # Pattern configuration with safe defaults
-            validated_data['conditions'] = self._validate_conditions(attrs.get('conditions', {}))
             validated_data['weight'] = self._safe_int_get(attrs, 'weight', 10, 1, 100)
             validated_data['confidence_threshold'] = self._safe_int_get(attrs, 'confidence_threshold', 70, 0, 100)
             validated_data['auto_block'] = attrs.get('auto_block', False)
