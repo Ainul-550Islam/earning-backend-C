@@ -198,23 +198,23 @@ class UserLevelSerializer(BaseSerializer):
     class Meta:
         model = UserLevel  # [OK] আপনার model import করতে হবে
         fields = ['id', 'current_level', 'level_type', 'experience_points', 
-                 'xp_to_next_level', 'level_up_date', 'created_at']
+                 'xp_to_next_level', 'total_xp_earned']
         read_only_fields = ['id', 'created_at']
 
 # 5. Notification Settings Serializer
 class NotificationSettingsSerializer(BaseSerializer):
     class Meta:
         model = NotificationSettings  # [OK] আপনার model import করতে হবে
-        fields = ['id', 'email_notifications', 'sms_notifications', 
-                 'push_notifications', 'promotional_emails', 'created_at']
+        fields = ['id', 'email_task_approved', 'email_task_rejected', 
+                 'email_withdrawal_processed', 'push_task_completed', 'sms_withdrawal_otp']
         read_only_fields = ['id', 'created_at']
 
 # 6. Security Settings Serializer
 class SecuritySettingsSerializer(BaseSerializer):
     class Meta:
         model = SecuritySettings  # [OK] আপনার model import করতে হবে
-        fields = ['id', 'two_factor_auth', 'login_alerts', 'device_management', 
-                 'session_timeout', 'created_at']
+        fields = ['id', 'two_factor_enabled', 'two_factor_method', 
+                 'require_login_verification', 'login_verification_method']
         read_only_fields = ['id', 'created_at']
 
 # 7. User Statistics Serializer
@@ -222,15 +222,15 @@ class UserStatisticsSerializer(BaseSerializer):
     class Meta:
         model = UserStatistics  # [OK] আপনার model import করতে হবে
         fields = ['id', 'total_earned', 'total_withdrawn', 'total_tasks_completed', 
-                 'referral_count', 'current_streak', 'longest_streak', 'created_at']
+                 'total_referrals', 'current_streak']
         read_only_fields = ['id', 'created_at']
 
 # 8. User Preferences Serializer
 class UserPreferencesSerializer(BaseSerializer):
     class Meta:
         model = UserPreferences  # [OK] আপনার model import করতে হবে
-        fields = ['id', 'language', 'currency', 'timezone', 'theme', 
-                 'notifications_sound', 'created_at']
+        fields = ['id', 'language', 'theme', 
+                 'show_quick_stats', 'show_recent_activity']
         read_only_fields = ['id', 'created_at']
 
 # 9. Support Ticket Serializer
