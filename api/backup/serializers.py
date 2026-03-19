@@ -142,7 +142,7 @@ class BackupSerializer(serializers.ModelSerializer):
             'backup_type', 'backup_type_display', 'status', 'status_display',
             
             # Storage configuration
-            'storage_type', 'storage_type_display', 'storage_path', 'file_name',
+            'storage_type', 'storage_type_display', 'file_path',
             'file_size', 'file_size_human', 'file_hash',
             
             # Security
