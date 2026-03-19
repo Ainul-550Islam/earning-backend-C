@@ -8715,25 +8715,13 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
     
     # ============ COMPUTED FIELDS (READ-ONLY) ============
     
-        help_text="Effectiveness metrics of the rule"
-    )
     
-        help_text="Formatted last triggered timestamp"
-    )
     
-        help_text="Whether the rule has expired"
-    )
     
-        help_text="Number of triggers today"
-    )
     
     # ============ RELATED FIELDS (SAFE ACCESS) ============
     
-        help_text="Username of rule creator"
-    )
     
-        help_text="Username of last updater"
-    )
     
     # ============ VALIDATION FIELDS ============
     
@@ -9561,8 +9549,6 @@ class FraudPatternSerializer(serializers.ModelSerializer):
         default=24,
         min_value=1,
         max_value=720,  # 30 days
-        help_text="Block duration in hours if auto-block enabled"
-    )
     
     class Meta:
         model = 'security.FraudPattern'  # Lazy reference
