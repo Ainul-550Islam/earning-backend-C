@@ -12,7 +12,7 @@ class RateLimitConfigSerializer(serializers.ModelSerializer):
         model = RateLimitConfig
         fields = [
             'id', 'name', 'rate_limit_type', 'requests_per_unit',
-            'time_unit', 'time_value', 'user', 'user_username',
+            'time_unit', 'time_value', 'user',
             'endpoint', 'ip_address', 'task_type', 'offer_wall',
             'is_active', 'created_at', 'updated_at'
         ]
