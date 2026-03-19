@@ -8758,38 +8758,41 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             'priority', 'is_active',
             
             # Conditions and parameters
-            # 'parameters', 'patterns',  # removed: not in model
-            # 'thresholds', 'cooldown_period',  # removed: not in model
+            # REMOVED (not in model): 'parameters', 'patterns'
+            # REMOVED (not in model): 'thresholds', 'cooldown_period'
             
             # Scope and targeting
-            'target_users', 'target_ips', 'target_user_agents',
-            'excluded_users', 'excluded_ips', 'excluded_user_agents',
-            'scope',
+            # REMOVED (not in model): 'target_users', 'target_ips', 'target_user_agents'
+            # REMOVED (not in model): 'excluded_users', 'excluded_ips', 'excluded_user_agents'
+            # REMOVED (not in model): 'scope'
             
             # Execution
-            'action_duration', 'notify_on_trigger', 'notification_channels',
-            'require_approval', 'approval_threshold',
+            # REMOVED (not in model): 'action_duration', 'notify_on_trigger', 'notification_channels'
+            # REMOVED (not in model): 'require_approval', 'approval_threshold'
             
             # Monitoring
-            'trigger_count', 'last_triggered', 'success_count',
-            'false_positive_count', 'total_processed',
+            # REMOVED (not in model): 'trigger_count', 'last_triggered', 'success_count'
+            # REMOVED (not in model): 'false_positive_count', 'total_processed'
             
             # Metadata
-            'created_by', 'created_by_username', 'created_at',
-            'updated_by', 'updated_by_username', 'updated_at',
-            'metadata', 'tags', 'version',
+            # REMOVED (not in model): 'created_by', 'created_by_username'
+            'created_at',
+            # REMOVED (not in model): 'updated_by', 'updated_by_username'
+            'updated_at',
+            # REMOVED (not in model): 'metadata', 'tags', 'version'
             
             # Computed fields
             'rule_effectiveness', 'last_triggered_formatted',
             'is_expired', 'trigger_count_today',
             
             # Validation fields
-            'test_data'
+            # REMOVED (not in model): 'test_data'
         ]
         read_only_fields = [
-            'id', 'created_at', 'updated_at', 'trigger_count',
-            'last_triggered', 'success_count', 'false_positive_count',
-            'total_processed', 'created_by_username', 'updated_by_username',
+            # REMOVED (not in model): 'trigger_count'
+            'id', 'created_at', 'updated_at',
+            # REMOVED (not in model): 'last_triggered', 'success_count', 'false_positive_count'
+            # REMOVED (not in model): 'total_processed', 'created_by_username', 'updated_by_username'
             'rule_effectiveness', 'last_triggered_formatted',
             'is_expired', 'trigger_count_today'
         ]
@@ -8930,19 +8933,19 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
             validated_data['is_automatic'] = attrs.get(True)
             
             # Conditions and parameters with safe defaults
-            # validated_data['parameters'] = ...  # field removed
-            validated_data['patterns'] = self._validate_patterns(attrs.get('patterns', []))
-            validated_data['thresholds'] = self._validate_thresholds(attrs.get('thresholds', {}))
-            validated_data['cooldown_period'] = self._safe_int_get(attrs, 'cooldown_period', 300, 0, 86400)
+            # # validated_data['parameters'] removed - field not in model
+            # validated_data['patterns'] removed - field not in model
+            # validated_data['thresholds'] removed - field not in model
+            # validated_data['cooldown_period'] removed - field not in model
             
             # Scope and targeting
-            validated_data['target_users'] = self._validate_user_list(attrs.get('target_users', []))
-            validated_data['target_ips'] = self._validate_ip_list(attrs.get('target_ips', []))
-            validated_data['target_user_agents'] = self._validate_string_list(attrs.get('target_user_agents', []))
-            validated_data['excluded_users'] = self._validate_user_list(attrs.get('excluded_users', []))
-            validated_data['excluded_ips'] = self._validate_ip_list(attrs.get('excluded_ips', []))
-            validated_data['excluded_user_agents'] = self._validate_string_list(attrs.get('excluded_user_agents', []))
-            validated_data['scope'] = attrs.get('scope', 'global')
+            # validated_data['target_users'] removed - field not in model
+            # validated_data['target_ips'] removed - field not in model
+            # validated_data['target_user_agents'] removed - field not in model
+            # validated_data['excluded_users'] removed - field not in model
+            # validated_data['excluded_ips'] removed - field not in model
+            # validated_data['excluded_user_agents'] removed - field not in model
+            # validated_data['scope'] removed - field not in model
             
             # Execution parameters
             validated_data['action_duration'] = self._safe_int_get(attrs, 'action_duration', 3600, 60, 2592000)
@@ -9360,10 +9363,10 @@ class AutoBlockRuleSerializer(serializers.ModelSerializer):
                 validated_data['created_by'] = request.user
             
             # Set initial monitoring values
-            validated_data['trigger_count'] = 0
-            validated_data['success_count'] = 0
-            validated_data['false_positive_count'] = 0
-            validated_data['total_processed'] = 0
+            # validated_data['trigger_count'] removed - field not in model
+            # validated_data['success_count'] removed - field not in model
+            # validated_data['false_positive_count'] removed - field not in model
+            # validated_data['total_processed'] removed - field not in model
             
             # Create instance
             instance = super().create(validated_data)
