@@ -578,7 +578,7 @@ class UserOfferEngagementViewSet(BaseViewSet):
             total_earnings=Sum('reward_earned', filter=Q(status='approved')),
             avg_earnings_per_offer=Avg('reward_earned', filter=Q(status='approved')),
             pending_approval=Count('id', filter=Q(status='pending')),
-            conversion_rate=Count('id', filter=Q(status__in=['completed', 'approved'])) * 100.0 / Count('id', filter=Q(status__in=['clicked', 'started'])) if Count('id', filter=Q(status__in=['clicked', 'started'])) > 0 else 0
+            conversion_rate=Count('id', filter=Q(status__in=['completed', 'approved']))
         )
         
         # Get recent activity
@@ -2902,7 +2902,7 @@ class SyncLogViewSet(viewsets.ReadOnlyModelViewSet):
 #             total_earnings=Sum('reward_earned', filter=Q(status='approved')),
 #             avg_earnings_per_offer=Avg('reward_earned', filter=Q(status='approved')),
 #             pending_approval=Count('id', filter=Q(status='pending')),
-#             conversion_rate=Count('id', filter=Q(status__in=['completed', 'approved'])) * 100.0 / Count('id', filter=Q(status__in=['clicked', 'started'])) if Count('id', filter=Q(status__in=['clicked', 'started'])) > 0 else 0
+#             conversion_rate=Count('id', filter=Q(status__in=['completed', 'approved']))
 #         )
         
 #         # Get recent activity
