@@ -69,7 +69,7 @@ def calculate_next_available_time(task: MasterTask, user_id: int) -> Optional[da
         if task.daily_completion_limit:
             today_start = timezone.now().replace(hour=0, minute=0, second=0)
             
-            today_completions = UserUserTaskCompletion.objects.filter(
+            today_completions = UserTaskCompletion.objects.filter(
                 user_id=user_id,
                 task=task,
                 completed_at__gte=today_start
@@ -82,7 +82,7 @@ def calculate_next_available_time(task: MasterTask, user_id: int) -> Optional[da
         # Check cooldown
         cooldown = task.constraints.get('cooldown_minutes', 0) if task.constraints else 0
         if cooldown > 0:
-            last_completion = UserUserTaskCompletion.objects.filter(
+            last_completion = UserTaskCompletion.objects.filter(
                 user_id=user_id,
                 task=task,
                 status='completed'
@@ -488,7 +488,7 @@ class MasterTaskViewSet(BulletproofViewSet):
             queryset = queryset.prefetch_related(
                 Prefetch(
                     'completions', 
-                    queryset=UserUserTaskCompletion.objects.filter(status='completed').order_by('-completed_at')[:prefetch_limit],
+                    queryset=UserTaskCompletion.objects.filter(status='completed').order_by('-completed_at')[:prefetch_limit],
                     to_attr='recent_completions'
                 )
             )
@@ -904,7 +904,7 @@ class TaskCompletionViewSet(BulletproofViewSet):
     ViewSet for task completions with bulletproof error handling
     """
     
-    queryset = UserUserTaskCompletion.objects.all()
+    queryset = UserTaskCompletion.objects.all()
     serializer_class = TaskCompletionSerializer
     permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
@@ -957,7 +957,7 @@ class TaskCompletionViewSet(BulletproofViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            existing = UserUserTaskCompletion.objects.filter(
+            existing = UserTaskCompletion.objects.filter(
                 user=request.user,
                 task_id=task_id,
                 status='started'
@@ -999,7 +999,7 @@ class TaskCompletionViewSet(BulletproofViewSet):
                 )
             
             # Create completion
-            completion = UserUserTaskCompletion.objects.create(
+            completion = UserTaskCompletion.objects.create(
                 user=request.user,
                 task_id=task_id,
                 ip_address=get_client_ip(request),
@@ -1160,7 +1160,7 @@ class TaskCompletionViewSet(BulletproofViewSet):
             current_date = today
             
             while True:
-                has_completion = UserUserTaskCompletion.objects.filter(
+                has_completion = UserTaskCompletion.objects.filter(
                     user_id=user_id,
                     status='completed',
                     completed_at__date=current_date
@@ -1398,7 +1398,7 @@ class HealthCheckView(APIView):
                 tasks_count = 0
             
             try:
-                completions_today = UserUserTaskCompletion.objects.filter(
+                completions_today = UserTaskCompletion.objects.filter(
                     started_at__date=timezone.now().date()
                 ).count()
             except:
