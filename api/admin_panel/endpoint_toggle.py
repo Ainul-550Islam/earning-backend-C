@@ -38,7 +38,7 @@ class EndpointToggle(models.Model):
                 models.Q(method='ALL') | models.Q(method=method)
             ).first()
             result = toggle is None
-            cache.set(cache_key, result, 30)
+            cache.set(cache_key, result, 5)
             return result
         except Exception:
             return True
@@ -93,7 +93,7 @@ class EndpointToggleMiddleware:
                     Q(method='ALL') | Q(method=method)
                 )
                 for toggle in disabled:
-                    if path == toggle.path or path.startswith(toggle.path):
+                    if path == toggle.path:
                         return JsonResponse({
                             'error': toggle.disabled_message,
                             'code': 'ENDPOINT_DISABLED',
