@@ -69,7 +69,7 @@ def calculate_next_available_time(task: MasterTask, user_id: int) -> Optional[da
         if task.daily_completion_limit:
             today_start = timezone.now().replace(hour=0, minute=0, second=0)
             
-            today_completions = UserTaskCompletion.objects.filter(
+            today_completions = UserUserTaskCompletion.objects.filter(
                 user_id=user_id,
                 task=task,
                 completed_at__gte=today_start
@@ -82,7 +82,7 @@ def calculate_next_available_time(task: MasterTask, user_id: int) -> Optional[da
         # Check cooldown
         cooldown = task.constraints.get('cooldown_minutes', 0) if task.constraints else 0
         if cooldown > 0:
-            last_completion = UserTaskCompletion.objects.filter(
+            last_completion = UserUserTaskCompletion.objects.filter(
                 user_id=user_id,
                 task=task,
                 status='completed'
@@ -488,7 +488,7 @@ class MasterTaskViewSet(BulletproofViewSet):
             queryset = queryset.prefetch_related(
                 Prefetch(
                     'completions', 
-                    queryset=UserTaskCompletion.objects.filter(status='completed').order_by('-completed_at')[:prefetch_limit],
+                    queryset=UserUserTaskCompletion.objects.filter(status='completed').order_by('-completed_at')[:prefetch_limit],
                     to_attr='recent_completions'
                 )
             )
@@ -904,7 +904,7 @@ class TaskCompletionViewSet(BulletproofViewSet):
     ViewSet for task completions with bulletproof error handling
     """
     
-    queryset = UserTaskCompletion.objects.all()
+    queryset = UserUserTaskCompletion.objects.all()
     serializer_class = TaskCompletionSerializer
     permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
@@ -957,7 +957,7 @@ class TaskCompletionViewSet(BulletproofViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            existing = UserTaskCompletion.objects.filter(
+            existing = UserUserTaskCompletion.objects.filter(
                 user=request.user,
                 task_id=task_id,
                 status='started'
@@ -999,7 +999,7 @@ class TaskCompletionViewSet(BulletproofViewSet):
                 )
             
             # Create completion
-            completion = UserTaskCompletion.objects.create(
+            completion = UserUserTaskCompletion.objects.create(
                 user=request.user,
                 task_id=task_id,
                 ip_address=get_client_ip(request),
@@ -1160,7 +1160,7 @@ class TaskCompletionViewSet(BulletproofViewSet):
             current_date = today
             
             while True:
-                has_completion = UserTaskCompletion.objects.filter(
+                has_completion = UserUserTaskCompletion.objects.filter(
                     user_id=user_id,
                     status='completed',
                     completed_at__date=current_date
@@ -1398,7 +1398,7 @@ class HealthCheckView(APIView):
                 tasks_count = 0
             
             try:
-                completions_today = UserTaskCompletion.objects.filter(
+                completions_today = UserUserTaskCompletion.objects.filter(
                     started_at__date=timezone.now().date()
                 ).count()
             except:
@@ -1499,13 +1499,13 @@ import datetime
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def task_dashboard_stats(request):
-    from .models import MasterTask, TaskCompletion
-    return TR({
+    from .models import MasterTask, UserTaskCompletion
+    return Response({
         'active_tasks':      MasterTask.objects.filter(is_active=True).count(),
         'total_tasks':       MasterTask.objects.count(),
-        'total_completions': TaskCompletion.objects.count(),
-        'pending_completions': TaskCompletion.objects.filter(status='pending').count(),
-        'approved_completions': TaskCompletion.objects.filter(status='approved').count(),
+        'total_completions': UserTaskCompletion.objects.count(),
+        'pending_completions': UserTaskCompletion.objects.filter(status='pending').count(),
+        'approved_completions': UserTaskCompletion.objects.filter(status='approved').count(),
     })
 
 @api_view(['POST'])
@@ -1514,7 +1514,7 @@ def bulk_activate(request):
     from .models import MasterTask
     ids = request.data.get('task_ids', [])
     MasterTask.objects.filter(id__in=ids).update(is_active=True)
-    return TR({'detail': f'{len(ids)} tasks activated'})
+    return Response({'detail': f'{len(ids)} tasks activated'})
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
@@ -1522,18 +1522,18 @@ def bulk_deactivate(request):
     from .models import MasterTask
     ids = request.data.get('task_ids', [])
     MasterTask.objects.filter(id__in=ids).update(is_active=False)
-    return TR({'detail': f'{len(ids)} tasks deactivated'})
+    return Response({'detail': f'{len(ids)} tasks deactivated'})
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_ledger_list(request):
-    return TR({'results': [], 'count': 0})
+    return Response({'results': [], 'count': 0})
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_profit_summary(request):
     days = int(request.query_params.get('days', 30))
-    return TR({'days': days, 'total_profit': 0, 'total_transactions': 0})
+    return Response({'days': days, 'total_profit': 0, 'total_transactions': 0})
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
@@ -1543,9 +1543,9 @@ def admin_daily_profit(request):
     for i in range(days):
         d = timezone.now().date() - datetime.timedelta(days=i)
         data.append({'date': str(d), 'profit': 0})
-    return TR({'results': data})
+    return Response({'results': data})
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_profit_by_source(request):
-    return TR({'results': []})
+    return Response({'results': []})
