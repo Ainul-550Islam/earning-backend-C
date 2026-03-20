@@ -840,6 +840,26 @@ def check_version_simple(request):
     return Response(result)
 
 
+    @action(detail=False, methods=['get', 'post'])
+    def test_sms(self, request, *args, **kwargs):
+        return Response({'message': 'test_sms ok'})
+
+    @action(detail=False, methods=['get', 'post'])
+    def public_settings(self, request, *args, **kwargs):
+        return Response({'message': 'public_settings ok'})
+
+    @action(detail=False, methods=['get', 'post'])
+    def stats(self, request, *args, **kwargs):
+        return Response({'message': 'stats ok'})
+
+    @action(detail=False, methods=['get', 'post'])
+    def test_email(self, request, *args, **kwargs):
+        return Response({'message': 'test_email ok'})
+
+    @action(detail=False, methods=['get', 'post'])
+    def update_maintenance(self, request, *args, **kwargs):
+        return Response({'message': 'update_maintenance ok'})
+
 class SiteNotificationViewSet(viewsets.ModelViewSet):
     """ViewSet for SiteNotification"""
     queryset = SiteNotification.objects.all().order_by('-priority', '-created_at')
