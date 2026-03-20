@@ -407,7 +407,6 @@ class OfferViewSet(BaseViewSet):
             total_completed=Count('id', filter=Q(status__in=['completed', 'approved'])),
             total_earnings=Sum('reward_earned', filter=Q(status='approved')),
             pending_approval=Count('id', filter=Q(status='pending')),
-            avg_completion_time=None
         )
         
         # Get global stats
@@ -449,7 +448,6 @@ class OfferViewSet(BaseViewSet):
         ).aggregate(
             conversions_7d=Count('id', filter=Q(completed_at__gte=last_7_days)),
             conversions_30d=Count('id', filter=Q(completed_at__gte=last_30_days)),
-            avg_time=None,
             total_earned=Sum('reward_earned')
         )
         
@@ -907,7 +905,6 @@ class AnalyticsViewSet(BaseViewSet):
         ).aggregate(
             overall_conversion_rate=Count('id', filter=Q(status__in=['completed', 'approved'])) * 100.0 / Count('id', filter=Q(status__in=['clicked', 'started'])) if Count('id', filter=Q(status__in=['clicked', 'started'])) > 0 else 0,
             avg_earning_per_click=Avg('reward_earned', filter=Q(status='approved')) / Count('id', filter=Q(status='clicked')) if Count('id', filter=Q(status='clicked')) > 0 else 0,
-            avg_completion_time=None,
             success_rate_by_difficulty=Count('id', filter=Q(
                 status__in=['completed', 'approved'],
                 offer__difficulty='easy'
@@ -1401,7 +1398,6 @@ class AdNetworkViewSet(BaseViewSet):
             conversions_last_7_days=Count('id', filter=Q(completed_at__gte=last_7_days)),
             conversions_last_30_days=Count('id', filter=Q(completed_at__gte=last_30_days)),
             total_earned=Sum('reward_earned'),
-            avg_completion_time=None
         )
         
         stats.update(conversion_stats)
@@ -1490,8 +1486,7 @@ class AdNetworkViewSet(BaseViewSet):
         }).values('date').annotate(
             conversions=Count('id'),
             earnings=Sum('reward_earned'),
-            clicks=Count('id', filter=Q(status='clicked')),
-            avg_time=None
+            clicks=Count('id', filter=Q(status='clicked'))
         ).order_by('date')
         
         # Offer category distribution
