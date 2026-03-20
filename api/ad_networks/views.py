@@ -306,8 +306,7 @@ class OfferViewSet(BaseViewSet):
             # If no completed offers, show featured offers
             recommended_offers = Offer.objects.filter(
                 status='active',
-                is_featured=True,
-                is_available=True
+                is_featured=True
             ).exclude(
                 id__in=UserOfferEngagement.objects.filter(
                     user=user
@@ -321,8 +320,7 @@ class OfferViewSet(BaseViewSet):
             # Recommend from completed categories
             recommended_offers = Offer.objects.filter(
                 status='active',
-                category_id__in=completed_categories,
-                is_available=True
+                category_id__in=completed_categories
             ).exclude(
                 id__in=UserOfferEngagement.objects.filter(
                     user=user
@@ -358,8 +356,7 @@ class OfferViewSet(BaseViewSet):
         
         # Get trending offers with optimized query
         trending_offers = Offer.objects.filter(
-            status='active',
-            is_available=True
+            status='active'
         ).annotate(
             recent_conversions=Count(
                 'engagements',
@@ -454,7 +451,7 @@ class OfferViewSet(BaseViewSet):
         return {
             'conversions_last_7_days': stats['conversions_7d'] or 0,
             'conversions_last_30_days': stats['conversions_30d'] or 0,
-            'average_completion_time': stats['avg_time'] or 0,
+            'average_completion_time': 0,
             'total_earned': stats['total_earned'] or 0
         }
     
@@ -2778,7 +2775,7 @@ class SyncLogViewSet(viewsets.ReadOnlyModelViewSet):
 #         return {
 #             'conversions_last_7_days': stats['conversions_7d'] or 0,
 #             'conversions_last_30_days': stats['conversions_30d'] or 0,
-#             'average_completion_time': stats['avg_time'] or 0,
+#             'average_completion_time': 0,
 #             'total_earned': stats['total_earned'] or 0
 #         }
     
