@@ -83,14 +83,23 @@ class EndpointToggleMiddleware:
         if any(path.startswith(skip) for skip in self.SKIP_PATHS):
             return self.get_response(request)
 
-        # Only check API paths
+        # Only check API paths - exact match
         if path.startswith('/api/'):
-            if not EndpointToggle.is_path_enabled(path, method):
-                message = EndpointToggle.get_message(path, method)
-                return JsonResponse({
-                    'error': message,
-                    'code': 'ENDPOINT_DISABLED',
-                    'path': path,
-                }, status=503)
+            try:
+                from django.db.models import Q
+                disabled = EndpointToggle.objects.filter(
+                    is_enabled=False
+                ).filter(
+                    Q(method='ALL') | Q(method=method)
+                )
+                for toggle in disabled:
+                    if path == toggle.path or path.startswith(toggle.path):
+                        return JsonResponse({
+                            'error': toggle.disabled_message,
+                            'code': 'ENDPOINT_DISABLED',
+                            'path': path,
+                        }, status=503)
+            except Exception:
+                pass
 
         return self.get_response(request)
