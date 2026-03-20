@@ -1070,19 +1070,27 @@ class EndpointToggleViewSet(viewsets.ModelViewSet):
     def bulk_toggle(self, request):
         """Toggle multiple endpoints at once"""
         toggles = request.data.get('toggles', [])
+        updated = 0
         for item in toggles:
-            EndpointToggle.objects.update_or_create(
-                path=item['path'],
-                method=item.get('method', 'ALL'),
-                defaults={
-                    'is_enabled': item['is_enabled'],
-                    'group': item.get('group', 'other'),
-                    'label': item.get('label', ''),
-                    'disabled_message': item.get('message', 'Feature temporarily disabled.'),
-                }
-            )
+            try:
+                obj, created = EndpointToggle.objects.get_or_create(
+                    path=item['path'],
+                    method=item.get('method', 'ALL'),
+                    defaults={
+                        'is_enabled': item['is_enabled'],
+                        'group': item.get('group', 'other'),
+                        'label': item.get('label', ''),
+                        'disabled_message': item.get('message', 'Feature temporarily disabled.'),
+                    }
+                )
+                if not created:
+                    obj.is_enabled = item['is_enabled']
+                    obj.save(update_fields=['is_enabled', 'updated_at'])
+                updated += 1
+            except Exception:
+                pass
         cache.clear()
-        return Response({'success': True, 'updated': len(toggles)})
+        return Response({'success': True, 'updated': updated})
 
     @action(detail=False, methods=['get'])
     def by_group(self, request):
