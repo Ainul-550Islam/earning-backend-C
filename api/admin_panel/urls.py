@@ -67,11 +67,6 @@ from .views import EndpointToggleViewSet
 # )
 
 # router = DefaultRouter()
-router.register(r'dashboard', AdminPanelViewSet, basename='admin-dashboard')
-# router.register(r'actions', AdminActionViewSet, basename='admin-actions')
-router.register(r'settings', SystemSettingsViewSet, basename='system-settings')
-# router.register(r'reports', ReportViewSet, basename='reports')
-# router.register(r'contents', views.SiteContentViewSet, basename='contents')
 
 # urlpatterns = [
 #     path('', include(router.urls)),
