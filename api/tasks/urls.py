@@ -253,13 +253,16 @@ urlpatterns += [
 
 # ✅ Router URLs — completions এখন /api/tasks/completions/ হবে
 urlpatterns += [
+    path('tasks/dashboard-stats/', views.task_dashboard_stats, name='task-dashboard-stats'),
+]
+
+urlpatterns += [
     path('', include(router.urls)),
     path('admin/', include(admin_router.urls)),
 ]
 
 # Statistics
 urlpatterns += [
-    path('tasks/dashboard-stats/', views.task_dashboard_stats, name='task-dashboard-stats'),
     path('tasks/bulk-activate/', views.bulk_activate, name='bulk-activate'),
     path('tasks/bulk-deactivate/', views.bulk_deactivate, name='bulk-deactivate'),
     path('admin-ledger/', views.admin_ledger_list, name='admin-ledger'),
