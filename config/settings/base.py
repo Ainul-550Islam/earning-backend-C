@@ -546,16 +546,7 @@ SPECTACULAR_SETTINGS = {
     'POSTPROCESSING_HOOKS': [],
     'DISABLE_ERRORS_AND_WARNINGS': True,
     'IGNORE_SCHEMA_GENERATION_ERRORS': True,
-}
-
-
-# Disable schema errors from crashing server
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'Earning Platform API',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
-    'POSTPROCESSING_HOOKS': [],
     'ENUM_GENERATE_CHOICE_DESCRIPTION': False,
     'SWAGGER_UI_SETTINGS': {
         'deepLinking': True,

@@ -14,10 +14,13 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 import os
 from api.notifications.models import Notice
+from api.tenants.models import Tenant
 
 
 # ==================== CUSTOM USER MODEL ====================
 class CustomUser(AbstractUser):
+    # --- Multi-tenant ---
+    tenant = models.ForeignKey(Tenant, on_delete=models.SET_NULL, null=True, blank=True, related_name="users")
     # --- Identification ---
     user_id = models.CharField(max_length=20, unique=True, blank=True)
     refer_code = models.CharField(max_length=10, unique=True, blank=True)
