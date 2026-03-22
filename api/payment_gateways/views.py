@@ -206,8 +206,6 @@ class GatewayTransactionViewSet(BaseViewSet):
                     clean['reference_id'] = result['transaction'].reference_id
                 return self.success_response(data=clean, message=f'{gateway} payment initiated')
             return self.success_response(data={}, message=f'{gateway} payment initiated')
-            else:
-                return self.error_response(message=f'Gateway {gateway} not supported', status_code=400)
         except Exception as e:
             return self.error_response(message=str(e), status_code=500)
 
