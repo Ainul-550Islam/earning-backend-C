@@ -76,6 +76,7 @@ const NAV = [
       { icon: Database,        label: 'Backup',           path: 'backup' },
       { icon: Lock,            label: 'Rate Limit',       path: 'rate-limit' },
       { icon: Settings,        label: 'Admin Panel',      path: 'settings' },
+
       { icon: FlaskConical,    label: 'Tests',            path: 'tests' },
       { icon: Megaphone,       label: 'Promotions',       path: 'promotions' },
     ]
@@ -116,6 +117,15 @@ export default function Sidebar({ user, onWidthChange }) {
   const [hidden,    setHidden]    = useState(false);   // true = slide out
   const [collapsed, setCollapsed] = useState({});      // section collapse
   const [colorOffset, setColorOffset] = useState(0);
+  const [pinned, setPinned] = useState(false);
+
+  /* ── Load pin state ── */
+  useEffect(() => {
+    if (sessionStorage.getItem('sb-pin') === '1') {
+      setPinned(true);
+      setExpanded(true);
+    }
+  }, []);
 
   /* ── Color cycle ── */
   useEffect(() => {
@@ -148,14 +158,23 @@ export default function Sidebar({ user, onWidthChange }) {
   /* ── Hover → expand, mouse সরালে → collapse ── */
   const hoverTimer = useRef(null);
   const handleMouseEnter = () => {
-    if (hidden) return;
+    if (hidden || pinned) return;
     clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => setExpanded(true), 60);
   };
   const handleMouseLeave = () => {
-    if (hidden) return;
+    if (hidden || pinned) return;
     clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => setExpanded(false), 150);
+  };
+
+  const togglePin = () => {
+    setPinned(prev => {
+      const next = !prev;
+      if (next) setExpanded(true);
+      sessionStorage.setItem('sb-pin', next ? '1' : '0');
+      return next;
+    });
   };
 
   /* ── Active path ── */
@@ -204,6 +223,15 @@ export default function Sidebar({ user, onWidthChange }) {
           >
             <AlignJustify style={{ width: 15, height: 15, color: expanded ? '#a855f7' : '#4a2a6a' }} />
           </button>
+          {expanded && (
+            <button
+              onClick={togglePin}
+              title={pinned ? 'Click: hover mode' : 'Click: keep open'}
+              style={{background:'none',border:'none',cursor:'pointer',padding:'3px 5px',display:'flex',alignItems:'center',marginLeft:'auto'}}
+            >
+              <Lock size={11} color={pinned ? '#00f5ff' : '#4a2a6a'} />
+            </button>
+          )}
 
           {/* Logo — শুধু expanded এ */}
           {expanded && (
@@ -235,7 +263,7 @@ export default function Sidebar({ user, onWidthChange }) {
         </div>
 
         {/* ══ NAV ══ */}
-        <nav className="sb-nav">
+        <nav className="sb-nav" ref={el => { if(el && !el._scrollBound) { el._scrollBound=true; const saved=sessionStorage.getItem("sb-scroll"); if(saved) el.scrollTop=+saved; el.addEventListener("scroll",()=>sessionStorage.setItem("sb-scroll",el.scrollTop)); } }}>
           {(() => {
             let globalIdx = 0;
             return NAV.map(({ section, items }, sIdx) => (
@@ -627,6 +655,7 @@ const SIDEBAR_CSS = `
 //       { icon: Database,        label: 'Backup',           path: 'backup' },
 //       { icon: Lock,            label: 'Rate Limit',       path: 'rate-limit' },
 //       { icon: Settings,        label: 'Admin Panel',      path: 'settings' },
+//
 //       { icon: FlaskConical,    label: 'Tests',            path: 'tests' },
 //       { icon: Megaphone,       label: 'Promotions',       path: 'promotions' },
 //     ]
@@ -638,6 +667,7 @@ const SIDEBAR_CSS = `
 //   const location   = useLocation();
 //   const [collapsed, setCollapsed] = useState({});
 //   const [colorOffset, setColorOffset] = useState(0);
+//   const [pinned, setPinned] = useState(false);
 
 //   useEffect(() => {
 //     const timer = setInterval(() => {
@@ -797,7 +827,7 @@ const SIDEBAR_CSS = `
 //         </div>
 
 //         {/* Nav */}
-//         <nav className="sb-nav">
+//         <nav className="sb-nav" ref={el => { if(el && !el._scrollBound) { el._scrollBound=true; const saved=sessionStorage.getItem("sb-scroll"); if(saved) el.scrollTop=+saved; el.addEventListener("scroll",()=>sessionStorage.setItem("sb-scroll",el.scrollTop)); } }}>
 //           {(() => {
 //             let globalIdx = 0;
 //             return NAV.map(({ section, items }, sIdx) => (

@@ -49,7 +49,8 @@ import AutoMod          from '../pages/AutoMod';
 import BehaviorAnalytics from '../pages/BehaviorAnalytics';
 import Gamification     from '../pages/Gamification';
 import Subscriptions    from '../pages/SubscriptionPage';
-import EndpointControl  from '../pages/EndpointControl';
+const EndpointControl = React.lazy(() => import('../pages/EndpointControl'));
+
 
 
 const router = createBrowserRouter([
@@ -105,7 +106,8 @@ const router = createBrowserRouter([
           { path: 'behavior-analytics', element: <BehaviorAnalytics /> },
           { path: 'gamification',       element: <Gamification /> },
           { path: 'subscriptions',      element: <Subscriptions /> },
-          { path: 'endpoint-control',    element: <EndpointControl /> },
+          { path: 'endpoint-control',    element: <React.Suspense fallback={<div>Loading...</div>}><EndpointControl /></React.Suspense> },
+          
           { path: '*',                    element: <Navigate to="/" replace /> },
         ],
       },
