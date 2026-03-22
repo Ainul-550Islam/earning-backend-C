@@ -47,14 +47,14 @@ class PaymentProcessor(ABC):
             return (amount * fee_percentage) / 100
         return Decimal('0')
     
-    def create_GatewayTransaction(self, user, GatewayTransaction_type, amount, payment_method=None, **kwargs):
+    def create_GatewayTransaction(self, user, transaction_type, amount, payment_method=None, **kwargs):
         """Create GatewayTransaction record"""
         fee = self.calculate_fee(amount)
         net_amount = amount - fee
         
         GatewayTransaction = TxnModel.objects.create(
             user=user,
-            GatewayTransaction_type=GatewayTransaction_type,
+            transaction_type=transaction_type,
             gateway=self.gateway_name,
             amount=amount,
             fee=fee,

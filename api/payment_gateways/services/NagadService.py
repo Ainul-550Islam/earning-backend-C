@@ -51,7 +51,7 @@ class NagadService(PaymentProcessor):
         # Create GatewayTransaction
         GatewayTransaction = self.create_GatewayTransaction(
             user=user,
-            GatewayTransaction_type='deposit',
+            transaction_type='deposit',
             amount=amount,
             payment_method=payment_method,
             metadata=kwargs.get('metadata', {})
@@ -153,7 +153,7 @@ class NagadService(PaymentProcessor):
             # Create GatewayTransaction record
             GatewayTransaction = self.create_GatewayTransaction(
                 user=user,
-                GatewayTransaction_type='withdrawal',
+                transaction_type='withdrawal',
                 amount=amount,
                 payment_method=payment_method,
                 metadata={
