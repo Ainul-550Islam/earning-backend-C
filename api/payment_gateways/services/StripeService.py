@@ -5,7 +5,7 @@ from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
 from .PaymentProcessor import PaymentProcessor
-from ..models import GatewayTransaction, PayoutRequest
+from ..models import GatewayTransaction as TxnModel, PayoutRequest
 
 
 class StripeService(PaymentProcessor):
@@ -21,8 +21,8 @@ class StripeService(PaymentProcessor):
         """Process Stripe deposit"""
         self.validate_amount(amount)
         
-        # Create GatewayTransaction
-        GatewayTransaction = self.create_GatewayTransaction(
+        # Create txn
+        txn = self.create_txn(
             user=user,
             transaction_type='deposit',
             amount=amount,
@@ -40,8 +40,8 @@ class StripeService(PaymentProcessor):
                 currency='usd',  # or 'bdt' if available
                 metadata={
                     'user_id': str(user.id),
-                    'GatewayTransaction_id': str(GatewayTransaction.id),
-                    'reference_id': GatewayTransaction.reference_id
+                    'GatewayTransaction_id': str(txn.id),
+                    'reference_id': txn.reference_id
                 },
                 description=f"Deposit for {user.username}",
                 statement_descriptor_suffix="DEPOSIT",
@@ -51,34 +51,34 @@ class StripeService(PaymentProcessor):
                 }
             )
             
-            # Update GatewayTransaction
-            GatewayTransaction.gateway_reference = payment_intent.id
-            GatewayTransaction.metadata['stripe_payment_intent'] = {
+            # Update txn
+            txn.gateway_reference = payment_intent.id
+            txn.metadata['stripe_payment_intent'] = {
                 'id': payment_intent.id,
                 'client_secret': payment_intent.client_secret,
                 'status': payment_intent.status,
                 'amount': payment_intent.amount / 100
             }
-            GatewayTransaction.save()
+            txn.save()
             
             return {
-                'GatewayTransaction': GatewayTransaction,
+                'transaction': txn,
                 'client_secret': payment_intent.client_secret,
                 'payment_intent_id': payment_intent.id,
                 'public_key': self.public_key
             }
             
         except stripe.error.StripeError as e:
-            GatewayTransaction.status = 'failed'
-            GatewayTransaction.metadata['stripe_error'] = str(e)
-            GatewayTransaction.save()
+            txn.status = 'failed'
+            txn.metadata['stripe_error'] = str(e)
+            txn.save()
             raise Exception(f"Stripe deposit failed: {str(e)}")
     
     def process_withdrawal(self, user, amount, payment_method, **kwargs):
         """Process Stripe withdrawal (Payout)"""
         self.validate_amount(amount)
         
-        with db_GatewayTransaction.atomic():
+        with db_txn.atomic():
             # Check if user has Stripe Connect account
             stripe_account_id = user.metadata.get('stripe_account_id') if hasattr(user, 'metadata') else None
             
@@ -98,8 +98,8 @@ class StripeService(PaymentProcessor):
                 reference_id=self.generate_reference_id()
             )
             
-            # Create GatewayTransaction record
-            GatewayTransaction = self.create_GatewayTransaction(
+            # Create txn record
+            txn = self.create_txn(
                 user=user,
                 transaction_type='withdrawal',
                 amount=amount,
@@ -119,20 +119,20 @@ class StripeService(PaymentProcessor):
                     destination=stripe_account_id,
                     metadata={
                         'user_id': str(user.id),
-                        'GatewayTransaction_id': str(GatewayTransaction.id),
+                        'GatewayTransaction_id': str(txn.id),
                         'payout_id': str(payout.id)
                     },
                     description=f"Payout to {user.username}"
                 )
                 
-                # Update GatewayTransaction and payout
-                GatewayTransaction.gateway_reference = transfer.id
-                GatewayTransaction.metadata['stripe_transfer'] = {
+                # Update txn and payout
+                txn.gateway_reference = transfer.id
+                txn.metadata['stripe_transfer'] = {
                     'id': transfer.id,
                     'amount': transfer.amount / 100,
                     'status': transfer.status
                 }
-                GatewayTransaction.save()
+                txn.save()
                 
                 payout.gateway_reference = transfer.id
                 payout.status = 'processing'
@@ -143,16 +143,16 @@ class StripeService(PaymentProcessor):
                 user.save()
                 
                 return {
-                    'GatewayTransaction': GatewayTransaction,
+                    'transaction': txn,
                     'payout': payout,
                     'transfer_id': transfer.id,
                     'message': 'Withdrawal processing started'
                 }
                 
             except stripe.error.StripeError as e:
-                GatewayTransaction.status = 'failed'
-                GatewayTransaction.metadata['stripe_error'] = str(e)
-                GatewayTransaction.save()
+                txn.status = 'failed'
+                txn.metadata['stripe_error'] = str(e)
+                txn.save()
                 
                 payout.status = 'failed'
                 payout.save()
@@ -164,40 +164,40 @@ class StripeService(PaymentProcessor):
         try:
             payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
             
-            # Find GatewayTransaction
+            # Find txn
             try:
-                GatewayTransaction = GatewayTransaction.objects.get(gateway_reference=payment_intent_id)
+                txn = TxnModel.objects.get(gateway_reference=payment_intent_id)
                 
                 if payment_intent.status == 'succeeded':
-                    GatewayTransaction.status = 'completed'
-                    GatewayTransaction.completed_at = timezone.now()
-                    GatewayTransaction.metadata['stripe_verification'] = {
+                    txn.status = 'completed'
+                    txn.completed_at = timezone.now()
+                    txn.metadata['stripe_verification'] = {
                         'status': payment_intent.status,
                         'amount_received': payment_intent.amount_received / 100,
                         'payment_method': payment_intent.payment_method
                     }
                     
                     # Update user balance
-                    user = GatewayTransaction.user
-                    user.balance += GatewayTransaction.net_amount
+                    user = txn.user
+                    user.balance += txn.net_amount
                     user.save()
                 elif payment_intent.status in ['canceled', 'requires_payment_method']:
-                    GatewayTransaction.status = 'failed'
-                    GatewayTransaction.metadata['stripe_verification'] = {
+                    txn.status = 'failed'
+                    txn.metadata['stripe_verification'] = {
                         'status': payment_intent.status,
                         'last_payment_error': payment_intent.last_payment_error
                     }
                 
-                GatewayTransaction.save()
-                return GatewayTransaction
+                txn.save()
+                return txn
                 
-            except GatewayTransaction.DoesNotExist:
+            except TxnModel.DoesNotExist:
                 return None
                 
         except stripe.error.StripeError as e:
             raise Exception(f"Payment verification failed: {str(e)}")
     
-    def get_payment_url(self, GatewayTransaction, **kwargs):
+    def get_payment_url(self, txn, **kwargs):
         """Get Stripe payment URL (Checkout Session)"""
         try:
             # Create Checkout Session for web payment
@@ -209,26 +209,26 @@ class StripeService(PaymentProcessor):
                         'product_data': {
                             'name': 'Account Deposit',
                         },
-                        'unit_amount': int(GatewayTransaction.amount * 100),
+                        'unit_amount': int(txn.amount * 100),
                     },
                     'quantity': 1,
                 }],
                 mode='payment',
                 success_url=kwargs.get('success_url', ''),
                 cancel_url=kwargs.get('cancel_url', ''),
-                client_reference_id=GatewayTransaction.reference_id,
+                client_reference_id=txn.reference_id,
                 metadata={
-                    'user_id': str(GatewayTransaction.user.id),
-                    'GatewayTransaction_id': str(GatewayTransaction.id)
+                    'user_id': str(txn.user.id),
+                    'GatewayTransaction_id': str(txn.id)
                 }
             )
             
-            GatewayTransaction.gateway_reference = checkout_session.id
-            GatewayTransaction.metadata['stripe_checkout'] = {
+            txn.gateway_reference = checkout_session.id
+            txn.metadata['stripe_checkout'] = {
                 'id': checkout_session.id,
                 'url': checkout_session.url
             }
-            GatewayTransaction.save()
+            txn.save()
             
             return checkout_session.url
             

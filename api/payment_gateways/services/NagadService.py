@@ -9,7 +9,7 @@ from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
 from .PaymentProcessor import PaymentProcessor
-from ..models import GatewayTransaction, PayoutRequest
+from ..models import GatewayTransaction as TxnModel, PayoutRequest
 
 
 class NagadService(PaymentProcessor):
@@ -48,8 +48,8 @@ class NagadService(PaymentProcessor):
         """Process Nagad deposit"""
         self.validate_amount(amount)
         
-        # Create GatewayTransaction
-        GatewayTransaction = self.create_GatewayTransaction(
+        # Create txn
+        txn = self.create_txn(
             user=user,
             transaction_type='deposit',
             amount=amount,
@@ -59,7 +59,7 @@ class NagadService(PaymentProcessor):
         
         try:
             # Step 1: Initialize payment
-            init_url = f"{self.base_url}/api/dfs/check-out/initialize/{self.config['merchant_id']}/{GatewayTransaction.reference_id}"
+            init_url = f"{self.base_url}/api/dfs/check-out/initialize/{self.config['merchant_id']}/{txn.reference_id}"
             
             init_data = {
                 'accountNumber': user.phone or '',
@@ -67,7 +67,7 @@ class NagadService(PaymentProcessor):
                 'sensitiveData': {
                     'merchantId': self.config['merchant_id'],
                     'datetime': datetime.now().strftime('%Y%m%d%H%M%S'),
-                    'orderId': GatewayTransaction.reference_id,
+                    'orderId': txn.reference_id,
                     'challenge': str(uuid.uuid4())
                 },
                 'signature': ''  # Will be calculated
@@ -115,28 +115,28 @@ class NagadService(PaymentProcessor):
             payment_response.raise_for_status()
             payment_result = payment_response.json()
             
-            # Update GatewayTransaction
-            GatewayTransaction.gateway_reference = payment_result.get('paymentReferenceId')
-            GatewayTransaction.metadata['nagad_payment_data'] = payment_result
-            GatewayTransaction.save()
+            # Update txn
+            txn.gateway_reference = payment_result.get('paymentReferenceId')
+            txn.metadata['nagad_payment_data'] = payment_result
+            txn.save()
             
             return {
-                'GatewayTransaction': GatewayTransaction,
+                'transaction': txn,
                 'payment_url': payment_result.get('callBackUrl'),
                 'payment_reference': payment_result.get('paymentReferenceId')
             }
             
         except Exception as e:
-            GatewayTransaction.status = 'failed'
-            GatewayTransaction.metadata['error'] = str(e)
-            GatewayTransaction.save()
+            txn.status = 'failed'
+            txn.metadata['error'] = str(e)
+            txn.save()
             raise Exception(f"Nagad deposit failed: {str(e)}")
     
     def process_withdrawal(self, user, amount, payment_method, **kwargs):
         """Process Nagad withdrawal"""
         self.validate_amount(amount)
         
-        with db_GatewayTransaction.atomic():
+        with db_txn.atomic():
             # Create payout request
             payout = PayoutRequest.objects.create(
                 user=user,
@@ -150,8 +150,8 @@ class NagadService(PaymentProcessor):
                 reference_id=self.generate_reference_id()
             )
             
-            # Create GatewayTransaction record
-            GatewayTransaction = self.create_GatewayTransaction(
+            # Create txn record
+            txn = self.create_txn(
                 user=user,
                 transaction_type='withdrawal',
                 amount=amount,
@@ -170,7 +170,7 @@ class NagadService(PaymentProcessor):
             # For now, mark as processing
             
             return {
-                'GatewayTransaction': GatewayTransaction,
+                'transaction': txn,
                 'payout': payout,
                 'message': 'Withdrawal request submitted successfully'
             }
@@ -188,36 +188,36 @@ class NagadService(PaymentProcessor):
             response.raise_for_status()
             verification_data = response.json()
             
-            # Find and update GatewayTransaction
+            # Find and update txn
             try:
-                GatewayTransaction = GatewayTransaction.objects.get(reference_id=order_id)
+                txn = TxnModel.objects.get(reference_id=order_id)
                 
                 if verification_data.get('status') == 'Success':
-                    GatewayTransaction.status = 'completed'
-                    GatewayTransaction.completed_at = timezone.now()
-                    GatewayTransaction.gateway_reference = verification_data.get('paymentRefId')
-                    GatewayTransaction.metadata['verification_data'] = verification_data
+                    txn.status = 'completed'
+                    txn.completed_at = timezone.now()
+                    txn.gateway_reference = verification_data.get('paymentRefId')
+                    txn.metadata['verification_data'] = verification_data
                     
                     # Update user balance
-                    user = GatewayTransaction.user
-                    user.balance += GatewayTransaction.net_amount
+                    user = txn.user
+                    user.balance += txn.net_amount
                     user.save()
                 else:
-                    GatewayTransaction.status = 'failed'
-                    GatewayTransaction.metadata['verification_data'] = verification_data
+                    txn.status = 'failed'
+                    txn.metadata['verification_data'] = verification_data
                 
-                GatewayTransaction.save()
-                return GatewayTransaction
+                txn.save()
+                return txn
                 
-            except GatewayTransaction.DoesNotExist:
+            except TxnModel.DoesNotExist:
                 return None
                 
         except Exception as e:
             raise Exception(f"Payment verification failed: {str(e)}")
     
-    def get_payment_url(self, GatewayTransaction, **kwargs):
+    def get_payment_url(self, txn, **kwargs):
         """Get Nagad payment URL"""
-        return GatewayTransaction.metadata.get('nagad_payment_data', {}).get('callBackUrl')
+        return txn.metadata.get('nagad_payment_data', {}).get('callBackUrl')
     
     def check_payment_status(self, payment_ref_id):
         """Check payment status using reference ID"""
