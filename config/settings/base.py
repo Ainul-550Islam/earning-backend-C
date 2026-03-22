@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'api.audit_logs',
     'api.tests',
     'api.backup',
+    'api.tenants.apps.TenantsConfig',
     'api.promotions',
     'api.subscription.apps.SubscriptionConfig',
     'api.gamification.apps.GamificationConfig',
@@ -93,6 +94,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'api.tenants.middleware.TenantMiddleware',
     'api.fraud_detection.middleware.FraudDetectionMiddleware',
     'api.security.middleware.SecurityAuditMiddleware',
     'api.rate_limit.middleware.RateLimitMiddleware',
@@ -547,6 +549,7 @@ LOGGING = {
 #     'api.audit_logs',       # ১২. Audit logging
 #     'api.tests',            # ১৩. Automated tests
 #     'api.backup',
+    'api.tenants.apps.TenantsConfig',
     
 
 # ]
@@ -561,6 +564,7 @@ LOGGING = {
 #     'django.contrib.auth.middleware.AuthenticationMiddleware',
 #     'django.contrib.messages.middleware.MessageMiddleware',
 #     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'api.tenants.middleware.TenantMiddleware',
 #     'api.security.middleware.SecurityAuditMiddleware',
 #     'api.rate_limit.middleware.RateLimitMiddleware',
 #     'api.rate_limit.middleware.EarningTaskRateLimitMiddleware',

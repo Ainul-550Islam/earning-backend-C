@@ -225,7 +225,13 @@ function SettingsTab(){
   const handleUpdate = async () => {
     setSaving(true); setError(''); setSuccess('');
     try{
-      await api.updateSettings(editForm);
+      let payload = editForm;
+      if(editForm.site_logo instanceof File || editForm.site_favicon instanceof File){
+        const fd = new FormData();
+        Object.entries(editForm).forEach(([k,v])=>{ if(v!==undefined && v!==null) fd.append(k,v); });
+        payload = fd;
+      }
+      await api.updateSettings(payload);
       setSuccess('Settings updated!');
       setEditModal(null);
       load();
@@ -267,7 +273,7 @@ function SettingsTab(){
             <span className="ap-setting-val">{settings[key]||'—'}</span>
           </div>
         ))}
-        <button className="ap-btn ap-btn--cyan ap-btn--sm" style={{marginTop:'10px'}} onClick={()=>{ setEditForm({site_name:settings.site_name,site_tagline:settings.site_tagline,contact_email:settings.contact_email}); setEditModal('site'); }}>
+        <button className="ap-btn ap-btn--cyan ap-btn--sm" style={{marginTop:'10px'}} onClick={()=>{ setEditForm({site_name:settings.site_name,site_tagline:settings.site_tagline,contact_email:settings.contact_email,currency_code:settings.currency_code,currency_symbol:settings.currency_symbol}); setEditModal('site'); }}>
           <Icon.Edit2 size={12}/> Edit
         </button>
       </div>}
@@ -355,6 +361,16 @@ function SettingsTab(){
             <input className="ap-input" value={v??''} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))}/>
           </Field>
         ))}
+        {editModal==='site'&&<>
+          <Field label="Site Logo">
+            <input type="file" accept="image/*" className="ap-input" onChange={e=>setEditForm(f=>({...f,site_logo:e.target.files[0]}))}/>
+            {settings?.site_logo&&<img src={settings.site_logo} alt="logo" style={{height:40,marginTop:6}}/>}
+          </Field>
+          <Field label="Site Favicon">
+            <input type="file" accept="image/*" className="ap-input" onChange={e=>setEditForm(f=>({...f,site_favicon:e.target.files[0]}))}/>
+            {settings?.site_favicon&&<img src={settings.site_favicon} alt="favicon" style={{height:24,marginTop:6}}/>}
+          </Field>
+        </>}
         {error&&<div className="ap-form-error">{error}</div>}
         <div className="ap-form-actions">
           <button className="ap-btn ap-btn--ghost" onClick={()=>setEditModal(null)}>Cancel</button>
