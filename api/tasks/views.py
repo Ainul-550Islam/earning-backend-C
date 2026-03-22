@@ -1504,8 +1504,9 @@ def task_dashboard_stats(request):
         'active_tasks':      MasterTask.objects.filter(is_active=True).count(),
         'total_tasks':       MasterTask.objects.count(),
         'total_completions': UserTaskCompletion.objects.count(),
-        'pending_completions': UserTaskCompletion.objects.filter(status='pending').count(),
-        'approved_completions': UserTaskCompletion.objects.filter(status='approved').count(),
+        'completed': UserTaskCompletion.objects.filter(status='completed').count(),
+        'verified': UserTaskCompletion.objects.filter(status='verified').count(),
+        'failed': UserTaskCompletion.objects.filter(status='failed').count(),
     })
 
 @api_view(['POST'])
