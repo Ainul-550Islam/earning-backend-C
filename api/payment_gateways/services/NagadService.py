@@ -49,7 +49,7 @@ class NagadService(PaymentProcessor):
         self.validate_amount(amount)
         
         # Create txn
-        txn = self.create_txn(
+        txn = self.create_GatewayTransaction(
             user=user,
             transaction_type='deposit',
             amount=amount,
@@ -151,7 +151,7 @@ class NagadService(PaymentProcessor):
             )
             
             # Create txn record
-            txn = self.create_txn(
+            txn = self.create_GatewayTransaction(
                 user=user,
                 transaction_type='withdrawal',
                 amount=amount,
