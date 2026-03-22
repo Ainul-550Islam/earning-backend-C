@@ -1,6 +1,7 @@
 # views.py
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
+from api.tenants.mixins import TenantMixin
 from rest_framework.decorators import api_view, permission_classes
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_http_methods

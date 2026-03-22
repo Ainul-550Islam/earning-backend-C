@@ -20,6 +20,7 @@ import os
 import hashlib
 import mimetypes
 from django.db.models.functions import Cast
+from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, status, generics, mixins
 from rest_framework.views import APIView
 from rest_framework.response import Response

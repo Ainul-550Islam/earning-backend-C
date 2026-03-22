@@ -1,4 +1,5 @@
 # earning_backend/api/notifications/views.py
+from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, generics, status, filters, permissions
 from rest_framework import decorators
 from rest_framework.decorators import action, api_view, permission_classes

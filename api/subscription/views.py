@@ -6,6 +6,7 @@ import json
 import logging
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from api.tenants.mixins import TenantMixin
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response

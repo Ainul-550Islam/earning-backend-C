@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Q, Count, Sum, Avg, Prefetch, F, ExpressionWrapper, fields
 from django.http import JsonResponse
 from django.conf import settings
+from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -354,8 +355,8 @@ class IsAdminUser(IsAuthenticated):
 
 # ============ BASE VIEWSET WITH BULLETPROOF PATTERNS ============
 
-# class BulletproofViewSet(viewsets.GenericViewSet):
-class BulletproofViewSet(viewsets.ModelViewSet):
+# class BulletproofViewSet(TenantMixin, viewsets.GenericViewSet):
+class BulletproofViewSet(TenantMixin, viewsets.ModelViewSet):
     """
     Base ViewSet with bulletproof patterns
     All viewsets should inherit from this
