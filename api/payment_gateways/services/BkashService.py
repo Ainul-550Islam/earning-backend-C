@@ -57,8 +57,8 @@ class BkashService(PaymentProcessor):
         """Process bKash deposit"""
         self.validate_amount(amount)
         
-        # Create GatewayTransaction
-        GatewayTransaction = self.create_GatewayTransaction(
+        # Create txn
+        txn = self.create_txn(
             user=user,
             transaction_type='deposit',
             amount=amount,
@@ -86,37 +86,37 @@ class BkashService(PaymentProcessor):
                 'amount': str(amount),
                 'currency': 'BDT',
                 'intent': 'sale',
-                'merchantInvoiceNumber': GatewayTransaction.reference_id
+                'merchantInvoiceNumber': txn.reference_id
             }
             
             response = requests.post(payment_url, json=payload, headers=headers)
             response.raise_for_status()
             payment_data = response.json()
             
-            # Update GatewayTransaction with payment ID
-            GatewayTransaction.gateway_reference = payment_data.get('paymentID')
-            GatewayTransaction.metadata['bkash_payment_data'] = payment_data
-            GatewayTransaction.save()
+            # Update txn with payment ID
+            txn.gateway_reference = payment_data.get('paymentID')
+            txn.metadata['bkash_payment_data'] = payment_data
+            txn.save()
             
             # Return payment URL
             payment_url = payment_data.get('bkashURL')
             return {
-                'GatewayTransaction': GatewayTransaction,
+                'transaction': txn,
                 'payment_url': payment_url,
                 'payment_id': payment_data.get('paymentID')
             }
             
         except Exception as e:
-            GatewayTransaction.status = 'failed'
-            GatewayTransaction.metadata['error'] = str(e)
-            GatewayTransaction.save()
+            txn.status = 'failed'
+            txn.metadata['error'] = str(e)
+            txn.save()
             raise Exception(f"bKash deposit failed: {str(e)}")
     
     def process_withdrawal(self, user, amount, payment_method, **kwargs):
         """Process bKash withdrawal (P2P)"""
         self.validate_amount(amount)
         
-        with db_GatewayTransaction.atomic():
+        with db_txn.atomic():
             # Create payout request
             payout = PayoutRequest.objects.create(
                 user=user,
@@ -130,8 +130,8 @@ class BkashService(PaymentProcessor):
                 reference_id=self.generate_reference_id()
             )
             
-            # Create GatewayTransaction record
-            GatewayTransaction = self.create_GatewayTransaction(
+            # Create txn record
+            txn = self.create_txn(
                 user=user,
                 transaction_type='withdrawal',
                 amount=amount,
@@ -150,7 +150,7 @@ class BkashService(PaymentProcessor):
             # This would call bKash P2P API
             
             return {
-                'GatewayTransaction': GatewayTransaction,
+                'transaction': txn,
                 'payout': payout,
                 'message': 'Withdrawal request submitted successfully'
             }
@@ -172,36 +172,36 @@ class BkashService(PaymentProcessor):
             response.raise_for_status()
             verification_data = response.json()
             
-            # Find and update GatewayTransaction
+            # Find and update txn
             try:
-                GatewayTransaction = TxnModel.objects.get(gateway_reference=payment_id)
+                txn = TxnModel.objects.get(gateway_reference=payment_id)
                 
                 if verification_data.get('GatewayTransactionStatus') == 'Completed':
-                    GatewayTransaction.status = 'completed'
-                    GatewayTransaction.completed_at = timezone.now()
-                    GatewayTransaction.metadata['verification_data'] = verification_data
+                    txn.status = 'completed'
+                    txn.completed_at = timezone.now()
+                    txn.metadata['verification_data'] = verification_data
                     
                     # Update user balance
-                    user = GatewayTransaction.user
-                    user.balance += GatewayTransaction.net_amount
+                    user = txn.user
+                    user.balance += txn.net_amount
                     user.save()
                 else:
-                    GatewayTransaction.status = 'failed'
-                    GatewayTransaction.metadata['verification_data'] = verification_data
+                    txn.status = 'failed'
+                    txn.metadata['verification_data'] = verification_data
                 
-                GatewayTransaction.save()
-                return GatewayTransaction
+                txn.save()
+                return txn
                 
-            except GatewayTransaction.DoesNotExist:
+            except TxnModel.DoesNotExist:
                 return None
                 
         except Exception as e:
             raise Exception(f"Payment verification failed: {str(e)}")
     
-    def get_payment_url(self, GatewayTransaction, **kwargs):
+    def get_payment_url(self, txn, **kwargs):
         """Get bKash payment URL"""
         # In bKash, payment URL is generated during create payment
-        return GatewayTransaction.metadata.get('bkash_payment_data', {}).get('bkashURL')
+        return txn.metadata.get('bkash_payment_data', {}).get('bkashURL')
     
     def execute_payment(self, payment_id):
         """Execute bKash payment (after callback)"""
@@ -225,12 +225,12 @@ class BkashService(PaymentProcessor):
         except Exception as e:
             raise Exception(f"Payment execution failed: {str(e)}")
     
-    def search_GatewayTransaction(self, trx_id):
-        """Search bKash GatewayTransaction"""
+    def search_txn(self, trx_id):
+        """Search bKash txn"""
         try:
             token = self.get_access_token()
             
-            url = f"{self.base_url}/tokenized/checkout/general/searchGatewayTransaction/{trx_id}"
+            url = f"{self.base_url}/tokenized/checkout/general/searchtxn/{trx_id}"
             
             headers = {
                 'Authorization': token,
@@ -243,4 +243,4 @@ class BkashService(PaymentProcessor):
             return response.json()
             
         except Exception as e:
-            raise Exception(f"GatewayTransaction search failed: {str(e)}")
+            raise Exception(f"txn search failed: {str(e)}")
