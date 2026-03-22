@@ -1,7 +1,7 @@
 # api/payment_gateways/services/PaymentProcessor.py
 
 from abc import ABC, abstractmethod
-from api.payment_gateways.models import GatewayTransaction as db_GatewayTransaction
+from api.payment_gateways.models import GatewayTransaction as db_GatewayTransaction, PaymentGateway
 from django.utils import timezone
 from decimal import Decimal
 
