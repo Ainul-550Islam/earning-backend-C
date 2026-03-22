@@ -3030,7 +3030,7 @@ class ContentPermissionForm(BulletproofModelForm):
     class Meta:
         model = ContentPermission
         fields = [
-            'permission_type', 'content', 'target_id', 'tenant_id',
+            'permission_type', 'content', 'target_id',
             'parent_permission', 'is_active', 'priority',
             'expires_at', 'conditions'
         ]
@@ -3040,7 +3040,7 @@ class ContentPermissionForm(BulletproofModelForm):
             'permission_type': forms.Select(attrs={'class': 'form-control'}),
             'content': forms.Select(attrs={'class': 'form-control'}),
             'target_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('User ID, Group ID, Role, etc.')}),
-            'tenant_id': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+
             'parent_permission': forms.Select(attrs={'class': 'form-control'}),
             'priority': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
             'expires_at': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
@@ -3052,9 +3052,9 @@ class ContentPermissionForm(BulletproofModelForm):
         
         # 🟢 ফিক্স 11: settings থেকে DEFAULT_TENANT_ID নেওয়া
         default_tenant = getattr(settings, 'DEFAULT_TENANT_ID', 1)
-        if not self.instance.pk and 'tenant_id' in self.fields:
-            self.initial['tenant_id'] = default_tenant
-            self.fields['tenant_id'].widget.attrs['value'] = default_tenant
+
+
+
         
         if self.instance and self.instance.pk:
             permissions = getattr(self.instance, 'permissions', 0)

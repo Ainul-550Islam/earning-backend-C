@@ -78,7 +78,7 @@ class PaymentGatewayMethod(TimeStampedModel):  # [ERROR] PaymentMethod থেক
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
-        related_name='gateway_payment_methods'  # [ERROR] unique related_name দিন
+        related_name='payment_gateways_paymentgatewaymethod_user'  # [ERROR] unique related_name দিন
     )
     gateway = models.CharField(max_length=20, choices=GATEWAY_CHOICES)
     account_number = models.CharField(max_length=100)
@@ -114,7 +114,7 @@ class GatewayTransaction(TimeStampedModel):  # [ERROR] Transaction থেকে 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
-        related_name='gateway_transactions'  # [ERROR] unique related_name দিন
+        related_name='payment_gateways_gatewaytransaction_user'  # [ERROR] unique related_name দিন
     )
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
     gateway = models.CharField(max_length=20)
@@ -169,7 +169,7 @@ class PayoutRequest(TimeStampedModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
-        related_name='payout_requests'
+        related_name='payment_gateways_payoutrequest_user'
     )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -185,7 +185,7 @@ class PayoutRequest(TimeStampedModel):
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True, 
-        related_name='processed_payouts'
+        related_name='payment_gateways_payoutrequest_processed_by'
     )
     processed_at = models.DateTimeField(null=True, blank=True)
     

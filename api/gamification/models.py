@@ -65,6 +65,15 @@ class TimestampedModel(models.Model):
     Abstract base providing created_at / updated_at audit timestamps
     and a UUID primary key for all gamification models.
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
 
     id = models.UUIDField(
         primary_key=True,

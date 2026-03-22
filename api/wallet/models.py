@@ -8,9 +8,18 @@ from datetime import timedelta
 
 class Wallet(models.Model):
     """User wallet - auto-created on signup"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     # user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     # wallet/models.py ফাইলে
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_app_profile')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_wallet_user')
     
     # v1 - Basic balances
     current_balance = models.DecimalField(
@@ -130,6 +139,15 @@ class Wallet(models.Model):
 
 class WalletTransaction(models.Model):
     """WalletTransaction ledger - all wallet operations"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     WalletTransaction_TYPES = [
         ('earning', 'Earning'),
@@ -155,7 +173,7 @@ class WalletTransaction(models.Model):
     
     # Core fields
     walletTransaction_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='WalletTransactions')
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     
     # GatewayTransaction details
     type = models.CharField(max_length=20, choices=WalletTransaction_TYPES)
@@ -185,7 +203,7 @@ class WalletTransaction(models.Model):
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
-        related_name='reversals'
+        related_name='%(app_label)s_%(class)s_tenant'
     )
     reversed_at = models.DateTimeField(null=True, blank=True)
     
@@ -195,14 +213,14 @@ class WalletTransaction(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='created_WalletTransactions'
+        related_name='wallet_wallettransaction_created_by'
     )
     approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='approved_WalletTransactions'
+        related_name='wallet_wallettransaction_approved_by'
     )
     
     # Timestamps
@@ -295,6 +313,15 @@ class WalletTransaction(models.Model):
 
 class UserPaymentMethod(models.Model):
     """Payment methods for withdrawals"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     METHOD_CHOICES = [
         ('bkash', 'bKash'),
         ('nagad', 'Nagad'),
@@ -304,7 +331,7 @@ class UserPaymentMethod(models.Model):
         ('card', 'Debit/Credit Card'),
     ]
     
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payment_methods')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_userpaymentmethod_user')
     method_type = models.CharField(max_length=20, choices=METHOD_CHOICES)
     account_number = models.CharField(max_length=50)
     account_name = models.CharField(max_length=100)
@@ -335,6 +362,15 @@ class UserPaymentMethod(models.Model):
 
 class WalletWebhookLog(models.Model):
     """Log payment gateway webhook calls"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     WEBHOOK_TYPES = [
         ('bkash', 'bKash'),
         ('nagad', 'Nagad'),
@@ -371,6 +407,15 @@ class WalletWebhookLog(models.Model):
 # যদি Withdrawal মডেলও লাগে:
 class Withdrawal(models.Model):
     """Withdrawal requests"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('processing', 'Processing'),
@@ -380,8 +425,8 @@ class Withdrawal(models.Model):
     ]
     
     withdrawal_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='completed_withdrawals')
-    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='withdrawals')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_withdrawal_user')
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='wallet_withdrawal_wallet')
     payment_method = models.ForeignKey(UserPaymentMethod, on_delete=models.SET_NULL, null=True, blank=True)
     
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -391,14 +436,14 @@ class Withdrawal(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
     # GatewayTransaction reference
-    WalletTransaction = models.OneToOneField(WalletTransaction, on_delete=models.CASCADE, related_name='withdrawal_request')
+    WalletTransaction = models.OneToOneField(WalletTransaction, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     
     processed_by = models.ForeignKey(
     settings.AUTH_USER_MODEL, 
     on_delete=models.SET_NULL, 
     null=True, 
     blank=True, 
-    related_name='wallet_withdrawals_handled' # আলাদা নাম দিন
+    related_name='wallet_withdrawal_processed_by' # আলাদা নাম দিন
     )
     processed_at = models.DateTimeField(null=True, blank=True)
     
@@ -429,6 +474,15 @@ class Withdrawal(models.Model):
         
         
 class WithdrawalRequest(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
@@ -436,7 +490,7 @@ class WithdrawalRequest(models.Model):
         ('cancelled', 'Cancelled'),
     ]
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='withdrawal_requests')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_withdrawalrequest_user')
     amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="ইউজার যত টাকা তুলতে চায়")
     fee = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="উইথড্র ফি (যা অ্যাডমিনের লাভ)")
     

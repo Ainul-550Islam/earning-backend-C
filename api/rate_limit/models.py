@@ -9,6 +9,15 @@ from datetime import timedelta
 
 
 class RateLimitConfig(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     RATE_LIMIT_TYPES = [
         ('user', 'User-based'),
         ('ip', 'IP-based'),
@@ -110,6 +119,15 @@ class RateLimitConfig(models.Model):
 
 
 class RateLimitLog(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     STATUS_CHOICES = [
         ('allowed', 'Allowed'),
         ('blocked', 'Blocked'),
@@ -198,7 +216,16 @@ class RateLimitLog(models.Model):
 
 
 class UserRateLimitProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='rate_limit_profile')
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='rate_limit_userratelimitprofile_user')
     
     # Premium status
     is_premium = models.BooleanField(default=False)

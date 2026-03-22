@@ -9,6 +9,15 @@ from django.conf import settings
 
 class SupportSettings(models.Model):
     """Admin can update support links without app update"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     telegram_group = models.URLField(blank=True, help_text="Telegram group/channel link")
     telegram_admin = models.URLField(blank=True, help_text="Direct admin chat link")
     whatsapp_number = models.CharField(max_length=20, blank=True, help_text="With country code")
@@ -42,6 +51,15 @@ class SupportSettings(models.Model):
 
 
 class SupportTicket(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     STATUS_CHOICES = [
         ('open', 'Open'),
         ('in_progress', 'In Progress'),
@@ -68,7 +86,7 @@ class SupportTicket(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, # এটি ব্যবহার করলে জ্যাঙ্গো সঠিক মডেল খুঁজে পাবে
         on_delete=models.CASCADE,
-        related_name='support_tickets'
+        related_name='support_supportticket_user'
     )
     ticket_id = models.CharField(max_length=20, unique=True, blank=True)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
@@ -102,6 +120,15 @@ class SupportTicket(models.Model):
 
 class FAQ(models.Model):
     """Frequently Asked Questions"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     question = models.CharField(max_length=300)
     answer = models.TextField()
     category = models.CharField(max_length=50, default='general')

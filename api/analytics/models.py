@@ -11,6 +11,15 @@ class AnalyticsEvent(models.Model):
     """
     Base model for all analytics events
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     EVENT_TYPES = (
         ('user_signup', 'User Signup'),
         ('user_login', 'User Login'),
@@ -33,7 +42,7 @@ class AnalyticsEvent(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='analytics_events')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='analytics_analyticsevent_user')
     session_id = models.CharField(max_length=100, blank=True, null=True)
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     user_agent = models.TextField(blank=True, null=True)
@@ -71,6 +80,15 @@ class UserAnalytics(models.Model):
     """
     Aggregated user analytics data
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     PERIOD_CHOICES = (
         ('daily', 'Daily'),
         ('weekly', 'Weekly'),
@@ -79,7 +97,7 @@ class UserAnalytics(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='user_analytics')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='analytics_useranalytics_user')
     period = models.CharField(max_length=10, choices=PERIOD_CHOICES)
     period_start = models.DateTimeField()
     period_end = models.DateTimeField()
@@ -189,6 +207,15 @@ class RevenueAnalytics(models.Model):
     """
     Aggregated revenue analytics
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     REVENUE_SOURCES = (
         ('offer_completion', 'Offer Completion'),
         ('task_completion', 'Task Completion'),
@@ -270,13 +297,22 @@ class OfferPerformanceAnalytics(models.Model):
     """
     Analytics for offer performance
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     # [OK] সঠিক string reference ব্যবহার করা হয়েছে
     offer = models.ForeignKey(
         'offerwall.Offer',  # [OK] শুধু app_label.ModelName
         on_delete=models.CASCADE,
-        related_name='performance_analytics',
+        related_name='%(app_label)s_%(class)s_tenant',
         null=True,
         blank=True
     )
@@ -346,6 +382,15 @@ class FunnelAnalytics(models.Model):
     """
     Conversion funnel analytics
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     FUNNEL_TYPES = (
         ('user_signup', 'User Signup'),
         ('offer_completion', 'Offer Completion'),
@@ -398,6 +443,15 @@ class RetentionAnalytics(models.Model):
     """
     User retention analytics
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     COHORT_TYPES = (
         ('daily', 'Daily'),
         ('weekly', 'Weekly'),
@@ -449,6 +503,15 @@ class Dashboard(models.Model):
     """
     Dashboard configuration
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     DASHBOARD_TYPES = (
         ('admin', 'Admin Dashboard'),
         ('user', 'User Dashboard'),
@@ -468,8 +531,8 @@ class Dashboard(models.Model):
     
     # Access control
     is_public = models.BooleanField(default=False)
-    # allowed_users = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='accessible_dashboards')
-    allowed_users = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='accessible_dashboards')
+    # allowed_users = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='analytics_dashboard_tenant')
+    allowed_users = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='analytics_dashboard_allowed_users')
     allowed_roles = ArrayField(models.CharField(max_length=50), default=list, blank=True)
     
     # Settings
@@ -479,7 +542,7 @@ class Dashboard(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_dashboards')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='analytics_dashboard_created_by')
     
     class Meta:
         ordering = ['-created_at']
@@ -493,6 +556,15 @@ class Report(models.Model):
     """
     Generated reports
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     REPORT_TYPES = (
         ('daily_summary', 'Daily Summary'),
         ('weekly_analytics', 'Weekly Analytics'),
@@ -529,7 +601,7 @@ class Report(models.Model):
     # Generation info
     generated_at = models.DateTimeField(auto_now_add=True)
     generation_duration = models.FloatField(null=True, blank=True)
-    generated_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='generated_reports')
+    generated_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='%(app_label)s_%(class)s_tenant')
     
     # Status
     status = models.CharField(max_length=20, default='completed', choices=(
@@ -567,6 +639,15 @@ class RealTimeMetric(models.Model):
     """
     Real-time metrics for monitoring
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     METRIC_TYPES = (
         ('active_users', 'Active Users'),
         ('concurrent_tasks', 'Concurrent Tasks'),
@@ -609,6 +690,15 @@ class AlertRule(models.Model):
     """
     Alert rules for monitoring
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     ALERT_TYPES = (
         ('threshold', 'Threshold Alert'),
         ('anomaly', 'Anomaly Detection'),
@@ -675,8 +765,17 @@ class AlertHistory(models.Model):
     """
     History of triggered alerts
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    rule = models.ForeignKey(AlertRule, on_delete=models.CASCADE, related_name='alerts')
+    rule = models.ForeignKey(AlertRule, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY_LEVELS)
     
     # Alert data
