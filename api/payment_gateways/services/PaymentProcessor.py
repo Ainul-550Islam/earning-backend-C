@@ -1,7 +1,7 @@
 # api/payment_gateways/services/PaymentProcessor.py
 
 from abc import ABC, abstractmethod
-from api.payment_gateways.models import GatewayTransaction as db_GatewayTransaction, PaymentGateway
+from api.payment_gateways.models import GatewayTransaction as TxnModel, PaymentGateway
 from django.utils import timezone
 from decimal import Decimal
 
@@ -52,7 +52,7 @@ class PaymentProcessor(ABC):
         fee = self.calculate_fee(amount)
         net_amount = amount - fee
         
-        GatewayTransaction = GatewayTransaction.objects.create(
+        GatewayTransaction = TxnModel.objects.create(
             user=user,
             GatewayTransaction_type=GatewayTransaction_type,
             gateway=self.gateway_name,
