@@ -187,17 +187,25 @@ class GatewayTransactionViewSet(BaseViewSet):
                 from .services.BkashService import BkashService
                 service = BkashService()
                 result = service.process_deposit(user=request.user, amount=amount)
-                return self.success_response(data=result, message='bKash payment initiated')
             elif gateway == 'nagad':
                 from .services.NagadService import NagadService
                 service = NagadService()
                 result = service.process_deposit(user=request.user, amount=amount)
-                return self.success_response(data=result, message='Nagad payment initiated')
             elif gateway == 'stripe':
                 from .services.StripeService import StripeService
                 service = StripeService()
                 result = service.process_deposit(user=request.user, amount=amount)
-                return self.success_response(data=result, message='Stripe payment initiated')
+            else:
+                return self.error_response(message=f'Gateway {gateway} not supported', status_code=400)
+            
+            # Serialize result - remove non-serializable objects
+            if isinstance(result, dict):
+                clean = {k: str(v) if hasattr(v, 'id') else v for k, v in result.items() if k != 'transaction'}
+                if 'transaction' in result and result['transaction']:
+                    clean['transaction_id'] = str(result['transaction'].id)
+                    clean['reference_id'] = result['transaction'].reference_id
+                return self.success_response(data=clean, message=f'{gateway} payment initiated')
+            return self.success_response(data={}, message=f'{gateway} payment initiated')
             else:
                 return self.error_response(message=f'Gateway {gateway} not supported', status_code=400)
         except Exception as e:
