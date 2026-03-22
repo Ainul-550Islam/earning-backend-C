@@ -1,5 +1,6 @@
 from urllib import request
 
+from api.tenants.mixins import TenantMixin
 from rest_framework_simplejwt.authentication import JWTAuthentication
 try:
     from api.audit_logs.models import AuditLog, AuditLogAction

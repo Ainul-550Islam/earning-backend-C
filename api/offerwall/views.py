@@ -2,6 +2,7 @@
 Offerwall API views
 """
 import logging
+from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response

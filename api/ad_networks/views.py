@@ -1,4 +1,5 @@
 # api/ad_networks/views.py
+from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action

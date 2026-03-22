@@ -6,6 +6,7 @@
 import logging
 from django.db.models import Q, Avg, Sum, Count, F
 from django.utils import timezone
+from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -94,8 +95,7 @@ class RewardPolicyViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class CurrencyRateViewSet(
-    mixins.ListModelMixin,
+class CurrencyRateViewSet(mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet
@@ -374,8 +374,7 @@ class TaskSubmissionViewSet(viewsets.ModelViewSet):
 # ── DISPUTE ──────────────────────────────────────────────────────────────────
 # =============================================================================
 
-class DisputeViewSet(
-    mixins.CreateModelMixin,
+class DisputeViewSet(mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
     mixins.ListModelMixin,
     viewsets.GenericViewSet,
@@ -436,8 +435,7 @@ class DisputeViewSet(
 # ── FINANCE ──────────────────────────────────────────────────────────────────
 # =============================================================================
 
-class PromotionTransactionViewSet(
-    mixins.ListModelMixin,
+class PromotionTransactionViewSet(mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
@@ -469,8 +467,7 @@ class PromotionTransactionViewSet(
         return Response(data)
 
 
-class EscrowWalletViewSet(
-    mixins.ListModelMixin,
+class EscrowWalletViewSet(mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
@@ -485,8 +482,7 @@ class EscrowWalletViewSet(
         return qs.filter(advertiser=user)
 
 
-class ReferralCommissionLogViewSet(
-    mixins.ListModelMixin,
+class ReferralCommissionLogViewSet(mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
@@ -550,8 +546,7 @@ class FraudReportViewSet(viewsets.ModelViewSet):
         return Response({'detail': f'Action "{action_taken}" taken on fraud report #{report.pk}.'})
 
 
-class DeviceFingerprintViewSet(
-    mixins.ListModelMixin,
+class DeviceFingerprintViewSet(mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
@@ -581,8 +576,7 @@ class DeviceFingerprintViewSet(
         serializer.save(user=self.request.user)
 
 
-class UserReputationViewSet(
-    mixins.ListModelMixin,
+class UserReputationViewSet(mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
@@ -611,8 +605,7 @@ class UserReputationViewSet(
 # ── ANALYTICS ────────────────────────────────────────────────────────────────
 # =============================================================================
 
-class CampaignAnalyticsViewSet(
-    mixins.ListModelMixin,
+class CampaignAnalyticsViewSet(mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):

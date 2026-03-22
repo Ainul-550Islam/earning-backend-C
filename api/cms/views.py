@@ -15,6 +15,7 @@ from api.wallet.models import WalletTransaction as GatewayTransaction
 from django.contrib.syndication.views import Feed
 from django.utils.feedgenerator import Atom1Feed
 from django.contrib.sitemaps import Sitemap
+from api.tenants.mixins import TenantMixin
 from rest_framework.views import APIView 
 from rest_framework.response import Response 
 from rest_framework.permissions import IsAuthenticatedOrReadOnly 

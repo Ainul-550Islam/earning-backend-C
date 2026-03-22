@@ -1,6 +1,7 @@
 # api/payment_gateways/views.py
 # ✅ Bulletproof — IsAdminUser for admin endpoints, all actions working
 
+from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser

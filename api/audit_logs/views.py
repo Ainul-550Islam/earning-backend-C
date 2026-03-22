@@ -2,6 +2,7 @@
 Views for Audit Log management and querying
 """
 
+from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, generics, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
