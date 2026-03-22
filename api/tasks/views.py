@@ -1499,15 +1499,18 @@ import datetime
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def task_dashboard_stats(request):
-    from .models import MasterTask, UserTaskCompletion
-    return Response({
-        'active_tasks':      MasterTask.objects.filter(is_active=True).count(),
-        'total_tasks':       MasterTask.objects.count(),
-        'total_completions': UserTaskCompletion.objects.count(),
-        'completed': UserTaskCompletion.objects.filter(status='completed').count(),
-        'verified': UserTaskCompletion.objects.filter(status='verified').count(),
-        'failed': UserTaskCompletion.objects.filter(status='failed').count(),
-    })
+    try:
+        from .models import MasterTask, UserTaskCompletion
+        return Response({
+            'active_tasks':      MasterTask.objects.filter(is_active=True).count(),
+            'total_tasks':       MasterTask.objects.count(),
+            'total_completions': UserTaskCompletion.objects.count(),
+            'completed': UserTaskCompletion.objects.filter(status='completed').count(),
+            'verified': UserTaskCompletion.objects.filter(status='verified').count(),
+            'failed': UserTaskCompletion.objects.filter(status='failed').count(),
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
