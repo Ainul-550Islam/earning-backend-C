@@ -550,3 +550,8 @@ SPECTACULAR_SETTINGS = {
         'deepLinking': True,
     },
 }
+
+
+# ==================== TENANT ====================
+TENANT_MODEL = "tenants.Tenant"
+TENANT_DOMAIN_MODEL = "tenants.Tenant"
