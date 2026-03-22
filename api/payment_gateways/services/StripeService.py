@@ -44,7 +44,7 @@ class StripeService(PaymentProcessor):
                     'reference_id': GatewayTransaction.reference_id
                 },
                 description=f"Deposit for {user.username}",
-                statement_descriptor="DEPOSIT",
+                statement_descriptor_suffix="DEPOSIT",
                 automatic_payment_methods={
                     'enabled': True,
                     'allow_redirects': 'never'
