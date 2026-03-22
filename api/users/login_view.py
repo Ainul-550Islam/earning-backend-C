@@ -196,11 +196,15 @@ class UserLoginView(APIView):
                 }
             )
 
+            from rest_framework_simplejwt.tokens import RefreshToken
+            refresh = RefreshToken.for_user(user)
             return Response({
                 'success': True,
                 'message': 'Login successful',
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
                 'user': {
-                    'id': user.id,
+                    'id': str(user.id),
                     'username': user.username,
                     'email': user.email
                 },
