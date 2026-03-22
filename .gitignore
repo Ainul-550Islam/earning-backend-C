@@ -3,3 +3,8 @@ node_modules/
 dist/
 venv/
 .env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python

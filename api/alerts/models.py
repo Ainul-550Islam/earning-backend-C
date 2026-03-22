@@ -226,6 +226,15 @@ def sanitize_phone_list(phone_string):
 
 class AlertRule(models.Model):
     """Admin-configurable alert rules"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     ALERT_TYPES = [
         ('high_earning', 'High Earning Activity'),
         ('mass_signup', 'Mass User Signup'),
@@ -294,7 +303,7 @@ class AlertRule(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='created_alert_rules'
+        related_name='alerts_alertrule_created_by'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -388,10 +397,19 @@ class AlertRule(models.Model):
 
 class AlertLog(models.Model):
     """Log of triggered alerts"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     rule = models.ForeignKey(
         AlertRule, 
         on_delete=models.CASCADE, 
-        related_name='logs',
+        related_name='%(app_label)s_%(class)s_tenant',
         db_index=True
     )
     triggered_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -425,7 +443,7 @@ class AlertLog(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='alert_resolved_by_logs'
+        related_name='alerts_alertlog_resolved_by'
     )
     resolution_note = models.TextField(blank=True)
     
@@ -524,6 +542,15 @@ class AlertLog(models.Model):
 
 class Notification(models.Model):
     """Track all notifications sent"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     NOTIFICATION_TYPES = [
         ('email', '📧 Email'),
         ('telegram', '📱 Telegram'),
@@ -543,7 +570,7 @@ class Notification(models.Model):
     alert_log = models.ForeignKey(
         AlertLog, 
         on_delete=models.CASCADE, 
-        related_name='notifications',
+        related_name='%(app_label)s_%(class)s_tenant',
         db_index=True
     )
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
@@ -630,6 +657,15 @@ def get_default_days_of_week():
     return [0, 1, 2, 3, 4]
 class AlertSchedule(models.Model):
     """Schedule for when alerts should be active"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     DAYS_OF_WEEK = [
         (0, 'Monday'),
         (1, 'Tuesday'),
@@ -643,7 +679,7 @@ class AlertSchedule(models.Model):
     rule = models.ForeignKey(
         AlertRule, 
         on_delete=models.CASCADE, 
-        related_name='schedules',
+        related_name='%(app_label)s_%(class)s_tenant',
         db_index=True
     )
     name = models.CharField(max_length=100)
@@ -777,10 +813,19 @@ class AlertSchedule(models.Model):
 
 class AlertEscalation(models.Model):
     """Escalation rules for unresolved alerts"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     rule = models.ForeignKey(
         AlertRule, 
         on_delete=models.CASCADE, 
-        related_name='escalations',
+        related_name='%(app_label)s_%(class)s_tenant',
         db_index=True
     )
     name = models.CharField(max_length=100)
@@ -806,7 +851,7 @@ class AlertEscalation(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='escalation_recipient'
+        related_name='alerts_alertescalation_escalate_to_user'
     )
     
     # Message customization
@@ -934,6 +979,15 @@ def get_default_available_variables():
 
 class AlertTemplate(models.Model):
     """Templates for alert messages"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     name = models.CharField(max_length=100, unique=True, db_index=True)
     alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES)
     severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY)
@@ -968,7 +1022,7 @@ class AlertTemplate(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='alert_template_creators'
+        related_name='alerts_alerttemplate_created_by'
     )
     
     def __str__(self):
@@ -1059,6 +1113,15 @@ class AlertTemplate(models.Model):
 
 class AlertAnalytics(models.Model):
     """Daily analytics for alerts"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     date = models.DateField(unique=True, db_index=True)
     
     # Count metrics
@@ -1255,11 +1318,20 @@ class AlertAnalytics(models.Model):
 
 class AlertGroup(models.Model):
     """Group related alert rules together"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     name = models.CharField(max_length=100, unique=True, db_index=True)
     description = models.TextField(blank=True)
     rules = models.ManyToManyField(
         AlertRule, 
-        related_name='groups', 
+        related_name='%(app_label)s_%(class)s_tenant', 
         blank=True,
         db_index=True
     )
@@ -1306,7 +1378,7 @@ class AlertGroup(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='created_alert_groups'
+        related_name='alerts_alertgroup_created_by'
     )
     
     def __str__(self):
@@ -1488,6 +1560,15 @@ class AlertGroup(models.Model):
 
 class AlertSuppression(models.Model):
     """Temporarily suppress specific alerts"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     SUPPRESSION_TYPES = [
         ('rule', 'Specific Rule'),
         ('type', 'Alert Type'),
@@ -1505,7 +1586,7 @@ class AlertSuppression(models.Model):
         on_delete=models.CASCADE, 
         null=True, 
         blank=True,
-        related_name='suppressions'
+        related_name='%(app_label)s_%(class)s_tenant'
     )
     alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES, blank=True)
     severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY, blank=True)
@@ -1533,7 +1614,7 @@ class AlertSuppression(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='created_suppressions'
+        related_name='alerts_alertsuppression_created_by'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1661,6 +1742,15 @@ class AlertSuppression(models.Model):
 
 class SystemHealthCheck(models.Model):
     """Periodic system health checks"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     CHECK_TYPES = [
         ('database', '🗄️ Database'),
         ('redis', '🔴 Redis'),
@@ -1710,7 +1800,7 @@ class SystemHealthCheck(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='health_checks'
+        related_name='%(app_label)s_%(class)s_tenant'
     )
     
     # Thresholds
@@ -1879,6 +1969,15 @@ class SystemHealthCheck(models.Model):
 
 class AlertRuleHistory(models.Model):
     """Track changes to alert rules"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     ACTION_CHOICES = [
         ('create', '➕ Create'),
         ('update', '✏️ Update'),
@@ -1892,7 +1991,7 @@ class AlertRuleHistory(models.Model):
     rule = models.ForeignKey(
         AlertRule, 
         on_delete=models.CASCADE, 
-        related_name='history',
+        related_name='%(app_label)s_%(class)s_tenant',
         null=True,  # Allow null for deleted rules
         blank=True
     )
@@ -1910,7 +2009,7 @@ class AlertRuleHistory(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='alert_rule_changes'
+        related_name='alerts_alertrulehistory_changed_by'
     )
     
     # Metadata
@@ -2052,10 +2151,19 @@ def get_default_dashboard_layout():
     }
 class AlertDashboardConfig(models.Model):
     """User-specific dashboard configurations"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='alert_dashboard_config'
+        related_name='alerts_alertdashboardconfig_user'
     )
     
     # Display preferences
@@ -2404,6 +2512,15 @@ def trigger_health_alert(sender, instance, **kwargs):
 
 class SystemMetrics(models.Model):
     """Track system-wide metrics for monitoring"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     timestamp = models.DateTimeField(auto_now_add=True)
     
     # User metrics
@@ -2672,6 +2789,15 @@ class SystemMetrics(models.Model):
 # # ==================== MAIN ALERT MODELS ====================
 
 # class AlertRule(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Admin-configurable alert rules"""
 #     ALERT_TYPES = [
 #         ('high_earning', 'High Earning Activity'),
@@ -2741,7 +2867,7 @@ class SystemMetrics(models.Model):
 #         settings.AUTH_USER_MODEL,
 #         on_delete=models.SET_NULL,
 #         null=True,
-#         related_name='created_alert_rules'
+#         related_name='alerts_systemmetrics_tenant'
 #     )
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     updated_at = models.DateTimeField(auto_now=True)
@@ -2834,11 +2960,20 @@ class SystemMetrics(models.Model):
 
 
 # class AlertLog(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Log of triggered alerts"""
 #     rule = models.ForeignKey(
 #         AlertRule, 
 #         on_delete=models.CASCADE, 
-#         related_name='logs',
+#         related_name='%(app_label)s_%(class)s_tenant',
 #         db_index=True
 #     )
 #     triggered_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -2872,7 +3007,7 @@ class SystemMetrics(models.Model):
 #         on_delete=models.SET_NULL,
 #         null=True,
 #         blank=True,
-#         related_name='alert_resolved_by_logs'
+#         related_name='alerts_systemmetrics_tenant'
 #     )
 #     resolution_note = models.TextField(blank=True)
     
@@ -2970,6 +3105,15 @@ class SystemMetrics(models.Model):
 # # ==================== SYSTEM 1: NOTIFICATION TRACKING ====================
 
 # class Notification(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Track all notifications sent"""
 #     NOTIFICATION_TYPES = [
 #         ('email', '📧 Email'),
@@ -2990,7 +3134,7 @@ class SystemMetrics(models.Model):
 #     alert_log = models.ForeignKey(
 #         AlertLog, 
 #         on_delete=models.CASCADE, 
-#         related_name='notifications',
+#         related_name='%(app_label)s_%(class)s_tenant',
 #         db_index=True
 #     )
 #     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
@@ -3076,6 +3220,15 @@ class SystemMetrics(models.Model):
 # def get_default_days_of_week():
 #     return [0, 1, 2, 3, 4]
 # class AlertSchedule(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Schedule for when alerts should be active"""
 #     DAYS_OF_WEEK = [
 #         (0, 'Monday'),
@@ -3090,7 +3243,7 @@ class SystemMetrics(models.Model):
 #     rule = models.ForeignKey(
 #         AlertRule, 
 #         on_delete=models.CASCADE, 
-#         related_name='schedules',
+#         related_name='%(app_label)s_%(class)s_tenant',
 #         db_index=True
 #     )
 #     name = models.CharField(max_length=100)
@@ -3223,11 +3376,20 @@ class SystemMetrics(models.Model):
 # # ==================== SYSTEM 3: ALERT ESCALATION ====================
 
 # class AlertEscalation(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Escalation rules for unresolved alerts"""
 #     rule = models.ForeignKey(
 #         AlertRule, 
 #         on_delete=models.CASCADE, 
-#         related_name='escalations',
+#         related_name='%(app_label)s_%(class)s_tenant',
 #         db_index=True
 #     )
 #     name = models.CharField(max_length=100)
@@ -3253,7 +3415,7 @@ class SystemMetrics(models.Model):
 #         on_delete=models.SET_NULL,
 #         null=True,
 #         blank=True,
-#         related_name='escalation_recipient'
+#         related_name='alerts_systemmetrics_tenant'
 #     )
     
 #     # Message customization
@@ -3380,6 +3542,15 @@ class SystemMetrics(models.Model):
 #     ]
 
 # class AlertTemplate(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Templates for alert messages"""
 #     name = models.CharField(max_length=100, unique=True, db_index=True)
 #     alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES)
@@ -3415,7 +3586,7 @@ class SystemMetrics(models.Model):
 #         settings.AUTH_USER_MODEL,
 #         on_delete=models.SET_NULL,
 #         null=True,
-#         related_name='alert_template_creators'
+#         related_name='alerts_systemmetrics_tenant'
 #     )
     
 #     def __str__(self):
@@ -3505,6 +3676,15 @@ class SystemMetrics(models.Model):
 # # ==================== SYSTEM 5: ALERT ANALYTICS ====================
 
 # class AlertAnalytics(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Daily analytics for alerts"""
 #     date = models.DateField(unique=True, db_index=True)
     
@@ -3701,12 +3881,21 @@ class SystemMetrics(models.Model):
 # # ==================== SYSTEM 6: ALERT GROUP ====================
 
 # class AlertGroup(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Group related alert rules together"""
 #     name = models.CharField(max_length=100, unique=True, db_index=True)
 #     description = models.TextField(blank=True)
 #     rules = models.ManyToManyField(
 #         AlertRule, 
-#         related_name='groups', 
+#         related_name='%(app_label)s_%(class)s_tenant', 
 #         blank=True,
 #         db_index=True
 #     )
@@ -3753,7 +3942,7 @@ class SystemMetrics(models.Model):
 #         settings.AUTH_USER_MODEL,
 #         on_delete=models.SET_NULL,
 #         null=True,
-#         related_name='created_alert_groups'
+#         related_name='alerts_systemmetrics_tenant'
 #     )
     
 #     def __str__(self):
@@ -3934,6 +4123,15 @@ class SystemMetrics(models.Model):
 # # ==================== SYSTEM 7: ALERT SUPPRESSION ====================
 
 # class AlertSuppression(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Temporarily suppress specific alerts"""
 #     SUPPRESSION_TYPES = [
 #         ('rule', 'Specific Rule'),
@@ -3952,7 +4150,7 @@ class SystemMetrics(models.Model):
 #         on_delete=models.CASCADE, 
 #         null=True, 
 #         blank=True,
-#         related_name='suppressions'
+#         related_name='%(app_label)s_%(class)s_tenant'
 #     )
 #     alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES, blank=True)
 #     severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY, blank=True)
@@ -3980,7 +4178,7 @@ class SystemMetrics(models.Model):
 #         settings.AUTH_USER_MODEL,
 #         on_delete=models.SET_NULL,
 #         null=True,
-#         related_name='created_suppressions'
+#         related_name='alerts_systemmetrics_tenant'
 #     )
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     updated_at = models.DateTimeField(auto_now=True)
@@ -4107,6 +4305,15 @@ class SystemMetrics(models.Model):
 # # ==================== SYSTEM 8: SYSTEM HEALTH CHECK ====================
 
 # class SystemHealthCheck(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Periodic system health checks"""
 #     CHECK_TYPES = [
 #         ('database', '🗄️ Database'),
@@ -4157,7 +4364,7 @@ class SystemMetrics(models.Model):
 #         on_delete=models.SET_NULL,
 #         null=True,
 #         blank=True,
-#         related_name='health_checks'
+#         related_name='%(app_label)s_%(class)s_tenant'
 #     )
     
 #     # Thresholds
@@ -4325,6 +4532,15 @@ class SystemMetrics(models.Model):
 # # ==================== SYSTEM 9: ALERT RULE HISTORY ====================
 
 # class AlertRuleHistory(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Track changes to alert rules"""
 #     ACTION_CHOICES = [
 #         ('create', '➕ Create'),
@@ -4339,7 +4555,7 @@ class SystemMetrics(models.Model):
 #     rule = models.ForeignKey(
 #         AlertRule, 
 #         on_delete=models.CASCADE, 
-#         related_name='history',
+#         related_name='%(app_label)s_%(class)s_tenant',
 #         null=True,  # Allow null for deleted rules
 #         blank=True
 #     )
@@ -4357,7 +4573,7 @@ class SystemMetrics(models.Model):
 #         settings.AUTH_USER_MODEL,
 #         on_delete=models.SET_NULL,
 #         null=True,
-#         related_name='alert_rule_changes'
+#         related_name='alerts_systemmetrics_tenant'
 #     )
     
 #     # Metadata
@@ -4498,11 +4714,20 @@ class SystemMetrics(models.Model):
 #         'quick_actions': {'x': 6, 'y': 10, 'w': 6, 'h': 3},
 #     }
 # class AlertDashboardConfig(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """User-specific dashboard configurations"""
 #     user = models.OneToOneField(
 #         settings.AUTH_USER_MODEL,
 #         on_delete=models.CASCADE,
-#         related_name='alert_dashboard_config'
+#         related_name='alerts_systemmetrics_tenant'
 #     )
     
 #     # Display preferences
@@ -4843,6 +5068,15 @@ class SystemMetrics(models.Model):
 # # ==================== SYSTEM METRICS MODEL ====================
 
 # class SystemMetrics(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """Track system-wide metrics for monitoring"""
 #     timestamp = models.DateTimeField(auto_now_add=True)
     

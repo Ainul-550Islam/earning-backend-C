@@ -76,6 +76,15 @@ _MAX_META_BYTES = 32_768  # 32 KB
 # ---------------------------------------------------------------------------
 
 class TimestampedModel(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,

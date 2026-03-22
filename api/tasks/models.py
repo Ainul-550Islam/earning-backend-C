@@ -38,6 +38,15 @@ class MasterTask(models.Model):
     """
     Single model to handle all 70+ tasks using metadata-driven architecture
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     # Master System Categories
     class SystemType(models.TextChoices):
@@ -991,17 +1000,26 @@ class UserTaskCompletion(models.Model):
     """
     Track user task completions with proper ForeignKey to User model
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='task_completions',
+        related_name='tasks_usertaskcompletion_user',
         db_index=True
     )
     task = models.ForeignKey(
         MasterTask, 
         on_delete=models.CASCADE, 
-        related_name='completions'
+        related_name='%(app_label)s_%(class)s_tenant'
     )
     
     status = models.CharField(
@@ -1181,6 +1199,15 @@ class AdminLedger(models.Model):
     Admin Ledger model for tracking all admin profits and revenues
     This is CRITICAL for tracking your earnings from the platform
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     # Source Types
     SOURCE_TASK = 'task'
@@ -1234,7 +1261,7 @@ class AdminLedger(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='admin_profits',
+        related_name='%(app_label)s_%(class)s_tenant',
         help_text="Task that generated this profit"
     )
     
@@ -1243,7 +1270,7 @@ class AdminLedger(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='generated_profits',
+        related_name='tasks_adminledger_user',
         help_text="User who generated this profit (if applicable)"
     )
     
@@ -1252,7 +1279,7 @@ class AdminLedger(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='admin_profits',
+        related_name='%(app_label)s_%(class)s_tenant',
         help_text="Task completion that generated this profit"
     )
     
@@ -1262,7 +1289,7 @@ class AdminLedger(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='admin_ledger',
+        related_name='%(app_label)s_%(class)s_tenant',
         help_text="Related transaction if any"
     )
     
@@ -1271,7 +1298,7 @@ class AdminLedger(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='admin_profits',
+        related_name='%(app_label)s_%(class)s_tenant',
         help_text="Withdrawal request that generated fee profit"
     )
     

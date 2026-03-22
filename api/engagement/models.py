@@ -7,11 +7,20 @@ from django.utils.translation import gettext_lazy as _
 
 
 class DailyCheckIn(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     # user = models.ForeignKey('api.User', on_delete=models.CASCADE)
     user = models.ForeignKey(
     settings.AUTH_USER_MODEL, 
     on_delete=models.CASCADE,
-    related_name='daily_checkins'  # ইউনিক নাম
+    related_name='engagement_dailycheckin_user'  # ইউনিক নাম
 )
     date = models.DateField(default=date.today)
     coins_earned = models.DecimalField(max_digits=10, decimal_places=2, default=5)
@@ -27,12 +36,21 @@ class DailyCheckIn(models.Model):
 
 
 class SpinWheel(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     # user = models.ForeignKey('api.User', on_delete=models.CASCADE)
     # ২. SpinWheel মডেলের জন্য
     user = models.ForeignKey(
     settings.AUTH_USER_MODEL, 
     on_delete=models.CASCADE,
-    related_name='spin_wheel_entries'  # ইউনিক নাম
+    related_name='engagement_spinwheel_user'  # ইউনিক নাম
 )
     coins_won = models.DecimalField(max_digits=10, decimal_places=2)
     spun_at = models.DateTimeField(auto_now_add=True)
@@ -52,11 +70,20 @@ class SpinWheel(models.Model):
 
 class Leaderboard(models.Model):
     """Daily leaderboard cache"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     # user = models.ForeignKey('api.User', on_delete=models.CASCADE)
     user = models.ForeignKey(
     settings.AUTH_USER_MODEL, 
     on_delete=models.CASCADE,
-    related_name='leaderboard_stats'  # ইউনিক নাম
+    related_name='engagement_leaderboard_user'  # ইউনিক নাম
 )
     date = models.DateField(default=date.today)
     total_coins_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -68,6 +95,15 @@ class Leaderboard(models.Model):
 
 
 class LeaderboardReward(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     rank = models.IntegerField(unique=True)
     reward_coins = models.DecimalField(max_digits=10, decimal_places=2)
     

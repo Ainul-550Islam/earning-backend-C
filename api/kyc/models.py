@@ -5,6 +5,15 @@ from django.utils import timezone
 
 class KYC(models.Model):
     """KYC verification for users"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     STATUS_CHOICES = [
         ('not_submitted', 'Not Submitted'),
@@ -64,7 +73,7 @@ class KYC(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='kyc_reviews'
+        related_name='kyc_kyc_reviewed_by'
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(blank=True)
@@ -77,7 +86,7 @@ class KYC(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='duplicates'
+        related_name='%(app_label)s_%(class)s_tenant'
     )
     
     # Risk scoring (v2)
@@ -176,7 +185,16 @@ class KYC(models.Model):
 
 class KYCVerificationLog(models.Model):
     """Log all KYC verification attempts"""
-    kyc = models.ForeignKey(KYC, on_delete=models.CASCADE, related_name='logs')
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
+    kyc = models.ForeignKey(KYC, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     action = models.CharField(max_length=50)
     performed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

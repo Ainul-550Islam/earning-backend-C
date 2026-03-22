@@ -78,6 +78,15 @@ class AuditLogAction(models.TextChoices):
 
 class AuditLog(models.Model):
     """Main audit log model"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP Address")
@@ -88,7 +97,7 @@ class AuditLog(models.Model):
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
-        related_name='audit_logs'
+        related_name='audit_logs_auditlog_user'
     )
     anonymous_id = models.CharField(max_length=100, blank=True, null=True)
     user_ip = models.GenericIPAddressField(null=True, blank=True)
@@ -144,7 +153,7 @@ class AuditLog(models.Model):
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
-        related_name='child_logs'
+        related_name='%(app_label)s_%(class)s_tenant'
     )
     correlation_id = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
     
@@ -206,6 +215,15 @@ class AuditLog(models.Model):
 
 class AuditLogConfig(models.Model):
     """Configuration for audit logging"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     action = models.CharField(max_length=50, unique=True)
     enabled = models.BooleanField(default=True)
@@ -229,6 +247,15 @@ class AuditLogConfig(models.Model):
 
 class AuditLogArchive(models.Model):
     """Archived logs for long-term storage"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     log_data = models.BinaryField()  # Compressed log data
@@ -250,6 +277,15 @@ class AuditLogArchive(models.Model):
 
 class AuditDashboard(models.Model):
     """Dashboard configurations for audit logs"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -271,6 +307,15 @@ class AuditDashboard(models.Model):
 
 class AuditAlertRule(models.Model):
     """Rules for triggering alerts from audit logs"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)

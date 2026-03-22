@@ -1,6 +1,15 @@
 from django.db import models
 
 class Customer(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     code = models.CharField(max_length=32, unique=True)
     firstname = models.CharField(max_length=64, null=True, blank=True)
@@ -29,9 +38,18 @@ class SpendingTxnManager(models.Manager):
         return super(SpendingTxnManager, self).get_queryset().filter(value__lt=0) # value_lt কে value__lt করুন
 
 class Txn(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     timestamp = models.DateTimeField(auto_now_add=True)
     # এখানে on_delete যোগ করা হয়েছে
-    customer = models.ForeignKey('Customer', related_name='transactions', on_delete=models.CASCADE)
+    customer = models.ForeignKey('Customer', related_name='%(app_label)s_%(class)s_tenant', on_delete=models.CASCADE)
     value = models.DecimalField(decimal_places=2, max_digits=7)
     is_discount = models.BooleanField(default=False)
 
@@ -48,9 +66,18 @@ class CustomerRelatedEvtManager(models.Manager):
         return super(CustomerRelatedEvtManager, self).get_queryset().filter(customer__isnull=False)
 
 class Event(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     timestamp = models.DateTimeField(auto_now_add=True)
     # এখানেও on_delete যোগ করা হয়েছে
-    customer = models.ForeignKey('Customer', related_name='events', null=True, blank=True, on_delete=models.CASCADE)
+    customer = models.ForeignKey('Customer', related_name='%(app_label)s_%(class)s_tenant', null=True, blank=True, on_delete=models.CASCADE)
     action = models.CharField(max_length=128)
     description = models.TextField(null=True, blank=True) # DateTime এর বদলে TextField করা হয়েছে
 

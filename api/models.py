@@ -20,7 +20,7 @@ from api.tenants.models import Tenant
 # ==================== CUSTOM USER MODEL ====================
 class CustomUser(AbstractUser):
     # --- Multi-tenant ---
-    tenant = models.ForeignKey(Tenant, on_delete=models.SET_NULL, null=True, blank=True, related_name="users")
+    tenant = models.ForeignKey(Tenant, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(app_label)s_%(class)s_tenant')
     # --- Identification ---
     user_id = models.CharField(max_length=20, unique=True, blank=True)
     refer_code = models.CharField(max_length=10, unique=True, blank=True)
@@ -60,14 +60,14 @@ class CustomUser(AbstractUser):
     # --- Authentication fields fix ---
     groups = models.ManyToManyField(
         Group,
-        related_name='custom_user_groups',
+        related_name='%(app_label)s_%(class)s_tenant',
         blank=True,
         help_text='The groups this user belongs to.',
         verbose_name='groups',
     )
     user_permissions = models.ManyToManyField(
         Permission,
-        related_name='custom_user_permissions',
+        related_name='%(app_label)s_%(class)s_tenant',
         blank=True,
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
@@ -95,10 +95,19 @@ class UserDevice(models.Model):
     """
     ইউজারের ডিভাইস ট্র্যাকিং ফ্রড ডিটেকশনের জন্য
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='devices',
+        related_name='api_userdevice_user',
         verbose_name=_("User")
     )
     
@@ -287,10 +296,19 @@ class DeviceLoginHistory(models.Model):
     """
     Device login history for tracking
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     device = models.ForeignKey(
         UserDevice,
         on_delete=models.CASCADE,
-        related_name='login_history',
+        related_name='%(app_label)s_%(class)s_tenant',
         verbose_name=_("Device")
     )
     
@@ -357,6 +375,15 @@ class ReferralLevel(models.Model):
     """
     টায়ার্ড রেফারেল সিস্টেম - প্রতিটি লেভেলের জন্য আলাদা কমিশন
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     level_number = models.IntegerField(
         unique=True,
         validators=[MinValueValidator(1), MaxValueValidator(5)],
@@ -427,17 +454,26 @@ class UserReferralNetwork(models.Model):
     """
     ইউজারের সম্পূর্ণ রেফারেল নেটওয়ার্ক ট্র্যাকিং
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         primary_key=True,
-        related_name='referral_network',
+        related_name='api_userreferralnetwork_user',
         verbose_name=_("User")
     )
     
     direct_referrals = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        related_name='referrers',
+        related_name='api_userreferralnetwork_direct_referrals',
         blank=True,
         verbose_name=_("Direct Referrals")
     )
@@ -544,6 +580,15 @@ class ReferralCommission(models.Model):
     """
     রেফারেল কমিশনের হিসাব
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     TRANSACTION_TYPES = [
         ('signup', 'Signup Bonus'),
         ('earning', 'Earning Commission'),
@@ -554,14 +599,14 @@ class ReferralCommission(models.Model):
     referrer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='commission_earned_referral',
+        related_name='api_referralcommission_referrer',
         verbose_name=_("Referrer")
     )
     
     referred_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='commission_generated',
+        related_name='api_referralcommission_referred_user',
         verbose_name=_("Referred User")
     )
     
@@ -635,11 +680,20 @@ class UserStreak(models.Model):
     """
     ডেইলি স্ট্রিক সিস্টেম - ইউজাররা প্রতিদিন অ্যাপ ওপেন করার জন্য রিওয়ার্ড
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         primary_key=True,
-        related_name='streak',
+        related_name='api_userstreak_user',
         verbose_name=_("User")
     )
     
@@ -835,6 +889,15 @@ class StreakReward(models.Model):
     """
     স্ট্রিক রিওয়ার্ড হিস্ট্রি
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     REWARD_TYPES = [
         ('daily', 'Daily Login'),
         ('milestone', 'Milestone'),
@@ -845,7 +908,7 @@ class StreakReward(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='streak_rewards',
+        related_name='api_streakreward_user',
         verbose_name=_("User")
     )
     
@@ -894,6 +957,15 @@ class OfferwallNetwork(models.Model):
     """
     অফারওয়াল নেটওয়ার্ক ডিটেইলস
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     NETWORK_CHOICES = [
         ('adgem', 'AdGem'),
         ('adgate', 'AdGate'),
@@ -1007,6 +1079,15 @@ class OfferwallOffer(models.Model):
     """
     অফারওয়াল অফার ডিটেইলস
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     OFFER_TYPES = [
         ('install', 'App Install'),
         ('survey', 'Survey'),
@@ -1034,7 +1115,7 @@ class OfferwallOffer(models.Model):
     network = models.ForeignKey(
         OfferwallNetwork,
         on_delete=models.CASCADE,
-        related_name='offers',
+        related_name='%(app_label)s_%(class)s_tenant',
         verbose_name=_("Network")
     )
     
@@ -1230,6 +1311,15 @@ class OfferwallLog(models.Model):
     """
     ইউজারের অফার কমপ্লিশন লগ - তুমি যে মডেল চেয়েছো
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
@@ -1241,14 +1331,14 @@ class OfferwallLog(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='offerwall_logs',
+        related_name='api_offerwalllog_user',
         verbose_name=_("User")
     )
     
     offer = models.ForeignKey(
         OfferwallOffer,
         on_delete=models.CASCADE,
-        related_name='logs',
+        related_name='%(app_label)s_%(class)s_tenant',
         verbose_name=_("Offer")
     )
     
@@ -1405,6 +1495,15 @@ class OfferwallLog(models.Model):
 
 # # ==================== ৫. NOTIFICATION HISTORY ====================
 # class Notification(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """
 #     নোটিফিকেশন হিস্ট্রি - তুমি যে মডেল চেয়েছো
 #     """
@@ -1438,7 +1537,7 @@ class OfferwallLog(models.Model):
 #     user = models.ForeignKey(
 #         settings.AUTH_USER_MODEL,
 #         on_delete=models.CASCADE,
-#         related_name='notifications',
+#         related_name='api_offerwalllog_tenant',
 #         verbose_name=_("User")
 #     )
     
@@ -1529,7 +1628,7 @@ class OfferwallLog(models.Model):
 #         on_delete=models.SET_NULL,
 #         null=True,
 #         blank=True,
-#         related_name='sent_notifications',
+#         related_name='api_offerwalllog_tenant',
 #         verbose_name=_("Sender")
 #     )
     
@@ -1606,6 +1705,15 @@ class NotificationTemplate(models.Model):
     """
     নোটিফিকেশন টেম্পলেট রিউজ করার জন্য
     """
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     TEMPLATE_TYPES = [
         ('welcome', 'Welcome Message'),
         ('payment_approved', 'Payment Approved'),
@@ -1680,6 +1788,15 @@ class NotificationTemplate(models.Model):
 
 # ==================== EXISTING MODELS ====================
 class Notice(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     message = models.CharField(max_length=500)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1694,6 +1811,15 @@ class Notice(models.Model):
 
 
 class EarningTask(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     TASK_TYPES = [
         ('ad_watch', 'Watch Ads'),
         ('app_install', 'App Install'),
@@ -1715,6 +1841,15 @@ class EarningTask(models.Model):
 
 
 class PaymentRequest(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     STATUS_CHOICES = [
         ('pending', 'Pending'), ('approved', 'Approved'),
         ('paid', 'Paid'), ('rejected', 'Rejected'),
@@ -1745,6 +1880,15 @@ class PaymentRequest(models.Model):
 
 
 class PaymentHistory(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
     username = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     payment_method = models.CharField(max_length=20)
@@ -1806,7 +1950,7 @@ import uuid
 #     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 #     total_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 #     referral_code = models.CharField(max_length=20, unique=True, blank=True)
-#     referred_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='referrals')
+#     referred_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='%(app_label)s_%(class)s_tenant')
 #     tier = models.CharField(max_length=10, choices=USER_TIER_CHOICES, default='FREE')
 #     phone_number = models.CharField(max_length=20, blank=True)
 #     country = models.CharField(max_length=100, blank=True)
@@ -1833,6 +1977,15 @@ import uuid
 
 class Wallet(models.Model):
     """User wallet for managing funds"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     TRANSACTION_STATUS = [
         ('PENDING', 'Pending'),
@@ -1841,7 +1994,7 @@ class Wallet(models.Model):
         ('CANCELLED', 'Cancelled'),
     ]
     
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_wallet_user')
     available_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pending_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     lifetime_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -1889,6 +2042,15 @@ class Wallet(models.Model):
 
 class Transaction(models.Model):
     """Transaction history"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     TRANSACTION_TYPES = [
         ('CREDIT', 'Credit'),
@@ -1906,7 +2068,7 @@ class Transaction(models.Model):
     ]
     
     transaction_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='transactions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_transaction_user')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
     description = models.TextField(blank=True)
@@ -1931,6 +2093,15 @@ class Transaction(models.Model):
 
 class Offer(models.Model):
     """Available offers for users to complete"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     OFFER_TYPES = [
         ('SURVEY', 'Survey'),
@@ -1994,6 +2165,15 @@ class Offer(models.Model):
 
 class UserOffer(models.Model):
     """Track user's offer completions"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     STATUS_CHOICES = [
         ('STARTED', 'Started'),
@@ -2003,8 +2183,8 @@ class UserOffer(models.Model):
         ('EXPIRED', 'Expired'),
     ]
     
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='user_offers')
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='user_completions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_useroffer_user')
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='api_useroffer_offer')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='STARTED')
     reward_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     started_at = models.DateTimeField(auto_now_add=True)
@@ -2050,9 +2230,18 @@ class UserOffer(models.Model):
 
 class Referral(models.Model):
     """Referral tracking and rewards"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
-    referrer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referrals_made')
-    referred = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referral_info')
+    referrer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_referral_referrer')
+    referred = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_referral_referred')
     commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=20.00)
     total_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     is_active = models.BooleanField(default=True)
@@ -2081,8 +2270,17 @@ class Referral(models.Model):
 
 class DailyStats(models.Model):
     """Daily statistics for analytics"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='daily_stats')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_dailystats_user')
     date = models.DateField()
     clicks = models.IntegerField(default=0)
     conversions = models.IntegerField(default=0)
@@ -2104,6 +2302,15 @@ class DailyStats(models.Model):
 
 class Withdrawal(models.Model):
     """Withdrawal requests"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),
@@ -2121,7 +2328,7 @@ class Withdrawal(models.Model):
     ]
     
     withdrawal_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_withdrawals')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_withdrawal_user')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS)
     payment_details = models.JSONField(default=dict)
@@ -2129,13 +2336,13 @@ class Withdrawal(models.Model):
     processing_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     net_amount = models.DecimalField(max_digits=10, decimal_places=2)
     rejection_reason = models.TextField(blank=True)
-    # processed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_withdrawals')
+    # processed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='api_withdrawal_user')
     processed_by = models.ForeignKey(
     settings.AUTH_USER_MODEL, 
     on_delete=models.SET_NULL, 
     null=True, 
     blank=True, 
-    related_name='api_withdrawals_handled'
+    related_name='api_withdrawal_processed_by'
 )
     requested_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
@@ -2170,6 +2377,15 @@ class Withdrawal(models.Model):
 
 # Notification
 # class Notification(models.Model):
+
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
 #     """User notifications"""
     
 #     NOTIFICATION_TYPES = [
@@ -2181,7 +2397,7 @@ class Withdrawal(models.Model):
 #         ('WITHDRAWAL', 'Withdrawal'),
 #     ]
     
-#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_withdrawal_tenant')
 #     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='INFO')
 #     title = models.CharField(max_length=200)
 #     message = models.TextField()

@@ -21,8 +21,8 @@ class OTP(TimeStampedModel):
         ('phone_verify', 'Phone Verification'),
     )
     
-    # user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='otps')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='otps')
+    # user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_otp_field')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_otp_user')
     code = models.CharField(max_length=6)
     otp_type = models.CharField(max_length=20, choices=OTP_TYPE_CHOICES, default='registration')
     is_used = models.BooleanField(default=False)
@@ -43,7 +43,7 @@ class OTP(TimeStampedModel):
 
 
 class LoginHistory(TimeStampedModel):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='login_history')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_loginhistory_user')
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField()
     device = models.CharField(max_length=100, blank=True, null=True)
@@ -63,7 +63,7 @@ class LoginHistory(TimeStampedModel):
 class UserActivity(models.Model):
     """Track All User Activities"""
     
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='activities')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_useractivity_user')
     action = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     ip_address = models.GenericIPAddressField(blank=True, null=True)
@@ -85,11 +85,11 @@ class UserActivity(models.Model):
 
 
 class UserDevice(TimeStampedModel):
-    # user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='devices')
+    # user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_userdevice_user')
     user = models.ForeignKey(
     settings.AUTH_USER_MODEL, 
     on_delete=models.CASCADE, 
-    related_name='user_app_devices_list' # ইউনিক নাম দিন
+    related_name='users_userdevice_user' # ইউনিক নাম দিন
 )
     device_id = models.CharField(max_length=255, unique=True)
     device_name = models.CharField(max_length=100)
@@ -256,9 +256,9 @@ class UserAccountLink(models.Model):
     """
     Links users to devices and IPs for multi-account detection
     """
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='account_links')
-    device = models.ForeignKey(DeviceFingerprint, on_delete=models.CASCADE, related_name='users')
-    ip_reputation = models.ForeignKey(IPReputation, on_delete=models.CASCADE, related_name='users')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_useraccountlink_user')
+    device = models.ForeignKey(DeviceFingerprint, on_delete=models.CASCADE, related_name='users_useraccountlink_device')
+    ip_reputation = models.ForeignKey(IPReputation, on_delete=models.CASCADE, related_name='users_useraccountlink_ip_reputation')
     linked_account = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -294,7 +294,7 @@ class UserBehavior(models.Model):
     """
     Track user behavior patterns for anomaly detection
     """
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='behavior')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_userbehavior_user')
     action_type = models.CharField(max_length=100)
 
 
@@ -373,7 +373,7 @@ class FraudDetectionLog(models.Model):
     action_taken = models.CharField(max_length=100, null=True, blank=True)
     is_resolved = models.BooleanField(default=False)
     resolved_at = models.DateTimeField(null=True, blank=True)
-    resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='resolved_frauds')
+    resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='users_frauddetectionlog_resolved_by')
     
     # Timestamp
     detected_at = models.DateTimeField(auto_now_add=True)
@@ -400,7 +400,7 @@ class RiskScoreHistory(models.Model):
     """
     Track risk score changes over time
     """
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='risk_history')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_riskscorehistory_user')
     
     # Score details
     risk_score = models.IntegerField()  # 0-100
@@ -524,7 +524,7 @@ class KYCVerification(models.Model):
         ('voter_id', 'Voter ID'),
     ]
     
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='kyc_verification')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_kycverification_user')
     verification_status = models.CharField(max_length=20, choices=VERIFICATION_STATUS, default='pending')
     document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPES)
     document_number = models.CharField(max_length=50)
@@ -536,7 +536,7 @@ class KYCVerification(models.Model):
     
     # Verification details
     submitted_at = models.DateTimeField(null=True, blank=True)
-    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_kyc')
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='users_kycverification_reviewed_by')
     reviewed_at = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(null=True, blank=True)
     
@@ -569,7 +569,7 @@ class UserLevel(models.Model):
         ('diamond', 'Diamond'),
     ]
     
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='level_info')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_userlevel_user')
     current_level = models.IntegerField(default=1)
     level_type = models.CharField(max_length=20, choices=LEVEL_TYPES, default='bronze')
     experience_points = models.IntegerField(default=0)
@@ -610,7 +610,7 @@ class NotificationSettings(models.Model):
     """
     User notification preferences
     """
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notification_settings')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_notificationsettings_user')
     
     # Email notifications
     email_task_approved = models.BooleanField(default=True)
@@ -663,7 +663,7 @@ class SecuritySettings(models.Model):
     """
     User security preferences and 2FA settings
     """
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='security_settings')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_securitysettings_user')
     
     # Two-Factor Authentication
     two_factor_enabled = models.BooleanField(default=False)
@@ -725,7 +725,7 @@ class UserStatistics(models.Model):
     """
     Comprehensive user statistics and analytics
     """
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='statistics')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_userstatistics_user')
     
     # Task statistics
     total_tasks_completed = models.IntegerField(default=0)
@@ -803,7 +803,7 @@ class UserPreferences(models.Model):
         ('ur', 'اردو'),
     ]
     
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='preferences')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_userpreferences_user')
     
     # UI/UX preferences
     theme = models.CharField(max_length=10, choices=THEME_CHOICES, default='auto')
@@ -879,7 +879,7 @@ class User(AbstractUser):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='tenant_users',
+        related_name='%(app_label)s_%(class)s_tenant',
         db_index=True,
     )
 
@@ -901,7 +901,7 @@ class User(AbstractUser):
     # রেফারেল সংক্রান্ত
     referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
     referred_by = models.ForeignKey(
-        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='referrals_list'
+        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='%(app_label)s_%(class)s_tenant'
     )
     
     tier = models.CharField(max_length=10, choices=USER_TIER_CHOICES, default='FREE')
@@ -936,7 +936,7 @@ class User(AbstractUser):
 
 
 class UserProfile(TimeStampedModel):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='users_userprofile_user')
     
     # Personal Information
     profile_id = models.CharField(max_length=20, unique=True, blank=True, null=True, editable=False)
@@ -980,7 +980,7 @@ class UserProfile(TimeStampedModel):
     
     # Referral System
     referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
-    referred_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='referrals')
+    referred_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='users_userprofile_referred_by')
     
     # Account Features
     is_premium = models.BooleanField(default=False)
@@ -1002,7 +1002,7 @@ class UserRank(models.Model):
         ('Diamond', 'Diamond'),
     ]
     
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='rank')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     rank = models.CharField(max_length=20, choices=RANK_CHOICES, default='Bronze')
     points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     badge_icon = models.CharField(max_length=50, blank=True, null=True)

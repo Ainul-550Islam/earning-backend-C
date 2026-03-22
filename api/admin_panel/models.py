@@ -21,9 +21,9 @@ class AdminAction(TimeStampedModel):
         ('setting_change', 'Setting Change'),
     )
     
-    admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='admin_actions')
+    admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='admin_panel_adminaction_admin')
     action_type = models.CharField(max_length=50, choices=ACTION_TYPES)
-    target_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='actions_received')
+    target_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='admin_panel_adminaction_target_user')
     description = models.TextField()
     metadata = models.JSONField(default=dict, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
@@ -84,6 +84,15 @@ class Report(TimeStampedModel):
 
 class SystemSettings(models.Model):
     """System-wide settings and configuration"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     
     # ==================== Site Information ====================
     site_name = models.CharField(max_length=255, default="Earning Platform")
@@ -639,7 +648,7 @@ class SystemSettings(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='settings_modifications'
+        related_name='admin_panel_systemsettings_last_modified_by'
     )
     
     class Meta:
@@ -790,6 +799,15 @@ class SystemSettings(models.Model):
 
 class SiteNotification(models.Model):
     """Site-wide notifications and announcements"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     NOTIFICATION_TYPE_CHOICES = [
         ('INFO', 'Information'),
         ('SUCCESS', 'Success'),
@@ -832,6 +850,15 @@ class SiteNotification(models.Model):
 
 class SiteContent(models.Model):
     """Dynamic site content (pages, sections, etc.)"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     CONTENT_TYPE_CHOICES = [
         ('PAGE', 'Page'),
         ('SECTION', 'Section'),

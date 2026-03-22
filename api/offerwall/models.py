@@ -8,6 +8,15 @@ from django.conf import settings
 
 class OfferProvider(models.Model):
     """External offer providers (Tapjoy, AdGem, etc.)"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     PROVIDER_TYPES = (
         ('tapjoy', 'Tapjoy'),
         ('adgem', 'AdGem'),
@@ -96,6 +105,15 @@ class OfferProvider(models.Model):
 
 class OfferCategory(models.Model):
     """Categories for offers"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -129,6 +147,15 @@ class OfferCategory(models.Model):
 
 class Offer(models.Model):
     """Main offer model"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     OFFER_TYPES = (
         ('app_install', 'App Install'),
         ('signup', 'Sign Up'),
@@ -173,7 +200,7 @@ class Offer(models.Model):
     provider = models.ForeignKey(
         OfferProvider,
         on_delete=models.CASCADE,
-        related_name='offers'
+        related_name='%(app_label)s_%(class)s_tenant'
     )
     external_offer_id = models.CharField(max_length=200, db_index=True)
     
@@ -188,7 +215,7 @@ class Offer(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='offers'
+        related_name='%(app_label)s_%(class)s_tenant'
     )
     offer_type = models.CharField(max_length=50, choices=OFFER_TYPES)
     tags = models.JSONField(default=list, blank=True)
@@ -408,10 +435,19 @@ class Offer(models.Model):
 
 class OfferClick(models.Model):
     """Track offer clicks"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='clicks')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offer_clicks')
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offerwall_offerclick_user')
     
     # Click data
     click_id = models.CharField(max_length=255, unique=True, db_index=True)
@@ -460,6 +496,15 @@ class OfferClick(models.Model):
 
 class OfferConversion(models.Model):
     """Track successful offer conversions"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     STATUS_CHOICES = (
         ('pending', 'Pending'),
         ('approved', 'Approved'),
@@ -470,9 +515,9 @@ class OfferConversion(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='conversions')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offer_conversions')
-    click = models.ForeignKey(OfferClick, on_delete=models.SET_NULL, null=True, blank=True, related_name='conversions')
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offerwall_offerconversion_user')
+    click = models.ForeignKey(OfferClick, on_delete=models.SET_NULL, null=True, blank=True, related_name='offerwall_offerconversion_click')
     
     # Conversion data
     conversion_id = models.CharField(max_length=255, unique=True, db_index=True)
@@ -500,7 +545,7 @@ class OfferConversion(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='offerwall_verified_conversions'
+        related_name='%(app_label)s_%(class)s_tenant'
     )
     
     # Transaction
@@ -509,7 +554,7 @@ class OfferConversion(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='offer_conversions'
+        related_name='%(app_label)s_%(class)s_tenant'
     )
     
     # Provider data
@@ -590,6 +635,15 @@ class OfferConversion(models.Model):
 
 class OfferWall(models.Model):
     """Custom offer wall configurations"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     name = models.CharField(max_length=100)
@@ -602,8 +656,8 @@ class OfferWall(models.Model):
     banner_image = models.URLField(blank=True)
     
     # Filters
-    categories = models.ManyToManyField(OfferCategory, blank=True, related_name='offer_walls')
-    providers = models.ManyToManyField(OfferProvider, blank=True, related_name='offer_walls')
+    categories = models.ManyToManyField(OfferCategory, blank=True, related_name='%(app_label)s_%(class)s_tenant')
+    providers = models.ManyToManyField(OfferProvider, blank=True, related_name='%(app_label)s_%(class)s_tenant')
     offer_types = models.JSONField(default=list, blank=True)
     platforms = models.JSONField(default=list, blank=True)
     

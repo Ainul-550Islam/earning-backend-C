@@ -422,8 +422,8 @@ class Offer(TimeStampedModel):
     )
     
     # Basic Information
-    ad_network = models.ForeignKey(AdNetwork, on_delete=models.CASCADE, related_name='offers')
-    category = models.ForeignKey(OfferCategory, on_delete=models.SET_NULL, null=True, related_name='offers')
+    ad_network = models.ForeignKey(AdNetwork, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
+    category = models.ForeignKey(OfferCategory, on_delete=models.SET_NULL, null=True, related_name='%(app_label)s_%(class)s_tenant')
     
     external_id = models.CharField(max_length=255, unique=True)
     internal_id = models.CharField(max_length=100, blank=True, null=True)
@@ -582,8 +582,8 @@ class UserOfferEngagement(TimeStampedModel):
     postback_attempts = models.IntegerField(default=0)
     last_postback_attempt = models.DateTimeField(null=True, blank=True)
     
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offer_engagements')
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='engagements')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ad_networks_userofferengagement_user')
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='ad_networks_userofferengagement_offer')
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='clicked')
     progress = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
@@ -618,7 +618,7 @@ class UserOfferEngagement(TimeStampedModel):
     # Verification
     rejection_reason = models.CharField(max_length=20, choices=REJECTION_REASONS, blank=True, null=True)
     rejection_details = models.TextField(blank=True, null=True)
-    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_engagements')
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='ad_networks_userofferengagement_verified_by')
     
     # Screenshots & Proof
     screenshot = models.ImageField(upload_to='engagement_screenshots/', blank=True, null=True)
@@ -684,7 +684,7 @@ class OfferConversion(TimeStampedModel):
         ('paid', 'Paid to User'),
     )
     
-    engagement = models.OneToOneField(UserOfferEngagement, on_delete=models.CASCADE, related_name='conversion')
+    engagement = models.OneToOneField(UserOfferEngagement, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     
     # Network Data
     postback_data = models.JSONField(default=default_dict)
@@ -694,7 +694,7 @@ class OfferConversion(TimeStampedModel):
     
     # Verification
     is_verified = models.BooleanField(default=False)
-    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_conversions')
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='ad_networks_offerconversion_verified_by')
     verified_at = models.DateTimeField(null=True, blank=True)
     
     # Fraud Protection Fields
@@ -794,8 +794,8 @@ class OfferWall(TimeStampedModel):
     description = models.TextField(blank=True, null=True)
     
     # Content
-    ad_networks = models.ManyToManyField(AdNetwork, related_name='offerwalls')
-    categories = models.ManyToManyField(OfferCategory, related_name='offerwalls', blank=True)
+    ad_networks = models.ManyToManyField(AdNetwork, related_name='%(app_label)s_%(class)s_tenant')
+    categories = models.ManyToManyField(OfferCategory, related_name='%(app_label)s_%(class)s_tenant', blank=True)
     
     # Settings
     is_active = models.BooleanField(default=True)
@@ -883,7 +883,7 @@ class AdNetworkWebhookLog(TimeStampedModel):
     ad_network = models.ForeignKey(
         AdNetwork,
         on_delete=models.CASCADE,
-        related_name='webhook_logs',
+        related_name='%(app_label)s_%(class)s_tenant',
         null=True,
         blank=True,
     )
@@ -935,7 +935,7 @@ class AdNetworkWebhookLog(TimeStampedModel):
 
 class NetworkStatistic(TimeStampedModel):
     """Daily statistics for ad networks"""
-    ad_network = models.ForeignKey(AdNetwork, on_delete=models.CASCADE, related_name='statistics')
+    ad_network = models.ForeignKey(AdNetwork, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     date = models.DateField()
     
     clicks = models.IntegerField(default=0)
@@ -954,14 +954,14 @@ class UserOfferLimit(TimeStampedModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='offer_limits',
+        related_name='ad_networks_userofferlimit_user',
     )
     # Tests create `UserOfferLimit` with only a user instance. Make `offer`
     # optional so those creations succeed.
     offer = models.ForeignKey(
         Offer,
         on_delete=models.CASCADE,
-        related_name='user_limits',
+        related_name='%(app_label)s_%(class)s_tenant',
         null=True,
         blank=True,
     )
@@ -976,7 +976,7 @@ class UserOfferLimit(TimeStampedModel):
 
 class OfferSyncLog(TimeStampedModel):
     """Log offer synchronization from networks"""
-    ad_network = models.ForeignKey(AdNetwork, on_delete=models.CASCADE, related_name='sync_logs')
+    ad_network = models.ForeignKey(AdNetwork, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     
     status = models.CharField(
         max_length=20, 
@@ -1003,8 +1003,8 @@ class OfferSyncLog(TimeStampedModel):
 
 class SmartOfferRecommendation(TimeStampedModel):
     """AI-powered offer recommendations for users"""
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offer_recommendations')
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='recommendations')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ad_networks_smartofferrecommendation_user')
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='ad_networks_smartofferrecommendation_offer')
     
     score = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(1)])
     reason = models.TextField(blank=True, null=True)
@@ -1021,7 +1021,7 @@ class SmartOfferRecommendation(TimeStampedModel):
 
 class OfferPerformanceAnalytics(TimeStampedModel):
     """Advanced analytics for offers"""
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='analytics')
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     
     # User Demographics
     age_distribution = models.JSONField(default=default_dict, blank=True)
@@ -1047,6 +1047,15 @@ class OfferPerformanceAnalytics(TimeStampedModel):
 
 class BlacklistedIP(models.Model):
     """IP addresses blocked for fraud/bot activities"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     ip_address = models.GenericIPAddressField(unique=True)
     reason = models.CharField(
         max_length=50,
@@ -1368,6 +1377,15 @@ class FraudDetectionRule(TimeStampedModel):
 
 class KnownBadIP(models.Model):
     """Known bad IP addresses from various sources"""
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_tenant',
+        db_index=True,
+    )
+
     ip_address = models.GenericIPAddressField(unique=True)
     threat_type = models.CharField(
         max_length=50,
