@@ -873,6 +873,16 @@ class User(AbstractUser):
     ]
 
     # uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    # Tenant isolation
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tenant_users',
+        db_index=True,
+    )
+
     # uid ফিল্ডটিকে primary_key করবেন না, এটি একটি আলাদা ইউনিক আইডেন্টিফায়ার হিসেবে থাকবে
     uid = models.UUIDField(
     default=uuid.uuid4, 
