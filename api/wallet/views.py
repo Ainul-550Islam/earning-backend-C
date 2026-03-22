@@ -42,9 +42,10 @@ class WalletViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        if self.request.user.is_staff:
-            return Wallet.objects.all()
-        return Wallet.objects.filter(user=self.request.user)
+        tenant = getattr(self.request, 'tenant', None)
+        if not tenant:
+            return Wallet.objects.none()
+        return Wallet.objects.filter(user=self.request.user, user__tenant=tenant)
     
     @action(detail=True, methods=['post'])
     def lock(self, request, pk=None):
