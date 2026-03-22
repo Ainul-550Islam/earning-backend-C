@@ -8,7 +8,7 @@ from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
 from .PaymentProcessor import PaymentProcessor
-from ..models import GatewayTransaction, PayoutRequest
+from ..models import GatewayTransaction as TxnModel, PayoutRequest
 
 
 class BkashService(PaymentProcessor):
@@ -174,7 +174,7 @@ class BkashService(PaymentProcessor):
             
             # Find and update GatewayTransaction
             try:
-                GatewayTransaction = GatewayTransaction.objects.get(gateway_reference=payment_id)
+                GatewayTransaction = TxnModel.objects.get(gateway_reference=payment_id)
                 
                 if verification_data.get('GatewayTransactionStatus') == 'Completed':
                     GatewayTransaction.status = 'completed'
