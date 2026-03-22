@@ -176,10 +176,32 @@ class GatewayTransactionViewSet(BaseViewSet):
 
     @action(detail=False, methods=['post'])
     def deposit(self, request):
-        """Initiate deposit"""
+        """Initiate deposit via payment gateway"""
         serializer = CreatePaymentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        return self.success_response(message='Deposit initiated — implement gateway logic')
+        data = serializer.validated_data
+        gateway = data.get('gateway', 'bkash').lower()
+        amount = data.get('amount')
+        try:
+            if gateway == 'bkash':
+                from .services.BkashService import BkashService
+                service = BkashService()
+                result = service.process_deposit(user=request.user, amount=amount)
+                return self.success_response(data=result, message='bKash payment initiated')
+            elif gateway == 'nagad':
+                from .services.NagadService import NagadService
+                service = NagadService()
+                result = service.process_deposit(user=request.user, amount=amount)
+                return self.success_response(data=result, message='Nagad payment initiated')
+            elif gateway == 'stripe':
+                from .services.StripeService import StripeService
+                service = StripeService()
+                result = service.process_deposit(user=request.user, amount=amount)
+                return self.success_response(data=result, message='Stripe payment initiated')
+            else:
+                return self.error_response(message=f'Gateway {gateway} not supported', status_code=400)
+        except Exception as e:
+            return self.error_response(message=str(e), status_code=500)
 
 
 # ── PayoutRequest ─────────────────────────────────────────────────────────────
