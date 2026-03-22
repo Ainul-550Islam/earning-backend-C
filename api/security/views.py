@@ -2406,12 +2406,12 @@ class FraudPatternViewSet(viewsets.ModelViewSet):
             
             report = {
                 'timeframe': f'Last {days} days',
-                'summary': self._get_fraud_summary(start_date),
-                'pattern_effectiveness': self._get_pattern_effectiveness(start_date),
-                'common_patterns': self._get_common_patterns(start_date),
-                'geographical_analysis': self._get_fraud_geography(start_date),
-                'user_risk_profiles': self._get_user_risk_profiles(start_date),
-                'recommendations': self._get_fraud_recommendations()
+                'summary': self._safe_call(self._get_fraud_summary, start_date),
+                'pattern_effectiveness': self._safe_call(self._get_pattern_effectiveness, start_date),
+                'common_patterns': self._safe_call(self._get_common_patterns, start_date),
+                'geographical_analysis': self._safe_call(self._get_fraud_geography, start_date),
+                'user_risk_profiles': self._safe_call(self._get_user_risk_profiles, start_date),
+                'recommendations': self._safe_call(self._get_fraud_recommendations)
             }
             
             return Response(report)
@@ -2423,6 +2423,13 @@ class FraudPatternViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+
+    def _safe_call(self, func, *args):
+        try:
+            return func(*args)
+        except Exception as e:
+            logger.error(f'Error in {func.__name__}: {str(e)}')
+            return {}
     def _get_fraud_summary(self, start_date):
         """Get fraud detection summary"""
         patterns = FraudPattern.objects.filter(is_active=True)
