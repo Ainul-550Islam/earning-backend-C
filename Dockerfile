@@ -11,4 +11,4 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-CMD ["sh", "-c", "python manage.py migrate --no-input && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120 --workers 1"]
+CMD ["sh", "-c", "python manage.py migrate --no-input && python manage.py seed_tenant && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120 --workers 1"]
