@@ -185,7 +185,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         
         # Create wallet
-        Wallet.objects.create(user=user)
+        from api.wallet.models import Wallet
+        Wallet.objects.get_or_create(user=user)
         
         # Handle referral
         if referred_by_code:
