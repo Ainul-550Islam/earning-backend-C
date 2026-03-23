@@ -1,14 +1,8 @@
-[phases.setup]
-nixPkgs = ["python312", "gcc", "libpq"]
-
 [phases.build]
 cmds = ["pip install -r requirements.txt"]
 
 [phases.deploy]
-cmds = [
-  "python manage.py migrate --noinput",
-  "python manage.py collectstatic --noinput"
-]
+cmds = ["python manage.py migrate --noinput"]
 
 [start]
-cmd = "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 300"
+cmd = "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 300"
