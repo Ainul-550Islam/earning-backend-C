@@ -901,7 +901,7 @@ class User(AbstractUser):
     # রেফারেল সংক্রান্ত
     referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
     referred_by = models.ForeignKey(
-        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='%(app_label)s_%(class)s_tenant'
+        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='referrals_list'
     )
     
     tier = models.CharField(max_length=10, choices=USER_TIER_CHOICES, default='FREE')
