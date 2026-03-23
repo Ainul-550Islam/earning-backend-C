@@ -19,6 +19,26 @@ def create_user_profile(sender, instance, created, **kwargs):
             Wallet.objects.get_or_create(user=instance)
         except Exception:
             pass
+        try:
+            from api.users.models import UserLevel
+            UserLevel.objects.get_or_create(user=instance)
+        except Exception:
+            pass
+        try:
+            from api.users.models import NotificationSettings
+            NotificationSettings.objects.get_or_create(user=instance)
+        except Exception:
+            pass
+        try:
+            from api.users.models import SecuritySettings
+            SecuritySettings.objects.get_or_create(user=instance)
+        except Exception:
+            pass
+        try:
+            from api.users.models import UserStatistics
+            UserStatistics.objects.get_or_create(user=instance)
+        except Exception:
+            pass
 
 @receiver(post_save, sender=User)
 def handle_referral_bonus(sender, instance, created, **kwargs):
