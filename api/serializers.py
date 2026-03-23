@@ -200,13 +200,18 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 )
                 
                 # Bonus for both
-                referrer.wallet.add_funds(5.00, "New referral bonus")
-                user.wallet.add_funds(Decimal("1.00"), "Welcome bonus")
+                from api.wallet.models import Wallet
+                referrer_wallet, _ = Wallet.objects.get_or_create(user=referrer)
+                referrer_wallet.add_funds(5.00, "New referral bonus")
+                user_wallet, _ = Wallet.objects.get_or_create(user=user)
+                user_wallet.add_funds(Decimal("1.00"), "Welcome bonus")
             except User.DoesNotExist:
                 pass
         else:
             # Welcome bonus
-            user.wallet.add_funds(Decimal("1.00"), "Welcome bonus")
+            from api.wallet.models import Wallet
+            user_wallet, _ = Wallet.objects.get_or_create(user=user)
+            user_wallet.add_funds(Decimal("1.00"), "Welcome bonus")
         
         return user
 
