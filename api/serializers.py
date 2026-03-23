@@ -155,7 +155,7 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['uid', 'balance', 'total_earned', 'referral_code', 'created_at']
     
     def get_referral_count(self, obj):
-        return obj.referrals.count()
+        return obj.referrals_list.count()
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -203,16 +203,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 # Bonus for both
                 from api.wallet.models import Wallet
                 referrer_wallet, _ = Wallet.objects.get_or_create(user=referrer)
-                referrer_wallet.add_funds(5.00, "New referral bonus")
+                referrer_wallet.current_balance += 5; referrer_wallet.save()
                 user_wallet, _ = Wallet.objects.get_or_create(user=user)
-                user_wallet.add_funds(Decimal("1.00"), "Welcome bonus")
+                user_wallet.current_balance += Decimal("1.00"); user_wallet.save()
             except User.DoesNotExist:
                 pass
         else:
             # Welcome bonus
             from api.wallet.models import Wallet
             user_wallet, _ = Wallet.objects.get_or_create(user=user)
-            user_wallet.add_funds(Decimal("1.00"), "Welcome bonus")
+            user_wallet.current_balance += Decimal("1.00"); user_wallet.save()
         
         return user
 
