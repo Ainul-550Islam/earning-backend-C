@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px;">
+  <div style="max-width: 600px; margin: auto; background: white; border-radius: 8px; overflow: hidden;">
+    <div style="background: {{ tenant.primary_color }}; padding: 30px; text-align: center;">
+      {% if tenant.logo %}
+        <img src="{{ tenant.logo.url }}" height="50" alt="{{ tenant.name }}">
+      {% else %}
+        <h1 style="color: white; margin: 0;">{{ tenant.name }}</h1>
+      {% endif %}
+    </div>
+    <div style="padding: 30px;">
+      <h2>Welcome to {{ tenant.name }}! í¾‰</h2>
+      <p>Hi {{ user.first_name }},</p>
+      <p>Your account has been created successfully.</p>
+      <p>Start earning today by completing tasks and offers!</p>
+      <a href="https://{{ tenant.domain }}" 
+         style="background: {{ tenant.primary_color }}; color: white; padding: 12px 24px; 
+                border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 10px;">
+        Get Started
+      </a>
+    </div>
+    <div style="background: #f4f4f4; padding: 20px; text-align: center; font-size: 12px; color: #999;">
+      Â© {{ tenant.name }} | 
+      <a href="{{ settings.privacy_policy_url }}">Privacy Policy</a> | 
+      <a href="{{ settings.terms_url }}">Terms</a>
+    </div>
+  </div>
+</body>
+</html>

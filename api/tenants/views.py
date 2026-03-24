@@ -125,3 +125,52 @@ class TenantViewSet(viewsets.ModelViewSet):
             "is_active": tenant.is_active,
             "message": f"Tenant {'activated' if tenant.is_active else 'suspended'}"
         })
+
+
+class TenantBillingViewSet(viewsets.ViewSet):
+    permission_classes = [IsAdminUser]
+
+    @action(detail=False, methods=["post"])
+    def create_subscription(self, request):
+        import stripe
+        from django.conf import settings
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        tenant = Tenant.objects.get(pk=request.data.get("tenant_id"))
+        billing, _ = TenantBilling.objects.get_or_create(tenant=tenant)
+
+        if not billing.stripe_customer_id:
+            customer = stripe.Customer.create(
+                email=tenant.admin_email,
+                name=tenant.name,
+            )
+            billing.stripe_customer_id = customer.id
+            billing.save()
+
+        return Response({"stripe_customer_id": billing.stripe_customer_id})
+
+    @action(detail=False, methods=["post"])
+    def cancel_subscription(self, request):
+        import stripe
+        from django.conf import settings
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        tenant = Tenant.objects.get(pk=request.data.get("tenant_id"))
+        billing = tenant.billing
+        if billing.stripe_subscription_id:
+            stripe.Subscription.cancel(billing.stripe_subscription_id)
+            billing.status = "cancelled"
+            billing.save()
+        return Response({"success": True})
+
+    @action(detail=False, methods=["get"])
+    def status(self, request):
+        tenant = getattr(request, "tenant", None)
+        if not tenant:
+            return Response({"error": "No tenant"}, status=404)
+        billing = getattr(tenant, "billing", None)
+        return Response({
+            "status": billing.status if billing else "unknown",
+            "is_active": billing.is_active() if billing else False,
+            "trial_ends_at": billing.trial_ends_at if billing else None,
+            "subscription_ends_at": billing.subscription_ends_at if billing else None,
+            "plan": tenant.plan,
+        })
