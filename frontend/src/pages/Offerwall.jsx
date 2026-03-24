@@ -10,6 +10,7 @@ import {
   Package, Award, Layers, RotateCcw, X
 } from 'lucide-react';
 import client from '../api/client';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─── Design Tokens ────────────────────────────────────────────────
 const C = {
@@ -919,6 +920,7 @@ export default function Offerwall() {
       `}</style>
 
       <ToastContainer toasts={toasts}/>
+        <PageEndpointPanel pageKey="Offerwall" title="Offerwall Endpoints" />
 
       {/* Header */}
       <div style={{ padding:'24px 32px 0', borderBottom:`1px solid ${C.border}`, background:`${C.bg2}88` }}>

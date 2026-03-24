@@ -25,6 +25,7 @@ import {
   ArrowUp, ArrowDown, Zap, UserPlus, Coins
 } from 'lucide-react';
 import client from '../api/client';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─── Micro helpers ────────────────────────────────────────────────────────────
 const SK = ({ w = '100%', h = 14, r = 6, s = {} }) => (
@@ -525,6 +526,7 @@ export default function Referral() {
               <Users style={{ width: 20, height: 20, color: '#bf5fff' }} />
             </div>
             <div>
+              <PageEndpointPanel pageKey="Referral" title="Referral Endpoints" />
               <h1 style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, fontFamily: "'Courier New',monospace", margin: 0, background: 'linear-gradient(90deg,#e0f0ff,#bf5fff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>REFERRAL PROGRAM</h1>
               <p style={{ fontSize: 10, color: '#7a9cc0', margin: 0, letterSpacing: 1, fontFamily: "'Courier New',monospace" }}>
                 {isAdmin

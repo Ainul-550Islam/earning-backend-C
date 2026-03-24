@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import * as Icon from 'react-feather';
 import client from '../api/client';
 import '../styles/AdminPanel.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── API ────────────────────────────────────────────────────────────
 const api = {

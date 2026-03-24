@@ -11,6 +11,7 @@ import {
   TrendingUp, Award, Key, Ban, CheckSquare
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 /* ══════════════════════════════════
    API HELPERS  (real API — unchanged)
@@ -37,6 +38,7 @@ const MiniChart = ({ color, points = [30, 45, 28, 60, 42, 70, 55, 80] }) => {
     <svg viewBox="0 0 80 26" style={{ width: '100%', height: 28, display: 'block' }}>
       <defs>
         <linearGradient id={`g-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <PageEndpointPanel pageKey="Users" title="Users Endpoints" />
           <stop offset="0%" stopColor={color} stopOpacity="0.35" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>

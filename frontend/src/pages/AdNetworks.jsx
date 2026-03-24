@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import "../styles/AdNetworks.css";
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─────────────────────────────────────────────────────────────
 // AUTH & API
@@ -1173,6 +1174,7 @@ export default function AdNetworks() {
   return (
     <div className="an-root">
       <div className="orb orb--1" /><div className="orb orb--2" /><div className="orb orb--3" />
+        <PageEndpointPanel pageKey="AdNetworks" title="AdNetworks Endpoints" />
       <div className="an-container">
         <header className="page-header">
           <div className="page-header__left">

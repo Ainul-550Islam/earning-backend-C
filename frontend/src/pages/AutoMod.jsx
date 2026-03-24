@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import * as Icon from 'react-feather';
 import { useRules, useSubmissions, useBots, useDashboard, errMsg } from '../hooks/useAutoMod';
 import '../styles/AutoMod.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── Constants ──────────────────────────────────────────────────────
 const SUB_TYPES    = ['task_proof','user_content','profile','report','comment','media'];

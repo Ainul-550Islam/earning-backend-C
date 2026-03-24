@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import client from '../api/client';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 export default function Withdrawals() {
   const [withdrawals, setWithdrawals] = useState([]);
@@ -37,6 +38,7 @@ export default function Withdrawals() {
             </tr>
           </thead>
           <tbody>
+            <PageEndpointPanel pageKey="Withdrawals" title="Withdrawals Endpoints" />
             {withdrawals.length === 0 ? (
               <tr><td colSpan={5} style={{textAlign:'center',padding:40,color:'rgba(180,160,255,.4)'}}>No withdrawals yet</td></tr>
             ) : withdrawals.map((w,i) => (

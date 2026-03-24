@@ -31,14 +31,16 @@ class EndpointToggle(models.Model):
         if cached is not None:
             return cached
         try:
+            from django.db.models import Q
             toggle = cls.objects.filter(
-                path=path,
                 is_enabled=False
             ).filter(
-                models.Q(method='ALL') | models.Q(method=method)
+                Q(path=path)
+            ).filter(
+                Q(method='ALL') | Q(method=method)
             ).first()
             result = toggle is None
-            cache.set(cache_key, result, 5)
+            cache.set(cache_key, result, 30)
             return result
         except Exception:
             return True
@@ -64,42 +66,38 @@ class EndpointToggle(models.Model):
 
 
 class EndpointToggleMiddleware:
-    """Middleware to check endpoint toggle before processing request"""
-
     SKIP_PATHS = [
-        '/admin/', '/api/admin-panel/endpoint-toggles/',
-        '/api/schema/', '/api/docs/', '/api/auth/login/',
-        '/api/auth/token/', '/static/', '/media/',
+        "/admin/", "/api/admin-panel/endpoint-toggles/",
+        "/api/schema/", "/api/docs/", "/api/auth/login/",
+        "/api/auth/token/", "/static/", "/media/",
     ]
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        path = request.path
+        path = request.path.rstrip("/")
         method = request.method
 
-        # Skip admin and toggle management paths
-        if any(path.startswith(skip) for skip in self.SKIP_PATHS):
+        if any(path.startswith(s.rstrip("/")) for s in self.SKIP_PATHS):
             return self.get_response(request)
 
-        # Only check API paths - exact match
-        if path.startswith('/api/'):
+        if path.startswith("/api/"):
             try:
                 from django.db.models import Q
                 disabled = EndpointToggle.objects.filter(
                     is_enabled=False
-                ).filter(
-                    Q(method='ALL') | Q(method=method)
-                )
+                ).filter(Q(method="ALL") | Q(method=method))
                 for toggle in disabled:
-                    if path == toggle.path:
+                    tp = toggle.path.rstrip("/")
+                    if path == tp or path.startswith(tp + "/"):
                         return JsonResponse({
-                            'error': toggle.disabled_message,
-                            'code': 'ENDPOINT_DISABLED',
-                            'path': path,
+                            "error": toggle.disabled_message,
+                            "code": "ENDPOINT_DISABLED",
+                            "path": path,
                         }, status=503)
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"EndpointToggle error: {e}")
 
         return self.get_response(request)

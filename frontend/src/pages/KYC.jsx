@@ -1,6 +1,7 @@
 // src/pages/KYCPage.jsx  ── 100% COMPLETE CRUD
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import client from '../api/client';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 const THEMES = [
   { name:"OCEAN COMMAND",   p:"#00d4ff", bg:"#010810", bgC:"#020c18", bgP:"#030f1e", b:"#00d4ff22", bs:"#00d4ff55", t:"#cce8ff", tm:"#4a7a99", g:"#00d4ff40", gr:"linear-gradient(135deg,#00d4ff15,#0099cc08)", sl:"#00d4ff08" },

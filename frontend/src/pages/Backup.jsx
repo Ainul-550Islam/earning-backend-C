@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import '../styles/backup.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─────────────────────────────────────────────────────────────
 // CONFIG & AUTH — unchanged
@@ -760,6 +761,7 @@ export default function Backup() {
     <div className="bk-root">
       {/* Ambient orbs */}
       <div className="bk-orb bk-orb--1"/>
+        <PageEndpointPanel pageKey="Backup" title="Backup Endpoints" />
       <div className="bk-orb bk-orb--2"/>
       <div className="bk-orb bk-orb--3"/>
 

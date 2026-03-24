@@ -4,6 +4,7 @@ const _BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api')
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import '../styles/tasks.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIG
@@ -670,6 +671,7 @@ export default function TasksDashboard() {
   return (
     <div className="tasks-page">
       <Toast toasts={toasts} remove={removeToast} />
+        <PageEndpointPanel pageKey="Tasks" title="Tasks Endpoints" />
 
       {/* ── HEADER ── */}
       <div className="tasks-header">

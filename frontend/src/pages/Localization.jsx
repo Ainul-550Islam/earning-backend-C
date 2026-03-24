@@ -9,6 +9,7 @@ import {
   useTranslationKeys,
   useMissingTranslations,
 } from "../hooks/useI18n";
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─── ICONS ────────────────────────────────────────────────────────────────
 const SVG = ({ d, size = 15 }) => (
@@ -739,6 +740,7 @@ export default function I18nPage() {
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <Icon name="globe" size={18} />
+              <PageEndpointPanel pageKey="Localization" title="Localization Endpoints" />
           </div>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 800, color: "#f2f2f7", letterSpacing: "-0.02em", margin: 0 }}>

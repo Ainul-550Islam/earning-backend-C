@@ -890,3 +890,4 @@ class SiteContent(models.Model):
     
     def __str__(self):
         return f"{self.title} ({self.get_content_type_display()})"
+from .endpoint_toggle import EndpointToggle

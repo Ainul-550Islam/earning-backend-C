@@ -1,6 +1,7 @@
 // src/pages/Cache.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import client from '../api/client';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─── THEMES ───────────────────────────────────────────────────────────────────
 const THEMES = [

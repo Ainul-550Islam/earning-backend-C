@@ -1,6 +1,7 @@
 // src/pages/Loyalty.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import '../styles/loyalty.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 function authHeaders() {
@@ -173,6 +174,7 @@ export default function LoyaltyPage() {
   return (
     <div className="loy-page">
       <div className="loy-orb loy-orb-1"/>
+        <PageEndpointPanel pageKey="Loyalty" title="Loyalty Endpoints" />
       <div className="loy-orb loy-orb-2"/>
 
       {toast && <Toast key={toast.key} msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}

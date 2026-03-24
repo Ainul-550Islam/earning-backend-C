@@ -11,6 +11,7 @@ import {
 } from '../hooks/useRateLimit';
 import rateLimitAPI from '../api/endpoints/rateLimit';
 import '../styles/ratelimit.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── Helpers ───────────────────────────────────────────────────────
 const errMsg = e => {

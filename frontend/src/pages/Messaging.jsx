@@ -10,6 +10,7 @@ import MessageAttachments from '../components/messaging/MessageAttachments';
 import '../styles/MessageAttachments.css';
 import { AttachmentList } from '../components/messaging/AttachmentCard';
 import '../styles/AttachmentCard.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── Mini Sparkline SVG ────────────────────────────────────────────
 function Sparkline({ data = [], color = '#00f3ff', height = 32, width = 80 }) {
@@ -746,6 +747,7 @@ export default function Messaging() {
   return (
     <div className="msg-root">
       <div className="msg-scanlines" aria-hidden/>
+        <PageEndpointPanel pageKey="Messaging" title="Messaging Endpoints" />
       <div className="msg-orb msg-orb-1" aria-hidden/>
       <div className="msg-orb msg-orb-2" aria-hidden/>
       <div className="msg-orb msg-orb-3" aria-hidden/>

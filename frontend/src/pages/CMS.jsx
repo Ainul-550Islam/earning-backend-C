@@ -19,6 +19,7 @@ import {
   useFiles,
   useGalleries,
 } from "../hooks/useCms";
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─── Cyberpunk Color System ───────────────────────────────────────
 const C = {
@@ -990,6 +991,7 @@ export default function CMSPage(){
       <div style={{position:"fixed",top:0,left:0,right:0,height:2,zIndex:1000,background:`linear-gradient(transparent,${C.cyan}08,transparent)`,animation:"scanline 8s linear infinite",pointerEvents:"none"}}/>
 
       <Toast toast={toast}/>
+        <PageEndpointPanel pageKey="CMS" title="CMS Endpoints" />
 
       <div style={{display:"flex",position:"relative",zIndex:1}}>
         {/* SIDEBAR */}
