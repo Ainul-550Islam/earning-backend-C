@@ -112,8 +112,23 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserLoginSerializer(serializers.Serializer):
-    username_or_email = serializers.CharField()
+    username_or_email = serializers.CharField(required=False, allow_blank=True)
+    username = serializers.CharField(required=False, allow_blank=True)
+    email = serializers.CharField(required=False, allow_blank=True)
+
     password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        # username / email / username_or_email — যেকোনো একটা accept করো
+        identifier = (
+            attrs.get('username_or_email') or
+            attrs.get('username') or
+            attrs.get('email') or ''
+        ).strip()
+        if not identifier:
+            raise serializers.ValidationError({'username_or_email': 'This field is required.'})
+        attrs['username_or_email'] = identifier
+        return attrs
 
 
 class OTPSerializer(BaseSerializer):

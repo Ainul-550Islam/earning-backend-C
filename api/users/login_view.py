@@ -57,7 +57,11 @@ class UserLoginView(APIView):
         try:
             # ✅ FIX: json.loads(request.body) → request.data
             data = request.data
-            username = data.get('username')
+            username = (
+                data.get('username_or_email') or
+                data.get('username') or
+                data.get('email') or ''
+            ).strip()
             password = data.get('password')
             device_fp_data = data.get('device_fingerprint')
 
