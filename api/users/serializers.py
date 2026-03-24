@@ -43,7 +43,7 @@ class UserSerializer(BaseSerializer):
         read_only_fields = ['id', 'balance', 'referral_code', 'created_at', 'modified_at']
     
     def get_referrals_count(self, obj):
-        return obj.referrals.count()
+        return obj.referrals_list.count() if hasattr(obj, "referrals_list") else 0
     
     
     
