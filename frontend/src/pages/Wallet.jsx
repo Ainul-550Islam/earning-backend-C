@@ -404,11 +404,11 @@ export default function Wallet() {
   // ✅ REAL DATA STATE
   // Initial value = mock data (দেখাবে যতক্ষণ API load না হয়)
   // fetchAll() call হলে real API data দিয়ে replace হবে
-  const [summary,      setSummary]      = useState(MOCK_SUMMARY);      // 🔄→✅ /api/wallet/summary/
-  const [wallets,      setWallets]      = useState(MOCK_WALLETS);      // 🔄→✅ /api/wallet/wallets/
-  const [transactions, setTransactions] = useState(MOCK_TRANSACTIONS); // 🔄→✅ /api/wallet/transactions/
-  const [withdrawals,  setWithdrawals]  = useState(MOCK_WITHDRAWALS);  // 🔄→✅ /api/wallet/withdrawals/
-  const [methods,      setMethods]      = useState(MOCK_METHODS);      // 🔄→✅ /api/wallet/payment-methods/
+  const [summary,      setSummary]      = useState({});      // 🔄→✅ /api/wallet/summary/
+  const [wallets,      setWallets]      = useState([]);      // 🔄→✅ /api/wallet/wallets/
+  const [transactions, setTransactions] = useState([]); // 🔄→✅ /api/wallet/transactions/
+  const [withdrawals,  setWithdrawals]  = useState([]);  // 🔄→✅ /api/wallet/withdrawals/
+  const [methods,      setMethods]      = useState([]);      // 🔄→✅ /api/wallet/payment-methods/
   const [webhooks,     setWebhooks]     = useState([]);                 // ✅ /api/wallet/webhook-logs/
 
   const setAL = (k,v) => setActionLoad(p=>({...p,[k]:v}));
@@ -443,19 +443,19 @@ export default function Wallet() {
 
     // ✅ Wallets: currency, current_balance, available_balance, status, is_locked…
     const wList = toList(wR);
-    if (wList) { setWallets(wList.length ? wList : MOCK_WALLETS); ok = true; }
+    if (wList) { setWallets(wList); ok = true; }
 
     // ✅ Transactions: transaction_id, type, amount, status, description…
     const txList = toList(txR);
-    if (txList) { setTransactions(txList.length ? txList : MOCK_TRANSACTIONS); ok = true; }
+    if (txList) { setTransactions(txList); ok = true; }
 
     // ✅ Withdrawals: withdrawal_id, amount, fee, net_amount, status…
     const wdList = toList(wdR);
-    if (wdList) { setWithdrawals(wdList.length ? wdList : MOCK_WITHDRAWALS); ok = true; }
+    if (wdList) { setWithdrawals(wdList); ok = true; }
 
     // ✅ Payment Methods: method_type, account_name, account_number, is_primary…
     const mList = toList(mR);
-    if (mList) { setMethods(mList.length ? mList : MOCK_METHODS); ok = true; }
+    if (mList) { setMethods(mList); ok = true; }
 
     // ✅ Webhooks: webhook_type, event_type, is_processed, processing_error…
     const whList = toList(whR);
