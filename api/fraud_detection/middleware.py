@@ -22,6 +22,15 @@ TASK_PATHS = (
     '/api/tasks/submit',
     '/api/complete-ad',
 )
+# এই paths এ fraud check করা হবে না
+SKIP_PATHS = (
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/token',
+    '/api/auth/refresh',
+    '/api/auth/otp',
+    '/admin/',
+)
 
 
 def _get_user_risk(user):
@@ -55,6 +64,11 @@ class FraudDetectionMiddleware(MiddlewareMixin):
         path = (request.path or '').strip()
         if not path.startswith('/api/'):
             request.fraud_risk_checked = False
+            return None
+        # Login/auth paths skip করো
+        if any(path.startswith(p) for p in SKIP_PATHS):
+            request.fraud_risk_checked = False
+            request.fraud_risk_allowed = True
             return None
         is_financial = any(path.startswith(p) for p in FINANCIAL_PATHS)
         is_task = any(path.startswith(p) for p in TASK_PATHS)

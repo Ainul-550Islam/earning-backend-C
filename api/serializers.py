@@ -110,13 +110,19 @@ class SignupSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    username_or_email = serializers.CharField()
+    username_or_email = serializers.CharField(required=False, allow_blank=True)
+    username = serializers.CharField(required=False, allow_blank=True)
     password = serializers.CharField(write_only=True)
     
     def validate(self, data):
         from django.contrib.auth import authenticate
         
-        username_or_email = data['username_or_email']
+        username_or_email = (
+            data.get('username_or_email') or
+            data.get('username') or ''
+        ).strip()
+        if not username_or_email:
+            raise serializers.ValidationError({'username_or_email': 'This field is required.'})
         password = data['password']
         
         # Try username first
