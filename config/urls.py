@@ -32,7 +32,7 @@ urlpatterns = [
     # ── Main API router ─────────────────────────────────────────────────
     # ✅ FIXED: was duplicated (appeared twice) — keep only once
     path('api/', include('api.urls')),
-    path('api/', include('api.tenants.urls')),
+    path('api/tenants/', include('api.tenants.urls')),
     path('auth/social/complete/google-oauth2/', __import__('api.users.oauth_views', fromlist=['google_callback']).google_callback),
     path('auth/social/login/google-oauth2/', __import__('api.users.oauth_views', fromlist=['google_login']).google_login),
     path('auth/social/', include('social_django.urls', namespace='social')),
