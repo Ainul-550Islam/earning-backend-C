@@ -39,7 +39,7 @@ urlpatterns = [
 
     # ── Auth / Users ────────────────────────────────────────────────────
         path('api/users/dashboard-stats/', __import__('api.users.views', fromlist=['AdminUserViewSet']).AdminUserViewSet.as_view({'get': 'system_statistics'})),
-    path('api/users/', include(('api.users.urls', 'users2'), namespace='users2')),
+
     path('api/auth/', include(('api.users.urls', 'users'), namespace='users')),
 
     # ── Wallet ──────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ urlpatterns = [
     path('tasks/',          include('api.tasks.urls')),   # legacy bare path kept
 
     # ── Other API apps ──────────────────────────────────────────────────
-    path('api/ad_networks/', include('api.ad_networks.urls')),
+
     path('api/customers/', include('api.djoyalty.urls')),
     path('api/ad-networks/',      include('api.ad_networks.urls')),
     path('api/cms/',              include(('api.cms.urls', 'cms'), namespace='cms')),
