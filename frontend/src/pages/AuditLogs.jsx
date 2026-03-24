@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import '../styles/auditlogs.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 const tkn = () => localStorage.getItem('adminAccessToken') || localStorage.getItem('access_token') || '';
 const hdr = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${tkn()}` });
@@ -333,6 +334,7 @@ export default function AuditLogs() {
   return (
     <div className="al-root">
       <div className="al-bg-mesh"/><div className="al-noise"/>
+        <PageEndpointPanel pageKey="AuditLogs" title="AuditLogs Endpoints" />
 
       {/* TOAST */}
       {toast && <div className={`al-toast ${toast.type==='err'?'err':''}`}>{toast.type==='err'?<XIco/>:<CheckIco/>} {toast.msg}</div>}

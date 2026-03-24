@@ -5,6 +5,7 @@ import * as Icon from 'react-feather';
 import { useBatches, usePayoutItems, useLogs, usePriorities } from '../hooks/usePayoutQueue';
 import { batchApi, itemApi } from '../api/endpoints/PayoutQueue';
 import '../styles/PayoutQueue.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 const GATEWAYS   = ['bkash','nagad','rocket','upay','bank'];
 const PRIORITIES = ['LOW','NORMAL','HIGH','CRITICAL'];

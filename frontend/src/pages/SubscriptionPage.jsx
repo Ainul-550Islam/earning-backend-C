@@ -3,6 +3,7 @@
 // Models: SubscriptionPlan, MembershipBenefit, UserSubscription, SubscriptionPayment
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 const getToken = () =>
@@ -1304,6 +1305,7 @@ export default function SubscriptionPage() {
   return (
     <>
       <GS/>
+        <PageEndpointPanel pageKey="SubscriptionPage" title="SubscriptionPage Endpoints" />
       <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'Outfit',sans-serif"}}>
 
         {/* ── TOP HEADER ────────────────────────────────────────────────── */}

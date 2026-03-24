@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import client from "../api/client";
 import "../styles/FraudDetection.css";
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─── API helpers ──────────────────────────────────────────────────
 const API = {
@@ -480,6 +481,7 @@ export default function FraudDetection() {
   return (
     <div className="fd-root">
       <div className="fd-bg"/>
+        <PageEndpointPanel pageKey="FraudDetection" title="FraudDetection Endpoints" />
 
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
 

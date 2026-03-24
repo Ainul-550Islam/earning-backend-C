@@ -7,6 +7,7 @@ import {
   LayoutDashboard, RefreshCw, Plus, X, Minus, ArrowUp, ArrowDown,
   ShieldCheck, Activity
 } from 'lucide-react';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 /* ─── API helpers ─────────────────────────────────── */
 const BASE = '/api/gamification';
@@ -685,6 +686,7 @@ This will clear leaderboard data!`)) return;
   if (loading) return (
     <div className="gm-loading">
       <div className="gm-spinner"/>
+        <PageEndpointPanel pageKey="Gamification" title="Gamification Endpoints" />
       <div className="gm-loading-text">LOADING GAMIFICATION...</div>
     </div>
   );

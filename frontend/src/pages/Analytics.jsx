@@ -11,6 +11,7 @@ import {
   Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import '../styles/Analytics.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const BASE           = '/api/analytics';
@@ -181,6 +182,7 @@ const KPICard = ({ label, value, unit, trend, trendUp, icon, delay=0 }) => (
   <div className="glass-card kpi-card" style={{animationDelay:`${delay}s`}}>
     <div className="kpi-card__icon">{icon}</div>
     <div className="kpi-card__label">{label}</div>
+      <PageEndpointPanel pageKey="Analytics" title="Analytics Endpoints" />
     <div className="kpi-card__value">{value}{unit&&<span>{unit}</span>}</div>
     <span className={`kpi-card__trend ${trendUp?'up':'down'}`}>{trendUp?'▲':'▼'} {trend}</span>
   </div>

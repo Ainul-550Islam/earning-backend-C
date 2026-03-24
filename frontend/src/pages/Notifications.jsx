@@ -2,6 +2,7 @@
 // API: /api/notifications/
 
 import { useState, useEffect, useCallback } from "react";
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─── API ──────────────────────────────────────────────────────────────────
 const API_BASE = "";
@@ -1075,6 +1076,7 @@ export default function NotificationsPage() {
   return (
     <>
       <GS/>
+        <PageEndpointPanel pageKey="Notifications" title="Notifications Endpoints" />
       {toast&&<Toast msg={toast.msg} type={toast.type}/>}
       {editModal&&<EditNotifModal notif={editModal} onSave={updateNotif} onClose={()=>setEditModal(null)}/>}
       {viewModal&&<ViewNotifModal notif={viewModal} onClose={()=>setViewModal(null)}/>}

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import * as Icon from 'react-feather';
 import { useItems, useUserInventory, useCodes } from '../hooks/useInventory';
 import '../styles/Inventory.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── Constants ──────────────────────────────────────────────────────
 const ITEM_TYPES   = ['digital','physical','voucher','experience','subscription','points','nft'];

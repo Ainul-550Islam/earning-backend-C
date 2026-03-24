@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import '../styles/wallet.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ════════════════════════════════════════════════════════════════════════════
 // ✅ BASE URL — আপনার urls.py এর wallet prefix
@@ -513,6 +514,7 @@ export default function Wallet() {
   return (
     <div className="wl-root">
       <div className="wl-bg">
+        <PageEndpointPanel pageKey="Wallet" title="Wallet Endpoints" />
         <div className="wl-orb wl-orb--1"/><div className="wl-orb wl-orb--2"/><div className="wl-orb wl-orb--3"/>
         <div className="wl-grid-overlay"/>
       </div>

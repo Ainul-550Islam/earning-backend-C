@@ -14,6 +14,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import "../styles/behavior_analytics.css";
 import axiosInstance from "../api/axiosInstance";
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─── BASE URL — axiosInstance.baseURL already includes /api
 // Django mount: path("api/analytics/", include(...))  ← matches urls.py
@@ -1425,6 +1426,7 @@ export default function BehaviorAnalytics() {
     <div className="ba-page">
       {/* HEADER */}
       <header className="ba-header">
+        <PageEndpointPanel pageKey="BehaviorAnalytics" title="BehaviorAnalytics Endpoints" />
         <div className="ba-logo">
           <div className="ba-logo-hex">
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none">

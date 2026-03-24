@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import RevenueChart from '../components/dashboard/RevenueChart';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 
 /* ── auth ── */
@@ -200,6 +201,7 @@ export default function Dashboard() {
   return (
     <div className="db-page">
       <GlowDefs/>
+        <PageEndpointPanel pageKey="Dashboard" title="Dashboard Endpoints" />
       <div className="db-content">
 
         {/* ══ 4 STAT CARDS ══ */}

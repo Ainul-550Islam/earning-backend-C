@@ -8,6 +8,7 @@ import {
   Eye, EyeOff, CheckCircle, AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 const authHeaders = (json=false) => {
   const h = { 'Authorization': `Bearer ${localStorage.getItem('adminAccessToken') || localStorage.getItem('access_token') || ''}` };
@@ -127,6 +128,7 @@ export default function Profile() {
   return (
     <>
       <style>{`
+        <PageEndpointPanel pageKey="Profile" title="Profile Endpoints" />
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap');
 
         .prof-root { padding: 24px; font-family: 'Rajdhani', sans-serif; color: #eae0ff; min-height: 100vh; }

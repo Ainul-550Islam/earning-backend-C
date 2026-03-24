@@ -7,6 +7,7 @@ import {
 } from '../hooks/useSecurity';
 import securityAPI from '../api/endpoints/security';
 import '../styles/security.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── Helpers ────────────────────────────────────────────────
 const errMsg = e => {

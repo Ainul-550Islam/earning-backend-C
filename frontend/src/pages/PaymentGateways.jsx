@@ -9,6 +9,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import '../styles/payment_gateways.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const BASE = '/api/payment_gateways';
@@ -846,6 +847,7 @@ export default function PaymentGateways() {
 
       {/* Header */}
       <header className="pg-header">
+        <PageEndpointPanel pageKey="PaymentGateways" title="PaymentGateways Endpoints" />
         <div className="pg-header__left">
           <h1 className="pg-header__title">💳 Payment Gateways</h1>
           <p className="pg-header__sub">

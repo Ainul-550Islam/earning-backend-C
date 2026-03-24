@@ -6,6 +6,7 @@ import { useState, useCallback } from 'react';
 import * as Icon from 'react-feather';
 import { usePolicies, useMaintenance, useRedirects } from '../hooks/useVersionControl';
 import '../styles/VersionControl.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── Helpers ───────────────────────────────────────────────────────
 const PLATFORMS      = ['android','ios','web','windows','macos'];
@@ -522,6 +523,7 @@ export default function VersionControl() {
     <div className="vc-root">
       {/* Page header */}
       <div className="vc-page-header">
+        <PageEndpointPanel pageKey="VersionControl" title="VersionControl Endpoints" />
         <div className="vc-page-header-inner">
           <div className="vc-page-title-wrap">
             <span className="vc-page-icon">⚙️</span>

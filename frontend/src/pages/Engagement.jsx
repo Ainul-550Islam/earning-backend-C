@@ -2,6 +2,7 @@ const _BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api')
 // src/pages/Engagement.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import '../styles/engagement.css';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ── Auth helper ────────────────────────────────────────────────────────────────
 function authHeaders() {
@@ -266,6 +267,7 @@ export default function EngagementPage() {
   return (
     <div className="eng-page">
       <div className="eng-orb eng-orb-1"/>
+        <PageEndpointPanel pageKey="Engagement" title="Engagement Endpoints" />
       <div className="eng-orb eng-orb-2"/>
       <div className="eng-orb eng-orb-3"/>
 

@@ -6,6 +6,7 @@ import {
   ToggleLeft, ToggleRight, X, Save, Terminal, Wifi, WifiOff,
   BarChart3, Key, AlertCircle, AlertTriangle, Shield
 } from "lucide-react";
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 const C = {
   cyan:"#00f5ff",purple:"#b400ff",pink:"#ff003c",green:"#00ff88",

@@ -13,6 +13,7 @@ import "../styles/promotions.css";
 // API CLIENT — reuse your project's axios instance
 // ============================================================
 import axios from "axios";
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 const API = axios.create({ baseURL: (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api") });
 
@@ -674,6 +675,7 @@ export default function Promotions() {
     <div className="pm-root">
       {/* BG */}
       <div className="pm-bg">
+        <PageEndpointPanel pageKey="Promotions" title="Promotions Endpoints" />
         <div className="pm-bg-base" />
         <div className="pm-bg-layer2" />
         <div className="pm-bg-stars" />

@@ -1,6 +1,7 @@
 // src/pages/Alerts.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import client from '../api/client';
+import PageEndpointPanel from '../components/common/PageEndpointPanel';
 
 // ─── ICONS ────────────────────────────────────────────────────────────────────
 const Icon = ({ d, size = 14 }) => (
@@ -379,6 +380,7 @@ export default function AlertsPage() {
               <span style={{ color:T.primary }}><Icon d={IC.bell} size={20}/></span>
             </div>
             <div>
+              <PageEndpointPanel pageKey="Alerts" title="Alerts Endpoints" />
               <h1 style={{ fontSize:20, fontWeight:900, letterSpacing:'.08em', fontFamily:"'Courier New',monospace", margin:0, color:T.primary, textShadow:`0 0 20px ${T.glow}` }}>ALERTS & MONITORING</h1>
               <p style={{ fontSize:10, color:T.textMuted, margin:0, fontFamily:"'Courier New',monospace" }}>
                 {overview ? `${overview.active_rules} ACTIVE RULES · ${overview.unresolved_alerts} UNRESOLVED · System: ` : 'Loading… · System: '}

@@ -1087,28 +1087,34 @@ class EndpointToggleViewSet(viewsets.ModelViewSet):
     serializer_class = EndpointToggleSerializer
     permission_classes = [permissions.IsAdminUser]
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-toggle')
     def bulk_toggle(self, request):
         """Toggle multiple endpoints at once"""
         toggles = request.data.get('toggles', [])
         updated = 0
         for item in toggles:
             try:
+                path   = item['path']
+                method = item.get('method', 'ALL')
                 obj, created = EndpointToggle.objects.get_or_create(
-                    path=item['path'],
-                    method=item.get('method', 'ALL'),
+                    path=path,
+                    method=method,
                     defaults={
                         'is_enabled': item['is_enabled'],
                         'group': item.get('group', 'other'),
                         'label': item.get('label', ''),
-                        'disabled_message': item.get('message', 'Feature temporarily disabled.'),
+                        'disabled_message': item.get('disabled_message', item.get('message', 'Feature temporarily disabled.')),
                     }
                 )
                 if not created:
                     obj.is_enabled = item['is_enabled']
-                    obj.save(update_fields=['is_enabled', 'updated_at'])
+                    if 'disabled_message' in item:
+                        obj.disabled_message = item['disabled_message']
+                    obj.save(update_fields=['is_enabled', 'disabled_message', 'updated_at'])
+                    from django.core.cache import cache
+                    cache.clear()
                 updated += 1
-            except Exception:
+            except Exception as e:
                 pass
         cache.clear()
         return Response({'success': True, 'updated': updated})
