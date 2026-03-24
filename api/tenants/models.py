@@ -1,5 +1,8 @@
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 import uuid
+
 
 class Tenant(models.Model):
     PLAN_CHOICES = [
@@ -11,13 +14,13 @@ class Tenant(models.Model):
     name = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
     domain = models.CharField(max_length=255, unique=True)
+    admin_email = models.EmailField(blank=True, null=True)
     api_key = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     logo = models.ImageField(upload_to="tenant_logos/", null=True, blank=True)
     primary_color = models.CharField(max_length=7, default="#007bff")
     secondary_color = models.CharField(max_length=7, default="#6c757d")
     plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default="basic")
-    max_users = models.IntegerField(default=10)
-    admin_email = models.EmailField(blank=True, null=True)
+    max_users = models.IntegerField(default=100)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -34,6 +37,14 @@ class Tenant(models.Model):
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
+    def get_active_user_count(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        return User.objects.filter(tenant=self, is_active=True).count()
+
+    def is_user_limit_reached(self):
+        return self.get_active_user_count() >= self.max_users
+
 
 class TenantSettings(models.Model):
     tenant = models.OneToOneField(Tenant, on_delete=models.CASCADE, related_name='settings')
@@ -44,7 +55,7 @@ class TenantSettings(models.Model):
     privacy_policy_url = models.URLField(blank=True)
     terms_url = models.URLField(blank=True)
 
-    # Feature Flags (on/off per tenant)
+    # Feature Flags
     enable_referral = models.BooleanField(default=True)
     enable_offerwall = models.BooleanField(default=True)
     enable_kyc = models.BooleanField(default=True)
@@ -68,10 +79,70 @@ class TenantSettings(models.Model):
         return f"{self.tenant.name} Settings"
 
 
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+class TenantBilling(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled'),
+        ('trial', 'Trial'),
+    ]
+
+    tenant = models.OneToOneField(Tenant, on_delete=models.CASCADE, related_name='billing')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='trial')
+    trial_ends_at = models.DateTimeField(null=True, blank=True)
+    subscription_ends_at = models.DateTimeField(null=True, blank=True)
+    monthly_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    stripe_customer_id = models.CharField(max_length=255, blank=True)
+    stripe_subscription_id = models.CharField(max_length=255, blank=True)
+    last_payment_at = models.DateTimeField(null=True, blank=True)
+    next_payment_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tenant_billing'
+
+    def __str__(self):
+        return f"{self.tenant.name} - {self.status}"
+
+    def is_active(self):
+        from django.utils import timezone
+        if self.status == 'trial':
+            return self.trial_ends_at and self.trial_ends_at > timezone.now()
+        if self.status == 'active':
+            return self.subscription_ends_at and self.subscription_ends_at > timezone.now()
+        return False
+
+
+class TenantInvoice(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='invoices')
+    invoice_number = models.CharField(max_length=50, unique=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, default='unpaid')
+    due_date = models.DateTimeField()
+    paid_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tenant_invoices'
+
+    def save(self, *args, **kwargs):
+        if not self.invoice_number:
+            self.invoice_number = f"INV-{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.invoice_number} - {self.tenant.name}"
+
 
 @receiver(post_save, sender=Tenant)
-def create_tenant_settings(sender, instance, created, **kwargs):
+def create_tenant_defaults(sender, instance, created, **kwargs):
     if created:
         TenantSettings.objects.get_or_create(tenant=instance)
+        from django.utils import timezone
+        TenantBilling.objects.get_or_create(
+            tenant=instance,
+            defaults={
+                'status': 'trial',
+                'trial_ends_at': timezone.now() + timezone.timedelta(days=14),
+            }
+        )
