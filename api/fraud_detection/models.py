@@ -80,7 +80,6 @@ class FraudRule(TimeStampedModel):
     false_positive_count = models.IntegerField(default=0)
     
     class Meta:
-        ordering = ['-severity', 'name']
         ordering = ['-updated_at']
         indexes = [
             models.Index(fields=['rule_type', 'is_active']),
@@ -141,7 +140,6 @@ class FraudAttempt(TimeStampedModel):
     amount_involved = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     class Meta:
-        ordering = ['-created_at']
         ordering = ['-updated_at']
         indexes = [
             models.Index(fields=['user', 'status']),
@@ -188,7 +186,6 @@ class FraudPattern(TimeStampedModel):
     model_version = models.CharField(max_length=50, blank=True)
     
     class Meta:
-        ordering = ['-occurrence_count']
         unique_together = ['name', 'pattern_type']
     
     def __str__(self):
@@ -249,7 +246,7 @@ class DeviceFingerprint(TimeStampedModel):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='device_fingerprints')
     
     # Device identifiers
-    device_id = models.CharField(max_length=255, unique=True)
+    device_id = models.CharField(max_length=255, unique=True, null=True, blank=True, default=None)
     device_hash = models.CharField(max_length=512, db_index=True)
     
     # Device information
@@ -289,7 +286,6 @@ class DeviceFingerprint(TimeStampedModel):
     last_seen = models.DateTimeField(auto_now=True)
     
     class Meta:
-        ordering = ['-last_seen']
         ordering = ['-updated_at']
         indexes = [
             models.Index(fields=['device_hash']),
@@ -330,7 +326,6 @@ class IPReputation(TimeStampedModel):
     last_threat_check = models.DateTimeField(null=True, blank=True)
     
     class Meta:
-        ordering = ['-fraud_score']
         ordering = ['-updated_at']
         indexes = [
             models.Index(fields=['ip_address', 'is_blacklisted']),
@@ -383,7 +378,6 @@ class FraudAlert(TimeStampedModel):
     notification_sent = models.BooleanField(default=False)
     
     class Meta:
-        ordering = ['-priority', '-created_at']
         ordering = ['-updated_at']
         indexes = [
             models.Index(fields=['alert_type', 'is_resolved']),

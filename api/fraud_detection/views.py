@@ -1467,9 +1467,9 @@ class FraudDetectionAPIView(APIView):
                 
                 # Also save device fingerprint if available
                 if result.get('fingerprint'):
-                    DeviceFingerprint.objects.create(
+                    DeviceFingerprint.objects.get_or_create(
                         user=user,
-                        device_id=device_data.get('device_id', 'unknown'),
+                        device_id=device_data.get('device_id') or str(__import__('uuid').uuid4()),
                         device_hash=result.get('device_hash', ''),
                         user_agent=device_data.get('user_agent', ''),
                         ip_address=device_data.get('ip_address', ''),
