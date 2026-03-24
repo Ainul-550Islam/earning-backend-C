@@ -1,9 +1,7 @@
 // src/api/axiosInstance.js
 import axios from "axios";
-
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 const TIMEOUT  = Number(import.meta.env.VITE_API_TIMEOUT) || 15_000;
-
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: TIMEOUT,
@@ -12,13 +10,17 @@ const axiosInstance = axios.create({
     Accept: "application/json",
   },
 });
-
 // ── Request interceptor — attach token ────────────────────────────────────────
 axiosInstance.interceptors.request.use(
   (config) => {
     try {
-      const token = localStorage.getItem("adminAccessToken");
-      if (token) config.headers.Authorization = `Bearer ${token}`;
+      // Auth endpoints এ token লাগবে না
+      const skipAuth = ['/auth/login', '/auth/register', '/auth/token', '/token/refresh'];
+      const isAuthUrl = skipAuth.some(path => (config.url || '').includes(path));
+      if (!isAuthUrl) {
+        const token = localStorage.getItem("adminAccessToken");
+        if (token) config.headers.Authorization = `Bearer ${token}`;
+      }
     } catch {
       // localStorage unavailable (SSR / incognito) — continue without token
     }
@@ -26,13 +28,11 @@ axiosInstance.interceptors.request.use(
   },
   (error) => Promise.reject(error),
 );
-
 // ── Response interceptor — token refresh + normalise errors ──────────────────
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-
     // 401 → try refresh once
     if (
       error.response?.status === 401 &&
@@ -54,16 +54,13 @@ axiosInstance.interceptors.response.use(
         return Promise.reject(error);
       }
     }
-
     // Normalise error shape so callers always get error.message
     if (error.response?.data) {
       const d = error.response.data;
       error.message =
         d.detail || d.message || (typeof d === "string" ? d : JSON.stringify(d));
     }
-
     return Promise.reject(error);
   },
 );
-
 export default axiosInstance;
