@@ -9,3 +9,23 @@ __pycache__/
 *.pyd
 .Python
 fix_*.py
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Backup files
+*.bak
+*.py.bak
+
+# Temp scripts
+PYEOF
+export_endpoints.py
+gen_eps.py
+fraud_fix_commands.sh
+fix_*.py
+
+# Frontend build
+frontend/dist/
+frontend/node_modules/
