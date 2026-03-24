@@ -198,8 +198,7 @@ def update_device_trust_score(sender, instance, created, **kwargs):
             
             if recent_fraud:
                 # Lower trust score
-                instance.trust_score = max(0, instance.trust_score - 20)
-                instance.save()
+                DeviceFingerprint.objects.filter(pk=instance.pk).update(trust_score=max(0, instance.trust_score - 20))
             
         except Exception as e:
             logger.error(f"Error updating device trust score: {e}")
