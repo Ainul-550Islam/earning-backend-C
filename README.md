@@ -514,3 +514,8 @@ services:
 - Extended License: Use in unlimited end products
 
 Â© 2026 EarningApp. All rights reserved.
+
+## í¾® Live Demo
+- **Demo URL**: https://earning-frontend-v2.vercel.app
+- **Admin login**: demo_admin / demo1234
+- **API Base**: https://earning-backend-c-production.up.railway.app
