@@ -588,7 +588,7 @@ function CardSkeleton() {
 // MAIN PAGE
 // ============================================================
 export default function Promotions() {
-  const { user } = useAuth();
+  const { user } = useAuth() || {};
   const [activeNav, setActiveNav] = useState("all");
   const [activeTab, setActiveTab] = useState("campaigns");
   const [activePanel, setActivePanel] = useState(null);
