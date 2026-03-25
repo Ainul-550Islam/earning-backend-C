@@ -17,9 +17,9 @@ import PageEndpointPanel from '../components/common/PageEndpointPanel';
    API HELPERS  (real API — unchanged)
 ══════════════════════════════════ */
 const getToken = () => localStorage.getItem('adminAccessToken');
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const apiFetch = (url, opts = {}) =>
-  fetch(BASE_URL.replace('/api', '') + url, {
+  fetch(BASE_URL + url, {
     headers: {
       Authorization: `Bearer ${getToken()}`,
       'Content-Type': 'application/json',
