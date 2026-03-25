@@ -41,6 +41,7 @@ urlpatterns = [
         path('api/users/dashboard-stats/', __import__('api.users.views', fromlist=['AdminUserViewSet']).AdminUserViewSet.as_view({'get': 'system_statistics'})),
 
     path('api/auth/', include(('api.users.urls', 'users'), namespace='users')),
+    path('api/users/', include(('api.users.urls', 'users_admin'), namespace='users_admin')),
 
     # ── Wallet ──────────────────────────────────────────────────────────
     # ✅ FIXED: was duplicated without namespace + with namespace — keep namespaced version only
