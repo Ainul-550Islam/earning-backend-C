@@ -12,6 +12,7 @@ from api.cms.admin import cms_admin_site
 from api.wallet import views as wallet_views
 from api.backup.admin import Backup_admin_site as backup_admin
 from api.security.admin import security_admin_site
+from api.cms.public_views import public_tenant_settings
 
 handler404 = wallet_views.handler404
 handler500 = wallet_views.handler500
@@ -35,6 +36,8 @@ urlpatterns = [
     path('api/tenants/', include('api.tenants.urls')),
     path('auth/social/complete/google-oauth2/', __import__('api.users.oauth_views', fromlist=['google_callback']).google_callback),
     path('auth/social/login/google-oauth2/', __import__('api.users.oauth_views', fromlist=['google_login']).google_login),
+    path('api/public/tenant-settings/', public_tenant_settings, name='public-tenant-settings'),
+
     path('auth/social/', include('social_django.urls', namespace='social')),
 
     # ── Auth / Users ────────────────────────────────────────────────────
@@ -106,6 +109,8 @@ urlpatterns = [
     path('admin-dashboard/',      admin_dashboard, name='admin_dashboard'),
     path('api/admob/verify/',     AdmobSSVView.as_view(), name='admob_ssv'),
     path('security/',             include('api.security.urls')),   # legacy bare path kept
+    path('publisher-tools/',      include('api.publisher_tools.urls')),
+    path('monetization-tools/',   include('api.monetization_tools.urls')),
 
     # ── Sitemaps & Feeds ────────────────────────────────────────────────
     path('sitemap.xml',           sitemap_index, {'sitemaps': sitemaps}, name='sitemap_index'),
