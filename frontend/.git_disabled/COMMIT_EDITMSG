@@ -1,1 +1,0 @@
-fix: skip auth token for login/register endpoints in axios interceptor
