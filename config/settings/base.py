@@ -81,12 +81,26 @@ INSTALLED_APPS = [
     'api.messaging',
     'api.payout_queue.apps.PayoutQueueConfig',
     'api.tenants.apps.TenantsConfig',
+
+    # Ainul Enterprise Engine — Webhook Dispatch System
+    'api.webhooks.apps.WebhooksConfig',
+    # 'api.webhooks',
+    # 'api.ai_engine',
+    # 'api.marketplace',
+    # 'api.disaster_recovery',
+    # 'api.postback_engine',
+    'api.monetization_tools',
+    'api.publisher_tools',
+    # 'api.advertiser_portal',
+    # 'api.proxy_intelligence',
+    # 'api.offer_inventory', 
 ]
 
 # ==================== MIDDLEWARE ====================
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'api.users.security_middleware.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'api.admin_panel.endpoint_toggle.EndpointToggleMiddleware',
@@ -255,12 +269,29 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute=0),
         'options': {'queue': 'monitoring'}
     },
+
+    # Ainul Enterprise Engine - Webhook Dispatch Engine
+    'webhook-reap-exhausted-logs-hourly': {
+        'task': 'ainul.webhooks.reap_exhausted_logs',
+        'schedule': crontab(minute=0),
+        'options': {'queue': 'webhooks_periodic'},
+    },
+    'webhook-auto-suspend-bad-endpoints-daily': {
+        'task': 'ainul.webhooks.auto_suspend_endpoints',
+        'schedule': crontab(hour=4, minute=0),
+        'options': {'queue': 'webhooks_periodic'},
+    },
 }
 
 CELERY_TASK_ROUTES = {
     'alerts.tasks.process_pending_alerts': {'queue': 'alerts'},
     'alerts.tasks.send_notifications': {'queue': 'notifications'},
     'alerts.tasks.cleanup_old_data': {'queue': 'maintenance'},
+    # Ainul Enterprise Engine - Webhook Dispatch Engine
+    'ainul.webhooks.retry_failed_dispatch': {'queue': 'webhooks'},
+    'ainul.webhooks.dispatch_event': {'queue': 'webhooks'},
+    'ainul.webhooks.reap_exhausted_logs': {'queue': 'webhooks_periodic'},
+    'ainul.webhooks.auto_suspend_endpoints': {'queue': 'webhooks_periodic'},
 }
 
 # ==================== STATIC / MEDIA ====================
@@ -381,21 +412,7 @@ CACHE_TIMEOUTS = {
 
 # ==================== CORS ====================
 CSRF_TRUSTED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'https://earning-backend-c-production.up.railway.app', 'https://earning-frontend-v2.vercel.app']
-CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://earning-frontend-v2.vercel.app',
-    'https://earning-backend-c-production.up.railway.app',
-])
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'authorization',
-    'content-type',
-    'x-csrftoken',
-    'x-requested-with',
-]
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:8080', 'http://127.0.0.1:8080', 'http://192.168.0.178:8080'])
 CORS_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 
 # ==================== MISC ====================
@@ -569,3 +586,19 @@ SPECTACULAR_SETTINGS = {
 # ==================== TENANT ====================
 TENANT_MODEL = "tenants.Tenant"
 TENANT_DOMAIN_MODEL = "tenants.Tenant"
+
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "x-tenant-id",  # এটি না থাকলে SaaS লগইন হবে না
+]
+
+# আপনার ব্যাকএন্ড যদি /api/ দিয়ে শুরু হয়, তবে এটিও নিশ্চিত করুন
+APPEND_SLASH = True
