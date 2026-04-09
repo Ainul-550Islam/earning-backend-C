@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.urls import reverse
 from django.contrib import messages
 from django.db.models import Count, Q
-from .models import KYC, KYCVerificationLog
+from .models import KYC, KYCVerificationLog, KYCSubmission
 import logging
 from datetime import timedelta
 
@@ -208,7 +208,10 @@ class KYCAdmin(admin.ModelAdmin):
     # ============ LIST DISPLAY METHODS ============
     
     def user_link(self, obj):
-        url = reverse('admin:users_user_change', args=[obj.user.id])
+        try:
+            url = reverse('admin:users_user_change', args=[obj.user.id])
+        except Exception:
+            return format_html('<span style="color: #667eea;">👤 {}</span>', obj.user.username)
         return format_html(
             '<a href="{}" style="color: #667eea; font-weight: 500; text-decoration: none;">'
             '<span style="display: flex; align-items: center; gap: 4px;">'
@@ -283,16 +286,19 @@ class KYCAdmin(admin.ModelAdmin):
     expiry_status.short_description = 'Expiry'
     
     def actions_column(self, obj):
-        return format_html(
-            '<div style="display: flex; gap: 5px;">'
-            '<a href="{}" style="background: #2196F3; color: white; padding: 4px 8px; '
-            'border-radius: 4px; text-decoration: none; font-size: 11px;">👁️ View</a>'
-            '<a href="{}" style="background: #4CAF50; color: white; padding: 4px 8px; '
-            'border-radius: 4px; text-decoration: none; font-size: 11px;">✏️ Edit</a>'
-            '</div>',
-            reverse('admin:kyc_kyc_change', args=[obj.id]),
-            reverse('admin:kyc_kyc_change', args=[obj.id])
-        )
+        try:
+            url = reverse('admin:kyc_kyc_change', args=[obj.id])
+            return format_html(
+                '<div style="display: flex; gap: 5px;">'
+                '<a href="{}" style="background: #2196F3; color: white; padding: 4px 8px; '
+                'border-radius: 4px; text-decoration: none; font-size: 11px;">👁️ View</a>'
+                '<a href="{}" style="background: #4CAF50; color: white; padding: 4px 8px; '
+                'border-radius: 4px; text-decoration: none; font-size: 11px;">✏️ Edit</a>'
+                '</div>',
+                url, url
+            )
+        except Exception:
+            return format_html('<span style="color:#999;">-</span>')
     actions_column.short_description = 'Actions'
     
     # ============ READONLY FIELDS ============
@@ -460,11 +466,11 @@ class KYCVerificationLogAdmin(admin.ModelAdmin):
     list_per_page = 100
     
     def kyc_link(self, obj):
-        url = reverse('admin:kyc_kyc_change', args=[obj.kyc.id])
-        return format_html(
-            '<a href="{}" style="color: #667eea;">KYC #{}</a>',
-            url, obj.kyc.id
-        )
+        try:
+            url = reverse('admin:kyc_kyc_change', args=[obj.kyc.id])
+            return format_html('<a href="{}" style="color: #667eea;">KYC #{}</a>', url, obj.kyc.id)
+        except Exception:
+            return format_html('<span style="color: #667eea;">KYC #{}</span>', obj.kyc.id)
     kyc_link.short_description = 'KYC'
     
     def action_badge(self, obj):
@@ -495,6 +501,84 @@ class KYCVerificationLogAdmin(admin.ModelAdmin):
     
     def has_add_permission(self, request):
         return False
+
+
+# ==================== KYC SUBMISSION ADMIN ====================
+@admin.register(KYCSubmission)
+class KYCSubmissionAdmin(admin.ModelAdmin):
+    list_display = [
+        "user_link",
+        "document_type",
+        "document_number",
+        "status_badge",
+        "verification_progress",
+        "face_liveness_badge",
+        "clarity_score",
+        "matching_score",
+        "submitted_at",
+    ]
+    list_filter = ["status", "document_type", "face_liveness_check", "submitted_at"]
+    search_fields = ["user__username", "user__email", "document_number"]
+    list_per_page = 50
+
+    readonly_fields = [
+        "created_at",
+        "updated_at",
+        "image_clarity_score",
+        "document_matching_score",
+    ]
+
+    fieldsets = (
+        ("👤 User", {"fields": ("user",)}),
+        ("[DOC] Document", {"fields": ("document_type", "document_number", "nid_front", "nid_back")}),
+        ("🪪 Selfie + Note", {"fields": ("selfie_with_note",)}),
+        ("🔍 Fraud & Scores (computed)", {"fields": ("image_clarity_score", "document_matching_score", "face_liveness_check")}),
+        ("✅ Verification Workflow", {"fields": ("status", "verification_progress", "rejection_reason")}),
+        ("📅 Timestamps", {"fields": ("created_at", "updated_at", "submitted_at")}),
+    )
+
+    def user_link(self, obj):
+        try:
+            try:
+                url = reverse("admin:users_user_change", args=[obj.user.id])
+            except Exception:
+                return format_html('<span style="color:#667eea;">👤 {}</span>', obj.user.username)
+            return format_html(
+                '<a href="{}" style="color:#667eea; font-weight:600; text-decoration:none;">👤 {}</a>',
+                url,
+                obj.user.username,
+            )
+        except Exception:
+            return "-"
+
+    user_link.short_description = "User"
+
+    def status_badge(self, obj):
+        return status_badge(obj.status)
+
+    status_badge.short_description = "Status"
+
+    def face_liveness_badge(self, obj):
+        cfg = {
+            "pending": ("#FF9800", "⏳"),
+            "success": ("#4CAF50", "[OK]"),
+            "failure": ("#F44336", "[FAIL]"),
+        }
+        color, icon = cfg.get(obj.face_liveness_check, ("#9E9E9E", "[?]"))
+        return badge(obj.face_liveness_check.replace("_", " ").title(), color, icon)
+
+    face_liveness_badge.short_description = "Liveness"
+
+    def clarity_score(self, obj):
+        return format_html('<span style="font-weight:700;">{}</span>', obj.image_clarity_score)
+
+    clarity_score.short_description = "Clarity"
+
+    def matching_score(self, obj):
+        return format_html('<span style="font-weight:700;">{}</span>', obj.document_matching_score)
+
+    matching_score.short_description = "Matching"
+
 
 
 # ==================== DASHBOARD WIDGET ====================
@@ -572,3 +656,43 @@ admin.site.index_title = format_html(
     '<h2 style="color: #667eea; font-weight: bold;">Welcome to KYC Management Center</h2>'
     '<p style="color: #999;">Verify user identities, manage KYC submissions, and monitor compliance</p>'
 )
+
+def _force_register_kyc():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(KYC, KYCAdmin), (KYCVerificationLog, KYCVerificationLogAdmin), (KYCSubmission, KYCSubmissionAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] kyc registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] kyc: {e}")
+
+# ==================== AUTO REGISTER ALL NEW MODELS ====================
+from django.contrib import admin
+from . import models as kyc_models
+import inspect
+
+_ALREADY_REGISTERED = {KYC, KYCVerificationLog, KYCSubmission}
+
+_new_models = [
+    obj for name, obj in inspect.getmembers(kyc_models, inspect.isclass)
+    if hasattr(obj, '_meta') 
+    and obj._meta.app_label == 'kyc'
+    and obj not in _ALREADY_REGISTERED
+]
+
+for _model in _new_models:
+    try:
+        if not admin.site.is_registered(_model):
+            admin.site.register(_model)
+            print(f"[OK] Registered: {_model.__name__}")
+    except Exception as _e:
+        print(f"[WARN] Could not register {_model.__name__}: {_e}")
