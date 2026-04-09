@@ -320,3 +320,21 @@ class EventAdmin(admin.ModelAdmin):
         deleted_count, _ = queryset.filter(customer=None).delete()
         self.message_user(request, f'[DELETE] {deleted_count} anonymous events deleted.')
     delete_anonymous_events.short_description = "Delete anonymous events"
+
+def _force_register_djoyalty():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(Customer, CustomerAdmin), (Txn, TxnAdmin), (Event, EventAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] djoyalty registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] djoyalty: {e}")
