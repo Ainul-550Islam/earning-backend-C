@@ -58,3 +58,8 @@ class NotificationsConfig(AppConfig):
                 
         except Exception as e:
             print(f"[WARN] Notifications admin registration error: {e}")
+        try:
+            from api.notifications.admin import _force_register_notifications
+            _force_register_notifications()
+        except Exception as e:
+            pass

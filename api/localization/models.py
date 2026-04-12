@@ -26,7 +26,7 @@ class Language(TimeStampedModel):
     code = models.CharField(
         max_length=10, 
         unique=True,
-        help_text=_("Language code (e.g., en, bn)")
+        help_text=_("Language code (e.g., en, bn, null=True, blank=True)")
     )
     name = models.CharField(
         max_length=50,
@@ -49,12 +49,12 @@ class Language(TimeStampedModel):
     flag_emoji = models.CharField(
         max_length=5, 
         blank=True,
-        help_text=_("Flag emoji (e.g., 🇧🇩)")
+        help_text=_("Flag emoji (e.g., 🇧🇩, null=True, blank=True)")
     )
     locale_code = models.CharField(
         max_length=10, 
         blank=True,
-        help_text=_("Locale code (e.g., bn_BD, en_US)")
+        help_text=_("Locale code (e.g., bn_BD, en_US, null=True, blank=True)")
     )
     
     class Meta:
@@ -113,7 +113,7 @@ class Country(TimeStampedModel):
     )
     phone_code = models.CharField(
         max_length=10,
-        help_text=_("Phone code (e.g., +880)")
+        help_text=_("Phone code (e.g., +880, null=True, blank=True)")
     )
     phone_digits = models.PositiveSmallIntegerField(
         default=10,
@@ -168,7 +168,7 @@ class Currency(TimeStampedModel):
     )
     symbol = models.CharField(
         max_length=10,
-        help_text=_("Currency symbol (e.g., $, ৳)")
+        help_text=_("Currency symbol (e.g., $, ৳, null=True, blank=True)")
     )
     symbol_native = models.CharField(
         max_length=10, 
@@ -252,12 +252,12 @@ class Timezone(TimeStampedModel):
     name = models.CharField(
         max_length=100, 
         unique=True,
-        help_text=_("Timezone name (e.g., Asia/Dhaka)")
+        help_text=_("Timezone name (e.g., Asia/Dhaka, null=True, blank=True)")
     )
     code = models.CharField(
         max_length=50, 
         unique=True,
-        help_text=_("Timezone code (e.g., BDT)")
+        help_text=_("Timezone code (e.g., BDT, null=True, blank=True)")
     )
     offset = models.CharField(
         max_length=6, 

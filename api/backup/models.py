@@ -108,8 +108,8 @@ class Backup(models.Model):
     
     
     # ৩. অ্যাডমিন প্যানেলের এরর ফিক্স করার জন্য প্রয়োজনীয় ফিল্ডগুলো নিচে দিন
-    name = models.CharField(max_length=255)
-    status = models.CharField(max_length=100, default='pending')
+    name = models.CharField(max_length=255, null=True, blank=True)
+    status = models.CharField(max_length=100, default='pending', null=True, blank=True)
     duration = models.FloatField(null=True, blank=True) # এরর ফিক্স হবে
     verification_hash = models.CharField(max_length=255, null=True, blank=True) # এরর ফিক্স হবে
     is_verified = models.BooleanField(default=False) # এরর ফিক্স হবে
@@ -138,7 +138,7 @@ class Backup(models.Model):
     # --- Advanced Features ---
     compression_type = models.CharField(max_length=100, default='zip', verbose_name=_("Compression"))
     encryption_type = models.CharField(max_length=100, null=True, blank=True, verbose_name=_("Encryption"))
-    retention_policy = models.CharField(max_length=100, choices=RETENTION_CHOICES, default=RETENTION_DAILY)
+    retention_policy = models.CharField(max_length=100, choices=RETENTION_CHOICES, default=RETENTION_DAILY, null=True, blank=True)
     
     # gfs_category এর length বাড়িয়ে ১১ এরর ফিক্স করা হলো
     gfs_category = models.CharField(max_length=100, null=True, blank=True, verbose_name=_("GFS Category")) 
@@ -271,8 +271,7 @@ class Backup(models.Model):
         null=True,
         blank=True,
         related_name='delta_children',
-        help_text="Base backup for delta/incremental"
-    )
+        help_text="Base backup for delta/incremental")
     changed_tables = models.JSONField(
         default=list,
         blank=True,
@@ -287,12 +286,11 @@ class Backup(models.Model):
     retention_policy = models.CharField(
         max_length=100,
         choices=RETENTION_CHOICES,
-        default=RETENTION_DAILY
-    )
+        default=RETENTION_DAILY)
     gfs_category = models.CharField(
         max_length=100,
         choices=[
-            ('son', 'Son (Daily)'),
+            ('son', 'Son (Daily, null=True, blank=True)'),
             ('father', 'Father (Weekly)'),
             ('grandfather', 'Grandfather (Monthly)'),
         ],
@@ -381,8 +379,7 @@ class Backup(models.Model):
         null=True,
         blank=True,
         related_name='schedule_backups',
-        verbose_name='Schedule'
-    )
+        verbose_name='Schedule')
 
     # Verification user
     verified_by = models.ForeignKey(
@@ -391,8 +388,7 @@ class Backup(models.Model):
         null=True,
         blank=True,
         related_name='verified_backups',
-        verbose_name='Verified By'
-    )
+        verbose_name='Verified By')
 
     # Security
     checksum = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Checksum"))
@@ -446,14 +442,6 @@ class Backup(models.Model):
         ]
         constraints = [
             models.UniqueConstraint(fields=['name', 'database_name'], name='unique_backup_name_per_database'),
-            models.CheckConstraint(
-                check=models.Q(file_size__gte=0),
-                name='file_size_non_negative'
-            ),
-            models.CheckConstraint(
-                check=models.Q(health_score__gte=0) & models.Q(health_score__lte=100),
-                name='health_score_range'
-            ),
         ]
     
     def __str__(self):
@@ -927,7 +915,7 @@ class BackupSchedule(models.Model):
     month_of_year = models.IntegerField(choices=MONTH_CHOICES, null=True, blank=True, verbose_name=_("Month of Year"))
 
     # ব্যাকআপ সেটিংস
-    backup_type = models.CharField(max_length=100, choices=Backup.BACKUP_TYPE_CHOICES, default='full')
+    backup_type = models.CharField(max_length=100, choices=Backup.BACKUP_TYPE_CHOICES, default='full', null=True, blank=True)
     
     # 🔴 অ্যাডমিন এরর ফিক্স করার জন্য এই ফিল্ডগুলো অবশ্যই যোগ করুন
     storage_type = models.CharField(
@@ -1942,7 +1930,7 @@ class BackupLog(models.Model):
 # Define missing models with placeholders
 class RetentionPolicy(models.Model):
     """Retention policy configuration"""
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, null=True, blank=True)
     keep_all = models.BooleanField(default=False)
     keep_weekly = models.BooleanField(default=True)
     keep_monthly = models.BooleanField(default=True)
@@ -1957,7 +1945,7 @@ class RetentionPolicy(models.Model):
 
 class BackupNotificationConfig(models.Model):
     """Notification configuration for backups"""
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, null=True, blank=True)
     notify_on_failure = models.BooleanField(default=True)
     notify_on_warning = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Created By')

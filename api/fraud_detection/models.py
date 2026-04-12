@@ -46,10 +46,10 @@ class FraudRule(TimeStampedModel):
         ('critical', 'Critical Risk'),
     )
     
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255, unique=True, null=True, blank=True)
     description = models.TextField()
-    rule_type = models.CharField(max_length=50, choices=RULE_TYPES)
-    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS)
+    rule_type = models.CharField(max_length=50, choices=RULE_TYPES, null=True, blank=True)
+    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, null=True, blank=True)
     
     # Rule configuration
     condition = models.TextField(default='{}')  # Rule conditions in JSON
@@ -112,13 +112,13 @@ class FraudAttempt(TimeStampedModel):
     
     # Identifiers
     attempt_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='fraud_attempts')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='fraud_detection_attempts', null=True, blank=True)
     
     # Attempt details
-    attempt_type = models.CharField(max_length=50, choices=ATTEMPT_TYPES)
+    attempt_type = models.CharField(max_length=50, choices=ATTEMPT_TYPES, null=True, blank=True)
     description = models.TextField()
-    detected_by = models.CharField(max_length=100)  # Which detector caught it
-    fraud_rules = models.ManyToManyField(FraudRule, related_name='fraud_attempts')
+    detected_by = models.CharField(max_length=100, null=True, blank=True)  # Which detector caught it
+    fraud_rules = models.ManyToManyField(FraudRule, related_name='fraud_detection_attempts')
     
     # Evidence and data
     evidence_data = models.TextField(default='{}')  # Raw data that triggered detection
@@ -129,15 +129,15 @@ class FraudAttempt(TimeStampedModel):
     confidence_score = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)])
     
     # Status and resolution
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='detected')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='detected', null=True, blank=True)
     is_resolved = models.BooleanField(default=False)
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolved_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='resolved_fraud_attempts')
     resolution_notes = models.TextField(blank=True)
     
     # Impact
-    affected_transactions = models.ManyToManyField('wallet.WalletTransaction', related_name='fraud_attempts', blank=True)
-    amount_involved = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    affected_transactions = models.ManyToManyField('wallet.WalletTransaction', related_name='fraud_detection_attempts', blank=True)
+    amount_involved = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     
     class Meta:
         ordering = ['-updated_at']
@@ -168,13 +168,13 @@ class FraudPattern(TimeStampedModel):
         ('network', 'Network Pattern'),
     )
     
-    name = models.CharField(max_length=255)
-    pattern_type = models.CharField(max_length=50, choices=PATTERN_TYPES)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    pattern_type = models.CharField(max_length=50, choices=PATTERN_TYPES, null=True, blank=True)
     description = models.TextField()
     
     # Pattern data
     pattern_data = models.TextField(default='{}')  # JSON representation of pattern
-    features = ArrayField(models.CharField(max_length=100), default=list)  # Key features of the pattern
+    features = ArrayField(models.CharField(max_length=100, null=True, blank=True), default=list)  # Key features of the pattern
     
     # Statistics
     occurrence_count = models.IntegerField(default=0)
@@ -183,7 +183,7 @@ class FraudPattern(TimeStampedModel):
     # ML metadata
     is_trained = models.BooleanField(default=False)
     last_trained = models.DateTimeField(null=True, blank=True)
-    model_version = models.CharField(max_length=50, blank=True)
+    model_version = models.CharField(max_length=50, null=True, blank=True)
     
     class Meta:
         unique_together = ['name', 'pattern_type']
@@ -193,7 +193,7 @@ class FraudPattern(TimeStampedModel):
 
 class UserRiskProfile(TimeStampedModel):
     """Risk assessment profile for each user"""
-    user = models.OneToOneField('users.User', on_delete=models.CASCADE, related_name='risk_profile')
+    user = models.OneToOneField('users.User', on_delete=models.CASCADE, related_name='fraud_detection_risk_profile', null=True, blank=True)
     
     # Risk scores
     overall_risk_score = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
@@ -203,7 +203,7 @@ class UserRiskProfile(TimeStampedModel):
     
     # Risk factors
     risk_factors = models.TextField(default='{}')  # {factor: score}
-    warning_flags = ArrayField(models.CharField(max_length=50), default=list)
+    warning_flags = ArrayField(models.CharField(max_length=50, null=True, blank=True), default=list)
     
     # Statistics
     total_fraud_attempts = models.IntegerField(default=0)
@@ -243,22 +243,22 @@ class UserRiskProfile(TimeStampedModel):
 
 class DeviceFingerprint(TimeStampedModel):
     """Device fingerprinting data"""
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='device_fingerprints')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='device_fingerprints', null=True, blank=True)
     
     # Device identifiers
     device_id = models.CharField(max_length=255, unique=True, null=True, blank=True, default=None)
-    device_hash = models.CharField(max_length=512, db_index=True)
+    device_hash = models.CharField(max_length=512, db_index=True, null=True, blank=True)
     
     # Device information
     user_agent = models.TextField()
-    platform = models.CharField(max_length=100)
-    browser = models.CharField(max_length=100)
-    browser_version = models.CharField(max_length=50)
-    os = models.CharField(max_length=100)
-    os_version = models.CharField(max_length=50)
-    screen_resolution = models.CharField(max_length=50)
-    language = models.CharField(max_length=10)
-    timezone = models.CharField(max_length=100)
+    platform = models.CharField(max_length=100, null=True, blank=True)
+    browser = models.CharField(max_length=100, null=True, blank=True)
+    browser_version = models.CharField(max_length=50, null=True, blank=True)
+    os = models.CharField(max_length=100, null=True, blank=True)
+    os_version = models.CharField(max_length=50, null=True, blank=True)
+    screen_resolution = models.CharField(max_length=50, null=True, blank=True)
+    language = models.CharField(max_length=10, null=True, blank=True)
+    timezone = models.CharField(max_length=100, null=True, blank=True)
     
     # Hardware info
     cpu_cores = models.IntegerField(null=True, blank=True)
@@ -266,9 +266,9 @@ class DeviceFingerprint(TimeStampedModel):
     max_touch_points = models.IntegerField(null=True, blank=True)
     
     # Canvas/WebGL fingerprint
-    canvas_fingerprint = models.CharField(max_length=512, blank=True)
-    webgl_fingerprint = models.CharField(max_length=512, blank=True)
-    audio_fingerprint = models.CharField(max_length=512, blank=True)
+    canvas_fingerprint = models.CharField(max_length=512, null=True, blank=True)
+    webgl_fingerprint = models.CharField(max_length=512, null=True, blank=True)
+    audio_fingerprint = models.CharField(max_length=512, null=True, blank=True)
     
     # Network info
     ip_address = models.GenericIPAddressField()
@@ -312,17 +312,17 @@ class IPReputation(TimeStampedModel):
     
     # Classification
     is_blacklisted = models.BooleanField(default=False)
-    blacklist_reason = models.CharField(max_length=255, blank=True)
+    blacklist_reason = models.CharField(max_length=255, null=True, blank=True)
     blacklisted_at = models.DateTimeField(null=True, blank=True)
     
     # Geolocation
-    country = models.CharField(max_length=100, blank=True)
-    region = models.CharField(max_length=100, blank=True)
-    city = models.CharField(max_length=100, blank=True)
-    isp = models.CharField(max_length=255, blank=True)
+    country = models.CharField(max_length=100, null=True, blank=True)
+    region = models.CharField(max_length=100, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    isp = models.CharField(max_length=255, null=True, blank=True)
     
     # Threat intelligence
-    threat_types = ArrayField(models.CharField(max_length=50), default=list)
+    threat_types = ArrayField(models.CharField(max_length=50, null=True, blank=True), default=list)
     last_threat_check = models.DateTimeField(null=True, blank=True)
     
     class Meta:
@@ -354,9 +354,9 @@ class FraudAlert(TimeStampedModel):
     
     # Alert details
     alert_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    alert_type = models.CharField(max_length=50, choices=ALERT_TYPES)
-    priority = models.CharField(max_length=20, choices=PRIORITY_LEVELS)
-    title = models.CharField(max_length=255)
+    alert_type = models.CharField(max_length=50, choices=ALERT_TYPES, null=True, blank=True)
+    priority = models.CharField(max_length=20, choices=PRIORITY_LEVELS, null=True, blank=True)
+    title = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField()
     
     # Related objects
@@ -400,22 +400,19 @@ class OfferCompletion(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='offer_completions',
-        verbose_name='User'
-    )
+        verbose_name='User')
     
     offer = models.ForeignKey(
         'offerwall.Offer',
         on_delete=models.CASCADE,
         related_name='completions',
-        verbose_name='Offer'
-    )
+        verbose_name='Offer')
     
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='pending',
-        verbose_name='Status'
-    )
+        verbose_name='Status')
     
     completion_data = models.JSONField(
         default=dict,
@@ -427,8 +424,7 @@ class OfferCompletion(models.Model):
         max_digits=14,
         decimal_places=6,
         default=0,
-        verbose_name='Reward Amount'
-    )
+        verbose_name='Reward Amount')
     
     transaction = models.ForeignKey(
         'wallet.WalletTransaction',
@@ -436,8 +432,7 @@ class OfferCompletion(models.Model):
         null=True,
         blank=True,
         related_name='offer_completions',
-        verbose_name='WalletTransaction'
-    )
+        verbose_name='WalletTransaction')
     
     ip_address = models.GenericIPAddressField(
         null=True,
@@ -453,14 +448,12 @@ class OfferCompletion(models.Model):
     device_id = models.CharField(
         max_length=255,
         blank=True,
-        verbose_name='Device ID'
-    )
+        verbose_name='Device ID')
     
     referral_code = models.CharField(
         max_length=100,
         blank=True,
-        verbose_name='Referral Code'
-    )
+        verbose_name='Referral Code')
     
     is_fraud = models.BooleanField(
         default=False,
@@ -495,8 +488,7 @@ class OfferCompletion(models.Model):
         null=True,
         blank=True,
         related_name='reviewed_offer_completions',
-        verbose_name='Reviewed By'
-    )
+        verbose_name='Reviewed By')
     
     notes = models.TextField(
         blank=True,

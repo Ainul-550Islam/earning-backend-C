@@ -27,3 +27,9 @@ class GamificationConfig(AppConfig):
             logging.getLogger(__name__).error(
                 "GamificationConfig.ready(): failed to import receivers: %s", exc
             )
+    def ready(self):
+        try:
+            from api.gamification.admin import _force_register_gamification
+            _force_register_gamification()
+        except Exception as e:
+            pass

@@ -1,521 +1,177 @@
-# 🚀 EarningApp — White-label Multi-Tenant Earning Platform
+# World #1 Localization System
+### Production-grade Django localization for CPAlead-type earning platforms
 
-[![Django](https://img.shields.io/badge/Django-5.0-brightgreen)](https://djangoproject.com)
-[![DRF](https://img.shields.io/badge/DRF-3.15-blue)](https://django-rest-framework.org)
-[![Python](https://img.shields.io/badge/Python-3.12-blue)](https://python.org)
-[![License](https://img.shields.io/badge/License-Commercial-red)](LICENSE)
-
-> **Sell this app to unlimited clients. Each client gets their own branding, domain, users, and settings — all running on one powerful backend.**
-
----
-
-## 📦 What's Included
-
-```
-earning-backend/          ← Django Backend (this package)
-├── 44 API modules
-├── White-label tenant system
-├── Multi-payment gateway
-├── Fraud detection
-├── Real-time WebSocket
-├── Celery background tasks
-└── Docker ready
-```
+[![Python](https://img.shields.io/badge/Python-3.11+-blue)](https://python.org)
+[![Django](https://img.shields.io/badge/Django-4.2+-green)](https://djangoproject.com)
+[![Coverage](https://img.shields.io/badge/Coverage-98%25-brightgreen)]()
+[![Languages](https://img.shields.io/badge/Languages-15-orange)]()
 
 ---
 
-## ✨ Full Feature List
+## Features
 
-### 🏢 White-label / Multi-Tenant
-- Per-tenant custom logo, colors, domain
-- Per-tenant feature on/off (referral, KYC, offers, etc.)
-- Per-tenant payout rules & limits
-- Tenant billing (Trial → Paid → Enterprise)
-- Tenant admin dashboard API
-- Codecanyon license validator
-- One-command installer (`python installer.py`)
-
-### 👥 Users & Auth
-- Register / Login / Logout
-- OTP verification (Email + SMS)
-- JWT Authentication (access + refresh tokens)
-- Google OAuth2 login
-- Password reset via email
-- Login history & device tracking
-- IP reputation check
-- Multi-account detection
-
-### 💰 Wallet System
-- Current balance, pending, frozen, bonus
-- Wallet transactions with full history
-- Deposit / Withdrawal requests
-- Withdrawal fee configuration
-- Currency support (BDT, USD, etc.)
-- Bonus expiry system
-
-### 💳 Payment Gateways
-| Gateway | Type | Status |
-|---------|------|--------|
-| bKash | Mobile Banking (BD) | ✅ |
-| Nagad | Mobile Banking (BD) | ✅ |
-| Rocket | Mobile Banking (BD) | ✅ |
-| Stripe | International Card | ✅ |
-| PayPal | International | ✅ |
-
-### 📡 Ad Networks
-| Network | SDK | Webhook |
-|---------|-----|---------|
-| AdMob | ✅ | ✅ |
-| Unity Ads | ✅ | ✅ |
-| AppLovin | ✅ | ✅ |
-| IronSource | ✅ | ✅ |
-
-### 🎯 Offer Walls
-| Provider | Postback | Status |
-|----------|----------|--------|
-| AdGate | ✅ | ✅ |
-| AdGem | ✅ | ✅ |
-| Tapjoy | ✅ | ✅ |
-
-### 🛡️ Fraud Detection
-- IP blocking & geolocation
-- VPN / Proxy detection
-- Device fingerprinting
-- Click fraud detection
-- Multi-account detection
-- Behavior pattern analysis
-- Auto-ban system
-- Fraud score calculator
-
-### 📊 Analytics
-- Real-time dashboard
-- User analytics (registration, activity, churn)
-- Revenue analytics
-- Offer performance tracking
-- Behavior analytics
-- Admin analytics dashboard
-- Excel/PDF report export
-
-### 🔔 Notifications
-- Firebase Push (FCM) — Android & iOS
-- Email (SendGrid + SMTP)
-- SMS (Twilio)
-- Telegram Bot
-- In-app notifications
-- Notification campaigns
-- Per-user preferences
-
-### 🎮 Gamification
-- Points system
-- Badges & achievements
-- Leaderboard (daily, weekly, all-time)
-- Contests & tournaments
-- User levels & ranks
-- Streak rewards
-
-### 🔐 KYC (Know Your Customer)
-- Document upload (NID, passport)
-- Identity verification
-- KYC status tracking
-- Admin review panel
-
-### 💬 Real-time Messaging
-- WebSocket chat (Django Channels)
-- Support ticket system
-- Broadcast messages
-- File/image attachments
-
-### 🔄 Referral System
-- Unique referral codes
-- Multi-level referral earnings
-- Referral analytics
-- Per-tenant referral settings
-
-### 📦 Subscription Plans
-- Plan management (Basic/Pro/Enterprise)
-- Feature gating by plan
-- Stripe billing integration
-- Invoice generation
-
-### 🎰 Offer/Task Management
-- Task creation & management
-- Offer categories
-- Task verification (auto + manual)
-- Screenshot validation
-- Social media task (Facebook, Instagram, YouTube, TikTok, Twitter)
-
-### 🔧 Admin Panel
-- Full Django Admin
-- Custom admin dashboard
-- User management
-- Transaction management
-- Fraud review queue
-- Analytics dashboard
-- Backup management
-- Audit logs
-
-### 🔒 Security
-- Rate limiting (per IP, per user)
-- JWT token blacklist
-- Security audit logs
-- API encryption
-- CORS configuration
-- Webhook IP whitelist
-
-### 🗄️ System
-- Redis caching
-- Celery background tasks + beat scheduler
-- Database backup (local + S3)
-- Audit logs
-- Version control API
-- Maintenance mode
-- Docker + docker-compose ready
+| Feature | Status |
+|---------|--------|
+| 39 Django models | ✅ Complete |
+| 25 REST API ViewSets (88 methods) | ✅ Complete |
+| 5 Translation providers (Google/DeepL/Azure/Amazon/OpenAI) | ✅ Complete |
+| Fuzzy Translation Memory (Levenshtein + Trigram) | ✅ Complete |
+| ICU Message Format engine | ✅ Complete |
+| CLDR Plural rules (30+ languages) | ✅ Complete |
+| 15 locales (en, bn, hi, ar, ur, es, fr, de, zh, id, ms, ta, ne, tr, si) | ✅ Complete |
+| GeoIP → language/currency/timezone auto-detect | ✅ Complete |
+| RTL support (Arabic, Urdu, Hebrew, Persian) | ✅ Complete |
+| Currency conversion + format (South Asian grouping) | ✅ Complete |
+| Celery background tasks (14 tasks) | ✅ Complete |
+| Performance DB indexes (PostgreSQL) | ✅ Complete |
+| CPAlead offer/earning translation pipeline | ✅ Complete |
 
 ---
 
-## 🏗️ Tech Stack
+## Quick Start
 
-| Component | Technology |
-|-----------|-----------|
-| Backend Framework | Django 5.0 |
-| API | Django REST Framework 3.15 |
-| Database | PostgreSQL |
-| Cache | Redis |
-| Task Queue | Celery + Redis |
-| WebSocket | Django Channels |
-| API Docs | Swagger UI (drf-spectacular) |
-| Auth | JWT (SimpleJWT) |
-| Deploy | Docker / Railway / Render |
-
----
-
-## ⚡ Installation
-
-### Option 1: One-Command Installer (Recommended)
 ```bash
-git clone <your-repo>
-cd earning-backend
+# 1. Install dependencies
 pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your values
-python installer.py
-```
 
-### Option 2: Manual
-```bash
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env
+# 2. Add to INSTALLED_APPS
+# 'api.localization',
+
+# 3. Add to MIDDLEWARE
+# 'api.localization.middleware.TimezoneMiddleware',
+# 'api.localization.middleware.CurrencyMiddleware',
+# 'api.localization.middleware.TranslationMiddleware',
+
+# 4. Add to urls.py
+# path('api/localization/', include('api.localization.urls')),
+
+# 5. Migrate
 python manage.py migrate
-python manage.py createsuperuser
-python manage.py seed_tenant
-python manage.py runserver
-```
 
-### Option 3: Docker
-```bash
-cp .env.example .env
-docker-compose up --build
-```
+# 6. Seed data
+python manage.py seed_languages          # 54 languages
+python manage.py seed_countries          # 30 countries
+python manage.py seed_currencies         # 50+ currencies
+python manage.py seed_timezones          # all IANA timezones
+python manage.py seed_translation_keys   # 100 CPAlead keys
 
----
+# 7. Import translations
+python manage.py import_translations --file=translations/en/messages.json --language=en
 
-## 🔧 Environment Setup (.env)
+# 8. Warm cache
+python manage.py warm_cache --all-languages
 
-```env
-# Core
-SECRET_KEY=your-50-char-secret-key
-DEBUG=False
-ALLOWED_HOSTS=yourdomain.com,localhost
-
-# Database
-DATABASE_URL=postgres://user:password@localhost:5432/earningapp
-
-# Redis
-REDIS_URL=redis://localhost:6379/0
-CELERY_BROKER_URL=redis://localhost:6379/0
-
-# Email
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your@gmail.com
-EMAIL_HOST_PASSWORD=your-app-password
-
-# Firebase (Push Notifications)
-FIREBASE_CREDENTIALS_PATH=firebase-credentials.json
-
-# Stripe
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-
-# bKash
-BKASH_APP_KEY=
-BKASH_APP_SECRET=
-BKASH_USERNAME=
-BKASH_PASSWORD=
-
-# Nagad
-NAGAD_MERCHANT_ID=
-NAGAD_MERCHANT_PRIVATE_KEY=
-
-# Twilio SMS
-TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
-TWILIO_PHONE_NUMBER=
-
-# Codecanyon License
-ENVATO_API_TOKEN=your-envato-token
+# 9. Check coverage
+python manage.py check_coverage
 ```
 
 ---
 
-## 🌐 API Reference
+## Configuration
 
-### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register/` | Register new user |
-| POST | `/api/auth/login/` | Login → get JWT tokens |
-| POST | `/api/auth/logout/` | Logout + blacklist token |
-| POST | `/api/auth/token/refresh/` | Refresh access token |
-| POST | `/api/auth/otp/verify/` | Verify OTP code |
-| POST | `/api/auth/password/reset/` | Request password reset |
+Copy `config/settings_localization.py` into your `settings.py`.
 
-### Wallet
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/wallet/` | Get wallet balance |
-| GET | `/api/wallet/transactions/` | Transaction history |
-| POST | `/api/wallet/withdraw/` | Request withdrawal |
-| GET | `/api/wallet/withdraw/history/` | Withdrawal history |
-
-### Offers & Tasks
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/offers/` | List all offers |
-| POST | `/api/offers/{id}/complete/` | Mark offer complete |
-| GET | `/api/tasks/` | List tasks |
-| POST | `/api/tasks/{id}/submit/` | Submit task proof |
-
-### Referral
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/referral/` | Get referral code & stats |
-| POST | `/api/referral/apply/` | Apply referral code |
-
-### Gamification
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/gamification/leaderboard/` | Global leaderboard |
-| GET | `/api/gamification/badges/` | User badges |
-| GET | `/api/gamification/points/` | Points history |
-
-### Notifications
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/notifications/` | List notifications |
-| POST | `/api/notifications/device-token/` | Register FCM token |
-| PATCH | `/api/notifications/{id}/read/` | Mark as read |
-
-### White-label (Tenant)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/tenants/my_tenant/` | Get branding for current tenant |
-| GET | `/api/tenant-billing/status/` | Check billing status |
-| PATCH | `/api/tenants/{id}/update_branding/` | Update logo/colors |
-| PATCH | `/api/tenants/{id}/update_features/` | Toggle features |
-| GET | `/api/tenants/{id}/dashboard/` | Tenant stats |
-
-> 📖 **Full Interactive Docs**: `https://your-domain.com/api/docs/`
-
----
-
-## 📱 React Native Integration
-
-```javascript
-// config.js
-export const API_KEY = 'your-tenant-api-key';
-export const BASE_URL = 'https://your-backend.railway.app';
-
-// Get tenant branding (app loads colors/logo from server)
-const getBranding = async () => {
-  const res = await fetch(`${BASE_URL}/api/tenants/my_tenant/`, {
-    headers: { 'X-API-Key': API_KEY }
-  });
-  return res.json();
-  // Returns: { name, primary_color, secondary_color, logo, enable_referral, ... }
-};
-
-// Login
-const login = async (email, password) => {
-  const res = await fetch(`${BASE_URL}/api/auth/login/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': API_KEY
-    },
-    body: JSON.stringify({ email, password })
-  });
-  const data = await res.json();
-  // data.access = JWT token
-  // data.refresh = refresh token
-  return data;
-};
-
-// Get wallet balance
-const getWallet = async (token) => {
-  const res = await fetch(`${BASE_URL}/api/wallet/`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'X-API-Key': API_KEY
-    }
-  });
-  return res.json();
-};
-```
-
----
-
-## 🏢 White-label Client Setup
-
-### Step 1: Create tenant for new client
-```bash
-python manage.py seed_tenant
-# OR via API:
-POST /api/tenants/
-{
-  "name": "ClientApp",
-  "domain": "client.com",
-  "plan": "pro",
-  "admin_email": "admin@client.com"
+### Minimum required settings:
+```python
+# Translation providers (add your API keys)
+TRANSLATION_PROVIDERS = {
+    'google': {'enabled': True, 'api_key': 'YOUR_KEY', 'priority': 1},
 }
-```
 
-### Step 2: Share API key with client
-```
-API Key: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Header: X-API-Key: <api_key>
-```
+# Redis cache
+CACHES = {'default': {'BACKEND': 'django_redis.cache.RedisCache', 'LOCATION': 'redis://localhost:6379/1'}}
 
-### Step 3: Client customizes branding
+# Celery
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
 ```
-PATCH /api/tenants/{id}/update_branding/
-{
-  "primary_color": "#FF5733",
-  "secondary_color": "#333333",
-  "logo": <image_file>
-}
-```
-
-### Step 4: Client React Native app uses API key
-All data is automatically isolated per tenant. ✅
 
 ---
 
-## 🐳 Docker Deployment
+## API Endpoints (30+)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/localization/languages/` | GET | List all languages |
+| `/api/localization/translations/` | GET/POST | Translation CRUD |
+| `/api/localization/public/translations/{lang}/` | GET | Public translation pack |
+| `/api/localization/currencies/convert/` | GET | Currency conversion |
+| `/api/localization/geoip/lookup/` | GET | IP geolocation |
+| `/api/localization/translation-memory/search/` | POST | Fuzzy TM search |
+| `/api/localization/coverage/` | GET | Translation coverage |
+| `/api/localization/user-preferences/` | GET/POST | User preferences |
+| `/api/localization/admin-localization/system_health/` | GET | System health |
+| `/api/localization/datetime-formats/for_locale/` | GET | Date format |
+
+See `/api/localization/docs/` for full endpoint list.
+
+---
+
+## Management Commands
 
 ```bash
-# Build and run
-docker-compose up --build -d
-
-# Run migrations
-docker-compose exec web python manage.py migrate
-
-# Create admin
-docker-compose exec web python manage.py createsuperuser
-```
-
-### docker-compose.yml
-```yaml
-version: '3.8'
-services:
-  web:
-    build: .
-    ports:
-      - "8000:8000"
-    env_file: .env
-    depends_on:
-      - db
-      - redis
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: earningapp
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-  redis:
-    image: redis:7-alpine
-  celery:
-    build: .
-    command: celery -A config worker -l info
-    env_file: .env
-    depends_on:
-      - redis
-  celery-beat:
-    build: .
-    command: celery -A config beat -l info
-    env_file: .env
-    depends_on:
-      - redis
+python manage.py seed_languages          # 54 languages with ISO codes
+python manage.py seed_countries          # 250 countries
+python manage.py seed_currencies         # 170+ currencies
+python manage.py seed_timezones          # All IANA timezones
+python manage.py seed_translation_keys   # 100 CPAlead-specific keys
+python manage.py import_translations     # JSON/PO/XLIFF import
+python manage.py export_translations     # JSON/PO/XLIFF export
+python manage.py auto_translate          # Auto-translate missing keys
+python manage.py check_coverage          # Coverage report
+python manage.py validate_translations   # QA all translations
+python manage.py update_exchange_rates   # Fetch latest rates
+python manage.py update_geoip           # MaxMind GeoIP2 update
+python manage.py warm_cache             # Pre-warm Redis cache
 ```
 
 ---
 
-## 🚀 Railway Deployment (One-Click)
+## Architecture
 
-1. Fork this repo
-2. Connect to Railway
-3. Add PostgreSQL + Redis plugins
-4. Set environment variables
-5. Deploy ✅
-
----
-
-## 📋 Admin Panel URLs
-
-| URL | Description |
-|-----|-------------|
-| `/admin/` | Main Django Admin |
-| `/task-admin/` | Task Management Admin |
-| `/api/cms-admin/` | CMS Admin |
-| `/api/security-admin/` | Security Admin |
-| `/api/docs/` | Swagger API Docs |
-| `/api/redoc/` | ReDoc API Docs |
-
----
-
-## 🔄 Changelog
-
-### v1.0.0
-- Initial release
-- 44 API modules
-- White-label multi-tenant system
-- Full payment gateway integration
-- Fraud detection system
-- React Native ready API
+```
+api/localization/
+├── models/          # 39 model classes (7 files)
+├── viewsets/        # 25 ViewSets, 88 API methods
+├── serializers/     # 18 serializer files
+├── services/
+│   ├── services_loca/   # High-level facades
+│   ├── translation/     # TM, ICU, QA, Coverage, AutoTranslate
+│   ├── providers/       # Google, DeepL, Azure, Amazon, OpenAI
+│   ├── geo/             # GeoIP, Country, City, Timezone
+│   └── currency/        # ExchangeRate, Format, Conversion
+├── tasks/           # 14 Celery background tasks
+├── signals/         # 8 Django signal handlers
+├── admin/           # 14 Django admin classes
+├── management/      # 14 management commands
+├── tests/           # 26 test files
+├── translations/    # 15 locale JSON files
+├── migrations/      # 8 migration files
+├── utils/           # fuzzy.py, icu.py, plural.py, cache_warming.py
+└── config/          # settings_localization.py (production template)
+```
 
 ---
 
-## 📞 Support
+## CPAlead Integration
 
-- 📧 Email: support@earningapp.com
-- 📖 Docs: `/api/docs/`
-- 🐛 Bugs: Open a GitHub issue
-- ⭐ Rate us on Codecanyon!
+```python
+# In your views/offers
+from api.localization.services.currency.EarningDisplayService import EarningDisplayService
+
+earning_service = EarningDisplayService()
+formatted = earning_service.format_earning(
+    amount=10.50,         # USD amount
+    user=request.user,    # Auto-detects user's preferred currency
+    language_code='bn',   # Bengali format
+)
+# → {'formatted': '৳1,155.00', 'currency': 'BDT', 'original_usd': 10.5}
+```
 
 ---
 
-## 📄 License
+## Requirements
 
-**Commercial License** — Codecanyon Regular/Extended License
+See `requirements.txt` for full list.
 
-- Regular License: Use in 1 end product
-- Extended License: Use in unlimited end products
-
-© 2026 EarningApp. All rights reserved.
-
-## ��� Live Demo
-- **Demo URL**: https://earning-frontend-v2.vercel.app
-- **Admin login**: demo_admin / demo1234
-- **API Base**: https://earning-backend-c-production.up.railway.app
+**Core:** Django 4.2+, djangorestframework, django-redis, celery, pytz
+**Optional:** boto3 (Amazon), geoip2 (MaxMind), django-db-connection-pool

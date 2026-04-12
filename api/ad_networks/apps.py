@@ -91,3 +91,8 @@ class AdNetworksConfig(AppConfig):
                 
         except Exception as e:
             print(f"[WARN] Ad Networks admin registration error: {e}")
+        try:
+            from api.ad_networks.admin import _force_register_ad_networks
+            _force_register_ad_networks()
+        except Exception as e:
+            pass

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alert Escalation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e9ecef;
+        }
+        .escalation-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #dc3545;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #dc3545;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .escalation-level {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #dc3545;
+            color: white;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .urgency-high { background: #dc3545; }
+        .urgency-medium { background: #ffc107; color: #000; }
+        .urgency-low { background: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Alert Escalation</h1>
+        <p>Immediate Action Required</p>
+    </div>
+    
+    <div class="content">
+        <div class="escalation-info">
+            <h2>Escalation Details</h2>
+            <p><span class="escalation-level urgency-{{ escalation.urgency|default:'high' }}">ESCALATION LEVEL {{ escalation.level }}</span></p>
+            
+            {% if alert %}
+            <p><strong>Alert:</strong> {{ alert.rule.name }}</p>
+            <p><strong>Alert Type:</strong> {{ alert.rule.alert_type }}</p>
+            <p><strong>Severity:</strong> {{ alert.rule.get_severity_display }}</p>
+            <p><strong>Trigger Value:</strong> {{ alert.trigger_value }}</p>
+            <p><strong>Threshold:</strong> {{ alert.rule.threshold_value }}</p>
+            <p><strong>Message:</strong> {{ alert.message }}</p>
+            {% endif %}
+            
+            {% if incident %}
+            <p><strong>Incident:</strong> {{ incident.title }}</p>
+            <p><strong>Severity:</strong> {{ incident.get_severity_display }}</p>
+            <p><strong>Impact:</strong> {{ incident.get_impact_display }}</p>
+            <p><strong>Status:</strong> {{ incident.get_status_display }}</p>
+            <p><strong>Description:</strong> {{ incident.description }}</p>
+            {% endif %}
+            
+            <p><strong>Escalation Reason:</strong> {{ escalation.reason }}</p>
+            <p><strong>Escalated To:</strong> {{ escalation.escalated_to.get_full_name|default:escalation.escalated_to.username }}</p>
+            
+            <div class="timestamp">
+                <p><strong>Escalated at:</strong> {{ escalation.escalated_at|date:"Y-m-d H:i:s" }}</p>
+                {% if alert %}
+                <p><strong>Original Alert Time:</strong> {{ alert.triggered_at|date:"Y-m-d H:i:s" }}</p>
+                {% endif %}
+                {% if incident %}
+                <p><strong>Incident Detected:</strong> {{ incident.detected_at|date:"Y-m-d H:i:s" }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if escalation.previous_attempts %}
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffeaa7;">
+            <h3>Previous Attempts</h3>
+            {% for attempt in escalation.previous_attempts %}
+            <div style="margin: 5px 0; padding: 8px; background: #f8f9fa; border-radius: 3px;">
+                <p><strong>Attempt {{ forloop.counter }}:</strong> {{ attempt.method }} to {{ attempt.recipient }}</p>
+                <p><small>Status: {{ attempt.status }} at {{ attempt.timestamp|date:"Y-m-d H:i:s" }}</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if escalation.impact_assessment %}
+        <div style="margin-top: 20px; padding: 15px; background: #f8d7da; border-radius: 5px; border: 1px solid #f5c6cb;">
+            <h3>Impact Assessment</h3>
+            <p>{{ escalation.impact_assessment }}</p>
+        </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{{ dashboard_url }}" class="btn">Take Immediate Action</a>
+            <a href="{{ alert_url|default:incident_url }}" class="btn btn-secondary">View Details</a>
+        </div>
+        
+        {% if escalation.recommended_actions %}
+        <div style="margin-top: 20px;">
+            <h3>Recommended Actions</h3>
+            <ol>
+                {% for action in escalation.recommended_actions %}
+                <li>{{ action }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+        
+        {% if escalation.contact_information %}
+        <div style="margin-top: 20px; padding: 15px; background: #d1ecf1; border-radius: 5px; border: 1px solid #bee5eb;">
+            <h3>Contact Information</h3>
+            <p><strong>Primary Contact:</strong> {{ escalation.contact_information.primary }}</p>
+            <p><strong>Secondary Contact:</strong> {{ escalation.contact_information.secondary }}</p>
+            <p><strong>Emergency Contact:</strong> {{ escalation.contact_information.emergency }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>This escalation requires immediate attention</p>
+        <p>If you are unable to handle this escalation, please forward it to the appropriate team</p>
+    </div>
+</body>
+</html>

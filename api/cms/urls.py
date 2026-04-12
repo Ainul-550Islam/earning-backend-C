@@ -1,6 +1,6 @@
 from django.urls import path, include
 from django.views.generic import RedirectView
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 from django.contrib.sitemaps.views import sitemap
 from .sitemaps import ContentPageSitemap, FAQSitemap, ContentCategorySitemap
 from .views import ContentAPIView, BannerAPIView, FAQAPIView
@@ -96,7 +96,7 @@ urlpatterns = [
 # ═══════════════════════════════════════════════════
 #  DRF API VIEWSETS ROUTER
 # ═══════════════════════════════════════════════════
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 from .views import (
     SiteSettingsViewSet, ContentPermissionViewSet,
     ContentCategoryViewSet, ContentPageViewSet, BannerViewSet,

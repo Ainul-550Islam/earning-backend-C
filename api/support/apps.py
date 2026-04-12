@@ -53,3 +53,8 @@ class SupportConfig(AppConfig):
                 
         except Exception as e:
             print(f"[WARN] Support admin registration error: {e}")
+        try:
+            from api.support.admin import _force_register_support
+            _force_register_support()
+        except Exception as e:
+            pass

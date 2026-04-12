@@ -1,3 +1,15 @@
+# =============================================================================
+# promotions/throttles.py  
+# Rate Throttling + Pagination Configuration
+# =============================================================================
+from collections import OrderedDict
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle, ScopedRateThrottle
+from rest_framework.pagination import CursorPagination, PageNumberPagination
+from rest_framework.response import Response
+
+
+class StandardCursorPagination(CursorPagination):
+    """Standard cursor pagination for campaign/submission feeds."""
     page_size               = 20
     page_size_query_param   = 'page_size'
     max_page_size           = 100

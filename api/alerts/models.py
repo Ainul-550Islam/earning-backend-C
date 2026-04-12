@@ -251,9 +251,9 @@ class AlertRule(models.Model):
         ('critical', 'Critical'),
     ]
     
-    name = models.CharField(max_length=100, unique=True, db_index=True)
-    alert_type = models.CharField(max_length=50, choices=ALERT_TYPES)
-    severity = models.CharField(max_length=20, choices=SEVERITY, default='medium')
+    name = models.CharField(max_length=100, unique=True, db_index=True, null=True, blank=True)
+    alert_type = models.CharField(max_length=50, choices=ALERT_TYPES, null=True, blank=True)
+    severity = models.CharField(max_length=20, choices=SEVERITY, default='medium', null=True, blank=True)
     description = models.TextField(blank=True)
     
     # Threshold configuration
@@ -272,16 +272,14 @@ class AlertRule(models.Model):
     send_telegram = models.BooleanField(default=False)
     send_sms = models.BooleanField(default=False)
     send_webhook = models.BooleanField(default=False)
-    webhook_url = models.URLField(blank=True, max_length=500)
+    webhook_url = models.URLField(blank=True, max_length=500, null=True)
     
     # Recipients with validation
     email_recipients = models.TextField(
         help_text="Comma-separated emails",
-        blank=True
     )
-    telegram_chat_id = models.CharField(max_length=100, blank=True)
+    telegram_chat_id = models.CharField(max_length=100, null=True, blank=True)
     sms_recipients = models.TextField(
-        blank=True, 
         help_text="Comma-separated phone numbers with country code"
     )
     
@@ -303,8 +301,7 @@ class AlertRule(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='alerts_alertrule_created_by'
-    )
+        related_name='alerts_alertrule_created_by')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -415,7 +412,7 @@ class AlertLog(models.Model):
     triggered_at = models.DateTimeField(auto_now_add=True, db_index=True)
     
     # Alert details
-    trigger_value = models.FloatField()
+    trigger_value = models.FloatField(null=True, blank=True)
     threshold_value = models.FloatField()
     message = models.TextField()
     details = models.JSONField(default=dict)
@@ -441,10 +438,7 @@ class AlertLog(models.Model):
     resolved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='alerts_alertlog_resolved_by'
-    )
+        related_name='alerts_alertlog_resolved_by')
     resolution_note = models.TextField(blank=True)
     
     # Escalation tracking
@@ -568,16 +562,16 @@ class Notification(models.Model):
     ]
     
     alert_log = models.ForeignKey(
-        AlertLog, 
-        on_delete=models.CASCADE, 
+        AlertLog,
+        on_delete=models.CASCADE,
         related_name='%(app_label)s_%(class)s_tenant',
         db_index=True
     )
-    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
-    recipient = models.CharField(max_length=255, db_index=True)
-    subject = models.CharField(max_length=200, blank=True)
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, null=True, blank=True)
+    recipient = models.CharField(max_length=255, db_index=True, null=True, blank=True)
+    subject = models.CharField(max_length=200, null=True, blank=True)
     message = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -586,15 +580,15 @@ class Notification(models.Model):
     read_at = models.DateTimeField(null=True, blank=True)
     
     # Tracking
-    message_id = models.CharField(max_length=255, blank=True, help_text="Provider message ID")
+    message_id = models.CharField(max_length=255, blank=True, help_text="Provider message ID", null=True)
     error_message = models.TextField(blank=True)
     retry_count = models.IntegerField(default=0)
     last_retry_at = models.DateTimeField(null=True, blank=True)
     max_retries = models.IntegerField(default=3)
     
     # Cost tracking (for paid notifications)
-    estimated_cost = models.DecimalField(max_digits=10, decimal_places=4, default=0)
-    currency = models.CharField(max_length=3, default='USD')
+    estimated_cost = models.DecimalField(max_digits=10, decimal_places=4, default=0, null=True, blank=True)
+    currency = models.CharField(max_length=3, default='USD', null=True, blank=True)
     
     # Performance metrics
     response_time_ms = models.FloatField(default=0, help_text="Response time from provider")
@@ -677,12 +671,12 @@ class AlertSchedule(models.Model):
     ]
     
     rule = models.ForeignKey(
-        AlertRule, 
-        on_delete=models.CASCADE, 
+        AlertRule,
+        on_delete=models.CASCADE,
         related_name='%(app_label)s_%(class)s_tenant',
         db_index=True
     )
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(blank=True)
     
     # Schedule timing
@@ -704,7 +698,7 @@ class AlertSchedule(models.Model):
         ('Asia/Singapore', 'Singapore'),
         ('Australia/Sydney', 'Sydney'),
     ]
-    timezone = models.CharField(max_length=50, choices=TIMEZONE_CHOICES, default='UTC')
+    timezone = models.CharField(max_length=50, choices=TIMEZONE_CHOICES, default='UTC', null=True, blank=True)
     
     # Status
     is_active = models.BooleanField(default=True, db_index=True)
@@ -713,7 +707,7 @@ class AlertSchedule(models.Model):
     # Override settings
     override_recipients = models.BooleanField(default=False)
     override_email_recipients = models.TextField(blank=True)
-    override_telegram_chat_id = models.CharField(max_length=100, blank=True)
+    override_telegram_chat_id = models.CharField(max_length=100, null=True, blank=True)
     override_sms_recipients = models.TextField(blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -828,7 +822,7 @@ class AlertEscalation(models.Model):
         related_name='%(app_label)s_%(class)s_tenant',
         db_index=True
     )
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(blank=True)
     
     # Escalation timing
@@ -841,18 +835,14 @@ class AlertEscalation(models.Model):
     
     # Escalation recipients
     escalate_to_email = models.TextField(
-        blank=True,
         help_text="Comma-separated emails for escalation"
     )
-    escalate_to_telegram = models.CharField(max_length=100, blank=True)
+    escalate_to_telegram = models.CharField(max_length=100, null=True, blank=True)
     escalate_to_sms = models.TextField(blank=True)
     escalate_to_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='alerts_alertescalation_escalate_to_user'
-    )
+        related_name='alerts_alertescalation_escalate_to_user')
     
     # Message customization
     message_template = models.TextField(
@@ -988,17 +978,17 @@ class AlertTemplate(models.Model):
         db_index=True,
     )
 
-    name = models.CharField(max_length=100, unique=True, db_index=True)
-    alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES)
-    severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY)
+    name = models.CharField(max_length=100, unique=True, db_index=True, null=True, blank=True)
+    alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES, null=True, blank=True)
+    severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY, null=True, blank=True)
     description = models.TextField(blank=True)
     
     # Templates for different channels
-    email_subject = models.CharField(max_length=200)
+    email_subject = models.CharField(max_length=200, null=True, blank=True)
     email_body = models.TextField()
     telegram_message = models.TextField()
-    sms_message = models.CharField(max_length=160, help_text="Max 160 characters for SMS")
-    push_title = models.CharField(max_length=100, blank=True)
+    sms_message = models.CharField(max_length=160, help_text="Max 160 characters for SMS", null=True, blank=True)
+    push_title = models.CharField(max_length=100, null=True, blank=True)
     push_body = models.TextField(blank=True)
     webhook_payload = models.JSONField(default=dict, blank=True)
     
@@ -1022,8 +1012,7 @@ class AlertTemplate(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='alerts_alerttemplate_created_by'
-    )
+        related_name='alerts_alerttemplate_created_by')
     
     def __str__(self):
         return f"{self.name} ({self.get_severity_display()})"
@@ -1150,9 +1139,9 @@ class AlertAnalytics(models.Model):
     avg_notification_delay_ms = models.FloatField(default=0)
     
     # Cost metrics
-    estimated_sms_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    estimated_email_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    total_notification_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    estimated_sms_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+    estimated_email_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+    total_notification_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     
     # Performance metrics
     system_uptime_percent = models.FloatField(default=100)
@@ -1327,12 +1316,11 @@ class AlertGroup(models.Model):
         db_index=True,
     )
 
-    name = models.CharField(max_length=100, unique=True, db_index=True)
+    name = models.CharField(max_length=100, unique=True, db_index=True, null=True, blank=True)
     description = models.TextField(blank=True)
     rules = models.ManyToManyField(
         AlertRule, 
         related_name='%(app_label)s_%(class)s_tenant', 
-        blank=True,
         db_index=True
     )
     
@@ -1347,7 +1335,7 @@ class AlertGroup(models.Model):
     
     # Group recipients (overrides individual rule recipients)
     group_email_recipients = models.TextField(blank=True)
-    group_telegram_chat_id = models.CharField(max_length=100, blank=True)
+    group_telegram_chat_id = models.CharField(max_length=100, null=True, blank=True)
     group_sms_recipients = models.TextField(blank=True)
     
     # Group message template
@@ -1377,9 +1365,7 @@ class AlertGroup(models.Model):
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        null=True,
-        related_name='alerts_alertgroup_created_by'
-    )
+        related_name='alerts_alertgroup_created_by')
     
     def __str__(self):
         return f"Group: {self.name}"
@@ -1576,20 +1562,18 @@ class AlertSuppression(models.Model):
         ('all', 'All Alerts'),
     ]
     
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(blank=True)
     
     # Suppression scope
-    suppression_type = models.CharField(max_length=20, choices=SUPPRESSION_TYPES)
+    suppression_type = models.CharField(max_length=20, choices=SUPPRESSION_TYPES, null=True, blank=True)
     rule = models.ForeignKey(
         AlertRule, 
         on_delete=models.CASCADE, 
-        null=True, 
-        blank=True,
         related_name='%(app_label)s_%(class)s_tenant'
     )
-    alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES, blank=True)
-    severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY, blank=True)
+    alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES, null=True, blank=True)
+    severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY, null=True, blank=True)
     
     # Suppression window
     start_time = models.DateTimeField(db_index=True)
@@ -1614,8 +1598,7 @@ class AlertSuppression(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='alerts_alertsuppression_created_by'
-    )
+        related_name='alerts_alertsuppression_created_by')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -1773,8 +1756,8 @@ class SystemHealthCheck(models.Model):
         ('unknown', '❓ Unknown'),
     ]
     
-    check_name = models.CharField(max_length=100, unique=True, db_index=True)
-    check_type = models.CharField(max_length=50, choices=CHECK_TYPES)
+    check_name = models.CharField(max_length=100, unique=True, db_index=True, null=True, blank=True)
+    check_type = models.CharField(max_length=50, choices=CHECK_TYPES, null=True)
     description = models.TextField(blank=True)
     
     # Check configuration
@@ -1783,7 +1766,7 @@ class SystemHealthCheck(models.Model):
     timeout_seconds = models.IntegerField(default=10)
     
     # Status
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unknown')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unknown', null=True, blank=True)
     status_message = models.TextField(blank=True)
     response_time_ms = models.FloatField(default=0)
     error_message = models.TextField(blank=True)
@@ -1798,8 +1781,6 @@ class SystemHealthCheck(models.Model):
     alert_rule = models.ForeignKey(
         AlertRule,
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
         related_name='%(app_label)s_%(class)s_tenant'
     )
     
@@ -1995,7 +1976,7 @@ class AlertRuleHistory(models.Model):
         null=True,  # Allow null for deleted rules
         blank=True
     )
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES, null=True, blank=True)
     
     # Changed data
     old_data = models.JSONField(null=True, blank=True)
@@ -2009,17 +1990,16 @@ class AlertRuleHistory(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='alerts_alertrulehistory_changed_by'
-    )
+        related_name='alerts_alertrulehistory_changed_by')
     
     # Metadata
     changed_at = models.DateTimeField(auto_now_add=True, db_index=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    session_id = models.CharField(max_length=100, blank=True)
+    session_id = models.CharField(max_length=100, null=True, blank=True)
     
     # For deleted rules
-    rule_name_backup = models.CharField(max_length=100, blank=True)
+    rule_name_backup = models.CharField(max_length=100, null=True, blank=True)
     rule_id_backup = models.IntegerField(null=True, blank=True)
     
     def __str__(self):
@@ -2163,8 +2143,7 @@ class AlertDashboardConfig(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='alerts_alertdashboardconfig_user'
-    )
+        related_name='alerts_alertdashboardconfig_user')
     
     # Display preferences
     theme = models.CharField(
@@ -2279,7 +2258,7 @@ class AlertDashboardConfig(models.Model):
         default='default'
     )
     
-    custom_sound_url = models.URLField(blank=True, max_length=500)
+    custom_sound_url = models.URLField(blank=True, max_length=500, null=True)
     
     # ✅ FIXED: Added missing dashboard_layout field (referenced in get_dashboard_settings and serializer)
     dashboard_layout = models.JSONField(
@@ -2531,15 +2510,15 @@ class SystemMetrics(models.Model):
     new_signups_24h = models.IntegerField(default=0)
     
     # Earning metrics
-    total_earnings_1h = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_earnings_24h = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_earnings_1h = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    total_earnings_24h = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     total_tasks_1h = models.IntegerField(default=0)
-    avg_earning_per_user = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    avg_earning_per_user = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     
     # Payment metrics
     pending_payments = models.IntegerField(default=0)
     payment_requests_1h = models.IntegerField(default=0)
-    total_payout_pending = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_payout_pending = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     
     # Security metrics
     fraud_indicators_1h = models.IntegerField(default=0)
@@ -2815,9 +2794,9 @@ class SystemMetrics(models.Model):
 #         ('critical', 'Critical'),
 #     ]
     
-#     name = models.CharField(max_length=100, unique=True, db_index=True)
-#     alert_type = models.CharField(max_length=50, choices=ALERT_TYPES)
-#     severity = models.CharField(max_length=20, choices=SEVERITY, default='medium')
+#     name = models.CharField(max_length=100, unique=True, db_index=True, null=True, blank=True)
+#     alert_type = models.CharField(max_length=50, choices=ALERT_TYPES, null=True)
+#     severity = models.CharField(max_length=20, choices=SEVERITY, default='medium', null=True, blank=True)
 #     description = models.TextField(blank=True)
     
 #     # Threshold configuration
@@ -2836,14 +2815,14 @@ class SystemMetrics(models.Model):
 #     send_telegram = models.BooleanField(default=False)
 #     send_sms = models.BooleanField(default=False)
 #     send_webhook = models.BooleanField(default=False)
-#     webhook_url = models.URLField(blank=True, max_length=500)
+#     webhook_url = models.URLField(blank=True, max_length=500, null=True)
     
 #     # Recipients with validation
 #     email_recipients = models.TextField(
 #         help_text="Comma-separated emails",
 #         blank=True
 #     )
-#     telegram_chat_id = models.CharField(max_length=100, blank=True)
+#     telegram_chat_id = models.CharField(max_length=100, null=True, blank=True)
 #     sms_recipients = models.TextField(
 #         blank=True, 
 #         help_text="Comma-separated phone numbers with country code"
@@ -2868,7 +2847,7 @@ class SystemMetrics(models.Model):
 #         on_delete=models.SET_NULL,
 #         null=True,
 #         related_name='alerts_systemmetrics_tenant'
-#     )
+#     , null=True, blank=True)
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     updated_at = models.DateTimeField(auto_now=True)
     
@@ -3008,7 +2987,7 @@ class SystemMetrics(models.Model):
 #         null=True,
 #         blank=True,
 #         related_name='alerts_systemmetrics_tenant'
-#     )
+#     , null=True)
 #     resolution_note = models.TextField(blank=True)
     
 #     # Escalation tracking
@@ -3137,11 +3116,11 @@ class SystemMetrics(models.Model):
 #         related_name='%(app_label)s_%(class)s_tenant',
 #         db_index=True
 #     )
-#     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
-#     recipient = models.CharField(max_length=255, db_index=True)
-#     subject = models.CharField(max_length=200, blank=True)
+#     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, null=True, blank=True)
+#     recipient = models.CharField(max_length=255, db_index=True, null=True, blank=True)
+#     subject = models.CharField(max_length=200, null=True, blank=True)
 #     message = models.TextField()
-#     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+#     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
     
 #     # Timestamps
 #     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -3150,15 +3129,15 @@ class SystemMetrics(models.Model):
 #     read_at = models.DateTimeField(null=True, blank=True)
     
 #     # Tracking
-#     message_id = models.CharField(max_length=255, blank=True, help_text="Provider message ID")
+#     message_id = models.CharField(max_length=255, blank=True, help_text="Provider message ID", null=True)
 #     error_message = models.TextField(blank=True)
 #     retry_count = models.IntegerField(default=0)
 #     last_retry_at = models.DateTimeField(null=True, blank=True)
 #     max_retries = models.IntegerField(default=3)
     
 #     # Cost tracking (for paid notifications)
-#     estimated_cost = models.DecimalField(max_digits=10, decimal_places=4, default=0)
-#     currency = models.CharField(max_length=3, default='USD')
+#     estimated_cost = models.DecimalField(max_digits=10, decimal_places=4, default=0, null=True, blank=True)
+#     currency = models.CharField(max_length=3, default='USD', null=True, blank=True)
     
 #     # Performance metrics
 #     response_time_ms = models.FloatField(default=0, help_text="Response time from provider")
@@ -3246,7 +3225,7 @@ class SystemMetrics(models.Model):
 #         related_name='%(app_label)s_%(class)s_tenant',
 #         db_index=True
 #     )
-#     name = models.CharField(max_length=100)
+#     name = models.CharField(max_length=100, null=True, blank=True)
 #     description = models.TextField(blank=True)
     
 #     # Schedule timing
@@ -3268,7 +3247,7 @@ class SystemMetrics(models.Model):
 #         ('Asia/Singapore', 'Singapore'),
 #         ('Australia/Sydney', 'Sydney'),
 #     ]
-#     timezone = models.CharField(max_length=50, choices=TIMEZONE_CHOICES, default='UTC')
+#     timezone = models.CharField(max_length=50, choices=TIMEZONE_CHOICES, default='UTC', null=True, blank=True)
     
 #     # Status
 #     is_active = models.BooleanField(default=True, db_index=True)
@@ -3277,7 +3256,7 @@ class SystemMetrics(models.Model):
 #     # Override settings
 #     override_recipients = models.BooleanField(default=False)
 #     override_email_recipients = models.TextField(blank=True)
-#     override_telegram_chat_id = models.CharField(max_length=100, blank=True)
+#     override_telegram_chat_id = models.CharField(max_length=100, null=True, blank=True)
 #     override_sms_recipients = models.TextField(blank=True)
     
 #     created_at = models.DateTimeField(auto_now_add=True)
@@ -3392,7 +3371,7 @@ class SystemMetrics(models.Model):
 #         related_name='%(app_label)s_%(class)s_tenant',
 #         db_index=True
 #     )
-#     name = models.CharField(max_length=100)
+#     name = models.CharField(max_length=100, null=True, blank=True)
 #     description = models.TextField(blank=True)
     
 #     # Escalation timing
@@ -3408,7 +3387,7 @@ class SystemMetrics(models.Model):
 #         blank=True,
 #         help_text="Comma-separated emails for escalation"
 #     )
-#     escalate_to_telegram = models.CharField(max_length=100, blank=True)
+#     escalate_to_telegram = models.CharField(max_length=100, null=True, blank=True)
 #     escalate_to_sms = models.TextField(blank=True)
 #     escalate_to_user = models.ForeignKey(
 #         settings.AUTH_USER_MODEL,
@@ -3416,7 +3395,7 @@ class SystemMetrics(models.Model):
 #         null=True,
 #         blank=True,
 #         related_name='alerts_systemmetrics_tenant'
-#     )
+#     , null=True)
     
 #     # Message customization
 #     message_template = models.TextField(
@@ -3552,17 +3531,17 @@ class SystemMetrics(models.Model):
         db_index=True,
     )
 #     """Templates for alert messages"""
-#     name = models.CharField(max_length=100, unique=True, db_index=True)
-#     alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES)
-#     severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY)
+#     name = models.CharField(max_length=100, unique=True, db_index=True, null=True, blank=True)
+#     alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES, null=True, blank=True)
+#     severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY, null=True, blank=True)
 #     description = models.TextField(blank=True)
     
 #     # Templates for different channels
-#     email_subject = models.CharField(max_length=200)
+#     email_subject = models.CharField(max_length=200, null=True, blank=True)
 #     email_body = models.TextField()
 #     telegram_message = models.TextField()
-#     sms_message = models.CharField(max_length=160, help_text="Max 160 characters for SMS")
-#     push_title = models.CharField(max_length=100, blank=True)
+#     sms_message = models.CharField(max_length=160, help_text="Max 160 characters for SMS", null=True, blank=True)
+#     push_title = models.CharField(max_length=100, null=True, blank=True)
 #     push_body = models.TextField(blank=True)
 #     webhook_payload = models.JSONField(default=dict, blank=True)
     
@@ -3587,7 +3566,7 @@ class SystemMetrics(models.Model):
 #         on_delete=models.SET_NULL,
 #         null=True,
 #         related_name='alerts_systemmetrics_tenant'
-#     )
+#     , null=True, blank=True)
     
 #     def __str__(self):
 #         return f"{self.name} ({self.get_severity_display()})"
@@ -3714,9 +3693,9 @@ class SystemMetrics(models.Model):
 #     avg_notification_delay_ms = models.FloatField(default=0)
     
 #     # Cost metrics
-#     estimated_sms_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-#     estimated_email_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-#     total_notification_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+#     estimated_sms_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+#     estimated_email_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+#     total_notification_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     
 #     # Performance metrics
 #     system_uptime_percent = models.FloatField(default=100)
@@ -3891,7 +3870,7 @@ class SystemMetrics(models.Model):
         db_index=True,
     )
 #     """Group related alert rules together"""
-#     name = models.CharField(max_length=100, unique=True, db_index=True)
+#     name = models.CharField(max_length=100, unique=True, db_index=True, null=True, blank=True)
 #     description = models.TextField(blank=True)
 #     rules = models.ManyToManyField(
 #         AlertRule, 
@@ -3911,7 +3890,7 @@ class SystemMetrics(models.Model):
     
 #     # Group recipients (overrides individual rule recipients)
 #     group_email_recipients = models.TextField(blank=True)
-#     group_telegram_chat_id = models.CharField(max_length=100, blank=True)
+#     group_telegram_chat_id = models.CharField(max_length=100, null=True, blank=True)
 #     group_sms_recipients = models.TextField(blank=True)
     
 #     # Group message template
@@ -3943,7 +3922,7 @@ class SystemMetrics(models.Model):
 #         on_delete=models.SET_NULL,
 #         null=True,
 #         related_name='alerts_systemmetrics_tenant'
-#     )
+#     , null=True, blank=True)
     
 #     def __str__(self):
 #         return f"Group: {self.name}"
@@ -4140,11 +4119,11 @@ class SystemMetrics(models.Model):
 #         ('all', 'All Alerts'),
 #     ]
     
-#     name = models.CharField(max_length=100)
+#     name = models.CharField(max_length=100, null=True, blank=True)
 #     description = models.TextField(blank=True)
     
 #     # Suppression scope
-#     suppression_type = models.CharField(max_length=20, choices=SUPPRESSION_TYPES)
+#     suppression_type = models.CharField(max_length=20, choices=SUPPRESSION_TYPES, null=True, blank=True)
 #     rule = models.ForeignKey(
 #         AlertRule, 
 #         on_delete=models.CASCADE, 
@@ -4152,8 +4131,8 @@ class SystemMetrics(models.Model):
 #         blank=True,
 #         related_name='%(app_label)s_%(class)s_tenant'
 #     )
-#     alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES, blank=True)
-#     severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY, blank=True)
+#     alert_type = models.CharField(max_length=50, choices=AlertRule.ALERT_TYPES, null=True, blank=True)
+#     severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY, null=True, blank=True)
     
 #     # Suppression window
 #     start_time = models.DateTimeField(db_index=True)
@@ -4179,7 +4158,7 @@ class SystemMetrics(models.Model):
 #         on_delete=models.SET_NULL,
 #         null=True,
 #         related_name='alerts_systemmetrics_tenant'
-#     )
+#     , null=True, blank=True)
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     updated_at = models.DateTimeField(auto_now=True)
     
@@ -4337,8 +4316,8 @@ class SystemMetrics(models.Model):
 #         ('unknown', '❓ Unknown'),
 #     ]
     
-#     check_name = models.CharField(max_length=100, unique=True, db_index=True)
-#     check_type = models.CharField(max_length=50, choices=CHECK_TYPES)
+#     check_name = models.CharField(max_length=100, unique=True, db_index=True, null=True, blank=True)
+#     check_type = models.CharField(max_length=50, choices=CHECK_TYPES, null=True)
 #     description = models.TextField(blank=True)
     
 #     # Check configuration
@@ -4347,7 +4326,7 @@ class SystemMetrics(models.Model):
 #     timeout_seconds = models.IntegerField(default=10)
     
 #     # Status
-#     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unknown')
+#     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unknown', null=True, blank=True)
 #     status_message = models.TextField(blank=True)
 #     response_time_ms = models.FloatField(default=0)
 #     error_message = models.TextField(blank=True)
@@ -4559,7 +4538,7 @@ class SystemMetrics(models.Model):
 #         null=True,  # Allow null for deleted rules
 #         blank=True
 #     )
-#     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+#     action = models.CharField(max_length=20, choices=ACTION_CHOICES, null=True, blank=True)
     
 #     # Changed data
 #     old_data = models.JSONField(null=True, blank=True)
@@ -4574,16 +4553,16 @@ class SystemMetrics(models.Model):
 #         on_delete=models.SET_NULL,
 #         null=True,
 #         related_name='alerts_systemmetrics_tenant'
-#     )
+#     , null=True, blank=True)
     
 #     # Metadata
 #     changed_at = models.DateTimeField(auto_now_add=True, db_index=True)
 #     ip_address = models.GenericIPAddressField(null=True, blank=True)
 #     user_agent = models.TextField(blank=True)
-#     session_id = models.CharField(max_length=100, blank=True)
+#     session_id = models.CharField(max_length=100, null=True, blank=True)
     
 #     # For deleted rules
-#     rule_name_backup = models.CharField(max_length=100, blank=True)
+#     rule_name_backup = models.CharField(max_length=100, null=True, blank=True)
 #     rule_id_backup = models.IntegerField(null=True, blank=True)
     
 #     def __str__(self):
@@ -4728,7 +4707,7 @@ class SystemMetrics(models.Model):
 #         settings.AUTH_USER_MODEL,
 #         on_delete=models.CASCADE,
 #         related_name='alerts_systemmetrics_tenant'
-#     )
+#     , null=True, blank=True)
     
 #     # Display preferences
 #     theme = models.CharField(
@@ -4843,7 +4822,7 @@ class SystemMetrics(models.Model):
 #         default='default'
 #     )
     
-#     custom_sound_url = models.URLField(blank=True, max_length=500)
+#     custom_sound_url = models.URLField(blank=True, max_length=500, null=True)
     
 #     updated_at = models.DateTimeField(auto_now=True)
 #     created_at = models.DateTimeField(auto_now_add=True)
@@ -5088,15 +5067,15 @@ class SystemMetrics(models.Model):
 #     new_signups_24h = models.IntegerField(default=0)
     
 #     # Earning metrics
-#     total_earnings_1h = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-#     total_earnings_24h = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+#     total_earnings_1h = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+#     total_earnings_24h = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
 #     total_tasks_1h = models.IntegerField(default=0)
-#     avg_earning_per_user = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+#     avg_earning_per_user = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     
 #     # Payment metrics
 #     pending_payments = models.IntegerField(default=0)
 #     payment_requests_1h = models.IntegerField(default=0)
-#     total_payout_pending = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+#     total_payout_pending = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     
 #     # Security metrics
 #     fraud_indicators_1h = models.IntegerField(default=0)

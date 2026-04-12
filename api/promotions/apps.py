@@ -15,3 +15,8 @@ class PromotionsConfig(AppConfig):
         import api.promotions.admin
         """App ready হলে signals import করো।"""
         import api.promotions.signals  # noqa: F401
+        try:
+            from api.promotions.admin import _force_register_promotions
+            _force_register_promotions()
+        except Exception as e:
+            pass

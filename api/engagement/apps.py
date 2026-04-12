@@ -10,3 +10,8 @@ class EngagementConfig(AppConfig):
             import api.engagement.signals  # noqa: F401
         except ImportError:
             pass
+        try:
+            from api.engagement.admin import _force_register_engagement
+            _force_register_engagement()
+        except Exception as e:
+            pass

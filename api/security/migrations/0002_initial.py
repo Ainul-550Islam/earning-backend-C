@@ -386,7 +386,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='securityconfig',
-            constraint=models.UniqueConstraint(condition=models.Q(('is_default', True)), fields=('config_type', 'is_default'), name='unique_default_per_type'),
+            constraint=models.UniqueConstraint(fields=('config_type', 'is_default'), name='unique_default_per_type'),
         ),
         migrations.AddIndex(
             model_name='securitylog',
@@ -442,7 +442,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='userban',
-            constraint=models.UniqueConstraint(condition=models.Q(('is_active_ban', True)), fields=('user', 'is_active_ban'), name='unique_active_ban_per_user'),
+            constraint=models.UniqueConstraint(fields=('user', 'is_active_ban'), name='unique_active_ban_per_user'),
         ),
         migrations.AddIndex(
             model_name='usersession',
@@ -486,22 +486,22 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='withdrawalprotection',
-            constraint=models.UniqueConstraint(condition=models.Q(('is_active', True)), fields=('user',), name='unique_active_protection_per_user'),
+            constraint=models.UniqueConstraint(fields=('user',), name='unique_active_protection_per_user'),
         ),
         migrations.AddConstraint(
             model_name='withdrawalprotection',
-            constraint=models.CheckConstraint(check=models.Q(('daily_limit__lte', models.F('weekly_limit'))), name='daily_limit_lte_weekly_limit'),
+            constraint=models.CheckConstraint(check=models.Q(daily_limit__lte=models.F('weekly_limit')), name='daily_limit_lte_weekly_limit'),
         ),
         migrations.AddConstraint(
             model_name='withdrawalprotection',
-            constraint=models.CheckConstraint(check=models.Q(('weekly_limit__lte', models.F('monthly_limit'))), name='weekly_limit_lte_monthly_limit'),
+            constraint=models.CheckConstraint(check=models.Q(weekly_limit__lte=models.F('monthly_limit')), name='weekly_limit_lte_monthly_limit'),
         ),
         migrations.AddConstraint(
             model_name='withdrawalprotection',
-            constraint=models.CheckConstraint(check=models.Q(('single_transaction_limit__lte', models.F('daily_limit'))), name='single_transaction_limit_lte_daily_limit'),
+            constraint=models.CheckConstraint(check=models.Q(single_transaction_limit__lte=models.F('daily_limit')), name='single_transaction_limit_lte_daily_limit'),
         ),
         migrations.AddConstraint(
             model_name='withdrawalprotection',
-            constraint=models.CheckConstraint(check=models.Q(('min_withdrawal_amount__lte', models.F('single_transaction_limit'))), name='min_withdrawal_amount_lte_single_transaction_limit'),
+            constraint=models.CheckConstraint(check=models.Q(min_withdrawal_amount__lte=models.F('single_transaction_limit')), name='min_withdrawal_amount_lte_single_transaction_limit'),
         ),
     ]

@@ -1,58 +1,30 @@
 """
-Management Command: send_broadcast — Trigger broadcast sending from CLI.
+Management command: python manage.py send_broadcast <broadcast_id>
 """
-from __future__ import annotations
-import logging
-from django.core.management.base import BaseCommand, CommandError
-from api.messaging.exceptions import BroadcastNotFoundError, BroadcastStateError, BroadcastSendError
-from api.messaging import services
-
-logger = logging.getLogger(__name__)
+from django.core.management.base import BaseCommand
 
 
 class Command(BaseCommand):
-    help = "Send an AdminBroadcast by its UUID."
+    help = "Send a broadcast message by ID"
 
     def add_arguments(self, parser):
-        parser.add_argument("broadcast_id", type=str, help="UUID of the AdminBroadcast.")
-        parser.add_argument("--async", dest="async_mode", action="store_true",
-                            help="Queue via Celery instead of sending synchronously.")
+        parser.add_argument("broadcast_id", type=str)
+        parser.add_argument("--async", dest="use_async", action="store_true")
 
     def handle(self, *args, **options):
         broadcast_id = options["broadcast_id"]
-        async_mode = options["async_mode"]
+        use_async    = options.get("use_async", False)
 
-        if not broadcast_id or not broadcast_id.strip():
-            raise CommandError("broadcast_id must not be empty.")
-
-        if async_mode:
+        if use_async:
+            from messaging.tasks import send_broadcast_async
+            task = send_broadcast_async.delay(broadcast_id)
+            self.stdout.write(f"✅ Queued broadcast {broadcast_id} — task: {task.id}")
+        else:
+            from messaging import services
             try:
-                from api.messaging.tasks import send_broadcast_async
-                task = send_broadcast_async.delay(broadcast_id)
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Broadcast {broadcast_id} queued. Task ID: {task.id}"
-                    )
-                )
+                result = services.send_broadcast(broadcast_id=broadcast_id)
+                self.stdout.write(self.style.SUCCESS(
+                    f"✅ Sent to {result['delivered']} recipients."
+                ))
             except Exception as exc:
-                raise CommandError(f"Failed to queue broadcast: {exc}")
-            return
-
-        self.stdout.write(f"Sending broadcast {broadcast_id} ...")
-        try:
-            result = services.send_broadcast(broadcast_id=broadcast_id)
-        except BroadcastNotFoundError as exc:
-            raise CommandError(f"Not found: {exc}")
-        except BroadcastStateError as exc:
-            raise CommandError(f"State error: {exc}")
-        except BroadcastSendError as exc:
-            raise CommandError(f"Send error: {exc}")
-        except Exception as exc:
-            logger.exception("send_broadcast command unexpected error: %s", exc)
-            raise CommandError(f"Unexpected error: {exc}")
-
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Broadcast sent: {result['delivered_count']}/{result['recipient_count']} delivered."
-            )
-        )
+                self.stderr.write(f"❌ Failed: {exc}")

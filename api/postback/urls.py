@@ -1,6 +1,6 @@
 """urls.py – URL routing for the postback module."""
 from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 
 from .viewsets import (
     DuplicateLeadCheckViewSet,

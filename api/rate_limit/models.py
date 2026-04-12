@@ -35,10 +35,10 @@ class RateLimitConfig(models.Model):
     ]
     
     # Basic fields
-    name = models.CharField(max_length=100, unique=True)
-    rate_limit_type = models.CharField(max_length=20, choices=RATE_LIMIT_TYPES)
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    rate_limit_type = models.CharField(max_length=20, choices=RATE_LIMIT_TYPES, null=True, blank=True)
     requests_per_unit = models.IntegerField(default=100)
-    time_unit = models.CharField(max_length=10, choices=TIME_UNITS, default='hour')
+    time_unit = models.CharField(max_length=10, choices=TIME_UNITS, default='hour', null=True, blank=True)
     time_value = models.IntegerField(default=1)
     is_active = models.BooleanField(default=True)
     
@@ -137,13 +137,13 @@ class RateLimitLog(models.Model):
     # Request info
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     ip_address = models.GenericIPAddressField()
-    endpoint = models.CharField(max_length=500)
-    request_method = models.CharField(max_length=10, default='GET')
+    endpoint = models.CharField(max_length=500, null=True, blank=True)
+    request_method = models.CharField(max_length=10, default='GET', null=True, blank=True)
     user_agent = models.TextField(blank=True)
     
     # Rate limit info
     config = models.ForeignKey(RateLimitConfig, on_delete=models.SET_NULL, null=True, blank=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, null=True, blank=True)
     requests_count = models.IntegerField(default=1)
     
     # Earning app specific
@@ -225,7 +225,7 @@ class UserRateLimitProfile(models.Model):
         related_name='%(app_label)s_%(class)s_tenant',
         db_index=True,
     )
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='rate_limit_userratelimitprofile_user')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='rate_limit_userratelimitprofile_user', null=True, blank=True)
     
     # Premium status
     is_premium = models.BooleanField(default=False)

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Alert Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e9ecef;
+        }
+        .test-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #00b894;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #00b894;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .test-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #00b894;
+            color: white;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .success-box {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #c3e6cb;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .channel-test {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 3px solid #00b894;
+        }
+        .channel-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-success { background: #28a745; color: white; }
+        .status-pending { background: #ffc107; color: #000; }
+        .status-failed { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Test Alert Notification</h1>
+        <p>System Test Message</p>
+    </div>
+    
+    <div class="content">
+        <div class="test-info">
+            <h2>Test Details</h2>
+            <p><span class="test-badge">TEST ALERT</span></p>
+            
+            <p><strong>Test Type:</strong> {{ test_type|title }}</p>
+            <p><strong>Test Reason:</strong> {{ test_reason }}</p>
+            <p><strong>Triggered By:</strong> {{ triggered_by }}</p>
+            
+            {% if test_rule %}
+            <p><strong>Test Rule:</strong> {{ test_rule.name }}</p>
+            <p><strong>Rule Type:</strong> {{ test_rule.alert_type }}</p>
+            <p><strong>Rule Severity:</strong> {{ test_rule.get_severity_display }}</p>
+            <p><strong>Test Value:</strong> {{ test_value }}</p>
+            <p><strong>Threshold:</strong> {{ test_rule.threshold_value }}</p>
+            {% endif %}
+            
+            <div class="timestamp">
+                <p><strong>Test Time:</strong> {{ test_time|date:"Y-m-d H:i:s" }}</p>
+            </div>
+        </div>
+        
+        <div class="success-box">
+            <h3>Test Status: Success</h3>
+            <p>This is a test alert to verify that the notification system is working correctly.</p>
+            <p><strong>All notification channels are functioning as expected.</strong></p>
+        </div>
+        
+        {% if channel_results %}
+        <div style="margin-top: 20px;">
+            <h3>Channel Test Results</h3>
+            {% for channel in channel_results %}
+            <div class="channel-test">
+                <p><strong>{{ channel.name }} ({{ channel.type }})</strong></p>
+                <p><span class="channel-status status-{{ channel.status }}">{{ channel.status|title }}</span></p>
+                <p><small>{{ channel.message }}</small></p>
+                <p><small>Tested at: {{ channel.test_time|date:"H:i:s" }}</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if test_configuration %}
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h3>Test Configuration</h3>
+            <p><strong>Environment:</strong> {{ test_configuration.environment }}</p>
+            <p><strong>Test Scope:</strong> {{ test_configuration.scope }}</p>
+            <p><strong>Test Duration:</strong> {{ test_configuration.duration }}</p>
+            {% if test_configuration.tested_channels %}
+            <p><strong>Tested Channels:</strong> {{ test_configuration.tested_channels|join:", " }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if next_steps %}
+        <div style="margin-top: 20px; padding: 15px; background: #d1ecf1; border-radius: 5px; border: 1px solid #bee5eb;">
+            <h3>Next Steps</h3>
+            <ol>
+                {% for step in next_steps %}
+                <li>{{ step }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{{ dashboard_url }}" class="btn">View Dashboard</a>
+            <a href="{{ test_results_url }}" class="btn btn-secondary">View Test Results</a>
+        </div>
+        
+        {% if verification_info %}
+        <div style="margin-top: 20px;">
+            <h3>Verification Information</h3>
+            <p><strong>Test ID:</strong> {{ verification_info.test_id }}</p>
+            <p><strong>Verification Code:</strong> {{ verification_info.verification_code }}</p>
+            <p><strong>Expires:</strong> {{ verification_info.expires_at|date:"Y-m-d H:i:s" }}</p>
+        </div>
+        {% endif %}
+        
+        {% if contact_info %}
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffeaa7;">
+            <h3>Test Contact Information</h3>
+            <p>If you have any questions about this test, please contact:</p>
+            <p><strong>Test Administrator:</strong> {{ contact_info.admin_name }}</p>
+            <p><strong>Email:</strong> {{ contact_info.admin_email }}</p>
+            <p><strong>Phone:</strong> {{ contact_info.admin_phone }}</p>
+        </div>
+        {% endif %}
+        
+        {% if troubleshooting_info %}
+        <div style="margin-top: 20px;">
+            <h3>Troubleshooting</h3>
+            <p>If you did not receive this test notification:</p>
+            <ul>
+                {% for tip in troubleshooting_info %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>This is a test alert notification from the Alert Management System</p>
+        <p>No action is required for this test message</p>
+        <p>If you received this message in error, please contact your system administrator</p>
+    </div>
+</body>
+</html>

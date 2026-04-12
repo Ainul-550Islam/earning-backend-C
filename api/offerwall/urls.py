@@ -2,7 +2,7 @@
 Offerwall URL configuration
 """
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 
 app_name = 'offerwall'
 
@@ -33,7 +33,11 @@ webhook_patterns = [
     path('offertoro/', OfferwallWebhookView.as_view(), name='offertoro-webhook'),
 ]
 
+from .views import PublicOfferListView
+from .views import PublicOfferListView
 urlpatterns = [
+    path('public/', PublicOfferListView.as_view(), name='public-offers'),
+    path('public/', PublicOfferListView.as_view(), name='public-offers'),
     # Custom list-level actions before router (avoid /{pk}/ conflict)
     path('offers/stats/',             OfferViewSet.as_view({'get': 'stats'}),                  name='offer-stats'),
     path('offers/featured/',          OfferViewSet.as_view({'get': 'featured'}),               name='offer-featured'),

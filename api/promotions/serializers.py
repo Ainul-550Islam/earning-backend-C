@@ -708,3 +708,250 @@ def _get_client_ip_from_request(request) -> str | None:
     if x_forwarded_for:
         return x_forwarded_for.split(',')[0].strip()
     return request.META.get('REMOTE_ADDR')
+
+
+# =============================================================================
+# NEW MODEL SERIALIZERS
+# =============================================================================
+
+from api.promotions.models import (
+    PublisherProfile, AdvertiserProfile, APIKeyModel, WebhookConfigModel,
+    VirtualCurrencyConfig, WhiteLabelConfig, EmailSubmitCampaign,
+    CPCCampaign, CPIAppCampaign, QuizCampaign, SmartLinkConfig,
+    ContentLockModel, SubIDClick, PayoutBatch, IPBlacklistModel,
+    TrackingDomain, SystemConfig,
+)
+
+
+class PublisherProfileSerializer(serializers.ModelSerializer):
+    username          = serializers.CharField(source='user.username', read_only=True)
+    email             = serializers.EmailField(source='user.email', read_only=True)
+    available_balance = serializers.SerializerMethodField()
+
+    def get_available_balance(self, obj):
+        from django.db.models import Sum
+        from api.promotions.models import PromotionTransaction
+        val = PromotionTransaction.objects.filter(user=obj.user).aggregate(
+            t=Sum('amount'))['t'] or 0
+        return str(max(val, 0))
+
+    class Meta:
+        model  = PublisherProfile
+        fields = ['id', 'username', 'email', 'tier', 'approval_status', 'country',
+                  'website_url', 'traffic_source', 'monthly_traffic', 'niche',
+                  'total_earned', 'total_withdrawn', 'available_balance',
+                  'phone_number', 'created_at']
+        read_only_fields = ['tier', 'total_earned', 'total_withdrawn']
+
+
+class AdvertiserProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model  = AdvertiserProfile
+        fields = ['id', 'username', 'company_name', 'website_url', 'country',
+                  'billing_email', 'total_deposited', 'total_spent',
+                  'credit_balance', 'is_verified', 'created_at']
+        read_only_fields = ['total_deposited', 'total_spent', 'credit_balance', 'is_verified']
+
+
+class APIKeySerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = APIKeyModel
+        fields = ['id', 'name', 'permissions', 'rate_limit', 'is_active',
+                  'last_used', 'total_requests', 'created_at']
+        read_only_fields = ['key_hash', 'total_requests', 'last_used']
+
+
+class WebhookConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = WebhookConfigModel
+        fields = ['id', 'event', 'url', 'method', 'is_active',
+                  'total_fires', 'last_fired', 'last_status_code', 'created_at']
+        read_only_fields = ['total_fires', 'last_fired', 'last_status_code']
+
+
+class VirtualCurrencyConfigSerializer(serializers.ModelSerializer):
+    rate_display = serializers.SerializerMethodField()
+
+    def get_rate_display(self, obj):
+        return f'1 USD = {obj.usd_to_vc_rate} {obj.currency_name}'
+
+    class Meta:
+        model  = VirtualCurrencyConfig
+        fields = ['id', 'currency_name', 'currency_icon', 'usd_to_vc_rate',
+                  'min_payout_vc', 'rounding', 'postback_url', 'is_active',
+                  'rate_display', 'created_at']
+
+
+class WhiteLabelConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = WhiteLabelConfig
+        fields = ['id', 'brand_name', 'logo_url', 'primary_color', 'secondary_color',
+                  'custom_domain', 'welcome_message', 'footer_text', 'show_powered_by',
+                  'is_active', 'created_at']
+
+
+class EmailSubmitCampaignSerializer(serializers.ModelSerializer):
+    advertiser_name = serializers.CharField(source='advertiser.username', read_only=True)
+    cvr_pct         = serializers.SerializerMethodField()
+
+    def get_cvr_pct(self, obj):
+        return 0.0  # Calculate from conversions in production
+
+    class Meta:
+        model  = EmailSubmitCampaign
+        fields = ['id', 'campaign_name', 'advertiser_name', 'opt_in_type', 'payout',
+                  'niche', 'target_countries', 'daily_cap', 'today_submits',
+                  'total_submits', 'total_spent', 'cvr_pct', 'status', 'created_at']
+        read_only_fields = ['today_submits', 'total_submits', 'total_spent']
+
+
+class CPCCampaignSerializer(serializers.ModelSerializer):
+    advertiser_name = serializers.CharField(source='advertiser.username', read_only=True)
+
+    class Meta:
+        model  = CPCCampaign
+        fields = ['id', 'title', 'advertiser_name', 'destination_url',
+                  'payout_us', 'payout_gb', 'payout_ca', 'payout_au', 'payout_other',
+                  'daily_cap', 'today_clicks', 'total_clicks', 'total_spent',
+                  'dedup_window_sec', 'status', 'created_at']
+        read_only_fields = ['today_clicks', 'total_clicks', 'total_spent']
+
+
+class CPIAppCampaignSerializer(serializers.ModelSerializer):
+    advertiser_name = serializers.CharField(source='advertiser.username', read_only=True)
+    postback_url    = serializers.SerializerMethodField()
+
+    def get_postback_url(self, obj):
+        from django.conf import settings
+        base = getattr(settings, 'SITE_URL', 'https://yourplatform.com')
+        return f'{base}/api/promotions/cpi/postback/{obj.mmp_provider}/{obj.id}/'
+
+    class Meta:
+        model  = CPIAppCampaign
+        fields = ['id', 'app_name', 'bundle_id', 'platform', 'app_store_url',
+                  'payout_per_install', 'mmp_provider', 'mmp_app_id',
+                  'target_countries', 'daily_cap', 'today_installs', 'total_installs',
+                  'total_spent', 'postback_url', 'status', 'created_at']
+        read_only_fields = ['today_installs', 'total_installs', 'total_spent']
+
+
+class QuizCampaignSerializer(serializers.ModelSerializer):
+    advertiser_name = serializers.CharField(source='advertiser.username', read_only=True)
+    questions_count = serializers.SerializerMethodField()
+
+    def get_questions_count(self, obj):
+        return len(obj.questions) if obj.questions else 0
+
+    class Meta:
+        model  = QuizCampaign
+        fields = ['id', 'title', 'advertiser_name', 'quiz_type', 'questions_count',
+                  'lead_form_fields', 'payout', 'target_countries', 'daily_cap',
+                  'today_completions', 'total_completions', 'total_spent', 'status', 'created_at']
+        read_only_fields = ['today_completions', 'total_completions', 'total_spent']
+
+
+class SmartLinkConfigSerializer(serializers.ModelSerializer):
+    redirect_url = serializers.SerializerMethodField()
+
+    def get_redirect_url(self, obj):
+        from django.conf import settings
+        base = getattr(settings, 'SITE_URL', 'https://yourplatform.com')
+        return f'{base}/api/promotions/smartlink/{obj.publisher_id}/{obj.link_hash}/'
+
+    class Meta:
+        model  = SmartLinkConfig
+        fields = ['id', 'name', 'link_hash', 'total_clicks', 'total_earnings',
+                  'is_active', 'redirect_url', 'created_at']
+        read_only_fields = ['link_hash', 'total_clicks', 'total_earnings']
+
+
+class ContentLockSerializer(serializers.ModelSerializer):
+    unlock_rate  = serializers.SerializerMethodField()
+    embed_code   = serializers.SerializerMethodField()
+
+    def get_unlock_rate(self, obj):
+        if obj.total_views == 0: return 0.0
+        return round(obj.total_unlocks / obj.total_views * 100, 2)
+
+    def get_embed_code(self, obj):
+        from django.conf import settings
+        base = getattr(settings, 'SITE_URL', 'https://yourplatform.com')
+        return f'<script src="{base}/static/promotions/js/locker.js" data-lock="{obj.lock_token}"></script>'
+
+    class Meta:
+        model  = ContentLockModel
+        fields = ['id', 'lock_type', 'lock_token', 'title', 'description',
+                  'destination_url', 'file_url', 'file_name', 'theme',
+                  'required_offers', 'total_views', 'total_unlocks', 'total_earnings',
+                  'unlock_rate', 'embed_code', 'is_active', 'created_at']
+        read_only_fields = ['lock_token', 'total_views', 'total_unlocks', 'total_earnings']
+
+
+class PayoutBatchSerializer(serializers.ModelSerializer):
+    publisher_name = serializers.CharField(source='publisher.username', read_only=True)
+
+    class Meta:
+        model  = PayoutBatch
+        fields = ['id', 'batch_id', 'publisher_name', 'amount', 'method',
+                  'method_details', 'status', 'fee', 'net_amount', 'tx_hash',
+                  'processed_at', 'notes', 'created_at']
+        read_only_fields = ['batch_id', 'fee', 'net_amount', 'processed_at']
+
+
+class PayoutRequestSerializer(serializers.Serializer):
+    amount         = serializers.DecimalField(max_digits=12, decimal_places=2)
+    method         = serializers.ChoiceField(choices=[
+        'paypal', 'payoneer', 'wire', 'ach',
+        'usdt_trc20', 'usdt_erc20', 'usdt_bep20', 'btc',
+    ])
+    method_details = serializers.DictField(required=False, default=dict)
+
+    def validate_amount(self, v):
+        from decimal import Decimal
+        if v < Decimal('10.00'):
+            raise serializers.ValidationError('Minimum payout is $10.00')
+        return v
+
+
+class IPBlacklistSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = IPBlacklistModel
+        fields = ['id', 'ip_address', 'cidr', 'reason', 'severity',
+                  'expires_at', 'is_active', 'hit_count', 'last_hit', 'created_at']
+        read_only_fields = ['hit_count', 'last_hit']
+
+
+class TrackingDomainSerializer(serializers.ModelSerializer):
+    dns_instructions = serializers.SerializerMethodField()
+
+    def get_dns_instructions(self, obj):
+        from django.conf import settings
+        target = getattr(settings, 'TRACKING_DOMAIN_TARGET', 'track.yourplatform.com')
+        return {
+            'type': 'CNAME',
+            'name': obj.domain,
+            'value': target,
+            'ttl': 300,
+        }
+
+    class Meta:
+        model  = TrackingDomain
+        fields = ['id', 'domain', 'is_verified', 'ssl_enabled', 'total_clicks',
+                  'is_active', 'dns_instructions', 'created_at']
+        read_only_fields = ['is_verified', 'ssl_enabled', 'total_clicks']
+
+
+class SystemConfigSerializer(serializers.ModelSerializer):
+    typed_value = serializers.SerializerMethodField()
+
+    def get_typed_value(self, obj):
+        try: return obj.get_typed_value()
+        except: return obj.value
+
+    class Meta:
+        model  = SystemConfig
+        fields = ['id', 'key', 'value', 'value_type', 'description',
+                  'is_public', 'typed_value', 'updated_at']
+        read_only_fields = ['updated_at']

@@ -292,8 +292,7 @@ class ContentPage(TimeStampedModel):
     subtitle = models.CharField(_("Subtitle"), max_length=300, blank=True)
     
     # Categorization
-    category = models.ForeignKey(ContentCategory, on_delete=models.SET_NULL,
-                               null=True, blank=True, related_name='pages')
+    category = models.ForeignKey(ContentCategory, on_delete=models.SET_NULL, blank=True, related_name='pages', null=True)
     page_type = models.CharField(_("Page Type"), max_length=20,
                                 choices=PAGE_TYPES, default='static')
     tags = models.JSONField(_("Tags"), default=default_list, blank=True,
@@ -323,8 +322,7 @@ class ContentPage(TimeStampedModel):
     )
     
     # Meta Information
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                             null=True, related_name='authored_pages')
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='authored_pages', null=True, blank=True)
     status = models.CharField(_("Status"), max_length=20,
                             choices=STATUS_CHOICES, default='draft')
     visibility = models.CharField(_("Visibility"), max_length=20,
@@ -352,17 +350,15 @@ class ContentPage(TimeStampedModel):
     comment_count = models.PositiveIntegerField(_("Comment Count"), default=0)
     
     # Earning App Specific Fields
-    related_offer = models.ForeignKey('offerwall.Offer', on_delete=models.SET_NULL,
-                                    null=True, blank=True, related_name='content_pages')
+    related_offer = models.ForeignKey('offerwall.Offer', on_delete=models.SET_NULL, blank=True, related_name='content_pages', null=True)
     # related_task = models.ForeignKey('tasks.Task', on_delete=models.SET_NULL,
-    #                                null=True, blank=True, related_name='content_pages')
+    #                                null=True, blank=True, related_name='content_pages', null=True)
     related_task = models.ForeignKey(
     'tasks.MasterTask', 
     on_delete=models.SET_NULL,
     null=True, 
     blank=True, 
-    related_name='content_pages'
-    )
+    related_name='content_pages')
     min_reward = models.DecimalField(_("Minimum Reward"), max_digits=10,
                                     decimal_places=2, default=0.00)
     max_reward = models.DecimalField(_("Maximum Reward"), max_digits=10,
@@ -384,15 +380,13 @@ class ContentPage(TimeStampedModel):
     
     # Version Control
     version = models.IntegerField(_("Version"), default=1)
-    parent_version = models.ForeignKey('self', on_delete=models.SET_NULL,
-                                     null=True, blank=True, related_name='child_versions')
+    parent_version = models.ForeignKey('self', on_delete=models.SET_NULL, blank=True, related_name='child_versions', null=True)
     
     # Localization
     language = models.CharField(_("Language"), max_length=10,
                                default='en', choices=settings.LANGUAGES)
     is_translation = models.BooleanField(_("Is Translation"), default=False)
-    original_content = models.ForeignKey('self', on_delete=models.SET_NULL,
-                                       null=True, blank=True, related_name='translations')
+    original_content = models.ForeignKey('self', on_delete=models.SET_NULL, blank=True, related_name='translations', null=True)
     
     # Metadata
     last_viewed = models.DateTimeField(_("Last Viewed"), null=True, blank=True)
@@ -713,19 +707,16 @@ class Banner(TimeStampedModel):
                                     ('none', "No Link"),
                                 ], default='external')
     link_url = models.URLField(_("Link URL"), blank=True)
-    internal_page = models.ForeignKey(ContentPage, on_delete=models.SET_NULL,
-                                     null=True, blank=True, related_name='banners')
-    offer = models.ForeignKey('offerwall.Offer', on_delete=models.SET_NULL,
-                            null=True, blank=True, related_name='banners')
+    internal_page = models.ForeignKey(ContentPage, on_delete=models.SET_NULL, blank=True, related_name='banners', null=True)
+    offer = models.ForeignKey('offerwall.Offer', on_delete=models.SET_NULL, blank=True, related_name='banners', null=True)
     # task = models.ForeignKey('tasks.Task', on_delete=models.SET_NULL,
-    #                        null=True, blank=True, related_name='banners')
+    #                        null=True, blank=True, related_name='banners', null=True)
     task = models.ForeignKey(
     'tasks.MasterTask', 
     on_delete=models.SET_NULL,
     null=True, 
     blank=True, 
-    related_name='banners'
-    )
+    related_name='banners')
 
     # Display Settings
     is_active = models.BooleanField(_("Active"), default=True)
@@ -1140,8 +1131,7 @@ class FAQ(TimeStampedModel):
     detailed_answer = RichTextField(_("Detailed Answer"))
     
     # Categorization
-    category = models.ForeignKey(FAQCategory, on_delete=models.SET_NULL,
-                               null=True, blank=True, related_name='faqs')
+    category = models.ForeignKey(FAQCategory, on_delete=models.SET_NULL, blank=True, related_name='faqs', null=True)
     tags = models.JSONField(_("Tags"), default=default_list, blank=True)
     
     # Display Settings
@@ -1166,8 +1156,7 @@ class FAQ(TimeStampedModel):
     
     # Metadata
     last_updated = models.DateTimeField(_("Last Updated"), auto_now=True)
-    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                                 null=True, related_name='updated_faqs')
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='updated_faqs', null=True, blank=True)
     
     class Meta:
         verbose_name = _("FAQ")
@@ -1296,9 +1285,8 @@ class FAQ(TimeStampedModel):
 class BannerImpression(TimeStampedModel):
     """Track banner impressions"""
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    banner = models.ForeignKey(Banner, on_delete=models.CASCADE, related_name='impressions')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                           null=True, blank=True)
+    banner = models.ForeignKey(Banner, on_delete=models.CASCADE, related_name='impressions', null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     impression_type = models.CharField(max_length=20, choices=[
         ('view', "View"),
         ('hover', "Hover"),
@@ -1306,11 +1294,11 @@ class BannerImpression(TimeStampedModel):
     ])
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    referrer = models.URLField(blank=True)
-    session_id = models.CharField(max_length=100, blank=True)
+    referrer = models.URLField(null=True, blank=True)
+    session_id = models.CharField(max_length=100, null=True, blank=True)
     device_type = models.CharField(max_length=20, blank=True,
-                                  help_text="Desktop, Mobile, Tablet")
-    browser = models.CharField(max_length=50, blank=True)
+                                  help_text="Desktop, Mobile, Tablet", null=True)
+    browser = models.CharField(max_length=50, null=True, blank=True)
     
     class Meta:
         verbose_name = _("Banner Impression")
@@ -1328,9 +1316,8 @@ class BannerImpression(TimeStampedModel):
 class BannerClick(TimeStampedModel):
     """Track banner clicks"""
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    banner = models.ForeignKey(Banner, on_delete=models.CASCADE, related_name='clicks')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                           null=True, blank=True)
+    banner = models.ForeignKey(Banner, on_delete=models.CASCADE, related_name='clicks', null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     click_type = models.CharField(max_length=20, choices=[
         ('user', "User Click"),
         ('auto', "Auto Click"),
@@ -1338,9 +1325,9 @@ class BannerClick(TimeStampedModel):
     ])
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    conversion_value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    referrer = models.URLField(blank=True)
-    device_type = models.CharField(max_length=20, blank=True)
+    conversion_value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
+    referrer = models.URLField(null=True, blank=True)
+    device_type = models.CharField(max_length=20, null=True, blank=True)
     
     class Meta:
         verbose_name = _("Banner Click")
@@ -1357,9 +1344,8 @@ class BannerClick(TimeStampedModel):
 class FAQFeedback(TimeStampedModel):
     """Track FAQ helpfulness feedback"""
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    faq = models.ForeignKey(FAQ, on_delete=models.CASCADE, related_name='feedbacks')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                           null=True, blank=True)
+    faq = models.ForeignKey(FAQ, on_delete=models.CASCADE, related_name='feedbacks', null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     is_helpful = models.BooleanField(default=True)
     feedback_text = models.TextField(blank=True)
     user_agent = models.TextField(blank=True)
@@ -1379,16 +1365,15 @@ class FAQFeedback(TimeStampedModel):
 class ContentViewLog(TimeStampedModel):
     """Track content views for analytics"""
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    content = models.ForeignKey(ContentPage, on_delete=models.CASCADE, related_name='view_logs')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                           null=True, blank=True)
+    content = models.ForeignKey(ContentPage, on_delete=models.CASCADE, related_name='view_logs', null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     view_duration = models.IntegerField(default=0, help_text="Duration in seconds")
     is_completed = models.BooleanField(default=False)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    referrer = models.URLField(blank=True)
-    session_id = models.CharField(max_length=100, blank=True)
-    device_type = models.CharField(max_length=20, blank=True)
+    referrer = models.URLField(null=True, blank=True)
+    session_id = models.CharField(max_length=100, null=True, blank=True)
+    device_type = models.CharField(max_length=20, null=True, blank=True)
     
     class Meta:
         verbose_name = _("Content View Log")
@@ -1405,9 +1390,8 @@ class ContentViewLog(TimeStampedModel):
 class ContentShare(TimeStampedModel):
     """Track content sharing"""
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    content = models.ForeignKey(ContentPage, on_delete=models.CASCADE, related_name='shares')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                           null=True, blank=True)
+    content = models.ForeignKey(ContentPage, on_delete=models.CASCADE, related_name='shares', null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     share_platform = models.CharField(max_length=50, choices=[
         ('facebook', "Facebook"),
         ('twitter', "Twitter"),
@@ -1418,7 +1402,7 @@ class ContentShare(TimeStampedModel):
         ('copy_link', "Copy Link"),
         ('other', "Other"),
     ])
-    share_url = models.URLField(blank=True)
+    share_url = models.URLField(null=True, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     
     class Meta:
@@ -1453,8 +1437,7 @@ class SiteSettings(TimeStampedModel):
                                    help_text="Expose via API")
     is_editable = models.BooleanField(_("Editable"), default=True)
     last_modified = models.DateTimeField(_("Last Modified"), auto_now=True)
-    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                                  null=True, related_name='modified_settings')
+    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='modified_settings', null=True, blank=True)
     
     class Meta:
         verbose_name = _("Site Setting")
@@ -1525,8 +1508,7 @@ class ImageGallery(TimeStampedModel):
     title = models.CharField(_("Title"), max_length=200)
     slug = models.SlugField(_("Slug"), unique=True, max_length=200)
     description = models.TextField(_("Description"), blank=True)
-    category = models.ForeignKey(ContentCategory, on_delete=models.SET_NULL,
-                               null=True, blank=True)
+    category = models.ForeignKey(ContentCategory, on_delete=models.SET_NULL, null=True, blank=True)
     tags = models.JSONField(_("Tags"), default=default_list, blank=True)
     is_active = models.BooleanField(_("Active"), default=True)
     is_featured = models.BooleanField(_("Featured"), default=False)
@@ -1569,7 +1551,7 @@ class GalleryImage(TimeStampedModel):
     """Individual images in gallery"""
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     gallery = models.ForeignKey(ImageGallery, on_delete=models.CASCADE,
-                              related_name='images')
+                              related_name='images', null=True, blank=True)
     image = ProcessedImageField(
         upload_to='gallery/%Y/%m/',
         processors=[ResizeToFill(1920, 1080)],
@@ -1659,8 +1641,7 @@ class FileManager(TimeStampedModel):
     file_size = models.BigIntegerField(_("File Size"), default=0)  # bytes
     mime_type = models.CharField(_("MIME Type"), max_length=100, blank=True)
     description = models.TextField(_("Description"), blank=True)
-    category = models.ForeignKey(ContentCategory, on_delete=models.SET_NULL,
-                               null=True, blank=True)
+    category = models.ForeignKey(ContentCategory, on_delete=models.SET_NULL, null=True, blank=True)
     is_public = models.BooleanField(_("Public Access"), default=False)
     is_active = models.BooleanField(_("Active"), default=True)
     download_count = models.PositiveIntegerField(_("Download Count"), default=0)
@@ -1832,10 +1813,10 @@ class Comment(TimeStampedModel):
     objects = CommentManager()
     
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     comment_type = models.CharField(_("Type"), max_length=20,
                                    choices=COMMENT_TYPES, default='content')
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
     
@@ -1847,15 +1828,13 @@ class Comment(TimeStampedModel):
     edit_reason = models.CharField(_("Edit Reason"), max_length=200, blank=True)
     like_count = models.PositiveIntegerField(_("Like Count"), default=0)
     reply_count = models.PositiveIntegerField(_("Reply Count"), default=0)
-    parent = models.ForeignKey('self', on_delete=models.CASCADE,
-                             null=True, blank=True, related_name='replies')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, related_name='replies', null=True)
     is_active = models.BooleanField(_("Active"), default=True)
     
     # Moderation fields
     is_flagged = models.BooleanField(_("Flagged"), default=False)
     flag_reason = models.TextField(_("Flag Reason"), blank=True)
-    moderated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                                   null=True, blank=True, related_name='moderated_comments')
+    moderated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, related_name='moderated_comments', null=True)
     moderated_at = models.DateTimeField(_("Moderated At"), null=True, blank=True)
     
     class Meta:
@@ -1974,8 +1953,8 @@ class CommentLike(TimeStampedModel):
     """Track comment likes"""
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE,
-                              related_name='likes')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+                              related_name='likes', null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     
     class Meta:
         verbose_name = _("Comment Like")
@@ -2442,9 +2421,9 @@ class PermissionAuditLog(models.Model):
     
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     permission_id = models.IntegerField(null=True, blank=True, db_index=True)
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES, db_index=True)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES, db_index=True, null=True, blank=True)
     user_id = models.IntegerField(null=True, blank=True, db_index=True)
-    username = models.CharField(max_length=150, blank=True)
+    username = models.CharField(max_length=150, null=True, blank=True)
     content_id = models.IntegerField(null=True, blank=True, db_index=True)
     
     # [OK] JSON ফিল্ড ফিক্সড
@@ -2534,8 +2513,7 @@ class InheritanceMixin(models.Model):
         null=True,
         blank=True,
         related_name='child_permissions',
-        db_index=True
-    )
+        db_index=True)
     
     # [OK] JSON ফিল্ড ফিক্সড
     inherit_flags = JSONTextField(
@@ -2590,8 +2568,7 @@ class ContentPermission(TenantMixin, InheritanceMixin, models.Model):
         max_length=20,
         choices=PermissionType.choices,
         default=PermissionType.USER,
-        db_index=True
-    )
+        db_index=True)
     
     # [OK] ফিক্স 1: স্ট্রিং রেফারেন্স ব্যবহার
     content = models.ForeignKey(
@@ -2612,7 +2589,7 @@ class ContentPermission(TenantMixin, InheritanceMixin, models.Model):
     target_id = models.CharField(
         max_length=100,
         db_index=True,
-        help_text=_("Target identifier (user ID, group ID, role, etc)")
+        help_text=_("Target identifier (user ID, group ID, role, etc, null=True, blank=True)")
     )
     
     # Bitmask field
@@ -2635,8 +2612,7 @@ class ContentPermission(TenantMixin, InheritanceMixin, models.Model):
         null=True,
         blank=True,
         related_name='child_permissions',
-        db_index=True
-    )
+        db_index=True)
     
     
     # Status fields
@@ -2659,8 +2635,7 @@ class ContentPermission(TenantMixin, InheritanceMixin, models.Model):
         on_delete=models.CASCADE,
         related_name='content_permissions',
         null=True,
-        blank=True
-    )
+        blank=True)
         
     
     # Expiry
@@ -3981,12 +3956,12 @@ class RateLimiter:
 class BannerReward(models.Model):
     # --- 🟢 আপনার মিসিং ফিল্ডগুলো এখানে যোগ করুন 🟢 ---
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='banner_rewards')
-    banner = models.ForeignKey('cms.Banner', on_delete=models.CASCADE, related_name='rewards')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='banner_rewards', null=True, blank=True)
+    banner = models.ForeignKey('cms.Banner', on_delete=models.CASCADE, related_name='rewards', null=True, blank=True)
     # transaction = models.OneToOneField('api_finance.Transaction', on_delete=models.SET_NULL, null=True, blank=True)
     
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
-    reward_type = models.CharField(max_length=50, default='fixed')
+    reward_type = models.CharField(max_length=50, default='fixed', null=True, blank=True)
     is_processed = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     

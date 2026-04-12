@@ -1,0 +1,12 @@
+from .smartlink_admin import *       # noqa
+from .targeting_admin import *       # noqa
+from .offer_pool_admin import *      # noqa
+from .click_admin import *           # noqa
+from .fraud_admin import *           # noqa
+from .domain_admin import *          # noqa
+from .landing_page_admin import *    # noqa
+from .ab_test_admin import *         # noqa
+from .stat_admin import *            # noqa
+from .publisher_admin import *       # noqa
+from .insight_admin import *         # noqa
+from .postback_admin import *  # noqa

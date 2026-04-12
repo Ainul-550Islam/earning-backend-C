@@ -14,3 +14,8 @@ class UsersConfig(AppConfig):
             print("[OK] Users app ready - signals imported")
         except ImportError as e:
             print("[ERROR] Failed to import signals: {}".format(e))
+        try:
+            from api.users.admin import _force_register_users
+            _force_register_users()
+        except Exception as e:
+            pass

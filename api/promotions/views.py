@@ -996,3 +996,234 @@ def promotions_archive_alias(request, pk):
         return R({'id': c.pk, 'status': 'archived'})
     except Campaign.DoesNotExist:
         return R({'detail': 'Not found.'}, status=404)
+
+# =============================================================================
+# NEW MODEL VIEWSETS
+# =============================================================================
+
+from api.promotions.models import (
+    PublisherProfile, AdvertiserProfile, APIKeyModel, WebhookConfigModel,
+    VirtualCurrencyConfig, WhiteLabelConfig, EmailSubmitCampaign,
+    CPCCampaign, CPIAppCampaign, QuizCampaign, SmartLinkConfig,
+    ContentLockModel, SubIDClick, PayoutBatch, IPBlacklistModel,
+    TrackingDomain, SystemConfig,
+)
+from api.promotions.serializers import (
+    PublisherProfileSerializer, AdvertiserProfileSerializer,
+    APIKeySerializer, WebhookConfigSerializer, VirtualCurrencyConfigSerializer,
+    WhiteLabelConfigSerializer, EmailSubmitCampaignSerializer,
+    CPCCampaignSerializer, CPIAppCampaignSerializer, QuizCampaignSerializer,
+    SmartLinkConfigSerializer, ContentLockSerializer,
+    PayoutBatchSerializer, PayoutRequestSerializer,
+    IPBlacklistSerializer, TrackingDomainSerializer, SystemConfigSerializer,
+)
+
+
+class PublisherProfileViewSet(viewsets.ModelViewSet):
+    """Publisher profile CRUD."""
+    serializer_class   = PublisherProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return PublisherProfile.objects.all().select_related('user')
+        return PublisherProfile.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class AdvertiserProfileViewSet(viewsets.ModelViewSet):
+    """Advertiser profile CRUD."""
+    serializer_class   = AdvertiserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return AdvertiserProfile.objects.all().select_related('user')
+        return AdvertiserProfile.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class EmailSubmitCampaignViewSet(viewsets.ModelViewSet):
+    """Email Submit campaign management."""
+    serializer_class   = EmailSubmitCampaignSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return EmailSubmitCampaign.objects.all()
+        return EmailSubmitCampaign.objects.filter(advertiser=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(advertiser=self.request.user)
+
+
+class CPCCampaignViewSet(viewsets.ModelViewSet):
+    """CPC Campaign management."""
+    serializer_class   = CPCCampaignSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return CPCCampaign.objects.all()
+        return CPCCampaign.objects.filter(advertiser=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(advertiser=self.request.user)
+
+
+class CPIAppCampaignViewSet(viewsets.ModelViewSet):
+    """CPI App Campaign management."""
+    serializer_class   = CPIAppCampaignSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return CPIAppCampaign.objects.all()
+        return CPIAppCampaign.objects.filter(advertiser=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(advertiser=self.request.user)
+
+
+class QuizCampaignViewSet(viewsets.ModelViewSet):
+    """Quiz/Survey campaign management."""
+    serializer_class   = QuizCampaignSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return QuizCampaign.objects.all()
+        return QuizCampaign.objects.filter(advertiser=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(advertiser=self.request.user)
+
+
+class SmartLinkConfigViewSet(mixins.ListModelMixin,
+                              mixins.CreateModelMixin,
+                              mixins.RetrieveModelMixin,
+                              mixins.DestroyModelMixin,
+                              viewsets.GenericViewSet):
+    """Publisher SmartLink management."""
+    serializer_class   = SmartLinkConfigSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return SmartLinkConfig.objects.filter(publisher=self.request.user, is_active=True)
+
+    def perform_create(self, serializer):
+        import hashlib, uuid
+        from django.utils import timezone
+        link_hash = hashlib.md5(
+            f'{self.request.user.id}:{uuid.uuid4()}'.encode()
+        ).hexdigest()[:12]
+        serializer.save(publisher=self.request.user, link_hash=link_hash)
+
+
+class ContentLockViewSet(viewsets.ModelViewSet):
+    """Content lock management."""
+    serializer_class   = ContentLockSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ContentLockModel.objects.filter(publisher=self.request.user)
+
+    def perform_create(self, serializer):
+        import uuid
+        token = str(uuid.uuid4()).replace('-', '')
+        serializer.save(publisher=self.request.user, lock_token=token)
+
+
+class PayoutBatchViewSet(mixins.ListModelMixin,
+                          mixins.CreateModelMixin,
+                          mixins.RetrieveModelMixin,
+                          viewsets.GenericViewSet):
+    """Publisher payout requests."""
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return PayoutRequestSerializer
+        return PayoutBatchSerializer
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return PayoutBatch.objects.all().select_related('publisher')
+        return PayoutBatch.objects.filter(publisher=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        from decimal import Decimal
+        from django.db.models import Sum
+        from api.promotions.models import PromotionTransaction
+        serializer = PayoutRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        d = serializer.validated_data
+        # Check balance
+        balance = PromotionTransaction.objects.filter(
+            user=request.user
+        ).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        if balance < d['amount']:
+            return Response({'error': f'Insufficient balance. Available: ${balance}'}, status=400)
+        # Fee calculation
+        fees = {'usdt_trc20': 1, 'usdt_erc20': 5, 'usdt_bep20': 0.5,
+                'btc': 2, 'paypal': 0, 'payoneer': 0, 'wire': 25, 'ach': 0}
+        fee = Decimal(str(fees.get(d['method'], 0)))
+        net = d['amount'] - fee
+        batch = PayoutBatch.objects.create(
+            publisher=request.user,
+            amount=d['amount'],
+            method=d['method'],
+            method_details=d.get('method_details', {}),
+            fee=fee,
+            net_amount=net,
+            status='pending',
+        )
+        # Lock balance
+        PromotionTransaction.objects.create(
+            user=request.user,
+            transaction_type='withdrawal',
+            amount=-d['amount'],
+            status='pending',
+            notes=f'Payout request #{str(batch.batch_id)[:8]}',
+        )
+        return Response(PayoutBatchSerializer(batch).data, status=201)
+
+
+class IPBlacklistViewSet(viewsets.ModelViewSet):
+    """IP Blacklist management — admin only."""
+    serializer_class   = IPBlacklistSerializer
+    permission_classes = [IsAdminUser]
+    queryset           = IPBlacklistModel.objects.all()
+
+
+class TrackingDomainViewSet(viewsets.ModelViewSet):
+    """Custom tracking domain management."""
+    serializer_class   = TrackingDomainSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return TrackingDomain.objects.filter(publisher=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(publisher=self.request.user)
+
+
+class SystemConfigViewSet(mixins.ListModelMixin,
+                           mixins.RetrieveModelMixin,
+                           viewsets.GenericViewSet):
+    """System config — public keys visible to all, private to admin."""
+    serializer_class = SystemConfigSerializer
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return SystemConfig.objects.all()
+        return SystemConfig.objects.filter(is_public=True)
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'create', 'destroy']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]

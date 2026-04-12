@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Security Alert</title>
+<style>body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:20px}.container{max-width:600px;margin:0 auto;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1)}.header{padding:24px 32px;background:#b71c1c;color:#fff}.body{padding:32px}.footer{padding:16px 32px;background:#f9f9f9;font-size:12px;color:#888;text-align:center}.alert-box{background:#fff3f3;border:2px solid #e53935;border-radius:8px;padding:20px;margin:16px 0}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:14px}.btn{display:inline-block;padding:12px 28px;background:#b71c1c;color:#fff;border-radius:6px;text-decoration:none;font-weight:bold;margin-top:16px}</style>
+</head>
+<body>
+<div class="container">
+  <div class="header"><h2 style="margin:0">🔐 Security Alert</h2><p style="margin:4px 0;opacity:.9">Action Required</p></div>
+  <div class="body">
+    <p>Hello <strong>{{ user.first_name|default:user.username }}</strong>,</p>
+    <div class="alert-box">
+      <strong style="color:#b71c1c">⚠️ {{ alert_type|default:"Suspicious Activity Detected" }}</strong><br>
+      <p style="margin:8px 0 0">{{ alert_description }}</p>
+    </div>
+    <div>
+      <div class="row"><span>Time</span><strong>{{ event_time }}</strong></div>
+      <div class="row"><span>IP Address</span><strong>{{ ip_address }}</strong></div>
+      <div class="row"><span>Location</span><strong>{{ location|default:"Unknown" }}</strong></div>
+    </div>
+    <p style="margin-top:16px">If this was not you, secure your account immediately.</p>
+    <a href="{{ change_password_url }}" class="btn">Change Password</a>
+    <a href="{{ support_url }}" style="display:inline-block;margin-left:12px;padding:12px 28px;border:2px solid #b71c1c;color:#b71c1c;border-radius:6px;text-decoration:none;font-weight:bold;margin-top:16px">Contact Support</a>
+  </div>
+  <div class="footer"><p>© {{ current_year }} {{ app_name }} · Automated Security Alert</p></div>
+</div>
+</body></html>

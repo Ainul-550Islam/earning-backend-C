@@ -341,9 +341,15 @@ class TranslationService(BaseService):
             if cached:
                 return cached
             
-            # TODO: Implement actual translation service call
-            # This is where you'd call Google Translate, DeepL, etc.
-            translated_text = f"[{from_lang} to {to_lang}] {text}"
+            # Real translation via ProviderRouter
+            translated_text = text
+            try:
+                from .services.providers.ProviderRouter import ProviderRouter
+                router = ProviderRouter()
+                result_obj = router.translate(text, from_lang, to_lang)
+                translated_text = result_obj.get('translated', text)
+            except Exception as provider_err:
+                self.logger.warning(f"Provider fallback: {provider_err}")
             
             result: Dict[str, Any] = {
                 'success': True,
@@ -874,8 +880,7 @@ class CityService(BaseService):
                          radius_km: int = 50) -> List[City]:
         """
         Find cities within radius
-        TODO: Implement with PostGIS for production
-        For now, returns empty list as placeholder
+        Uses Haversine formula — no PostGIS required. Returns up to 50 cities sorted by distance.
         """
         try:
             # This is a placeholder
@@ -890,8 +895,37 @@ class CityService(BaseService):
             #     distance=Distance('location', point)
             # ).order_by('distance')
             
-            self.logger.info("get_nearby_cities called - returning empty list (PostGIS not implemented)")
-            return []
+            # Haversine distance — no PostGIS needed
+            import math
+            def _haversine(lat1, lon1, lat2, lon2):
+                R = 6371
+                dlat = math.radians(lat2 - lat1)
+                dlon = math.radians(lon2 - lon1)
+                a = (math.sin(dlat/2)**2 +
+                     math.cos(math.radians(lat1)) *
+                     math.cos(math.radians(lat2)) *
+                     math.sin(dlon/2)**2)
+                return R * 2 * math.asin(math.sqrt(a))
+            from .models.core import City
+            candidates = City.objects.filter(
+                is_active=True, latitude__isnull=False, longitude__isnull=False,
+                latitude__gte=float(latitude) - (radius_km / 111.0),
+                latitude__lte=float(latitude) + (radius_km / 111.0),
+            ).select_related('country', 'timezone')
+            result = []
+            for city in candidates:
+                try:
+                    dist = _haversine(
+                        float(latitude), float(longitude),
+                        float(city.latitude), float(city.longitude)
+                    )
+                    if dist <= radius_km:
+                        city._distance_km = round(dist, 2)
+                        result.append(city)
+                except Exception:
+                    pass
+            result.sort(key=lambda c: c._distance_km)
+            return result[:50]
             
         except Exception as e:
             self.logger.error(f"Nearby cities error: {e}")

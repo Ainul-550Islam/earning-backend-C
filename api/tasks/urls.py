@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.contrib.sitemaps.views import sitemap
 from django.contrib.sitemaps import GenericSitemap
 from django.contrib.admin.views.decorators import staff_member_required
-from rest_framework.routers import DefaultRouter, SimpleRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter, SimpleRouter
 from rest_framework import permissions
 from django.db import connection
 

@@ -301,3 +301,258 @@ class UserInboxSerializer(serializers.ModelSerializer):
             "is_archived", "metadata", "created_at",
         ]
         read_only_fields = ["id", "created_at", "read_at"]
+
+
+# ============================================================================
+# NEW SERIALIZERS (appended — existing serializers unchanged above)
+# ============================================================================
+
+from .models import (
+    MessageReaction, UserPresence, CallSession,
+    AnnouncementChannel, ScheduledMessage, MessagePin,
+    BotConfig, MessagingWebhook, UserBlock, MessageTranslation, DeviceToken,
+)
+
+
+class MessageReactionSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MessageReaction
+        fields = ["id", "message", "user", "user_name", "emoji", "custom_emoji", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+    def get_user_name(self, obj) -> str:
+        try:
+            return obj.user.get_full_name() or obj.user.username
+        except Exception:
+            return ""
+
+
+class UserPresenceSerializer(serializers.ModelSerializer):
+    effective_status = serializers.ReadOnlyField()
+
+    class Meta:
+        model = UserPresence
+        fields = [
+            "user", "status", "effective_status", "last_seen_at",
+            "last_seen_on", "custom_status", "custom_status_emoji",
+            "custom_status_expires_at", "is_invisible",
+        ]
+        read_only_fields = ["last_seen_at", "effective_status"]
+
+
+class CallSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CallSession
+        fields = [
+            "id", "call_type", "status", "chat", "initiated_by", "room_id",
+            "started_at", "ended_at", "duration_seconds", "is_recorded", "created_at",
+        ]
+        read_only_fields = ["id", "room_id", "created_at"]
+
+
+class AnnouncementChannelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AnnouncementChannel
+        fields = [
+            "id", "name", "slug", "description", "channel_type",
+            "avatar", "is_verified", "subscriber_count", "post_count",
+            "last_post_at", "created_at",
+        ]
+        read_only_fields = ["id", "slug", "subscriber_count", "post_count", "created_at"]
+
+
+class ScheduledMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScheduledMessage
+        fields = [
+            "id", "chat", "sender", "content", "message_type",
+            "attachments", "scheduled_for", "status", "created_at",
+        ]
+        read_only_fields = ["id", "sender", "status", "created_at"]
+
+
+class MessagePinSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MessagePin
+        fields = ["id", "chat", "message", "pinned_by", "pinned_at"]
+        read_only_fields = ["id", "pinned_at"]
+
+
+class BotConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BotConfig
+        fields = [
+            "id", "name", "chat", "trigger_type", "trigger_value",
+            "response_template", "is_active", "priority",
+            "delay_seconds", "created_by", "created_at",
+        ]
+        read_only_fields = ["id", "created_by", "created_at"]
+
+
+class MessagingWebhookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MessagingWebhook
+        fields = [
+            "id", "name", "url", "events", "is_active",
+            "failure_count", "last_triggered_at", "created_at",
+        ]
+        read_only_fields = ["id", "failure_count", "last_triggered_at", "created_at"]
+
+
+class UserBlockSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserBlock
+        fields = ["id", "blocker", "blocked", "reason", "created_at"]
+        read_only_fields = ["id", "blocker", "created_at"]
+
+
+class MessageTranslationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MessageTranslation
+        fields = [
+            "id", "message", "target_language", "translated_content",
+            "source_language", "provider", "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+
+class DeviceTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeviceToken
+        fields = ["id", "platform", "device_name", "app_version", "is_active", "last_used_at"]
+        read_only_fields = ["id", "last_used_at"]
+
+
+# ── Final 6% Serializers ──────────────────────────────────────────────────────
+
+from .models import (
+    MessageEditHistory, DisappearingMessageConfig,
+    UserStory, StoryView, StoryHighlight,
+    VoiceMessageTranscription, LinkPreview, MessageLinkPreview,
+)
+
+
+class MessageEditHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MessageEditHistory
+        fields = ["id", "message", "edited_by", "previous_content",
+                  "edit_number", "edit_reason", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
+class DisappearingMessageConfigSerializer(serializers.ModelSerializer):
+    ttl_display = serializers.ReadOnlyField()
+
+    class Meta:
+        model = DisappearingMessageConfig
+        fields = ["chat", "is_enabled", "ttl_seconds", "ttl_display",
+                  "enabled_by", "enabled_at"]
+        read_only_fields = ["enabled_by", "enabled_at", "ttl_display"]
+
+
+class UserStorySerializer(serializers.ModelSerializer):
+    is_expired = serializers.ReadOnlyField()
+
+    class Meta:
+        model = UserStory
+        fields = [
+            "id", "user", "story_type", "content", "media_url",
+            "thumbnail_url", "background_color", "font_style",
+            "duration_seconds", "expires_at", "is_active", "view_count",
+            "visibility", "link_url", "link_label", "location",
+            "music_track", "is_expired", "created_at",
+        ]
+        read_only_fields = ["id", "view_count", "is_active", "is_expired", "created_at"]
+
+
+class StoryViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StoryView
+        fields = ["id", "story", "viewer", "viewed_at", "reaction_emoji", "reply_text"]
+        read_only_fields = ["id", "viewed_at"]
+
+
+class VoiceMessageTranscriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VoiceMessageTranscription
+        fields = [
+            "id", "message", "transcribed_text", "language",
+            "confidence", "provider", "duration_seconds",
+            "waveform_data", "is_processing", "error", "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+
+class LinkPreviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LinkPreview
+        fields = [
+            "id", "url", "title", "description", "image_url",
+            "favicon_url", "site_name", "domain", "content_type",
+            "video_url", "is_safe", "fetched_at",
+        ]
+        read_only_fields = ["id", "fetched_at"]
+
+
+# ── CPA Platform Serializers ──────────────────────────────────────────────────
+
+from .models import CPANotification, CPABroadcast, MessageTemplate, AffiliateConversationThread
+
+
+class CPANotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CPANotification
+        fields = [
+            "id", "notification_type", "title", "body", "priority",
+            "object_type", "object_id", "action_url", "action_label",
+            "payload", "is_read", "read_at", "push_sent", "email_sent",
+            "created_at",
+        ]
+        read_only_fields = ["id", "push_sent", "email_sent", "created_at"]
+
+
+class CPABroadcastSerializer(serializers.ModelSerializer):
+    open_rate  = serializers.ReadOnlyField()
+    click_rate = serializers.ReadOnlyField()
+
+    class Meta:
+        model = CPABroadcast
+        fields = [
+            "id", "title", "body", "notification_type", "priority",
+            "audience_filter", "audience_params",
+            "send_push", "send_email", "send_inbox", "send_sms",
+            "action_url", "action_label", "status",
+            "scheduled_at", "sent_at",
+            "recipient_count", "delivered_count", "opened_count", "clicked_count",
+            "open_rate", "click_rate", "created_by", "created_at",
+        ]
+        read_only_fields = [
+            "id", "status", "sent_at", "recipient_count", "delivered_count",
+            "opened_count", "clicked_count", "created_by", "created_at",
+        ]
+
+
+class MessageTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MessageTemplate
+        fields = [
+            "id", "name", "category", "subject", "body",
+            "tags", "is_active", "usage_count", "created_by", "created_at",
+        ]
+        read_only_fields = ["id", "usage_count", "created_by", "created_at"]
+
+
+class AffiliateThreadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AffiliateConversationThread
+        fields = [
+            "id", "affiliate", "manager", "chat", "status",
+            "affiliate_unread", "manager_unread",
+            "last_message_at", "last_message_by", "tags", "created_at",
+        ]
+        read_only_fields = [
+            "id", "affiliate_unread", "manager_unread",
+            "last_message_at", "last_message_by", "created_at",
+        ]

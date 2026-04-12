@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incident Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e9ecef;
+        }
+        .incident-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #dc3545;
+        }
+        .severity-critical { border-left-color: #dc3545; }
+        .severity-high { border-left-color: #fd7e14; }
+        .severity-medium { border-left-color: #ffc107; }
+        .severity-low { border-left-color: #28a745; }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .timeline-item {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 3px solid #6c757d;
+        }
+        .responder-info {
+            background: #d1ecf1;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 3px solid #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Incident Notification</h1>
+        <p>{{ incident.title }}</p>
+    </div>
+    
+    <div class="content">
+        <div class="incident-info severity-{{ incident.severity }}">
+            <h2>Incident Details</h2>
+            <p><strong>Title:</strong> {{ incident.title }}</p>
+            <p><strong>Severity:</strong> {{ incident.get_severity_display }}</p>
+            <p><strong>Impact:</strong> {{ incident.get_impact_display }}</p>
+            <p><strong>Urgency:</strong> {{ incident.get_urgency_display }}</p>
+            <p><strong>Status:</strong> {{ incident.get_status_display }}</p>
+            <p><strong>Description:</strong> {{ incident.description }}</p>
+            
+            {% if incident.assigned_to %}
+            <p><strong>Assigned To:</strong> {{ incident.assigned_to.get_full_name|default:incident.assigned_to.username }}</p>
+            {% endif %}
+            
+            <div class="timestamp">
+                <p><strong>Detected at:</strong> {{ incident.detected_at|date:"Y-m-d H:i:s" }}</p>
+                {% if incident.acknowledged_at %}
+                <p><strong>Acknowledged at:</strong> {{ incident.acknowledged_at|date:"Y-m-d H:i:s" }}</p>
+                {% endif %}
+                {% if incident.resolved_at %}
+                <p><strong>Resolved at:</strong> {{ incident.resolved_at|date:"Y-m-d H:i:s" }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if incident.timeline_events %}
+        <div style="margin-top: 20px;">
+            <h3>Recent Timeline Events</h3>
+            {% for event in incident.timeline_events|slice:":5" %}
+            <div class="timeline-item">
+                <p><strong>{{ event.event_type|title }}:</strong> {{ event.title }}</p>
+                <p><small>{{ event.description }}</small></p>
+                <p><small>{{ event.timestamp|date:"Y-m-d H:i:s" }}</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if incident.responders %}
+        <div style="margin-top: 20px;">
+            <h3>Assigned Responders</h3>
+            {% for responder in incident.responders %}
+            <div class="responder-info">
+                <p><strong>{{ responder.user.get_full_name|default:responder.user.username }}</strong> - {{ responder.role|title }}</p>
+                <p><small>Status: {{ responder.get_status_display }}</small></p>
+                <p><small>Assigned: {{ responder.assigned_at|date:"Y-m-d H:i:s" }}</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{{ dashboard_url }}" class="btn">View in Dashboard</a>
+            <a href="{{ incident_url }}" class="btn">View Incident Details</a>
+            {% if incident.status == 'open' %}
+            <a href="{{ acknowledge_url }}" class="btn">Acknowledge Incident</a>
+            {% endif %}
+        </div>
+        
+        {% if incident.root_cause %}
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffeaa7;">
+            <h3>Root Cause Analysis</h3>
+            <p>{{ incident.root_cause }}</p>
+        </div>
+        {% endif %}
+        
+        {% if incident.affected_services %}
+        <div style="margin-top: 20px;">
+            <h3>Affected Services</h3>
+            <ul>
+                {% for service in incident.affected_services %}
+                <li>{{ service }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>This incident notification was generated by the Incident Management System</p>
+        <p>Please respond promptly to minimize impact on services</p>
+    </div>
+</body>
+</html>

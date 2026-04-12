@@ -41,7 +41,7 @@ class AnalyticsEvent(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPES, null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='analytics_analyticsevent_user')
     session_id = models.CharField(max_length=100, blank=True, null=True)
     ip_address = models.GenericIPAddressField(blank=True, null=True)
@@ -97,8 +97,8 @@ class UserAnalytics(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='analytics_useranalytics_user')
-    period = models.CharField(max_length=10, choices=PERIOD_CHOICES)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='analytics_useranalytics_user', null=True, blank=True)
+    period = models.CharField(max_length=10, choices=PERIOD_CHOICES, null=True, blank=True)
     period_start = models.DateTimeField()
     period_end = models.DateTimeField()
     
@@ -119,10 +119,10 @@ class UserAnalytics(models.Model):
     offer_conversion_rate = models.FloatField(default=0)
     
     # Earning metrics
-    earnings_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    earnings_from_tasks = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    earnings_from_offers = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    earnings_from_referrals = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    earnings_total = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    earnings_from_tasks = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    earnings_from_offers = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    earnings_from_referrals = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     
     # Referral metrics
     referrals_sent = models.IntegerField(default=0)
@@ -133,7 +133,7 @@ class UserAnalytics(models.Model):
     # Withdrawal metrics
     withdrawals_requested = models.IntegerField(default=0)
     withdrawals_completed = models.IntegerField(default=0)
-    withdrawals_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    withdrawals_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     
     # Device metrics
     device_mobile_count = models.IntegerField(default=0)
@@ -141,7 +141,7 @@ class UserAnalytics(models.Model):
     device_tablet_count = models.IntegerField(default=0)
     
     # Geographical metrics
-    locations = ArrayField(models.CharField(max_length=100), default=list, blank=True)
+    locations = ArrayField(models.CharField(max_length=100, null=True, blank=True), default=list, blank=True)
     
     # Additional metrics
     notifications_received = models.IntegerField(default=0)
@@ -227,21 +227,21 @@ class RevenueAnalytics(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    period = models.CharField(max_length=10, choices=UserAnalytics.PERIOD_CHOICES)
+    period = models.CharField(max_length=10, choices=UserAnalytics.PERIOD_CHOICES, null=True, blank=True)
     period_start = models.DateTimeField()
     period_end = models.DateTimeField()
     
     # Revenue metrics
-    revenue_total = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    revenue_total = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     revenue_by_source = models.JSONField(default=dict)
     
     # Cost metrics
-    cost_total = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    cost_total = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     cost_breakdown = models.JSONField(default=dict)
     
     # Profit metrics
-    gross_profit = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    net_profit = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    gross_profit = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
+    net_profit = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     profit_margin = models.FloatField(default=0)
     
     # User metrics
@@ -250,16 +250,16 @@ class RevenueAnalytics(models.Model):
     conversion_rate = models.FloatField(default=0)
     
     # ARPU/ARPPU
-    arpu = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    arppu = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    arpu = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+    arppu = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     
     # Withdrawal metrics
-    total_withdrawals = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_withdrawals = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     withdrawal_requests = models.IntegerField(default=0)
     
     # Platform metrics
-    platform_fee_earned = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    tax_deducted = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    platform_fee_earned = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
+    tax_deducted = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     
     # Calculated fields
     calculated_at = models.DateTimeField(auto_now_add=True)
@@ -317,7 +317,7 @@ class OfferPerformanceAnalytics(models.Model):
         blank=True
     )
     
-    period = models.CharField(max_length=10, choices=UserAnalytics.PERIOD_CHOICES)
+    period = models.CharField(max_length=10, choices=UserAnalytics.PERIOD_CHOICES, null=True, blank=True)
     period_start = models.DateTimeField()
     period_end = models.DateTimeField()
     
@@ -331,8 +331,8 @@ class OfferPerformanceAnalytics(models.Model):
     completion_rate = models.FloatField(default=0)
     
     # Revenue metrics
-    revenue_generated = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    cost_per_completion = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    revenue_generated = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    cost_per_completion = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     roi = models.FloatField(default=0)
     
     # User metrics
@@ -400,8 +400,8 @@ class FunnelAnalytics(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    funnel_type = models.CharField(max_length=50, choices=FUNNEL_TYPES)
-    period = models.CharField(max_length=10, choices=UserAnalytics.PERIOD_CHOICES)
+    funnel_type = models.CharField(max_length=50, choices=FUNNEL_TYPES, null=True, blank=True)
+    period = models.CharField(max_length=10, choices=UserAnalytics.PERIOD_CHOICES, null=True, blank=True)
     period_start = models.DateTimeField()
     period_end = models.DateTimeField()
     
@@ -459,7 +459,7 @@ class RetentionAnalytics(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    cohort_type = models.CharField(max_length=10, choices=COHORT_TYPES)
+    cohort_type = models.CharField(max_length=10, choices=COHORT_TYPES, null=True, blank=True)
     cohort_date = models.DateField()
     total_users = models.IntegerField(default=0)
     
@@ -476,8 +476,8 @@ class RetentionAnalytics(models.Model):
     active_users_by_period = models.JSONField(default=dict)
     
     # Revenue metrics
-    revenue_by_user = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    ltv = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    revenue_by_user = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    ltv = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     
     # Churn metrics
     churned_users = models.IntegerField(default=0)
@@ -521,8 +521,8 @@ class Dashboard(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100)
-    dashboard_type = models.CharField(max_length=20, choices=DASHBOARD_TYPES)
+    name = models.CharField(max_length=100, null=True, blank=True)
+    dashboard_type = models.CharField(max_length=20, choices=DASHBOARD_TYPES, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     
     # Dashboard configuration
@@ -533,11 +533,11 @@ class Dashboard(models.Model):
     is_public = models.BooleanField(default=False)
     # allowed_users = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='analytics_dashboard_tenant')
     allowed_users = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='analytics_dashboard_allowed_users')
-    allowed_roles = ArrayField(models.CharField(max_length=50), default=list, blank=True)
+    allowed_roles = ArrayField(models.CharField(max_length=50, null=True, blank=True), default=list, blank=True)
     
     # Settings
     refresh_interval = models.IntegerField(default=300)
-    default_time_range = models.CharField(max_length=50, default='last_7_days')
+    default_time_range = models.CharField(max_length=50, default='last_7_days', null=True, blank=True)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -585,9 +585,9 @@ class Report(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=200)
-    report_type = models.CharField(max_length=50, choices=REPORT_TYPES)
-    format = models.CharField(max_length=10, choices=FORMAT_CHOICES)
+    name = models.CharField(max_length=200, null=True, blank=True)
+    report_type = models.CharField(max_length=50, choices=REPORT_TYPES, null=True, blank=True)
+    format = models.CharField(max_length=10, choices=FORMAT_CHOICES, null=True, blank=True)
     
     # Report data
     parameters = models.JSONField(default=dict)
@@ -660,9 +660,9 @@ class RealTimeMetric(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    metric_type = models.CharField(max_length=50, choices=METRIC_TYPES)
+    metric_type = models.CharField(max_length=50, choices=METRIC_TYPES, null=True, blank=True)
     value = models.FloatField()
-    unit = models.CharField(max_length=50, default='count')
+    unit = models.CharField(max_length=50, default='count', null=True, blank=True)
     
     # Dimensions
     dimension = models.CharField(max_length=100, blank=True, null=True)
@@ -713,12 +713,12 @@ class AlertRule(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    alert_type = models.CharField(max_length=20, choices=ALERT_TYPES)
+    alert_type = models.CharField(max_length=20, choices=ALERT_TYPES, null=True, blank=True)
     
     # Condition configuration
-    metric_type = models.CharField(max_length=50, choices=RealTimeMetric.METRIC_TYPES)
+    metric_type = models.CharField(max_length=50, choices=RealTimeMetric.METRIC_TYPES, null=True, blank=True)
     condition = models.CharField(max_length=20, choices=(
         ('greater_than', 'Greater Than'),
         ('less_than', 'Less Than'),
@@ -735,7 +735,7 @@ class AlertRule(models.Model):
     evaluation_interval = models.IntegerField(default=60)
     
     # Alert settings
-    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, default='warning')
+    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, default='warning', null=True, blank=True)
     is_active = models.BooleanField(default=True)
     cooldown_period = models.IntegerField(default=300)
     
@@ -776,7 +776,7 @@ class AlertHistory(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     rule = models.ForeignKey(AlertRule, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
-    severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY_LEVELS)
+    severity = models.CharField(max_length=20, choices=AlertRule.SEVERITY_LEVELS, null=True, blank=True)
     
     # Alert data
     metric_value = models.FloatField()

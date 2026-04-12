@@ -4151,3 +4151,22 @@ admin.site.index_title = "Welcome to Ad Networks Management"
 
 
 
+
+
+def _force_register_ad_networks():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(AdNetwork, AdNetworkAdmin), (OfferCategory, OfferCategoryAdmin), (Offer, OfferAdmin), (UserOfferEngagement, UserOfferEngagementAdmin), (OfferConversion, OfferConversionAdmin), (BlacklistedIP, BlacklistedIPAdmin), (KnownBadIP, KnownBadIPAdmin), (FraudDetectionRule, FraudDetectionRuleAdmin), (OfferWall, OfferWallAdmin), (AdNetworkWebhookLog, AdNetworkWebhookLogAdmin), (NetworkStatistic, NetworkStatisticAdmin), (UserOfferLimit, UserOfferLimitAdmin), (OfferSyncLog, OfferSyncLogAdmin), (SmartOfferRecommendation, SmartOfferRecommendationAdmin), (OfferPerformanceAnalytics, OfferPerformanceAnalyticsAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] ad_networks registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] ad_networks: {e}")

@@ -1,0 +1,170 @@
+version: "3.9"
+
+services:
+  # ── API Server ───────────────────────────────────────────────────────────────
+  dr-api:
+    build: .
+    container_name: dr-api
+    command: uvicorn disaster_recovery.main:app --host 0.0.0.0 --port 8000 --workers 4
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://druser:drpass@postgres-primary:5432/drdb
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - ENCRYPTION_MASTER_KEY=${ENCRYPTION_MASTER_KEY:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_S3_BACKUP_BUCKET=${AWS_S3_BACKUP_BUCKET:-dr-backups}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - PAGERDUTY_API_KEY=${PAGERDUTY_API_KEY:-}
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - backup-storage:/var/backups/dr
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Celery Worker ────────────────────────────────────────────────────────────
+  dr-worker:
+    build: .
+    container_name: dr-worker
+    command: celery -A disaster_recovery.tasks worker --loglevel=info --concurrency=4
+    environment:
+      - DATABASE_URL=postgresql://druser:drpass@postgres-primary:5432/drdb
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      - postgres-primary
+      - redis
+    volumes:
+      - backup-storage:/var/backups/dr
+    restart: unless-stopped
+
+  # ── Celery Beat (Scheduler) ──────────────────────────────────────────────────
+  dr-beat:
+    build: .
+    container_name: dr-beat
+    command: celery -A disaster_recovery.tasks beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://druser:drpass@postgres-primary:5432/drdb
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # ── PostgreSQL Primary ───────────────────────────────────────────────────────
+  postgres-primary:
+    image: postgres:16-alpine
+    container_name: postgres-primary
+    environment:
+      POSTGRES_DB: drdb
+      POSTGRES_USER: druser
+      POSTGRES_PASSWORD: drpass
+      POSTGRES_REPLICATION_USER: replicator
+      POSTGRES_REPLICATION_PASSWORD: replpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-primary-data:/var/lib/postgresql/data
+    command: >
+      postgres
+        -c wal_level=replica
+        -c max_wal_senders=5
+        -c wal_keep_size=1GB
+        -c hot_standby=on
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U druser -d drdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── PostgreSQL Replica ───────────────────────────────────────────────────────
+  postgres-replica:
+    image: postgres:16-alpine
+    container_name: postgres-replica
+    environment:
+      PGUSER: replicator
+      PGPASSWORD: replpass
+    command: >
+      bash -c "
+        until pg_basebackup -h postgres-primary -D /var/lib/postgresql/data -U replicator -vP --wal-method=fetch; do
+          echo 'Waiting for primary...' && sleep 5;
+        done;
+        echo 'standby_mode=on' >> /var/lib/postgresql/data/recovery.conf;
+        echo 'primary_conninfo=host=postgres-primary port=5432 user=replicator password=replpass' >> /var/lib/postgresql/data/recovery.conf;
+        postgres
+      "
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── Prometheus ───────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
+  # ── Grafana ──────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  postgres-primary-data:
+  postgres-replica-data:
+  redis-data:
+  backup-storage:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  default:
+    name: dr-network

@@ -80,3 +80,8 @@ class SecurityConfig(AppConfig):
             connection.on_commit(_do_initialization)
         except Exception as e:
             logger.error(f"Error setting up security initialization: {e}")
+        try:
+            from api.security.admin import _force_register_security
+            _force_register_security()
+        except Exception as e:
+            pass

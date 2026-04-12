@@ -1,5 +1,5 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 from .views import (
     AdminPanelViewSet, AdminActionViewSet, SystemSettingsViewSet,
     ReportViewSet, SiteContentViewSet, SiteNotificationViewSet, SystemHealthView,
@@ -56,7 +56,7 @@ urlpatterns = [
 
 
 # from django.urls import path, include
-# from rest_framework.routers import DefaultRouter
+# from rest_framework.routers import SimpleRouter as DefaultRouter
 # from . import views
 from .views import EndpointToggleViewSet
 # # from .views import AdminPanelViewSet, AdminActionViewSet, SystemSettingsViewSet, ReportViewSet

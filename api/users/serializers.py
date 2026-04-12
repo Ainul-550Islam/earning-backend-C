@@ -203,10 +203,41 @@ class PasswordResetSerializer(serializers.Serializer):
 class KYCVerificationSerializer(BaseSerializer):
     class Meta:
         model = KYCVerification  # [OK] আপনার model import করতে হবে
-        fields = ['id', 'document_type', 'front_image', 'back_image', 
-                 'selfie_image', 'verification_status', 'submitted_at', 
-                 'reviewed_at', 'rejection_reason']
+        fields = [
+            'id',
+            'document_type',
+            'document_number',
+            'front_image',
+            'back_image',
+            'selfie_image',              # legacy fallback
+            'selfie_with_id_note',      # anti-fraud selfie requirement
+            'verification_status',
+            'submitted_at',
+            'reviewed_at',
+            'rejection_reason',
+        ]
         read_only_fields = ['id', 'submitted_at', 'reviewed_at', 'verification_status']
+
+    def validate(self, data):
+        """
+        Require the anti-fraud selfie (ID + handwritten note) when submitting new KYC.
+        Keep legacy support for `selfie_image` so older clients don't break.
+        """
+        selfie_with_note = data.get('selfie_with_id_note')
+        selfie_legacy = data.get('selfie_image')
+
+        if not selfie_with_note and not selfie_legacy:
+            raise serializers.ValidationError({
+                'selfie_with_id_note': 'Selfie with ID card and handwritten note is required.'
+            })
+
+        # If legacy selfie_image is provided, only use it for backward compatibility.
+        # New clients should send `selfie_with_id_note`.
+        if selfie_with_note and selfie_legacy:
+            # Prefer the new anti-fraud selfie and ignore legacy.
+            data['selfie_image'] = None
+
+        return data
 
 # 4. User Level Serializer
 class UserLevelSerializer(BaseSerializer):

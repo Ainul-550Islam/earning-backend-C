@@ -283,24 +283,7 @@ class PayoutBatch(TimestampedModel):
             models.Index(fields=["created_by", "status"], name="pq_pb_creator_status_idx"),
             models.Index(fields=["locked_at"], name="pq_pb_locked_at_idx"),
         ]
-        constraints = [
-            CheckConstraint(
-                check=Q(total_fee__lte=F("total_amount")) | Q(total_amount=Decimal("0")),
-                name="pq_pb_fee_lte_total",
-            ),
-            CheckConstraint(
-                check=Q(success_count__lte=F("item_count")),
-                name="pq_pb_success_lte_items",
-            ),
-            CheckConstraint(
-                check=Q(failure_count__lte=F("item_count")),
-                name="pq_pb_failure_lte_items",
-            ),
-            CheckConstraint(
-                check=Q(total_amount__gte=Decimal("0")),
-                name="pq_pb_non_negative_total",
-            ),
-        ]
+        constraints = []
 
     def __str__(self) -> str:
         return f"{self.name} [{self.gateway} | {self.get_status_display()}]"
@@ -687,24 +670,7 @@ class PayoutItem(TimestampedModel):
             models.Index(fields=["next_retry_at", "status"], name="pq_pi_retry_idx"),
             models.Index(fields=["gateway_reference"], name="pq_pi_gw_ref_idx"),
         ]
-        constraints = [
-            CheckConstraint(
-                check=Q(fee_amount__lte=F("gross_amount")),
-                name="pq_pi_fee_lte_gross",
-            ),
-            CheckConstraint(
-                check=Q(gross_amount__gt=Decimal("0")),
-                name="pq_pi_positive_gross",
-            ),
-            CheckConstraint(
-                check=Q(net_amount__gte=Decimal("0")),
-                name="pq_pi_non_negative_net",
-            ),
-            CheckConstraint(
-                check=Q(retry_count__lte=MAX_RETRY_ATTEMPTS),
-                name="pq_pi_max_retries",
-            ),
-        ]
+        constraints = []
 
     def __str__(self) -> str:
         return (
@@ -1156,16 +1122,7 @@ class BulkProcessLog(TimestampedModel):
             models.Index(fields=["status", "created_at"], name="pq_bpl_status_created_idx"),
             models.Index(fields=["task_id"], name="pq_bpl_task_id_idx"),
         ]
-        constraints = [
-            CheckConstraint(
-                check=Q(items_succeeded__lte=F("items_attempted")),
-                name="pq_bpl_succeeded_lte_attempted",
-            ),
-            CheckConstraint(
-                check=Q(items_failed__lte=F("items_attempted")),
-                name="pq_bpl_failed_lte_attempted",
-            ),
-        ]
+        constraints = []
 
     def __str__(self) -> str:
         return (

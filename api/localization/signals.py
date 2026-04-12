@@ -504,7 +504,22 @@ def missing_translation_post_save(sender: Type[MissingTranslation], instance: Mi
                 logger.error(
                     f"High number of missing translations detected: {recent_count} in last hour"
                 )
-                # TODO: Send alert to admin
+                # Send alert via Django mail/logging — no external dependency needed
+                try:
+                    from django.conf import settings
+                    from django.core.mail import mail_admins
+                    subject = f"ALERT: {recent_count} missing translations in last hour"
+                    message = (
+                        f"High volume of missing translation keys detected.\n\n"
+                        f"Count: {recent_count} in last 60 minutes\n"
+                        f"Threshold: 100\n\n"
+                        f"Action: Run 'python manage.py auto_translate' or check /admin/localization/missingtranslation/\n"
+                    )
+                    if getattr(settings, 'LOCALIZATION_ALERT_EMAIL', True):
+                        mail_admins(subject, message, fail_silently=True)
+                    logger.critical(f"LOCALIZATION ALERT: {subject}")
+                except Exception as alert_err:
+                    logger.error(f"Alert send failed: {alert_err}")
     
     BaseSignalHandler.safe_execute(_post_save)
 

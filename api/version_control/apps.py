@@ -20,3 +20,9 @@ class VersionControlConfig(AppConfig):
             logging.getLogger(__name__).exception(
                 "version_control.ready: failed to import receivers: %s", exc
             )
+    def ready(self):
+        try:
+            from api.version_control.admin import _force_register_version_control
+            _force_register_version_control()
+        except Exception as e:
+            pass

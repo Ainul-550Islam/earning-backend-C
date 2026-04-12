@@ -18,11 +18,11 @@ class SupportSettings(models.Model):
         db_index=True,
     )
 
-    telegram_group = models.URLField(blank=True, help_text="Telegram group/channel link")
-    telegram_admin = models.URLField(blank=True, help_text="Direct admin chat link")
-    whatsapp_number = models.CharField(max_length=20, blank=True, help_text="With country code")
-    whatsapp_group = models.URLField(blank=True)
-    facebook_page = models.URLField(blank=True)
+    telegram_group = models.URLField(blank=True, help_text="Telegram group/channel link", null=True)
+    telegram_admin = models.URLField(blank=True, help_text="Direct admin chat link", null=True)
+    whatsapp_number = models.CharField(max_length=20, blank=True, help_text="With country code", null=True)
+    whatsapp_group = models.URLField(null=True, blank=True)
+    facebook_page = models.URLField(null=True, blank=True)
     email_support = models.EmailField(blank=True)
     
     # # Business hours
@@ -39,9 +39,9 @@ class SupportSettings(models.Model):
     # App update
     force_update = models.BooleanField(default=False)
     latest_version_code = models.IntegerField(default=1)
-    latest_version_name = models.CharField(max_length=20, default="1.0.0")
+    latest_version_name = models.CharField(max_length=20, default="1.0.0", null=True, blank=True)
     update_message = models.TextField(blank=True)
-    play_store_url = models.URLField(blank=True)
+    play_store_url = models.URLField(null=True, blank=True)
     
     class Meta:
         verbose_name_plural = "Support Settings"
@@ -82,20 +82,19 @@ class SupportTicket(models.Model):
         ('other', 'Other'),
     ]
     
-    # user = models.ForeignKey('api.User', on_delete=models.CASCADE)
+    # user = models.ForeignKey('api.User', on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, # এটি ব্যবহার করলে জ্যাঙ্গো সঠিক মডেল খুঁজে পাবে
         on_delete=models.CASCADE,
-        related_name='support_supportticket_user'
-    )
-    ticket_id = models.CharField(max_length=20, unique=True, blank=True)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
-    subject = models.CharField(max_length=200)
+        related_name='support_supportticket_user')
+    ticket_id = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, null=True, blank=True)
+    subject = models.CharField(max_length=200, null=True, blank=True)
     description = models.TextField()
     screenshot = models.ImageField(upload_to='support_tickets/', null=True, blank=True)
     
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
-    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open', null=True, blank=True)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium', null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -129,9 +128,9 @@ class FAQ(models.Model):
         db_index=True,
     )
 
-    question = models.CharField(max_length=300)
+    question = models.CharField(max_length=300, null=True, blank=True)
     answer = models.TextField()
-    category = models.CharField(max_length=50, default='general')
+    category = models.CharField(max_length=50, default='general', null=True, blank=True)
     is_active = models.BooleanField(default=True)
     order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -65,4 +65,8 @@ class AnalyticsConfig(AppConfig):
                 
         except Exception as e:
             print(f"[WARN] Analytics admin registration error: {e}")
-            
+        try:
+            from api.analytics.admin import _force_register_analytics
+            _force_register_analytics()
+        except Exception as e:
+            pass

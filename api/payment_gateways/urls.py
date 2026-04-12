@@ -2,7 +2,7 @@
 # ✅ Bulletproof — all ViewSets registered
 
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 
 from .views import (
     PaymentGatewayViewSet,
@@ -12,6 +12,7 @@ from .views import (
     GatewayConfigViewSet,
     CurrencyViewSet,
     PaymentWebhookLogViewSet,
+    user_active_gateways,
 )
 
 app_name = 'payment_gateways'
@@ -27,5 +28,6 @@ router.register(r'webhook-logs', PaymentWebhookLogViewSet,    basename='webhook-
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('user/gateways/active/', user_active_gateways, name='user-gateways-active'),
     path('webhooks/', include('api.payment_gateways.webhooks.urls', namespace='webhooks')),
 ]

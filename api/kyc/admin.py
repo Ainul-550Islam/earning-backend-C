@@ -647,15 +647,9 @@ except Exception as e:
 
 
 # ==================== ADMIN SITE CUSTOMIZATION ====================
-admin.site.site_header = format_html(
-    '<span style="font-size: 24px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); '
-    '-webkit-background-clip: text; -webkit-text-fill-color: transparent;">[SECURE] Earning Platform - KYC Management</span>'
-)
+admin.site.site_header = '[SECURE] Earning Platform - KYC Management'
 admin.site.site_title = 'KYC Admin'
-admin.site.index_title = format_html(
-    '<h2 style="color: #667eea; font-weight: bold;">Welcome to KYC Management Center</h2>'
-    '<p style="color: #999;">Verify user identities, manage KYC submissions, and monitor compliance</p>'
-)
+admin.site.index_title = 'Welcome to KYC Management Center'
 
 def _force_register_kyc():
     try:

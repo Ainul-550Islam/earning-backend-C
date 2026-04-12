@@ -163,14 +163,13 @@ class DeviceInfo(models.Model):
         related_name='user_devices',
         null=True,
         blank=True,
-        db_index=True
-    )
-    device_id = models.CharField(max_length=255, db_index=True)
-    device_id_hash = models.CharField(max_length=64, db_index=True, unique=True)
-    device_model = models.CharField(max_length=100, default="Unknown")
-    device_brand = models.CharField(max_length=100, blank=True, default="Unknown")
-    android_version = models.CharField(max_length=50, default="Unknown")
-    app_version = models.CharField(max_length=20, default='1.0.0')
+        db_index=True)
+    device_id = models.CharField(max_length=255, db_index=True, null=True, blank=True)
+    device_id_hash = models.CharField(max_length=64, db_index=True, unique=True, null=True, blank=True)
+    device_model = models.CharField(max_length=100, default="Unknown", null=True, blank=True)
+    device_brand = models.CharField(max_length=100, blank=True, default="Unknown", null=True)
+    android_version = models.CharField(max_length=50, default="Unknown", null=True, blank=True)
+    app_version = models.CharField(max_length=20, default='1.0.0', null=True, blank=True)
     
     # Security flags
     is_rooted = models.BooleanField(default=False, db_index=True)
@@ -672,16 +671,16 @@ class SecurityLog(models.Model):
     
     log_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     # ভিউ এর সাথে মিল রাখার জন্য এই নামগুলো ব্যবহার করুন:
-    security_type = models.CharField(max_length=100) # event_type এর বদলে এটি দিন
-    severity = models.CharField(max_length=20, default='low')
+    security_type = models.CharField(max_length=100, null=True, blank=True) # event_type এর বদলে এটি দিন
+    severity = models.CharField(max_length=20, default='low', null=True, blank=True)
     ip_address = models.GenericIPAddressField(default='0.0.0.0', null=True, blank=True)
     # SecurityLog model এ যোগ করুন
     # resolved = models.BooleanField(default=False)
     # resolved_at = models.DateTimeField(null=True, blank=True)
-    # resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    # resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    # device_info = models.ForeignKey(DeviceInfo, null=True, blank=True, on_delete=models.SET_NULL)
+    # device_info = models.ForeignKey(DeviceInfo, on_delete=models.SET_NULL, null=True, blank=True)
     
     description = models.TextField(null=True, blank=True) # এটি নতুন যোগ করুন
     risk_score = models.IntegerField(default=0) # এটি নতুন যোগ করুন
@@ -695,8 +694,6 @@ class SecurityLog(models.Model):
     # 🔴 CRITICAL: Use safe IP field
     ip_address = models.GenericIPAddressField(
         default='0.0.0.0',  # Safe default
-        null=True,
-        blank=True,
         verbose_name=_("IP Address")
     )
     
@@ -705,16 +702,14 @@ class SecurityLog(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='security_logs'
-    )
+        related_name='security_logs')
     
     device_info = models.ForeignKey(
         'DeviceInfo',
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
-        related_name='security_logs'
-    )
+        related_name='security_logs')
     
     action_taken = models.TextField(
         blank=True,
@@ -737,12 +732,11 @@ class SecurityLog(models.Model):
     
     resolved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
         related_name='resolved_security_logs',
-        verbose_name="Resolved By"
-    )
+        verbose_name="Resolved By")
     
     user_agent = models.TextField(blank=True, null=True)
     request_path = models.CharField(max_length=500, blank=True, null=True)
@@ -812,9 +806,9 @@ class SecurityLog(models.Model):
 #         related_name='security_logs',
 #         null=True,
 #         blank=True
-#     )
-#     security_type = models.CharField(max_length=50, choices=SECURITY_TYPES)
-#     severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, default='medium')
+#     , null=True, blank=True)
+#     security_type = models.CharField(max_length=50, choices=SECURITY_TYPES, null=True, blank=True)
+#     severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, default='medium', null=True, blank=True)
 #     ip_address = models.GenericIPAddressField(null=True, blank=True)  # Null Object Pattern
 #     user_agent = models.TextField(blank=True, null=True, default="")
 #     device_info = models.ForeignKey(
@@ -823,10 +817,10 @@ class SecurityLog(models.Model):
 #         null=True,
 #         blank=True,
 #         related_name='security_logs'
-#     )
+#     , null=True, blank=True)
 #     description = models.TextField(default="")
 #     metadata = models.JSONField(default=dict, blank=True)
-#     action_taken = models.CharField(max_length=200, blank=True, default="")
+#     action_taken = models.CharField(max_length=200, default="", null=True, blank=True)
 #     risk_score = models.IntegerField(default=0)
 #     resolved = models.BooleanField(default=False)
 #     resolved_at = models.DateTimeField(null=True, blank=True)
@@ -836,7 +830,7 @@ class SecurityLog(models.Model):
 #         null=True,
 #         blank=True,
 #         related_name='resolved_security_logs'
-#     )
+#     , null=True, blank=True)
 #     created_at = models.DateTimeField(auto_now_add=True)
 #     response_time_ms = models.IntegerField(null=True, blank=True)
     
@@ -910,8 +904,7 @@ class RiskScore(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='risk_scores'
-    )
+        related_name='risk_scores')
     current_score = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     previous_score = models.IntegerField(default=0)
     
@@ -1113,8 +1106,8 @@ class AutoBlockRule(models.Model):
         ('velocity', 'Velocity Check'),
     ]
     
-    name = models.CharField(max_length=100, unique=True)
-    rule_type = models.CharField(max_length=50, choices=RULE_TYPES)
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    rule_type = models.CharField(max_length=50, choices=RULE_TYPES, null=True, blank=True)
     description = models.TextField()
     
     # Threshold configuration
@@ -1135,7 +1128,6 @@ class AutoBlockRule(models.Model):
     apply_to_all_users = models.BooleanField(default=True)
     user_groups = models.ManyToManyField(
         'auth.Group',
-        blank=True,
         related_name='auto_block_rules'
     )
     
@@ -1274,12 +1266,11 @@ class AuditTrail(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='audit_trails'
-    )
-    action_type = models.CharField(max_length=20, choices=ACTION_TYPES)
-    model_name = models.CharField(max_length=100)
-    object_id = models.CharField(max_length=100)
-    object_repr = models.CharField(max_length=255, blank=True)
+        related_name='audit_trails')
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPES, null=True, blank=True)
+    model_name = models.CharField(max_length=100, null=True, blank=True)
+    object_id = models.CharField(max_length=100, null=True, blank=True)
+    object_repr = models.CharField(max_length=255, null=True, blank=True)
     
     # Changes made
     old_values = models.JSONField(default=dict, blank=True)
@@ -1289,11 +1280,11 @@ class AuditTrail(models.Model):
     # Context
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    session_key = models.CharField(max_length=100, blank=True)
+    session_key = models.CharField(max_length=100, null=True, blank=True)
     
     # Metadata
-    request_path = models.CharField(max_length=500, blank=True)
-    request_method = models.CharField(max_length=10, blank=True)
+    request_path = models.CharField(max_length=500, null=True, blank=True)
+    request_method = models.CharField(max_length=10, null=True, blank=True)
     status_code = models.IntegerField(null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1356,28 +1347,27 @@ class DataExport(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='data_exports'
-    )
-    export_name = models.CharField(max_length=200)
-    format = models.CharField(max_length=10, choices=FORMAT_CHOICES, default='csv')
+        related_name='data_exports')
+    export_name = models.CharField(max_length=200, null=True, blank=True)
+    format = models.CharField(max_length=10, choices=FORMAT_CHOICES, default='csv', null=True, blank=True)
     
     # Query parameters
-    model_name = models.CharField(max_length=100)
+    model_name = models.CharField(max_length=100, null=True, blank=True)
     filters = models.JSONField(default=dict, blank=True)
     columns = models.JSONField(default=list, blank=True)
     
     # Security
-    password_hash = models.CharField(max_length=128, blank=True)
+    password_hash = models.CharField(max_length=128, null=True, blank=True)
     encryption_key = models.TextField(blank=True)
     is_encrypted = models.BooleanField(default=True)
     
     # Storage
-    file_path = models.CharField(max_length=500, blank=True)
+    file_path = models.CharField(max_length=500, null=True, blank=True)
     file_size = models.BigIntegerField(default=0)
-    download_url = models.URLField(blank=True)
+    download_url = models.URLField(null=True, blank=True)
     
     # Metadata
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
     total_records = models.IntegerField(default=0)
     exported_records = models.IntegerField(default=0)
     
@@ -1450,16 +1440,15 @@ class DataImport(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='data_imports'
-    )
-    import_name = models.CharField(max_length=200)
-    model_name = models.CharField(max_length=100)
+        related_name='data_imports')
+    import_name = models.CharField(max_length=200, null=True, blank=True)
+    model_name = models.CharField(max_length=100, null=True, blank=True)
     
     # File details
-    file_name = models.CharField(max_length=255)
-    file_path = models.CharField(max_length=500)
+    file_name = models.CharField(max_length=255, null=True, blank=True)
+    file_path = models.CharField(max_length=500, null=True, blank=True)
     file_size = models.BigIntegerField()
-    file_hash = models.CharField(max_length=64)  # SHA-256 hash
+    file_hash = models.CharField(max_length=64, null=True, blank=True)  # SHA-256 hash
     
     # Processing
     total_records = models.IntegerField(default=0)
@@ -1473,10 +1462,10 @@ class DataImport(models.Model):
     
     # Security
     is_verified = models.BooleanField(default=False)
-    verification_hash = models.CharField(max_length=64, blank=True)
+    verification_hash = models.CharField(max_length=64, null=True, blank=True)
     
     # Status
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
     
     # Audit
     uploaded_at = models.DateTimeField(auto_now_add=True)
@@ -1550,18 +1539,17 @@ class SecurityNotification(models.Model):
         on_delete=models.CASCADE,
         related_name='security_notifications',
         null=True,
-        blank=True
-    )
-    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
-    priority = models.CharField(max_length=20, choices=PRIORITY_LEVELS, default='medium')
+        blank=True)
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, null=True, blank=True)
+    priority = models.CharField(max_length=20, choices=PRIORITY_LEVELS, default='medium', null=True, blank=True)
     
     # Content
-    title = models.CharField(max_length=200)
+    title = models.CharField(max_length=200, null=True, blank=True)
     message = models.TextField()
     data = models.JSONField(default=dict, blank=True)  # Additional data
     
     # Delivery
-    recipient = models.CharField(max_length=500)  # Email, phone, etc.
+    recipient = models.CharField(max_length=500, null=True, blank=True)  # Email, phone, etc.
     sent_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
     read_at = models.DateTimeField(null=True, blank=True)
@@ -1665,9 +1653,8 @@ class AlertRule(models.Model):
         on_delete=models.CASCADE,
         related_name='alert_rules',
         null=True,
-        blank=True
-    )
-    name = models.CharField(max_length=100)
+        blank=True)
+    name = models.CharField(max_length=100, null=True, blank=True)
     condition = models.JSONField()  # JSON logic condition
     notification_types = models.JSONField(default=list)  # List of notification types
     
@@ -1745,8 +1732,8 @@ class FraudPattern(models.Model):
         ('money_laundering', 'Money Laundering'),
     ]
     
-    name = models.CharField(max_length=100, unique=True)
-    pattern_type = models.CharField(max_length=50, choices=PATTERN_TYPES)
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    pattern_type = models.CharField(max_length=50, choices=PATTERN_TYPES, null=True, blank=True)
     description = models.TextField()
     
     # Pattern configuration
@@ -1844,8 +1831,8 @@ class RealTimeDetection(models.Model):
         ('error', 'Error'),
     ]
     
-    name = models.CharField(max_length=100, unique=True)
-    detection_type = models.CharField(max_length=50)
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    detection_type = models.CharField(max_length=50, null=True, blank=True)
     description = models.TextField()
     
     # Configuration
@@ -1853,7 +1840,7 @@ class RealTimeDetection(models.Model):
     batch_size = models.IntegerField(default=100)
     
     # Status
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='idle')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='idle', null=True, blank=True)
     last_run_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True)
     
@@ -1923,9 +1910,9 @@ class RealTimeDetection(models.Model):
 
 class Country(models.Model):
     """Country information for geolocation"""
-    name = models.CharField(max_length=100, unique=True)
-    code = models.CharField(max_length=2, unique=True)  # ISO 3166-1 alpha-2
-    iso_code = models.CharField(max_length=3, unique=True)  # ISO 3166-1 alpha-3
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    code = models.CharField(max_length=2, unique=True, null=True, blank=True)  # ISO 3166-1 alpha-2
+    iso_code = models.CharField(max_length=3, unique=True, null=True, blank=True)  # ISO 3166-1 alpha-3
     
     # Risk assessment
     risk_level = models.CharField(max_length=20, choices=[
@@ -1982,20 +1969,20 @@ class GeolocationLog(models.Model):
     ip_address = models.GenericIPAddressField(db_index=True)
     
     # Geolocation data
-    country_code = models.CharField(max_length=2, blank=True)
-    country_name = models.CharField(max_length=100, blank=True)
-    region_code = models.CharField(max_length=10, blank=True)
-    region_name = models.CharField(max_length=100, blank=True)
-    city = models.CharField(max_length=100, blank=True)
-    zip_code = models.CharField(max_length=20, blank=True)
-    timezone = models.CharField(max_length=50, blank=True)
+    country_code = models.CharField(max_length=2, null=True, blank=True)
+    country_name = models.CharField(max_length=100, null=True, blank=True)
+    region_code = models.CharField(max_length=10, null=True, blank=True)
+    region_name = models.CharField(max_length=100, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    zip_code = models.CharField(max_length=20, null=True, blank=True)
+    timezone = models.CharField(max_length=50, null=True, blank=True)
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     
     # ISP/Network information
-    isp = models.CharField(max_length=200, blank=True)
-    organization = models.CharField(max_length=200, blank=True)
-    as_number = models.CharField(max_length=50, blank=True)
+    isp = models.CharField(max_length=200, null=True, blank=True)
+    organization = models.CharField(max_length=200, null=True, blank=True)
+    as_number = models.CharField(max_length=50, null=True, blank=True)
     
     # Threat intelligence
     is_vpn = models.BooleanField(default=False)
@@ -2123,8 +2110,7 @@ class CountryBlockRule(models.Model):
     country = models.ForeignKey(
         Country,
         on_delete=models.CASCADE,
-        related_name='block_rules'
-    )
+        related_name='block_rules')
     
     # Blocking configuration
     block_type = models.CharField(max_length=20, choices=[
@@ -2154,8 +2140,8 @@ class CountryBlockRule(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='created_country_blocks'
-    )
+        blank=True,
+        related_name='created_country_blocks')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -2226,23 +2212,21 @@ class APIRateLimit(models.Model):
         ('month', 'Per Month'),
     ]
     
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
     description = models.TextField(blank=True)
     
     # Limit configuration
-    limit_type = models.CharField(max_length=20, choices=LIMIT_TYPES)
-    limit_period = models.CharField(max_length=20, choices=PERIOD_CHOICES)
+    limit_type = models.CharField(max_length=20, choices=LIMIT_TYPES, null=True, blank=True)
+    limit_period = models.CharField(max_length=20, choices=PERIOD_CHOICES, null=True, blank=True)
     request_limit = models.IntegerField(default=100)
     
     # Scope
-    endpoint_pattern = models.CharField(max_length=500, blank=True)  # URL pattern
+    endpoint_pattern = models.CharField(max_length=500, null=True, blank=True)  # URL pattern
     user_group = models.ForeignKey(
         'auth.Group',
         on_delete=models.SET_NULL,
         null=True,
-        blank=True,
-        related_name='api_rate_limits'
-    )
+        related_name='api_rate_limits')
     
     # Response configuration
     response_status_code = models.IntegerField(default=429)
@@ -2371,8 +2355,7 @@ class RateLimitLog(models.Model):
     rate_limit = models.ForeignKey(
         APIRateLimit,
         on_delete=models.CASCADE,
-        related_name='logs'
-    )
+        related_name='logs')
     
     # Request information
     user = models.ForeignKey(
@@ -2380,11 +2363,10 @@ class RateLimitLog(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='rate_limit_logs'
-    )
+        related_name='security_rate_limit_logs')
     ip_address = models.GenericIPAddressField()
-    endpoint = models.CharField(max_length=500)
-    request_method = models.CharField(max_length=10)
+    endpoint = models.CharField(max_length=500, null=True, blank=True)
+    request_method = models.CharField(max_length=10, null=True, blank=True)
     
     # Rate limit status
     current_count = models.IntegerField()
@@ -2413,7 +2395,7 @@ class RateLimitLog(models.Model):
 
 class PasswordPolicy(models.Model):
     """Password policy configuration"""
-    name = models.CharField(max_length=100, default="Default Password Policy")
+    name = models.CharField(max_length=100, default="Default Password Policy", null=True, blank=True)
     
     # Length requirements
     min_length = models.IntegerField(default=8)
@@ -2425,7 +2407,7 @@ class PasswordPolicy(models.Model):
     require_digits = models.BooleanField(default=True)
     require_special_chars = models.BooleanField(default=True)
     min_special_chars = models.IntegerField(default=1)
-    special_chars_set = models.CharField(max_length=100, default="!@#$%^&*()_+-=[]{}|;:,.<>?")
+    special_chars_set = models.CharField(max_length=100, default="!@#$%^&*(, null=True, blank=True)_+-=[]{}|;:,.<>?")
     
     # History requirements
     remember_last_passwords = models.IntegerField(default=5)
@@ -2566,13 +2548,12 @@ class PasswordHistory(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='password_history'
-    )
+        related_name='password_history')
     
     # Password data
-    password_hash = models.CharField(max_length=128)
-    salt = models.CharField(max_length=128, blank=True)
-    algorithm = models.CharField(max_length=50, default='pbkdf2_sha256')
+    password_hash = models.CharField(max_length=128, null=True, blank=True)
+    salt = models.CharField(max_length=128, null=True, blank=True)
+    algorithm = models.CharField(max_length=50, default='pbkdf2_sha256', null=True, blank=True)
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -2581,8 +2562,7 @@ class PasswordHistory(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='changed_passwords'
-    )
+        related_name='changed_passwords')
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     
     class Meta:
@@ -2618,8 +2598,7 @@ class PasswordAttempt(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='password_attempts'
-    )
+        related_name='password_attempts')
     ip_address = models.GenericIPAddressField()
     successful = models.BooleanField(default=False)
     attempted_at = models.DateTimeField(auto_now_add=True)
@@ -2674,11 +2653,10 @@ class UserSession(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='sessions'
-    )
+        related_name='sessions')
     
     # Session data
-    session_key = models.CharField(max_length=100, unique=True)
+    session_key = models.CharField(max_length=100, unique=True, null=True, blank=True)
     session_data = models.TextField()
     
     # Device information
@@ -2687,8 +2665,7 @@ class UserSession(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='sessions'
-    )
+        related_name='sessions')
     
     # Location information
     ip_address = models.GenericIPAddressField()
@@ -2697,8 +2674,7 @@ class UserSession(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='sessions'
-    )
+        related_name='sessions')
     
     # Status
     is_active = models.BooleanField(default=True)
@@ -2712,7 +2688,7 @@ class UserSession(models.Model):
     
     # Metadata
     user_agent = models.TextField(blank=True)
-    login_method = models.CharField(max_length=50, default='password')  # password, 2fa, social, etc.
+    login_method = models.CharField(max_length=50, default='password', null=True, blank=True)  # password, 2fa, social, etc.
     
     class Meta:
         ordering = ['-created_at']
@@ -2805,14 +2781,13 @@ class SessionActivity(models.Model):
     session = models.ForeignKey(
         UserSession,
         on_delete=models.CASCADE,
-        related_name='activities'
-    )
-    activity_type = models.CharField(max_length=50, choices=ACTIVITY_TYPES)
+        related_name='activities')
+    activity_type = models.CharField(max_length=50, choices=ACTIVITY_TYPES, null=True, blank=True)
     
     # Context
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField(blank=True)
-    endpoint = models.CharField(max_length=500, blank=True)
+    endpoint = models.CharField(max_length=500, null=True, blank=True)
     
     # Data
     metadata = models.JSONField(default=dict, blank=True)
@@ -2845,15 +2820,14 @@ class TwoFactorMethod(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='two_factor_methods'
-    )
-    method_type = models.CharField(max_length=20, choices=METHOD_TYPES)
+        related_name='two_factor_methods')
+    method_type = models.CharField(max_length=20, choices=METHOD_TYPES, null=True, blank=True)
     is_primary = models.BooleanField(default=False)
     is_enabled = models.BooleanField(default=False)
     
     # Method-specific data
-    secret_key = models.CharField(max_length=100, blank=True)  # For TOTP
-    phone_number = models.CharField(max_length=20, blank=True)  # For SMS
+    secret_key = models.CharField(max_length=100, null=True, blank=True)  # For TOTP
+    phone_number = models.CharField(max_length=20, null=True, blank=True)  # For SMS
     email = models.EmailField(blank=True)  # For email
     backup_codes = models.JSONField(default=list, blank=True)  # List of backup codes
     
@@ -2932,18 +2906,14 @@ class TwoFactorAttempt(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='two_factor_attempts'
-    )
+        related_name='two_factor_attempts')
     method = models.ForeignKey(
         TwoFactorMethod,
         on_delete=models.CASCADE,
-        related_name='attempts',
-        null=True,
-        blank=True
-    )
+        related_name='attempts',)
     
     # Attempt data
-    code = models.CharField(max_length=100, blank=True)
+    code = models.CharField(max_length=100, null=True, blank=True)
     successful = models.BooleanField(default=False)
     
     # Context
@@ -2952,9 +2922,7 @@ class TwoFactorAttempt(models.Model):
     device_info = models.ForeignKey(
         DeviceInfo,
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
+        null=True,)
     
     attempted_at = models.DateTimeField(auto_now_add=True)
     
@@ -2975,11 +2943,10 @@ class TwoFactorRecoveryCode(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='recovery_codes'
-    )
+        related_name='recovery_codes')
     
     # Code information
-    code_hash = models.CharField(max_length=64)  # SHA-256 hash of code
+    code_hash = models.CharField(max_length=64, null=True, blank=True)  # SHA-256 hash of code
     is_used = models.BooleanField(default=False)
     used_at = models.DateTimeField(null=True, blank=True)
     
@@ -3162,12 +3129,11 @@ class UserBan(models.Model):
     
     # 1. Null Object Pattern and default values
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE, 
         related_name='security_bans',
         verbose_name="User",
-        help_text="The user who is banned"
-    )
+        help_text="The user who is banned")
     
     reason = models.TextField(
         verbose_name="Reason",
@@ -3515,13 +3481,12 @@ class ClickTracker(models.Model):
         verbose_name="User",
         help_text="User who performed the click",
         null=True,  # Allow anonymous clicks
-        blank=True
-    )
+        blank=True)
     
     action_type = models.CharField(
         max_length=100,
         verbose_name="Action Type",
-        help_text="Type of click (e.g., button_click, link_click)",
+        help_text="Type of click (e.g., button_click, link_click, null=True, blank=True)",
         default="unknown",  # Default value
         db_index=True
     )
@@ -3538,7 +3503,6 @@ class ClickTracker(models.Model):
         verbose_name="User Agent",
         help_text="Browser/device user agent",
         default="",  # Default value
-        blank=True
     )
     
     device_info = models.JSONField(
@@ -3553,8 +3517,6 @@ class ClickTracker(models.Model):
         verbose_name="Additional Metadata",
         help_text="Any additional click data",
         default=dict,  # Default empty dict
-        blank=True,
-        null=True
     )
     
     referer = models.URLField(
@@ -3562,16 +3524,12 @@ class ClickTracker(models.Model):
         max_length=500,
         blank=True,
         null=True,
-        default=""
-    )
+        default="")
     
     page_url = models.URLField(
         verbose_name="Page URL",
         max_length=500,
-        blank=True,
-        null=True,
-        default=""
-    )
+        default="")
     
     element_id = models.CharField(
         max_length=200,
@@ -3579,8 +3537,7 @@ class ClickTracker(models.Model):
         help_text="HTML element ID that was clicked",
         blank=True,
         null=True,
-        default=""
-    )
+        default="")
     
     session_id = models.CharField(
         max_length=100,
@@ -3588,8 +3545,7 @@ class ClickTracker(models.Model):
         help_text="User session identifier",
         blank=True,
         null=True,
-        default=""
-    )
+        default="")
     
     is_suspicious = models.BooleanField(
         verbose_name="Is Suspicious",
@@ -4897,14 +4853,12 @@ class MaintenanceMode(models.Model):
         verbose_name="Title",
         help_text="Maintenance mode title",
         default="Site Under Maintenance",
-        blank=True
-    )
+        blank=True)
     
     message = models.TextField(
         verbose_name="Message",
         help_text="Message for users",
         default="We are currently performing maintenance. Please check back shortly.",
-        blank=True
     )
     
     start_time = models.DateTimeField(
@@ -4923,8 +4877,6 @@ class MaintenanceMode(models.Model):
     actual_end_time = models.DateTimeField(
         verbose_name="Actual End Time",
         help_text="When maintenance actually ended",
-        null=True,
-        blank=True
     )
     
     # Maintenance scope and settings
@@ -4964,8 +4916,6 @@ class MaintenanceMode(models.Model):
         verbose_name="Allowed Users",
         help_text="User IDs allowed during maintenance (JSON array)",
         default=list,
-        blank=True,
-        null=True
     )
     
     bypass_token = models.CharField(
@@ -4974,8 +4924,7 @@ class MaintenanceMode(models.Model):
         help_text="Token to bypass maintenance mode",
         blank=True,
         null=True,
-        unique=True
-    )
+        unique=True)
     
     # Status tracking
     progress_percentage = models.IntegerField(
@@ -5007,14 +4956,11 @@ class MaintenanceMode(models.Model):
         verbose_name="Initiated By",
         help_text="User who initiated maintenance",
         null=True,
-        blank=True
-    )
+        blank=True)
     
     notes = models.TextField(
         verbose_name="Notes",
         help_text="Additional notes/comments",
-        blank=True,
-        null=True
     )
     
     created_at = models.DateTimeField(
@@ -5450,17 +5396,17 @@ class SecurityConfig(models.Model):
     
     # Null Object Pattern: Default values for all fields
     name = models.CharField(
+        null=True, blank=True,
         max_length=100,
         verbose_name="Configuration Name",
         help_text="Unique name for this security configuration",
         unique=True,
-        db_index=True
-    )
+        db_index=True)
     
     description = models.TextField(
+        null=True, blank=True,
         verbose_name="Description",
         help_text="Description of this security configuration",
-        blank=True
     )
     
     config_type = models.CharField(
@@ -5527,8 +5473,7 @@ class SecurityConfig(models.Model):
         help_text="Parent configuration this was based on",
         null=True,
         blank=True,
-        related_name='child_configs'
-    )
+        related_name='child_configs')
     
     # Metadata
     created_by = models.ForeignKey(
@@ -5538,8 +5483,7 @@ class SecurityConfig(models.Model):
         help_text="User who created this configuration",
         null=True,
         blank=True,
-        related_name='created_security_configs'
-    )
+        related_name='created_security_configs')
     
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -5548,8 +5492,7 @@ class SecurityConfig(models.Model):
         help_text="User who last updated this configuration",
         null=True,
         blank=True,
-        related_name='updated_security_configs'
-    )
+        related_name='updated_security_configs')
     
     created_at = models.DateTimeField(
         verbose_name="Created At",
@@ -6036,7 +5979,7 @@ class AppVersion(models.Model):
     version_name = models.CharField(
         max_length=50,
         verbose_name="Version Name",
-        help_text="Version name (e.g., 1.0.0)",
+        help_text="Version name (e.g., 1.0.0, null=True, blank=True)",
         default="1.0.0",
         unique=True
     )
@@ -6047,8 +5990,7 @@ class AppVersion(models.Model):
         help_text="Version code for comparison",
         default="1",
         unique=True,
-        db_index=True
-    )
+        db_index=True)
     
     release_type = models.CharField(
         max_length=20,
@@ -6082,31 +6024,25 @@ class AppVersion(models.Model):
         verbose_name="Minimum OS Version",
         help_text="Minimum operating system version required",
         default="",
-        blank=True
-    )
+        blank=True)
     
     max_os_version = models.CharField(
         max_length=20,
         verbose_name="Maximum OS Version",
         help_text="Maximum operating system version supported",
-        default="",
-        blank=True
-    )
+        default="",)
     
     download_url = models.URLField(
         verbose_name="Download URL",
         help_text="URL to download the update",
         default="",
-        blank=True
-    )
+        blank=True)
     
     checksum = models.CharField(
         max_length=128,
         verbose_name="Checksum",
         help_text="SHA256 checksum for verification",
-        default="",
-        blank=True
-    )
+        default="",)
     
     file_size = models.BigIntegerField(
         verbose_name="File Size",
@@ -6157,14 +6093,11 @@ class AppVersion(models.Model):
         verbose_name="Created By",
         help_text="User who created this version",
         null=True,
-        blank=True
-    )
+        blank=True)
     
     notes = models.TextField(
         verbose_name="Notes",
         help_text="Additional notes/comments",
-        blank=True,
-        null=True
     )
     
     created_at = models.DateTimeField(
@@ -6439,6 +6372,7 @@ class IPBlacklist(models.Model):
     
     # Null Object Pattern: Default values for all fields
     ip_address = models.GenericIPAddressField(
+        null=True, blank=True,
         verbose_name="IP Address",
         help_text="IP address to blacklist",
         unique=True,
@@ -6576,48 +6510,36 @@ class IPBlacklist(models.Model):
         verbose_name="Country Code",
         help_text="ISO country code",
         blank=True,
-        null=True
-    )
+        null=True)
     
     country_name = models.CharField(
         max_length=100,
         verbose_name="Country Name",
-        help_text="Country name",
-        blank=True,
-        null=True
-    )
+        help_text="Country name",)
     
     city = models.CharField(
         max_length=100,
         verbose_name="City",
         help_text="City name",
         blank=True,
-        null=True
-    )
+        null=True)
     
     isp = models.CharField(
         max_length=200,
         verbose_name="ISP",
-        help_text="Internet Service Provider",
-        blank=True,
-        null=True
-    )
+        help_text="Internet Service Provider",)
     
     asn = models.CharField(
         max_length=50,
         verbose_name="ASN",
         help_text="Autonomous System Number",
         blank=True,
-        null=True
-    )
+        null=True)
     
     organization = models.CharField(
         max_length=200,
         verbose_name="Organization",
-        help_text="Organization name",
-        blank=True,
-        null=True
-    )
+        help_text="Organization name",)
     
     # Threat intelligence
     threat_intel_data = models.JSONField(
@@ -6636,22 +6558,18 @@ class IPBlacklist(models.Model):
         help_text="User who reported this IP",
         null=True,
         blank=True,
-        related_name='reported_ips'
-    )
+        related_name='reported_ips')
     
     auto_blocked_by = models.CharField(
         max_length=100,
         verbose_name="Auto-blocked By",
         help_text="System/rule that auto-blocked this IP",
-        blank=True,
-        null=True
-    )
+        null=True)
     
     notes = models.TextField(
         verbose_name="Notes",
         help_text="Additional notes/comments",
         blank=True,
-        null=True
     )
     
     # Model-Level Constraints
@@ -7261,8 +7179,7 @@ class WithdrawalProtection(models.Model):
         verbose_name="User",
         help_text="User associated with withdrawal protection",
         related_name='withdrawal_protections',
-        db_index=True
-    )
+        db_index=True)
     
     # Protection status
     is_active = models.BooleanField(
@@ -7293,40 +7210,35 @@ class WithdrawalProtection(models.Model):
         help_text="Maximum withdrawal amount per day",
         max_digits=15,
         decimal_places=2,
-        default=1000.00
-    )
+        default=1000.00)
     
     weekly_limit = models.DecimalField(
         verbose_name="Weekly Withdrawal Limit",
         help_text="Maximum withdrawal amount per week",
         max_digits=15,
         decimal_places=2,
-        default=5000.00
-    )
+        default=5000.00)
     
     monthly_limit = models.DecimalField(
         verbose_name="Monthly Withdrawal Limit",
         help_text="Maximum withdrawal amount per month",
         max_digits=15,
         decimal_places=2,
-        default=20000.00
-    )
+        default=20000.00)
     
     single_transaction_limit = models.DecimalField(
         verbose_name="Single Transaction Limit",
         help_text="Maximum amount per single withdrawal",
         max_digits=15,
         decimal_places=2,
-        default=2000.00
-    )
+        default=2000.00)
     
     min_withdrawal_amount = models.DecimalField(
         verbose_name="Minimum Withdrawal Amount",
         help_text="Minimum amount per withdrawal",
         max_digits=15,
         decimal_places=2,
-        default=10.00
-    )
+        default=10.00)
     
     # Frequency limits
     daily_count_limit = models.PositiveIntegerField(
@@ -7399,8 +7311,7 @@ class WithdrawalProtection(models.Model):
         help_text="Amount threshold for automatic hold review",
         max_digits=15,
         decimal_places=2,
-        default=5000.00
-    )
+        default=5000.00)
     
     # Whitelist/Blacklist
     whitelisted_ips = models.JSONField(
@@ -7415,8 +7326,6 @@ class WithdrawalProtection(models.Model):
         verbose_name="Whitelisted Devices",
         help_text="Device IDs allowed for withdrawals",
         default=list,
-        blank=True,
-        null=True
     )
     
     blacklisted_destinations = models.JSONField(
@@ -7440,8 +7349,6 @@ class WithdrawalProtection(models.Model):
         verbose_name="Allowed Withdrawal Days",
         help_text="Days when withdrawals are allowed (0=Monday, 6=Sunday)",
         default=get_hours_default,
-        blank=True,
-        null=True
     )
     
     # Verification requirements
@@ -7475,8 +7382,7 @@ class WithdrawalProtection(models.Model):
         help_text="Amount considered as large withdrawal",
         max_digits=15,
         decimal_places=2,
-        default=1000.00
-    )
+        default=1000.00)
     
     notify_on_suspicious_activity = models.BooleanField(
         verbose_name="Notify on Suspicious Activity",
@@ -7496,8 +7402,7 @@ class WithdrawalProtection(models.Model):
         help_text="Total amount withdrawn",
         max_digits=20,
         decimal_places=2,
-        default=0.00
-    )
+        default=0.00)
     
     last_withdrawal_at = models.DateTimeField(
         verbose_name="Last Withdrawal At",
@@ -7511,7 +7416,6 @@ class WithdrawalProtection(models.Model):
         verbose_name="Custom Rules",
         help_text="Custom withdrawal protection rules",
         default=dict,
-        blank=True,
         null=True
     )
     
@@ -7520,7 +7424,6 @@ class WithdrawalProtection(models.Model):
         help_text="Exceptions to protection rules",
         default=dict,
         blank=True,
-        null=True
     )
     
     # Metadata
@@ -7531,14 +7434,11 @@ class WithdrawalProtection(models.Model):
         help_text="User who created this protection",
         null=True,
         blank=True,
-        related_name='created_withdrawal_protections'
-    )
+        related_name='created_withdrawal_protections')
     
     notes = models.TextField(
         verbose_name="Notes",
         help_text="Additional notes/comments",
-        blank=True,
-        null=True
     )
     
     created_at = models.DateTimeField(
@@ -7569,25 +7469,7 @@ class WithdrawalProtection(models.Model):
             # Ensure one active protection per user
             models.UniqueConstraint(
                 fields=['user'],
-                condition=models.Q(is_active=True),
                 name='unique_active_protection_per_user'
-            ),
-            # Ensure limits are logically consistent
-            models.CheckConstraint(
-                check=models.Q(daily_limit__lte=models.F('weekly_limit')),
-                name='daily_limit_lte_weekly_limit'
-            ),
-            models.CheckConstraint(
-                check=models.Q(weekly_limit__lte=models.F('monthly_limit')),
-                name='weekly_limit_lte_monthly_limit'
-            ),
-            models.CheckConstraint(
-                check=models.Q(single_transaction_limit__lte=models.F('daily_limit')),
-                name='single_transaction_limit_lte_daily_limit'
-            ),
-            models.CheckConstraint(
-                check=models.Q(min_withdrawal_amount__lte=models.F('single_transaction_limit')),
-                name='min_withdrawal_amount_lte_single_transaction_limit'
             ),
         ]
         

@@ -14,7 +14,7 @@ from rest_framework.test import APITestCase, APIRequestFactory
 
 from api.users.models import User, UserProfile, OTP, UserActivity, UserDevice
 from api.users.serializers import (
-    UserRegistrationSerializer, UserLoginSerializer, 'users.User',
+    UserRegistrationSerializer, UserLoginSerializer,
     UserSerializer, ChangePasswordSerializer, VerifyOTPSerializer
 )
 from api.users.services import UserService, OTPService, TokenService

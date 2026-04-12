@@ -340,3 +340,207 @@ for _model in _apps.get_app_config(_app_label).get_models():
         admin.site.register(_model)
     except admin.sites.AlreadyRegistered:
         pass
+
+
+def _force_register_promotions():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(PromotionCategory, PromotionCategoryAdmin), (Platform, PlatformAdmin), (RewardPolicy, RewardPolicyAdmin), (CurrencyRate, CurrencyRateAdmin), (Campaign, CampaignAdmin), (TaskSubmission, TaskSubmissionAdmin), (Dispute, DisputeAdmin), (PromotionTransaction, PromotionTransactionAdmin), (EscrowWallet, EscrowWalletAdmin), (AdminCommissionLog, AdminCommissionLogAdmin), (FraudReport, FraudReportAdmin), (Blacklist, BlacklistAdmin), (UserReputation, UserReputationAdmin), (DeviceFingerprint, DeviceFingerprintAdmin), (CampaignAnalytics, CampaignAnalyticsAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] promotions registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] promotions: {e}")
+
+
+# =============================================================================
+# NEW MODELS ADMIN REGISTRATION
+# =============================================================================
+
+from api.promotions.models import (
+    PublisherProfile, AdvertiserProfile, APIKeyModel, WebhookConfigModel,
+    VirtualCurrencyConfig, WhiteLabelConfig, EmailSubmitCampaign,
+    EmailSubmitConversion, CPCCampaign, CPIAppCampaign, QuizCampaign,
+    SmartLinkConfig, ContentLockModel, SubIDClick, PayoutBatch,
+    IPBlacklistModel, TrackingDomain, SystemConfig,
+)
+
+
+@admin.register(PublisherProfile)
+class PublisherProfileAdmin(admin.ModelAdmin):
+    list_display  = ('user', 'tier', 'approval_status', 'country', 'total_earned', 'created_at')
+    list_filter   = ('tier', 'approval_status', 'country')
+    search_fields = ('user__username', 'user__email', 'website_url')
+    readonly_fields = ('total_earned', 'total_withdrawn', 'created_at')
+    actions       = ['approve_publishers', 'reject_publishers']
+
+    @admin.action(description='Approve selected publishers')
+    def approve_publishers(self, request, qs):
+        from django.utils import timezone
+        qs.update(approval_status='approved', approved_at=timezone.now())
+
+    @admin.action(description='Reject selected publishers')
+    def reject_publishers(self, request, qs):
+        qs.update(approval_status='rejected')
+
+
+@admin.register(AdvertiserProfile)
+class AdvertiserProfileAdmin(admin.ModelAdmin):
+    list_display  = ('user', 'company_name', 'country', 'total_deposited', 'total_spent', 'is_verified')
+    list_filter   = ('is_verified', 'country')
+    search_fields = ('user__username', 'user__email', 'company_name')
+
+
+@admin.register(APIKeyModel)
+class APIKeyModelAdmin(admin.ModelAdmin):
+    list_display  = ('user', 'name', 'is_active', 'rate_limit', 'total_requests', 'last_used', 'created_at')
+    list_filter   = ('is_active',)
+    search_fields = ('user__username', 'name')
+    readonly_fields = ('key_hash', 'total_requests', 'last_used')
+
+    def has_add_permission(self, request):
+        return False  # Keys generated via API only
+
+
+@admin.register(WebhookConfigModel)
+class WebhookConfigModelAdmin(admin.ModelAdmin):
+    list_display  = ('publisher', 'event', 'method', 'is_active', 'total_fires', 'last_fired', 'last_status_code')
+    list_filter   = ('event', 'method', 'is_active')
+    search_fields = ('publisher__username', 'url')
+
+
+@admin.register(VirtualCurrencyConfig)
+class VirtualCurrencyConfigAdmin(admin.ModelAdmin):
+    list_display  = ('publisher', 'currency_name', 'currency_icon', 'usd_to_vc_rate', 'is_active')
+    list_filter   = ('is_active',)
+    search_fields = ('publisher__username', 'currency_name')
+
+
+@admin.register(WhiteLabelConfig)
+class WhiteLabelConfigAdmin(admin.ModelAdmin):
+    list_display  = ('publisher', 'brand_name', 'custom_domain', 'is_active', 'created_at')
+    list_filter   = ('is_active',)
+    search_fields = ('publisher__username', 'brand_name', 'custom_domain')
+
+
+@admin.register(EmailSubmitCampaign)
+class EmailSubmitCampaignAdmin(admin.ModelAdmin):
+    list_display  = ('campaign_name', 'advertiser', 'opt_in_type', 'payout', 'daily_cap', 'today_submits', 'total_submits', 'status')
+    list_filter   = ('opt_in_type', 'status', 'niche')
+    search_fields = ('campaign_name', 'advertiser__username')
+    readonly_fields = ('today_submits', 'total_submits', 'total_spent')
+    list_editable   = ('status',)
+
+
+@admin.register(EmailSubmitConversion)
+class EmailSubmitConversionAdmin(admin.ModelAdmin):
+    list_display  = ('campaign', 'publisher', 'country', 'is_confirmed', 'is_paid', 'payout_amount', 'created_at')
+    list_filter   = ('is_confirmed', 'is_paid', 'country')
+    readonly_fields = ('email_hash', 'ip_hash', 'payout_amount')
+
+
+@admin.register(CPCCampaign)
+class CPCCampaignAdmin(admin.ModelAdmin):
+    list_display  = ('title', 'advertiser', 'payout_us', 'daily_cap', 'today_clicks', 'total_clicks', 'total_spent', 'status')
+    list_filter   = ('status',)
+    search_fields = ('title', 'advertiser__username')
+    readonly_fields = ('today_clicks', 'total_clicks', 'total_spent')
+
+
+@admin.register(CPIAppCampaign)
+class CPIAppCampaignAdmin(admin.ModelAdmin):
+    list_display  = ('app_name', 'advertiser', 'platform', 'payout_per_install', 'mmp_provider', 'daily_cap', 'today_installs', 'status')
+    list_filter   = ('platform', 'mmp_provider', 'status')
+    search_fields = ('app_name', 'bundle_id', 'advertiser__username')
+
+
+@admin.register(QuizCampaign)
+class QuizCampaignAdmin(admin.ModelAdmin):
+    list_display  = ('title', 'advertiser', 'quiz_type', 'payout', 'daily_cap', 'today_completions', 'total_completions', 'status')
+    list_filter   = ('quiz_type', 'status')
+    search_fields = ('title', 'advertiser__username')
+
+
+@admin.register(SmartLinkConfig)
+class SmartLinkConfigAdmin(admin.ModelAdmin):
+    list_display  = ('publisher', 'name', 'link_hash', 'total_clicks', 'total_earnings', 'is_active')
+    list_filter   = ('is_active',)
+    search_fields = ('publisher__username', 'name', 'link_hash')
+    readonly_fields = ('link_hash', 'total_clicks', 'total_earnings')
+
+
+@admin.register(ContentLockModel)
+class ContentLockModelAdmin(admin.ModelAdmin):
+    list_display  = ('publisher', 'lock_type', 'title', 'required_offers', 'total_views', 'total_unlocks', 'total_earnings', 'is_active')
+    list_filter   = ('lock_type', 'is_active')
+    search_fields = ('publisher__username', 'title', 'lock_token')
+    readonly_fields = ('lock_token', 'total_views', 'total_unlocks', 'total_earnings')
+
+
+@admin.register(SubIDClick)
+class SubIDClickAdmin(admin.ModelAdmin):
+    list_display  = ('publisher', 'click_id', 's1', 's2', 'country', 'device', 'is_converted', 'payout', 'created_at')
+    list_filter   = ('is_converted', 'country', 'device')
+    search_fields = ('click_id', 'publisher__username', 's1', 's2')
+    readonly_fields = ('click_id', 'ip_hash')
+    date_hierarchy  = 'created_at'
+
+
+@admin.register(PayoutBatch)
+class PayoutBatchAdmin(admin.ModelAdmin):
+    list_display  = ('batch_id', 'publisher', 'amount', 'method', 'status', 'fee', 'net_amount', 'tx_hash', 'created_at')
+    list_filter   = ('status', 'method')
+    search_fields = ('publisher__username', 'tx_hash')
+    readonly_fields = ('batch_id', 'fee', 'net_amount')
+    list_editable   = ('status',)
+    actions         = ['mark_completed', 'mark_failed']
+
+    @admin.action(description='Mark selected payouts as completed')
+    def mark_completed(self, request, qs):
+        from django.utils import timezone
+        qs.update(status='completed', processed_at=timezone.now(), processed_by=request.user)
+
+    @admin.action(description='Mark selected payouts as failed')
+    def mark_failed(self, request, qs):
+        qs.update(status='failed')
+
+
+@admin.register(IPBlacklistModel)
+class IPBlacklistModelAdmin(admin.ModelAdmin):
+    list_display  = ('ip_address', 'reason', 'severity', 'is_active', 'hit_count', 'last_hit', 'created_at')
+    list_filter   = ('severity', 'is_active')
+    search_fields = ('ip_address', 'reason', 'cidr')
+    readonly_fields = ('hit_count', 'last_hit')
+
+
+@admin.register(TrackingDomain)
+class TrackingDomainAdmin(admin.ModelAdmin):
+    list_display  = ('domain', 'publisher', 'is_verified', 'ssl_enabled', 'total_clicks', 'is_active')
+    list_filter   = ('is_verified', 'ssl_enabled', 'is_active')
+    search_fields = ('domain', 'publisher__username')
+    actions       = ['verify_domains']
+
+    @admin.action(description='Mark selected domains as verified')
+    def verify_domains(self, request, qs):
+        from django.utils import timezone
+        qs.update(is_verified=True, verified_at=timezone.now())
+
+
+@admin.register(SystemConfig)
+class SystemConfigAdmin(admin.ModelAdmin):
+    list_display  = ('key', 'value_type', 'is_public', 'updated_at', 'updated_by')
+    list_filter   = ('value_type', 'is_public')
+    search_fields = ('key', 'description')
+    readonly_fields = ('updated_at',)
+
+    def save_model(self, request, obj, form, change):
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)

@@ -63,6 +63,11 @@ from .models import (
 
 def safe_admin_method(default_return=None):
     """Decorator for safe admin method execution"""
+    # Accept plain strings as default_return and wrap them safely
+    if isinstance(default_return, str):
+        from django.utils.safestring import mark_safe
+        default_return = mark_safe(default_return)
+
     def decorator(func):
         @wraps(func)
         def wrapper(self, obj=None, *args, **kwargs):
@@ -72,7 +77,8 @@ def safe_admin_method(default_return=None):
                 logger.error(f"Error in {func.__name__}: {str(e)}", exc_info=True)
                 if default_return is not None:
                     return default_return
-                return format_html('<span style="color: #dc3545;">[WARN] Error</span>')
+                from django.utils.safestring import mark_safe
+                return mark_safe('<span style="color: #dc3545;">[WARN] Error</span>')
         return wrapper
     return decorator
 
@@ -98,7 +104,7 @@ class DeviceInfoAdmin(admin.ModelAdmin):
     
     # ==================== SAFE DISPLAY METHODS ====================
     
-    @safe_admin_method(default_return=format_html('<span style="color: #6c757d;">Error</span>'))
+    @safe_admin_method(default_return='<span style="color: #6c757d;">Error</span>')
     def device_card(self, obj):
         """Display device as card"""
         icons = []
@@ -145,7 +151,7 @@ class DeviceInfoAdmin(admin.ModelAdmin):
     device_card.short_description = 'Device'
     device_card.admin_order_field = 'device_model'
     
-    @safe_admin_method(default_return=format_html('<span style="color: #6c757d;">Error</span>'))
+    @safe_admin_method(default_return='<span style="color: #6c757d;">Error</span>')
     def user_display(self, obj):
         """Display user info"""
         if not obj or not obj.user:
@@ -189,7 +195,7 @@ class DeviceInfoAdmin(admin.ModelAdmin):
     user_display.short_description = 'User'
     user_display.admin_order_field = 'user__username'
     
-    @safe_admin_method(default_return=format_html('<span style="color: #6c757d;">Error</span>'))
+    @safe_admin_method(default_return='<span style="color: #6c757d;">Error</span>')
     def security_status(self, obj):
         """Display security warnings"""
         warnings = []
@@ -219,7 +225,7 @@ class DeviceInfoAdmin(admin.ModelAdmin):
         )
     security_status.short_description = 'Security'
     
-    @safe_admin_method(default_return=format_html('<span style="color: #6c757d;">?</span>'))
+    @safe_admin_method(default_return='<span style="color: #6c757d;">?</span>')
     def risk_meter(self, obj):
         """Display risk score meter"""
         score = getattr(obj, 'risk_score', 0)
@@ -252,7 +258,7 @@ class DeviceInfoAdmin(admin.ModelAdmin):
     risk_meter.short_description = 'Risk'
     risk_meter.admin_order_field = 'risk_score'
     
-    @safe_admin_method(default_return=format_html('<span style="color: #6c757d;">?</span>'))
+    @safe_admin_method(default_return='<span style="color: #6c757d;">?</span>')
     def trust_level_badge(self, obj):
         """Display trust level"""
         if getattr(obj, 'is_trusted', False):
@@ -286,7 +292,7 @@ class DeviceInfoAdmin(admin.ModelAdmin):
     trust_level_badge.short_description = 'Trust'
     trust_level_badge.admin_order_field = 'trust_level'
     
-    @safe_admin_method(default_return=format_html('<span style="color: #6c757d;">—</span>'))
+    @safe_admin_method(default_return='<span style="color: #6c757d;">—</span>')
     def location_info(self, obj):
         """Display location info"""
         last_ip = getattr(obj, 'last_ip', None)
@@ -302,7 +308,7 @@ class DeviceInfoAdmin(admin.ModelAdmin):
     location_info.short_description = 'IP Address'
     location_info.admin_order_field = 'last_ip'
     
-    @safe_admin_method(default_return=format_html('<span style="color: #6c757d;">—</span>'))
+    @safe_admin_method(default_return='<span style="color: #6c757d;">—</span>')
     def activity_time(self, obj):
         """Display last activity"""
         last_activity = getattr(obj, 'last_activity', None)
@@ -6978,3 +6984,21 @@ for model in security_models_list:
         pass
 
 print(f"[SECURE] Registration Complete!")
+
+def _force_register_security():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(DeviceInfo, DeviceInfoAdmin), (SecurityLog, SecurityLogAdmin), (UserBan, UserBanAdmin), (ClickTracker, ClickTrackerAdmin), (MaintenanceMode, MaintenanceModeAdmin), (AppVersion, AppVersionAdmin), (IPBlacklist, IPBlacklistAdmin), (WithdrawalProtection, WithdrawalProtectionAdmin), (RiskScore, RiskScoreAdmin), (PasswordPolicy, PasswordPolicyAdmin), (PasswordHistory, PasswordHistoryAdmin), (PasswordAttempt, PasswordAttemptAdmin), (UserSession, UserSessionAdmin), (SessionActivity, SessionActivityAdmin), (TwoFactorMethod, TwoFactorMethodAdmin), (TwoFactorAttempt, TwoFactorAttemptAdmin), (TwoFactorRecoveryCode, TwoFactorRecoveryCodeAdmin), (AuditTrail, AuditTrailAdmin), (SecurityNotification, SecurityNotificationAdmin), (AlertRule, AlertRuleAdmin), (Country, CountryAdmin), (GeolocationLog, GeolocationLogAdmin), (APIRateLimit, APIRateLimitAdmin), (RateLimitLog, RateLimitLogAdmin), (FraudPattern, FraudPatternAdmin), (AutoBlockRule, AutoBlockRuleAdmin), (SecurityDashboard, SecurityDashboardAdmin), (SecurityConfig, SecurityConfigAdmin), (DataExport, DataExportAdmin), (DataImport, DataImportAdmin), (RealTimeDetection, RealTimeDetectionAdmin), (CountryBlockRule, CountryBlockRuleAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] security registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] security: {e}")

@@ -81,25 +81,26 @@ INSTALLED_APPS = [
     'api.messaging',
     'api.payout_queue.apps.PayoutQueueConfig',
     'api.tenants.apps.TenantsConfig',
-
-    # Ainul Enterprise Engine — Webhook Dispatch System
     'api.webhooks.apps.WebhooksConfig',
-    # 'api.webhooks',
-    # 'api.ai_engine',
-    # 'api.marketplace',
-    # 'api.disaster_recovery',
-    # 'api.postback_engine',
+    'api.marketplace',
+    'api.postback_engine',
     'api.monetization_tools',
     'api.publisher_tools',
-    # 'api.advertiser_portal',
-    # 'api.proxy_intelligence',
-    # 'api.offer_inventory', 
+    'api.proxy_intelligence',
+    'api.advertiser_portal',
+    'api.offer_inventory',
+    'api.smartlink', 
+    'api.disaster_recovery.apps.DisasterRecoveryConfig',
+    'api.dr_integration',
+    'api.ai_engine',
 ]
 
 # ==================== MIDDLEWARE ====================
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    # 'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'api.dr_integration.middleware.DRAuditMiddleware',
     'api.users.security_middleware.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -108,6 +109,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'api.smartlink.middleware.SmartLinkRedirectMiddleware',
+    'api.smartlink.middleware.SmartLinkPerformanceMiddleware',
     'api.fraud_detection.middleware.FraudDetectionMiddleware',
     'api.security.middleware.SecurityAuditMiddleware',
     'api.rate_limit.middleware.RateLimitMiddleware',
@@ -153,6 +156,8 @@ DATABASES = {
         'PASSWORD': env('DB_PASSWORD', default='12345'),
         'HOST': env('DB_HOST', default='localhost'),
         'PORT': env('DB_PORT', default='5432'),
+        'DISABLE_SERVER_SIDE_CURSORS': True,
+        'CONN_MAX_AGE': 0,
     }
 }
 
@@ -242,6 +247,7 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_TRACK_STARTED = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_WORKER_CONCURRENCY = 4
+
 
 CELERY_BEAT_SCHEDULE = {
     'process-pending-alerts-every-5-minutes': {
@@ -602,3 +608,226 @@ CORS_ALLOW_HEADERS = [
 
 # আপনার ব্যাকএন্ড যদি /api/ দিয়ে শুরু হয়, তবে এটিও নিশ্চিত করুন
 APPEND_SLASH = True
+
+
+# DR System path
+DR_SYSTEM_PATH = os.environ.get('DR_SYSTEM_PATH', '/app/disaster_recovery')
+
+# Notifications (Slack, PagerDuty, Datadog)
+DR_NOTIFICATION_CONFIG = {
+    'slack_webhook_url': os.environ.get('DR_SLACK_WEBHOOK_URL', ''),
+    'pagerduty_api_key': os.environ.get('DR_PAGERDUTY_API_KEY', ''),
+    'pagerduty_integration_key': os.environ.get('DR_PAGERDUTY_INTEGRATION_KEY', ''),
+    'datadog_api_key': os.environ.get('DR_DATADOG_API_KEY', ''),
+}
+
+# Backup storage
+DR_LOCAL_BACKUP_PATH = os.environ.get('DR_LOCAL_BACKUP_PATH', '/var/backups/api')
+DR_BACKUP_BACKENDS = ['local', 's3']
+
+DR_STORAGE_CONFIGS = [
+    {'name': 'local', 'provider': 'local', 'base_path': DR_LOCAL_BACKUP_PATH},
+    {
+        'name': 's3-backups',
+        'provider': 'aws_s3',
+        'bucket': os.environ.get('BACKUP_S3_BUCKET', ''),
+        'region': os.environ.get('AWS_REGION', 'us-east-1'),
+        'access_key_id': os.environ.get('AWS_ACCESS_KEY_ID', ''),
+        'secret_access_key': os.environ.get('AWS_SECRET_ACCESS_KEY', ''),
+    },
+]
+
+# Audit log files
+DR_AUDIT_CONFIG = {
+    'log_file': '/var/log/api/dr_audit.jsonl',
+    'security_log_file': '/var/log/api/dr_security_audit.jsonl',
+}
+
+# Health check components
+DR_HEALTH_CHECK_COMPONENTS = [
+    {'name': 'database', 'type': 'database', 'url': os.environ.get('DATABASE_URL', '')},
+    {'name': 'redis', 'type': 'tcp', 'host': 'localhost', 'port': 6379},
+    {'name': 'api', 'type': 'http', 'url': 'http://localhost:8000/health/'},
+]
+
+# GDAL/GEOS settings
+GDAL_LIBRARY_PATH = r'C:\Users\Ainul Islam\New folder (8)\earning_backend\venv\Lib\site-packages\osgeo\gdal.dll'
+GEOS_LIBRARY_PATH = r'C:\Users\Ainul Islam\New folder (8)\earning_backend\venv\Lib\site-packages\osgeo\geos_c.dll'
+
+# Status page components (তোমার app অনুযায়ী)
+DR_STATUS_PAGE_COMPONENTS = [
+    {'name': 'api',             'display_name': 'API Server',      'group': 'Application'},
+    {'name': 'database',        'display_name': 'Database',         'group': 'Infrastructure'},
+    {'name': 'offerwall',       'display_name': 'Offerwall',        'group': 'Application'},
+    {'name': 'payment_gateway', 'display_name': 'Payment Gateway',  'group': 'External'},
+    {'name': 'marketplace',     'display_name': 'Marketplace',      'group': 'Application'},
+    {'name': 'ai_engine',       'display_name': 'AI Engine',        'group': 'Application'},
+]
+
+# Key management
+DR_KEY_CONFIG = {
+    'key_store_path': '/etc/api/dr_keys',
+    'rotation_days': 90,
+}
+
+# On-call (optional)
+DR_ON_CALL_ROSTER = [
+    {
+        'name': os.environ.get('ON_CALL_PRIMARY_NAME', 'Primary On-Call'),
+        'email': os.environ.get('ON_CALL_PRIMARY_EMAIL', ''),
+        'slack_id': os.environ.get('ON_CALL_PRIMARY_SLACK', ''),
+    }
+]
+
+# Celery Beat — DR tasks (তোমার existing CELERY_BEAT_SCHEDULE এ merge করো)
+DR_CELERY_BEAT_SCHEDULE = {
+    'dr-incremental-backup-4h': {
+        'task': 'dr_integration.auto_backup',
+        'schedule': 4 * 60 * 60,
+        'kwargs': {'backup_type': 'incremental'},
+    },
+    'dr-full-backup-weekly': {
+        'task': 'dr_integration.auto_backup',
+        'schedule': 7 * 24 * 60 * 60,
+        'kwargs': {'backup_type': 'full'},
+    },
+    'dr-sync-status-5m': {
+        'task': 'dr_integration.sync_dr_status',
+        'schedule': 5 * 60,
+    },
+    'dr-verify-backups-daily': {
+        'task': 'dr_integration.verify_recent_backups',
+        'schedule': 24 * 60 * 60,
+    },
+    'dr-health-check-2m': {
+        'task': 'dr_integration.health_check',
+        'schedule': 2 * 60,
+    },
+    'dr-collect-metrics-1m': {
+        'task': 'dr_integration.collect_and_push_metrics',
+        'schedule': 60,
+    },
+}
+GDAL_LIBRARY_PATH = r'C:\Users\Ainul Islam\New folder (8)\earning_backend\venv\Lib\site-packages\osgeo\gdal.dll'
+GEOS_LIBRARY_PATH = r'C:\Users\Ainul Islam\New folder (8)\earning_backend\venv\Lib\site-packages\osgeo\geos_c.dll'
+MIGRATION_MODULES = {'advertiser_portal': 'api.advertiser_portal.django_migrations'}
+
+# ==================== LOCALIZATION SETTINGS ====================
+
+# ── Translation Providers ────────────────────────────────────────
+TRANSLATION_PROVIDERS = {
+    'deepl': {
+        'enabled': False,
+        'priority': 1,
+        'api_key': '',
+    },
+    'google': {
+        'enabled': False,
+        'priority': 2,
+        'api_key': '',
+        'project_id': '',
+    },
+    'azure': {
+        'enabled': False,
+        'priority': 3,
+        'api_key': '',
+        'region': 'eastus',
+    },
+    'amazon': {
+        'enabled': False,
+        'priority': 4,
+        'api_key': '',
+        'access_key': '',
+        'region': 'us-east-1',
+    },
+    'openai': {
+        'enabled': False,
+        'priority': 5,
+        'api_key': '',
+        'model': 'gpt-4o-mini',
+        'temperature': 0.2,
+    },
+}
+
+# ── GeoIP ────────────────────────────────────────────────────────
+MAXMIND_LICENSE_KEY = ''
+GEOIP_PATH = '/var/lib/localization/GeoLite2-City.mmdb'
+LOCALIZATION_DETECT_FROM_IP = True
+
+# ── Localization App Settings ────────────────────────────────────
+LOCALIZATION_ALERT_EMAIL = True
+LOG_MISSING_TRANSLATIONS = True
+USER_PREF_CACHE_TTL = 3600
+API_CACHE_TIMEOUT = 3600
+CACHE_24_HOURS = 86400
+MAX_TRANSLATION_TEXT_LENGTH = 5000
+LANGUAGE_PACK_CDN_URL = '/api/localization/public/translations'
+
+# ── Localization API Keys ────────────────────────────────────────
+LOCALIZATION_API_KEYS = []
+
+# ── Localization Rate Limits ─────────────────────────────────────
+LOCALIZATION_RATE_LIMITS = {
+    'translate': '100/hour',
+    'public_translations': '1000/hour',
+    'currency_convert': '500/hour',
+    'geoip': '200/hour',
+}
+
+# ── Localization Celery Beat (merged into main schedule) ─────────
+CELERY_BEAT_SCHEDULE.update({
+    'update-exchange-rates': {
+        'task': 'api.localization.tasks.exchange_rate_tasks.update_rates',
+        'schedule': crontab(minute=0),
+        'options': {'expires': 3500},
+    },
+    'clean-translation-cache': {
+        'task': 'api.localization.tasks.translation_cache_tasks.clean_expired_cache',
+        'schedule': crontab(minute=30, hour='*/6'),
+    },
+    'rebuild-popular-cache': {
+        'task': 'api.localization.tasks.translation_cache_tasks.rebuild_popular_cache',
+        'schedule': crontab(minute=0, hour='*/4'),
+    },
+    'auto-translate-missing': {
+        'task': 'api.localization.tasks.auto_translation_tasks.auto_translate_missing',
+        'schedule': crontab(minute=0, hour=2),
+        'kwargs': {'limit': 200},
+    },
+    'translation-qa-check': {
+        'task': 'api.localization.tasks.translation_qa_tasks.run_qa_check',
+        'schedule': crontab(minute=0, hour=3),
+    },
+    'update-coverage': {
+        'task': 'api.localization.tasks.coverage_report_tasks.update_coverage',
+        'schedule': crontab(minute=0, hour=4),
+    },
+    'alert-missing-translations': {
+        'task': 'api.localization.tasks.missing_translation_tasks.alert_missing_translations',
+        'schedule': crontab(minute=0, hour='*/2'),
+    },
+    'aggregate-daily-insights': {
+        'task': 'api.localization.tasks.insight_tasks.aggregate_daily_insights',
+        'schedule': crontab(minute=0, hour=0),
+    },
+    'cleanup-localization': {
+        'task': 'api.localization.tasks.cleanup_tasks.cleanup_all',
+        'schedule': crontab(minute=0, hour=5, day_of_week=0),
+    },
+    'update-geoip-db': {
+        'task': 'api.localization.tasks.geoip_update_tasks.update_geoip_db',
+        'schedule': crontab(minute=0, hour=6, day_of_week=0),
+    },
+    'check-provider-health': {
+        'task': 'api.localization.tasks.provider_health_tasks.check_provider_health',
+        'schedule': crontab(minute='*/30'),
+    },
+    'index-translation-memory': {
+        'task': 'api.localization.tasks.translation_memory_tasks.index_approved_translations',
+        'schedule': crontab(minute=0, hour=7, day_of_week=1),
+    },
+    'build-language-packs': {
+        'task': 'api.localization.tasks.language_pack_tasks.build_all_packs',
+        'schedule': crontab(minute=0, hour=5),
+    },
+})

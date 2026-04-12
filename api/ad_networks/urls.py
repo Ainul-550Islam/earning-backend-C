@@ -1,6 +1,6 @@
 # api/ad_networks/urls.py — এই file টা পুরোটা REPLACE করো
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 
 from .views import (
     OfferCategoryViewSet,

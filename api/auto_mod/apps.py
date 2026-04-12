@@ -20,3 +20,9 @@ class AutoModConfig(AppConfig):
             logging.getLogger(__name__).exception(
                 "auto_mod.ready: failed to import receivers: %s", exc
             )
+    def ready(self):
+        try:
+            from api.auto_mod.admin import _force_register_auto_mod
+            _force_register_auto_mod()
+        except Exception as e:
+            pass

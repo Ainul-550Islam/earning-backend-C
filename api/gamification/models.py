@@ -131,10 +131,12 @@ class ContestCycle(TimestampedModel):
     name = models.CharField(
         max_length=MAX_CONTEST_NAME_LENGTH,
         unique=True,
+        blank=True, default='',
         verbose_name=_("Contest Name"),
         help_text=_("Human-readable unique name for this contest cycle."),
     )
     slug = models.SlugField(
+        blank=True, default='',
         max_length=MAX_CONTEST_NAME_LENGTH,
         unique=True,
         db_index=True,
@@ -142,7 +144,6 @@ class ContestCycle(TimestampedModel):
         help_text=_("URL-safe identifier derived from the contest name."),
     )
     description = models.TextField(
-        blank=True,
         default="",
         max_length=MAX_DESCRIPTION_LENGTH,
         verbose_name=_("Description"),
@@ -157,6 +158,7 @@ class ContestCycle(TimestampedModel):
         help_text=_("Lifecycle state of the contest cycle."),
     )
     start_date = models.DateTimeField(
+        null=True, blank=True,
         verbose_name=_("Start Date"),
         help_text=_("Inclusive start of the contest window (UTC)."),
     )
@@ -188,7 +190,6 @@ class ContestCycle(TimestampedModel):
     )
     metadata = models.JSONField(
         default=dict,
-        blank=True,
         verbose_name=_("Metadata"),
         help_text=_(
             "Arbitrary JSON configuration for this cycle (e.g. reward tiers, "
@@ -214,16 +215,7 @@ class ContestCycle(TimestampedModel):
             models.Index(fields=["status", "start_date"], name="gamif_cc_status_start_idx"),
             models.Index(fields=["start_date", "end_date"], name="gamif_cc_date_range_idx"),
         ]
-        constraints = [
-            CheckConstraint(
-                check=Q(start_date__lt=F("end_date")),
-                name="gamif_cc_start_before_end",
-            ),
-            CheckConstraint(
-                check=Q(points_multiplier__gt=Decimal("0")),
-                name="gamif_cc_positive_multiplier",
-            ),
-        ]
+        constraints = []
 
     # ------------------------------------------------------------------
     # Dunder
@@ -398,6 +390,7 @@ class LeaderboardSnapshot(TimestampedModel):
 
     contest_cycle = models.ForeignKey(
         ContestCycle,
+        null=True, blank=True,
         on_delete=models.PROTECT,
         related_name="leaderboard_snapshots",
         verbose_name=_("Contest Cycle"),
@@ -455,7 +448,6 @@ class LeaderboardSnapshot(TimestampedModel):
         help_text=_("Timestamp when this snapshot was successfully finalized."),
     )
     error_message = models.TextField(
-        blank=True,
         default="",
         verbose_name=_("Error Message"),
         help_text=_("Populated when status=FAILED; contains traceback or summary."),
@@ -639,6 +631,7 @@ class ContestReward(TimestampedModel):
     contest_cycle = models.ForeignKey(
         ContestCycle,
         on_delete=models.PROTECT,
+        null=True, blank=True,
         related_name="rewards",
         verbose_name=_("Contest Cycle"),
     )
@@ -671,6 +664,7 @@ class ContestReward(TimestampedModel):
         ),
     )
     rank_from = models.PositiveIntegerField(
+        null=True, blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(MAX_RANK_VALUE)],
         verbose_name=_("Rank From"),
         help_text=_("Inclusive lower bound of the rank window (1 = top)."),
@@ -709,7 +703,6 @@ class ContestReward(TimestampedModel):
     )
     metadata = models.JSONField(
         default=dict,
-        blank=True,
         verbose_name=_("Metadata"),
         help_text=_("Arbitrary extra data for the reward (e.g. coupon code, SKU)."),
     )
@@ -729,20 +722,7 @@ class ContestReward(TimestampedModel):
                 name="gamif_cr_type_active_idx",
             ),
         ]
-        constraints = [
-            CheckConstraint(
-                check=Q(rank_from__lte=F("rank_to")),
-                name="gamif_cr_rank_from_lte_rank_to",
-            ),
-            CheckConstraint(
-                check=Q(reward_value__gte=Decimal("0")),
-                name="gamif_cr_non_negative_value",
-            ),
-            CheckConstraint(
-                check=Q(issued_count__gte=0),
-                name="gamif_cr_nn_issued_count",
-            ),
-        ]
+        constraints = []
 
     # ------------------------------------------------------------------
     # Dunder
@@ -869,6 +849,7 @@ class UserAchievement(TimestampedModel):
 
     user = models.ForeignKey(
         User,
+        null=True, blank=True,
         on_delete=models.CASCADE,
         related_name="achievements",
         db_index=True,
@@ -900,12 +881,12 @@ class UserAchievement(TimestampedModel):
         help_text=_("Semantic category of the achievement."),
     )
     title = models.CharField(
+        null=True, blank=True,
         max_length=MAX_ACHIEVEMENT_TITLE_LENGTH,
         verbose_name=_("Title"),
         help_text=_("Display title for the achievement (e.g. 'Top 10 Finisher')."),
     )
     description = models.TextField(
-        blank=True,
         default="",
         max_length=MAX_DESCRIPTION_LENGTH,
         verbose_name=_("Description"),
@@ -957,7 +938,6 @@ class UserAchievement(TimestampedModel):
     )
     metadata = models.JSONField(
         default=dict,
-        blank=True,
         verbose_name=_("Metadata"),
         help_text=_("Arbitrary context data at time of award (e.g. snapshot id, score)."),
     )
@@ -993,10 +973,6 @@ class UserAchievement(TimestampedModel):
                 fields=["user", "achievement_type"],
                 condition=Q(contest_cycle__isnull=True),
                 name="gamif_ua_uniq_usr_type_glb",
-            ),
-            CheckConstraint(
-                check=Q(points_awarded__gte=MIN_POINTS_VALUE),
-                name="gamif_ua_min_points",
             ),
         ]
 

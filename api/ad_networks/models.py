@@ -181,7 +181,7 @@ class AdNetwork(TimeStampedModel):
     )
     
     # Basic Information
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, null=True, blank=True)
     # `network_type` used to be unique & required, but tests create
     # `AdNetwork` instances without providing it. Make it optional and
     # non-unique so simple creations in tests pass without IntegrityError.
@@ -190,9 +190,8 @@ class AdNetwork(TimeStampedModel):
         choices=NETWORK_TYPES,
         unique=False,
         blank=True,
-        null=True,
-    )
-    category = models.CharField(max_length=20, choices=NETWORK_CATEGORIES, default='offerwall')
+        null=True,)
+    category = models.CharField(max_length=20, choices=NETWORK_CATEGORIES, default='offerwall', null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     website = models.URLField(blank=True, null=True)
     logo = models.ImageField(upload_to='network_logos/', blank=True, null=True)
@@ -225,9 +224,9 @@ class AdNetwork(TimeStampedModel):
     rating = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
     
     # Financial Settings
-    min_payout = models.DecimalField(max_digits=10, decimal_places=2, default=1.00)
+    min_payout = models.DecimalField(max_digits=10, decimal_places=2, default=1.00, null=True, blank=True)
     max_payout = models.DecimalField(max_digits=10, decimal_places=2, default=1000.00, blank=True, null=True)
-    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text='Your commission %')
+    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text='Your commission %', null=True, blank=True)
     payment_methods = models.JSONField(default=default_list, blank=True)
     payment_duration = models.IntegerField(default=30, help_text='Payment processing days')
     
@@ -243,17 +242,17 @@ class AdNetwork(TimeStampedModel):
     supports_tasks = models.BooleanField(default=False)
     
     # Geo & Platform Targeting
-    country_support = models.CharField(max_length=20, choices=COUNTRY_SUPPORT, default='global')
+    country_support = models.CharField(max_length=20, choices=COUNTRY_SUPPORT, default='global', null=True, blank=True)
     countries = models.JSONField(default=default_list, blank=True, help_text='Specific countries list')
     platforms = models.JSONField(default=default_platforms, blank=True)
     device_types = models.JSONField(default=default_devices, blank=True)
     
     # Performance Metrics
-    total_payout = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_payout = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     total_conversions = models.IntegerField(default=0)
     total_clicks = models.IntegerField(default=0)
     conversion_rate = models.FloatField(default=0, help_text='CR% = Conversions/Clicks')
-    epc = models.DecimalField(max_digits=10, decimal_places=4, default=0, help_text='Earnings Per Click')
+    epc = models.DecimalField(max_digits=10, decimal_places=4, default=0, help_text='Earnings Per Click', null=True, blank=True)
     
     # Time Settings
     offer_refresh_interval = models.IntegerField(default=3600, help_text='Seconds between offer refreshes')
@@ -330,13 +329,13 @@ class OfferCategory(TimeStampedModel):
         ('other', 'Other'),
     )
     
-    name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
-    category_type = models.CharField(max_length=20, choices=CATEGORY_TYPES, default='offer')
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, null=True, blank=True)
+    category_type = models.CharField(max_length=20, choices=CATEGORY_TYPES, default='offer', null=True, blank=True)
     icon = models.CharField(max_length=50, blank=True, null=True, help_text='FontAwesome icon class')
     image = models.ImageField(upload_to='offer_categories/', blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    color = models.CharField(max_length=7, default='#3498db', help_text='Hex color code')
+    color = models.CharField(max_length=7, default='#3498db', help_text='Hex color code', null=True, blank=True)
     
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
@@ -353,7 +352,7 @@ class OfferCategory(TimeStampedModel):
     # Statistics
     total_offers = models.IntegerField(default=0)
     total_conversions = models.IntegerField(default=0)
-    avg_reward = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    avg_reward = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     
     class Meta:
         verbose_name = 'Offer Category'
@@ -425,9 +424,9 @@ class Offer(TimeStampedModel):
     ad_network = models.ForeignKey(AdNetwork, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     category = models.ForeignKey(OfferCategory, on_delete=models.SET_NULL, null=True, related_name='%(app_label)s_%(class)s_tenant')
     
-    external_id = models.CharField(max_length=255, unique=True)
+    external_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     internal_id = models.CharField(max_length=100, blank=True, null=True)
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField()
     instructions = models.TextField(blank=True, null=True)
     thumbnail = models.URLField(blank=True, null=True)
@@ -435,12 +434,12 @@ class Offer(TimeStampedModel):
     
     # Reward Information
     reward_amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    reward_currency = models.CharField(max_length=10, default='BDT')
+    reward_currency = models.CharField(max_length=10, default='BDT', null=True, blank=True)
     network_payout = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     
     # Offer Details
-    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_LEVELS, default='easy')
+    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_LEVELS, default='easy', null=True, blank=True)
     estimated_time = models.IntegerField(default=5, help_text='Estimated time in minutes')
     steps_required = models.IntegerField(default=1, help_text='Number of steps to complete')
     
@@ -455,21 +454,21 @@ class Offer(TimeStampedModel):
     # Targeting
     countries = models.JSONField(default=default_list, blank=True)
     platforms = models.JSONField(default=default_platforms, blank=True)
-    device_type = models.CharField(max_length=20, choices=DEVICE_TYPES, default='any')
+    device_type = models.CharField(max_length=20, choices=DEVICE_TYPES, default='any', null=True, blank=True)
     min_age = models.IntegerField(default=13, validators=[MinValueValidator(13), MaxValueValidator(100)])
     max_age = models.IntegerField(default=100, validators=[MinValueValidator(13), MaxValueValidator(100)])
-    gender_targeting = models.CharField(max_length=10, choices=GENDER_TARGETING, default='any')
-    age_group = models.CharField(max_length=10, choices=AGE_GROUPS, default='any')
+    gender_targeting = models.CharField(max_length=10, choices=GENDER_TARGETING, default='any', null=True, blank=True)
+    age_group = models.CharField(max_length=10, choices=AGE_GROUPS, default='any', null=True, blank=True)
     
     # URLs
-    click_url = models.URLField()
+    click_url = models.URLField(null=True, blank=True)
     tracking_url = models.URLField(blank=True, null=True)
     preview_url = models.URLField(blank=True, null=True)
     terms_url = models.URLField(blank=True, null=True)
     privacy_url = models.URLField(blank=True, null=True)
     
     # Status & Visibility
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', null=True, blank=True)
     is_featured = models.BooleanField(default=False)
     is_hot = models.BooleanField(default=False, help_text='High demand offer')
     is_new = models.BooleanField(default=True)
@@ -582,14 +581,14 @@ class UserOfferEngagement(TimeStampedModel):
     postback_attempts = models.IntegerField(default=0)
     last_postback_attempt = models.DateTimeField(null=True, blank=True)
     
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ad_networks_userofferengagement_user')
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='ad_networks_userofferengagement_offer')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ad_networks_userofferengagement_user', null=True, blank=True)
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='ad_networks_userofferengagement_offer', null=True, blank=True)
     
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='clicked')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='clicked', null=True, blank=True)
     progress = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     
     # Tracking IDs
-    click_id = models.CharField(max_length=255, unique=True)
+    click_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     conversion_id = models.CharField(max_length=255, blank=True, null=True)
     transaction_id = models.CharField(max_length=255, blank=True, null=True)
     campaign_id = models.CharField(max_length=255, blank=True, null=True)
@@ -603,9 +602,9 @@ class UserOfferEngagement(TimeStampedModel):
     os = models.CharField(max_length=100, blank=True, null=True)
     
     # Reward Information
-    reward_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    network_payout = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    commission_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    reward_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+    network_payout = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+    commission_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     
     # Time Tracking
     clicked_at = models.DateTimeField(auto_now_add=True)
@@ -688,9 +687,9 @@ class OfferConversion(TimeStampedModel):
     
     # Network Data
     postback_data = models.JSONField(default=default_dict)
-    payout = models.DecimalField(max_digits=10, decimal_places=2)
-    network_currency = models.CharField(max_length=10, default='USD')
-    exchange_rate = models.DecimalField(max_digits=10, decimal_places=4, default=1)
+    payout = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    network_currency = models.CharField(max_length=10, default='USD', null=True, blank=True)
+    exchange_rate = models.DecimalField(max_digits=10, decimal_places=4, default=1, null=True, blank=True)
     
     # Verification
     is_verified = models.BooleanField(default=False)
@@ -698,7 +697,7 @@ class OfferConversion(TimeStampedModel):
     verified_at = models.DateTimeField(null=True, blank=True)
     
     # Fraud Protection Fields
-    conversion_status = models.CharField(max_length=20, choices=CONVERSION_STATUS, default='pending')
+    conversion_status = models.CharField(max_length=20, choices=CONVERSION_STATUS, default='pending', null=True, blank=True)
     rejection_reason = models.TextField(blank=True, null=True)
     chargeback_at = models.DateTimeField(blank=True, null=True)
     chargeback_reason = models.TextField(blank=True, null=True)
@@ -788,9 +787,9 @@ class OfferWall(TimeStampedModel):
         ('quick', 'Quick Offers'),
     )
     
-    name = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100, unique=True)
-    wall_type = models.CharField(max_length=20, choices=WALL_TYPES, default='main')
+    name = models.CharField(max_length=100, null=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, null=True, blank=True)
+    wall_type = models.CharField(max_length=20, choices=WALL_TYPES, default='main', null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     
     # Content
@@ -800,12 +799,12 @@ class OfferWall(TimeStampedModel):
     # Settings
     is_active = models.BooleanField(default=True)
     is_default = models.BooleanField(default=False)
-    min_payout = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    min_payout = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     max_offers = models.IntegerField(default=50, help_text='Maximum offers to display')
     refresh_interval = models.IntegerField(default=300, help_text='Seconds between refreshes')
     
     # Filtering
-    min_reward = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    min_reward = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     max_reward = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     allowed_countries = models.JSONField(default=default_list, blank=True)
     excluded_countries = models.JSONField(default=default_list, blank=True)
@@ -837,9 +836,9 @@ class OfferWall(TimeStampedModel):
     )
     
     # Styling
-    theme_color = models.CharField(max_length=7, default='#3498db')
-    background_color = models.CharField(max_length=7, default='#f8f9fa')
-    text_color = models.CharField(max_length=7, default='#333333')
+    theme_color = models.CharField(max_length=7, default='#3498db', null=True, blank=True)
+    background_color = models.CharField(max_length=7, default='#f8f9fa', null=True, blank=True)
+    text_color = models.CharField(max_length=7, default='#333333', null=True, blank=True)
     
     # Statistics
     total_views = models.IntegerField(default=0)
@@ -892,7 +891,7 @@ class AdNetworkWebhookLog(TimeStampedModel):
     payload = models.JSONField()
     headers = models.JSONField(default=default_dict)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
-    request_method = models.CharField(max_length=10, default='POST')
+    request_method = models.CharField(max_length=10, default='POST', null=True, blank=True)
     content_type = models.CharField(max_length=100, blank=True, null=True)
     
     # Processing
@@ -940,8 +939,8 @@ class NetworkStatistic(TimeStampedModel):
     
     clicks = models.IntegerField(default=0)
     conversions = models.IntegerField(default=0)
-    payout = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    commission = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    payout = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
+    commission = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     
     class Meta:
         unique_together = ['ad_network', 'date']
@@ -954,8 +953,7 @@ class UserOfferLimit(TimeStampedModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='ad_networks_userofferlimit_user',
-    )
+        related_name='ad_networks_userofferlimit_user',)
     # Tests create `UserOfferLimit` with only a user instance. Make `offer`
     # optional so those creations succeed.
     offer = models.ForeignKey(
@@ -1003,8 +1001,8 @@ class OfferSyncLog(TimeStampedModel):
 
 class SmartOfferRecommendation(TimeStampedModel):
     """AI-powered offer recommendations for users"""
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ad_networks_smartofferrecommendation_user')
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='ad_networks_smartofferrecommendation_offer')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ad_networks_smartofferrecommendation_user', null=True, blank=True)
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='ad_networks_smartofferrecommendation_offer', null=True, blank=True)
     
     score = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(1)])
     reason = models.TextField(blank=True, null=True)
@@ -1329,7 +1327,7 @@ class BlacklistedIP(models.Model):
 class FraudDetectionRule(TimeStampedModel):
     
     """Rules for fraud detection"""
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     
     rule_type = models.CharField(

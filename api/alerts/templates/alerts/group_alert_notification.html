@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Alert Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e9ecef;
+        }
+        .group-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #6c5ce7;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #6c5ce7;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .group-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #6c5ce7;
+            color: white;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .severity-critical { color: #dc3545; font-weight: bold; }
+        .severity-high { color: #fd7e14; font-weight: bold; }
+        .severity-medium { color: #ffc107; font-weight: bold; }
+        .severity-low { color: #28a745; font-weight: bold; }
+        .alert-item {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 3px solid #6c757d;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #6c5ce7;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .pattern-info {
+            background: #d1ecf1;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #bee5eb;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Group Alert Notification</h1>
+        <p>{{ alert_group.name }}</p>
+    </div>
+    
+    <div class="content">
+        <div class="group-info">
+            <h2>Group Alert Details</h2>
+            <p><span class="group-badge">GROUP ALERT</span></p>
+            
+            <p><strong>Group Name:</strong> {{ alert_group.name }}</p>
+            <p><strong>Group Type:</strong> {{ alert_group.get_group_type_display }}</p>
+            <p><strong>Alert Count:</strong> {{ alert_count }}</p>
+            <p><strong>Group Severity:</strong> {{ alert_group.get_severity_display }}</p>
+            <p><strong>Status:</strong> {{ alert_group.get_status_display }}</p>
+            
+            {% if alert_group.description %}
+            <p><strong>Description:</strong> {{ alert_group.description }}</p>
+            {% endif %}
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">{{ alert_count }}</div>
+                    <div class="stat-label">Total Alerts</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ critical_count }}</div>
+                    <div class="stat-label">Critical</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ high_count }}</div>
+                    <div class="stat-label">High</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ time_span }}</div>
+                    <div class="stat-label">Time Span</div>
+                </div>
+            </div>
+            
+            <div class="timestamp">
+                <p><strong>First Alert:</strong> {{ first_alert_time|date:"Y-m-d H:i:s" }}</p>
+                <p><strong>Last Alert:</strong> {{ last_alert_time|date:"Y-m-d H:i:s" }}</p>
+                <p><strong>Group Created:</strong> {{ alert_group.created_at|date:"Y-m-d H:i:s" }}</p>
+            </div>
+        </div>
+        
+        {% if recent_alerts %}
+        <div style="margin-top: 20px;">
+            <h3>Recent Alerts in Group</h3>
+            {% for alert in recent_alerts %}
+            <div class="alert-item">
+                <p><strong>{{ alert.rule.name }}</strong> - {{ alert.rule.get_severity_display }}</p>
+                <p><small>{{ alert.message|truncatechars:100 }}</small></p>
+                <p><small>Triggered: {{ alert.triggered_at|date:"H:i:s" }}</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if alert_pattern %}
+        <div class="pattern-info">
+            <h3>Detected Pattern</h3>
+            <p><strong>Pattern Type:</strong> {{ alert_pattern.pattern_type }}</p>
+            <p><strong>Confidence:</strong> {{ alert_pattern.confidence|floatformat:1 }}%</p>
+            <p><strong>Description:</strong> {{ alert_pattern.description }}</p>
+            {% if alert_pattern.recommendation %}
+            <p><strong>Recommendation:</strong> {{ alert_pattern.recommendation }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if affected_services %}
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffeaa7;">
+            <h3>Affected Services</h3>
+            <ul>
+                {% for service in affected_services %}
+                <li>{{ service }} ({{ service.alert_count }} alerts)</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if escalation_info %}
+        <div style="margin-top: 20px; padding: 15px; background: #f8d7da; border-radius: 5px; border: 1px solid #f5c6cb;">
+            <h3>Escalation Information</h3>
+            <p><strong>Escalation Level:</strong> {{ escalation_info.level }}</p>
+            <p><strong>Escalated To:</strong> {{ escalation_info.escalated_to }}</p>
+            <p><strong>Escalation Reason:</strong> {{ escalation_info.reason }}</p>
+        </div>
+        {% endif %}
+        
+        {% if correlation_info %}
+        <div style="margin-top: 20px; padding: 15px; background: #d1ecf1; border-radius: 5px; border: 1px solid #bee5eb;">
+            <h3>Correlation Analysis</h3>
+            <p><strong>Correlation Score:</strong> {{ correlation_info.score|floatformat:1 }}%</p>
+            <p><strong>Related Rules:</strong> {{ correlation_info.related_rules|length }}</p>
+            <p><strong>Common Factors:</strong></p>
+            <ul>
+                {% for factor in correlation_info.common_factors %}
+                <li>{{ factor }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if recommended_actions %}
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h3>Recommended Actions</h3>
+            <ol>
+                {% for action in recommended_actions %}
+                <li>{{ action }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{{ dashboard_url }}" class="btn">View Group Dashboard</a>
+            <a href="{{ group_url }}" class="btn btn-secondary">View Group Details</a>
+            {% if alert_group.status == 'active' %}
+            <a href="{{ acknowledge_url }}" class="btn btn-secondary">Acknowledge Group</a>
+            {% endif %}
+        </div>
+        
+        {% if group_statistics %}
+        <div style="margin-top: 20px;">
+            <h3>Group Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">{{ group_statistics.avg_resolution_time|default:"N/A" }}</div>
+                    <div class="stat-label">Avg Resolution</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ group_statistics.resolution_rate|floatformat:1 }}%</div>
+                    <div class="stat-label">Resolution Rate</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ group_statistics.impact_score|floatformat:1 }}</div>
+                    <div class="stat-label">Impact Score</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ group_statistics.frequency }}</div>
+                    <div class="stat-label">Frequency</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if contact_information %}
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h3>Contact Information</h3>
+            <p><strong>Group Owner:</strong> {{ contact_information.owner }}</p>
+            <p><strong>Primary Contact:</strong> {{ contact_information.primary }}</p>
+            <p><strong>Secondary Contact:</strong> {{ contact_information.secondary }}</p>
+        </div>
+        {% endif %}
+        
+        {% if next_occurrence_prediction %}
+        <div style="margin-top: 20px; padding: 15px; background: #d4edda; border-radius: 5px; border: 1px solid #c3e6cb;">
+            <h3>Next Occurrence Prediction</h3>
+            <p><strong>Probability:</strong> {{ next_occurrence_prediction.probability|floatformat:1 }}%</p>
+            <p><strong>Estimated Time:</strong> {{ next_occurrence_prediction.estimated_time|date:"Y-m-d H:i:s" }}</p>
+            <p><strong>Confidence:</strong> {{ next_occurrence_prediction.confidence|floatformat:1 }}%</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>This group alert notification was generated by the Alert Management System</p>
+        <p>Multiple related alerts have been grouped for easier management</p>
+        <p>Please review the group and take appropriate action</p>
+    </div>
+</body>
+</html>

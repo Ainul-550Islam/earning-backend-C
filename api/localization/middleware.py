@@ -48,8 +48,16 @@ class BaseMiddleware(MiddlewareMixin):
         super().__init__(get_response)
     
     def process_request(self, request: HttpRequest):
-        """Process request - override in subclasses"""
-        pass
+        """Process request — sets common localization attributes on request"""
+        # Ensure request has localization attributes
+        if not hasattr(request, 'localization_language'):
+            request.localization_language = getattr(settings, 'LANGUAGE_CODE', 'en')
+        if not hasattr(request, 'localization_currency'):
+            request.localization_currency = getattr(settings, 'DEFAULT_CURRENCY', 'USD')
+        if not hasattr(request, 'localization_is_rtl'):
+            request.localization_is_rtl = False
+        if not hasattr(request, 'localization_text_direction'):
+            request.localization_text_direction = 'ltr' 
     
     def process_response(self, request: HttpRequest, response: HttpResponse):
         """Process response - override in subclasses"""
@@ -378,30 +386,159 @@ class TranslationMiddleware(BaseMiddleware):
         self.log_missing_translations = getattr(settings, 'LOG_MISSING_TRANSLATIONS', True)
     
     def process_request(self, request: HttpRequest):
-        """Initialize translation context"""
+        """
+        Full localization detection — language, RTL, GeoIP, user preference.
+        Priority: user_preference > session > Accept-Language > GeoIP > default
+        """
         request.translation_context = {}
+        try:
+            # 1. Determine language
+            lang_code = self._detect_language(request)
+            request.localization_language = lang_code
+            request.translation_context['language'] = lang_code
+
+            # 2. RTL detection
+            from .utils import is_rtl_language, get_text_direction
+            is_rtl = is_rtl_language(lang_code)
+            request.localization_is_rtl = is_rtl
+            request.localization_text_direction = 'rtl' if is_rtl else 'ltr'
+            request.translation_context['is_rtl'] = is_rtl
+            request.translation_context['text_direction'] = request.localization_text_direction
+
+            # 3. BCP47 code for HTML lang attribute
+            try:
+                from .models.core import Language
+                lang_obj = Language.objects.filter(code=lang_code, is_active=True).only(
+                    'bcp47_code', 'font_family'
+                ).first()
+                if lang_obj:
+                    request.localization_bcp47 = lang_obj.bcp47_code or lang_code
+                    request.localization_font = lang_obj.font_family or ''
+                else:
+                    request.localization_bcp47 = lang_code
+                    request.localization_font = ''
+            except Exception:
+                request.localization_bcp47 = lang_code
+                request.localization_font = ''
+
+            # 4. Active language pack namespace (for lazy loading)
+            request.translation_context['pack_namespace'] = 'global'
+
+        except Exception as e:
+            logger.error(f"TranslationMiddleware.process_request error: {e}")
+            request.localization_language = getattr(settings, 'LANGUAGE_CODE', 'en')
+            request.localization_is_rtl = False
+            request.localization_text_direction = 'ltr'
+
+    def _detect_language(self, request: HttpRequest) -> str:
+        """Language detection — priority chain"""
+        try:
+            # 1. Authenticated user preference
+            if hasattr(request, 'user') and getattr(request.user, 'is_authenticated', False):
+                try:
+                    from .models.core import UserLanguagePreference
+                    pref = UserLanguagePreference.objects.filter(
+                        user=request.user
+                    ).select_related('ui_language').first()
+                    if pref:
+                        lang = pref.ui_language or pref.primary_language
+                        if lang and lang.is_active:
+                            return lang.code
+                except Exception:
+                    pass
+
+            # 2. Session language
+            lang_from_session = request.session.get('language_code') if hasattr(request, 'session') else None
+            if lang_from_session:
+                return lang_from_session
+
+            # 3. URL parameter ?lang=
+            lang_param = request.GET.get('lang') or request.GET.get('language')
+            if lang_param and len(lang_param) <= 10:
+                from .models.core import Language
+                if Language.objects.filter(code=lang_param, is_active=True).exists():
+                    return lang_param
+
+            # 4. Cookie
+            lang_cookie = request.COOKIES.get('localization_language')
+            if lang_cookie and len(lang_cookie) <= 10:
+                return lang_cookie
+
+            # 5. Accept-Language header
+            accept_lang = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
+            if accept_lang:
+                try:
+                    from .utils import get_language_from_accept_header
+                    from .models.core import Language
+                    available = list(Language.objects.filter(
+                        is_active=True
+                    ).values_list('code', flat=True))
+                    detected = get_language_from_accept_header(accept_lang, available)
+                    if detected:
+                        return detected
+                except Exception:
+                    pass
+
+            # 6. GeoIP detection
+            if getattr(settings, 'LOCALIZATION_DETECT_FROM_IP', True):
+                try:
+                    ip = self.get_client_ip(request)
+                    if ip and not self._is_private_ip(ip):
+                        from .services.services_loca.GeoService import GeoService
+                        lang = GeoService().get_language_for_country(
+                            GeoService().detect_from_ip(ip).get('country_code', '')
+                        )
+                        if lang:
+                            return lang
+                except Exception:
+                    pass
+
+        except Exception as e:
+            logger.error(f"Language detection error: {e}")
+
+        return getattr(settings, 'LANGUAGE_CODE', 'en')
+
+    def _is_private_ip(self, ip: str) -> bool:
+        """Private IP check — don't do GeoIP for localhost"""
+        private_prefixes = ('127.', '192.168.', '10.', '172.', '::1')
+        return any(ip.startswith(p) for p in private_prefixes)
     
     def process_response(self, request: HttpRequest, response: HttpResponse):
-        """Process translation-related tasks"""
+        """Add localization headers + log analytics"""
         try:
-            # Log missing translations for API requests
-            if self.log_missing_translations and self.is_api_request(request):
-                self._log_missing_translations(request, response)
-            
-            # Add translation info header for debugging
-            if settings.DEBUG and hasattr(request, 'LANGUAGE_CODE'):
-                response['X-Language'] = request.LANGUAGE_CODE
-            
+            lang = getattr(request, 'localization_language', '')
+            is_rtl = getattr(request, 'localization_is_rtl', False)
+            bcp47 = getattr(request, 'localization_bcp47', lang)
+
+            # Localization headers — useful for frontend and CDN caching
+            if lang:
+                response['X-Localization-Language'] = lang
+                response['X-Localization-Direction'] = 'rtl' if is_rtl else 'ltr'
+                response['X-Localization-BCP47'] = bcp47
+                response['Content-Language'] = bcp47
+
+            # Vary header for CDN — different content per language
+            existing_vary = response.get('Vary', '')
+            if 'Accept-Language' not in existing_vary:
+                response['Vary'] = (existing_vary + ', Accept-Language').strip(', ')
+
+            # Log analytics event (async — don't block response)
+            if lang and self.is_api_request(request):
+                try:
+                    from .models.analytics import LocalizationAnalytics
+                    LocalizationAnalytics.log_event(
+                        event_type=LocalizationAnalytics.EventType.TRANSLATION_REQUESTED,
+                        country_code=getattr(request, 'localization_country_code', ''),
+                        ip_address=self.get_client_ip(request),
+                        endpoint=request.path,
+                    )
+                except Exception:
+                    pass
+
         except Exception as e:
-            logger.error(f"Translation middleware error: {e}")
-        
+            logger.error(f"Translation middleware response error: {e}")
+
         return response
-    
-    def _log_missing_translations(self, request: HttpRequest, response: HttpResponse):
-        """Log missing translations from request"""
-        # This would need to be implemented based on how you track missing translations
-        # For now, it's a placeholder
-        pass
 
 
 # ======================== Device Detection Middleware ========================

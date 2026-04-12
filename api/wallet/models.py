@@ -17,49 +17,43 @@ class Wallet(models.Model):
         db_index=True,
     )
 
-    # user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    # user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     # wallet/models.py ফাইলে
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_wallet_user')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_wallet_user', null=True, blank=True)
     
     # v1 - Basic balances
     current_balance = models.DecimalField(
         max_digits=12, 
         decimal_places=2, 
         default=0,
-        help_text="Available balance for withdrawal"
-    )
+        help_text="Available balance for withdrawal")
     pending_balance = models.DecimalField(
         max_digits=12, 
         decimal_places=2, 
         default=0,
-        help_text="Pending approval/verification"
-    )
+        help_text="Pending approval/verification")
     total_earned = models.DecimalField(
         max_digits=12, 
         decimal_places=2, 
         default=0,
-        help_text="Lifetime earnings"
-    )
+        help_text="Lifetime earnings")
     total_withdrawn = models.DecimalField(
         max_digits=12, 
         decimal_places=2, 
         default=0,
-        help_text="Total amount withdrawn"
-    )
+        help_text="Total amount withdrawn")
     frozen_balance = models.DecimalField(
         max_digits=12, 
         decimal_places=2, 
         default=0,
-        help_text="Locked due to fraud/dispute"
-    )
+        help_text="Locked due to fraud/dispute")
     
     # v2 - Advanced features
     bonus_balance = models.DecimalField(
         max_digits=12, 
         decimal_places=2, 
         default=0,
-        help_text="Bonus/promotional balance"
-    )
+        help_text="Bonus/promotional balance")
     bonus_expires_at = models.DateTimeField(null=True, blank=True)
     
     # Wallet status
@@ -68,7 +62,7 @@ class Wallet(models.Model):
     locked_at = models.DateTimeField(null=True, blank=True)
     
     # Currency (v2)
-    currency = models.CharField(max_length=3, default='BDT')
+    currency = models.CharField(max_length=3, default='BDT', null=True, blank=True)
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -176,25 +170,25 @@ class WalletTransaction(models.Model):
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     
     # GatewayTransaction details
-    type = models.CharField(max_length=20, choices=WalletTransaction_TYPES)
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    type = models.CharField(max_length=20, choices=WalletTransaction_TYPES, null=True, blank=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
     
     # References
-    reference_id = models.CharField(max_length=100, blank=True, help_text="External reference")
-    reference_type = models.CharField(max_length=50, blank=True)
+    reference_id = models.CharField(max_length=100, blank=True, help_text="External reference", null=True)
+    reference_type = models.CharField(max_length=50, null=True, blank=True)
     
     # Balances snapshot (for audit)
-    balance_before = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    balance_after = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    balance_before = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    balance_after = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     
     # Details
     description = models.TextField(blank=True)
     metadata = models.JSONField(default=dict, blank=True)
     
     # v2 - Double entry ledger
-    debit_account = models.CharField(max_length=50, blank=True)
-    credit_account = models.CharField(max_length=50, blank=True)
+    debit_account = models.CharField(max_length=50, null=True, blank=True)
+    credit_account = models.CharField(max_length=50, null=True, blank=True)
     
     # Reversal support
     is_reversed = models.BooleanField(default=False)
@@ -213,15 +207,13 @@ class WalletTransaction(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='wallet_wallettransaction_created_by'
-    )
+        related_name='wallet_wallettransaction_created_by')
     approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='wallet_wallettransaction_approved_by'
-    )
+        related_name='wallet_wallettransaction_approved_by')
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -331,21 +323,21 @@ class UserPaymentMethod(models.Model):
         ('card', 'Debit/Credit Card'),
     ]
     
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_userpaymentmethod_user')
-    method_type = models.CharField(max_length=20, choices=METHOD_CHOICES)
-    account_number = models.CharField(max_length=50)
-    account_name = models.CharField(max_length=100)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_userpaymentmethod_user', null=True, blank=True)
+    method_type = models.CharField(max_length=20, choices=METHOD_CHOICES, null=True, blank=True)
+    account_number = models.CharField(max_length=50, null=True, blank=True)
+    account_name = models.CharField(max_length=100, null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     is_primary = models.BooleanField(default=False)
     
     # Bank specific fields
-    bank_name = models.CharField(max_length=100, blank=True)
-    branch_name = models.CharField(max_length=100, blank=True)
-    routing_number = models.CharField(max_length=50, blank=True)
+    bank_name = models.CharField(max_length=100, null=True, blank=True)
+    branch_name = models.CharField(max_length=100, null=True, blank=True)
+    routing_number = models.CharField(max_length=50, null=True, blank=True)
     
     # Card specific fields
-    card_last_four = models.CharField(max_length=4, blank=True)
-    card_expiry = models.CharField(max_length=7, blank=True)  # MM/YYYY format
+    card_last_four = models.CharField(max_length=4, null=True, blank=True)
+    card_expiry = models.CharField(max_length=7, null=True, blank=True)  # MM/YYYY format
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -379,8 +371,8 @@ class WalletWebhookLog(models.Model):
         ('sslcommerz', 'SSLCommerz'),
     ]
     
-    webhook_type = models.CharField(max_length=20, choices=WEBHOOK_TYPES)
-    event_type = models.CharField(max_length=100)
+    webhook_type = models.CharField(max_length=20, choices=WEBHOOK_TYPES, null=True, blank=True)
+    event_type = models.CharField(max_length=100, null=True, blank=True)
     payload = models.JSONField()
     headers = models.JSONField(default=dict, blank=True)
     
@@ -389,8 +381,8 @@ class WalletWebhookLog(models.Model):
     processing_error = models.TextField(blank=True)
     
     # References
-    reference_id = models.CharField(max_length=100, blank=True)
-    WalletTransaction_reference = models.CharField(max_length=100, blank=True)
+    reference_id = models.CharField(max_length=100, null=True, blank=True)
+    WalletTransaction_reference = models.CharField(max_length=100, null=True, blank=True)
     
     # Timestamps
     received_at = models.DateTimeField(auto_now_add=True)
@@ -425,25 +417,26 @@ class Withdrawal(models.Model):
     ]
     
     withdrawal_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_withdrawal_user')
-    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='wallet_withdrawal_wallet')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_withdrawal_user', null=True, blank=True)
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='wallet_withdrawal_wallet', null=True, blank=True)
     payment_method = models.ForeignKey(UserPaymentMethod, on_delete=models.SET_NULL, null=True, blank=True)
     
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-    fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    net_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    net_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
     
     # GatewayTransaction reference
-    WalletTransaction = models.OneToOneField(WalletTransaction, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
+    wallet_transaction = models.OneToOneField(WalletTransaction, on_delete=models.CASCADE, null=True, blank=True, related_name='%(app_label)s_%(class)s_tenant'
+    )
     
     processed_by = models.ForeignKey(
-    settings.AUTH_USER_MODEL, 
+        settings.AUTH_USER_MODEL, 
     on_delete=models.SET_NULL, 
     null=True, 
     blank=True, 
-    related_name='wallet_withdrawal_processed_by' # আলাদা নাম দিন
+    related_name='wallet_withdrawal_processed_by'
     )
     processed_at = models.DateTimeField(null=True, blank=True)
     
@@ -452,7 +445,7 @@ class Withdrawal(models.Model):
     rejected_at = models.DateTimeField(null=True, blank=True)
     
     # Payment gateway response
-    gateway_reference = models.CharField(max_length=100, blank=True)
+    gateway_reference = models.CharField(max_length=100, null=True, blank=True)
     gateway_response = models.JSONField(default=dict, blank=True)
     
     # Timestamps
@@ -490,15 +483,15 @@ class WithdrawalRequest(models.Model):
         ('cancelled', 'Cancelled'),
     ]
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_withdrawalrequest_user')
-    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="ইউজার যত টাকা তুলতে চায়")
-    fee = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="উইথড্র ফি (যা অ্যাডমিনের লাভ)")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet_withdrawalrequest_user', null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="ইউজার যত টাকা তুলতে চায়", null=True, blank=True)
+    fee = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="উইথড্র ফি (যা অ্যাডমিনের লাভ, null=True, blank=True)")
     
     # পেমেন্ট মেথড (বিকাশ, নগদ বা রকেট হতে পারে)
-    method = models.CharField(max_length=50, help_text="Payment Method (e.g., Bkash, Nagad)")
-    account_number = models.CharField(max_length=20, help_text="ইউজারের পেমেন্ট একাউন্ট নাম্বার")
+    method = models.CharField(max_length=50, help_text="Payment Method (e.g., Bkash, Nagad, null=True, blank=True)")
+    account_number = models.CharField(max_length=20, help_text="ইউজারের পেমেন্ট একাউন্ট নাম্বার", null=True, blank=True)
     
-    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
     
     admin_note = models.TextField(blank=True, help_text="রিজেক্ট করলে কারণ এখানে লেখা যাবে")
     

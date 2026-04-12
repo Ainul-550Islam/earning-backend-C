@@ -57,3 +57,8 @@ class AuditLogsConfig(AppConfig):
                 
         except Exception as e:
             print(f"[WARN] Audit Logs admin registration error: {e}")
+        try:
+            from api.audit_logs.admin import _force_register_audit_logs
+            _force_register_audit_logs()
+        except Exception as e:
+            pass

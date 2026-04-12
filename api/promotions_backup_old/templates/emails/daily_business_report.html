@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Business Report</title>
+<style>
+  body { margin:0; padding:0; background:#0f0f1a; font-family:'Segoe UI',Arial,sans-serif; }
+  .wrapper { max-width:680px; margin:40px auto; background:#1a1a2e; border-radius:16px; overflow:hidden; }
+  .header { background:linear-gradient(135deg,#0f3460 0%,#16213e 100%); padding:40px; border-bottom:1px solid rgba(255,255,255,0.08); }
+  .header .logo { font-size:22px; font-weight:900; color:#e94560; letter-spacing:2px; margin:0 0 8px; }
+  .header h1 { color:#fff; margin:0; font-size:20px; font-weight:600; }
+  .header p { color:rgba(255,255,255,0.5); margin:6px 0 0; font-size:13px; }
+  .section { padding:28px 36px; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .section-title { font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#e94560; font-weight:700; margin:0 0 20px; }
+  .kpi-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .kpi-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px 20px; }
+  .kpi-card .kpi-label { font-size:12px; color:rgba(255,255,255,0.4); margin:0 0 6px; text-transform:uppercase; letter-spacing:1px; }
+  .kpi-card .kpi-value { font-size:28px; font-weight:800; color:#fff; margin:0; line-height:1; }
+  .kpi-card .kpi-change { font-size:12px; margin:6px 0 0; }
+  .kpi-card .kpi-change.up { color:#00d4a0; }
+  .kpi-card .kpi-change.down { color:#ff6b6b; }
+  .kpi-card .kpi-change.neutral { color:rgba(255,255,255,0.4); }
+  .table { width:100%; border-collapse:collapse; margin:0; }
+  .table th { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.3); text-align:left; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .table td { font-size:13px; color:rgba(255,255,255,0.7); padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .table td strong { color:#fff; }
+  .table .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+  .badge.green { background:rgba(0,212,160,0.15); color:#00d4a0; }
+  .badge.red { background:rgba(255,107,107,0.15); color:#ff6b6b; }
+  .badge.yellow { background:rgba(255,193,7,0.15); color:#ffc107; }
+  .alert-box { background:rgba(233,69,96,0.1); border:1px solid rgba(233,69,96,0.3); border-radius:8px; padding:14px 16px; margin:0 0 12px; }
+  .alert-box .at { font-size:12px; color:#e94560; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin:0 0 4px; }
+  .alert-box .am { font-size:13px; color:rgba(255,255,255,0.7); margin:0; }
+  .footer { padding:24px 36px; text-align:center; }
+  .footer p { font-size:12px; color:rgba(255,255,255,0.2); margin:4px 0; }
+  .footer a { color:rgba(255,255,255,0.3); }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <div class="logo">{{ site_name|upper }}</div>
+    <h1>📊 Daily Business Report</h1>
+    <p>{{ report_date }} — Generated at {{ generated_at }}</p>
+  </div>
+
+  <!-- Revenue KPIs -->
+  <div class="section">
+    <div class="section-title">💰 Revenue Overview</div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value">${{ revenue.total|floatformat:2 }}</div>
+        <div class="kpi-change {% if revenue.change >= 0 %}up{% else %}down{% endif %}">
+          {% if revenue.change >= 0 %}▲{% else %}▼{% endif %} {{ revenue.change|floatformat:1 }}% vs yesterday
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Platform Commission</div>
+        <div class="kpi-value">${{ revenue.commission|floatformat:2 }}</div>
+        <div class="kpi-change neutral">{{ revenue.commission_rate|floatformat:1 }}% take rate</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Total Payouts</div>
+        <div class="kpi-value">${{ payouts.total|floatformat:2 }}</div>
+        <div class="kpi-change {% if payouts.change >= 0 %}up{% else %}down{% endif %}">
+          {% if payouts.change >= 0 %}▲{% else %}▼{% endif %} {{ payouts.change|floatformat:1 }}% vs yesterday
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Net Profit</div>
+        <div class="kpi-value">${{ revenue.net_profit|floatformat:2 }}</div>
+        <div class="kpi-change {% if revenue.profit_margin >= 20 %}up{% else %}neutral{% endif %}">
+          {{ revenue.profit_margin|floatformat:1 }}% margin
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Stats -->
+  <div class="section">
+    <div class="section-title">✅ Task Statistics</div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Submissions</div>
+        <div class="kpi-value">{{ tasks.total_submissions }}</div>
+        <div class="kpi-change {% if tasks.sub_change >= 0 %}up{% else %}down{% endif %}">
+          {% if tasks.sub_change >= 0 %}▲{% else %}▼{% endif %} {{ tasks.sub_change }}% vs yesterday
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Approval Rate</div>
+        <div class="kpi-value">{{ tasks.approval_rate|floatformat:1 }}%</div>
+        <div class="kpi-change {% if tasks.approval_rate >= 80 %}up{% elif tasks.approval_rate >= 60 %}neutral{% else %}down{% endif %}">
+          {{ tasks.approved }} approved / {{ tasks.rejected }} rejected
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">AI Auto-Approved</div>
+        <div class="kpi-value">{{ tasks.ai_approved }}</div>
+        <div class="kpi-change neutral">{{ tasks.ai_rate|floatformat:1 }}% automation rate</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Fraud Blocked</div>
+        <div class="kpi-value">{{ tasks.fraud_blocked }}</div>
+        <div class="kpi-change down">{{ tasks.fraud_rate|floatformat:2 }}% fraud rate</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Campaigns -->
+  <div class="section">
+    <div class="section-title">🏆 Top Performing Campaigns</div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Campaign</th>
+          <th>Platform</th>
+          <th>Revenue</th>
+          <th>Tasks</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in top_campaigns %}
+        <tr>
+          <td><strong>{{ c.title|truncatechars:28 }}</strong></td>
+          <td>{{ c.platform }}</td>
+          <td>${{ c.revenue|floatformat:2 }}</td>
+          <td>{{ c.task_count }}</td>
+          <td><span class="badge green">Active</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.3);padding:20px;">No campaign data for today</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- User Stats -->
+  <div class="section">
+    <div class="section-title">👥 User Activity</div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Active Workers</div>
+        <div class="kpi-value">{{ users.active_workers }}</div>
+        <div class="kpi-change {% if users.worker_change >= 0 %}up{% else %}down{% endif %}">
+          {% if users.worker_change >= 0 %}▲{% else %}▼{% endif %} {{ users.worker_change }} vs yesterday
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">New Registrations</div>
+        <div class="kpi-value">{{ users.new_today }}</div>
+        <div class="kpi-change neutral">Total: {{ users.total_users }}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Active Advertisers</div>
+        <div class="kpi-value">{{ users.active_advertisers }}</div>
+        <div class="kpi-change neutral">{{ users.active_campaigns }} campaigns running</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Banned Today</div>
+        <div class="kpi-value">{{ users.banned_today }}</div>
+        <div class="kpi-change {% if users.banned_today > 0 %}down{% else %}up{% endif %}">
+          {% if users.banned_today == 0 %}No bans today ✓{% else %}Review required{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  {% if alerts %}
+  <div class="section">
+    <div class="section-title">🚨 System Alerts</div>
+    {% for alert in alerts %}
+    <div class="alert-box">
+      <div class="at">{{ alert.level|upper }} — {{ alert.type }}</div>
+      <p class="am">{{ alert.message }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    <p>{{ site_name }} Admin Report • {{ report_date }}</p>
+    <p>Generated automatically. <a href="{{ admin_url }}">Open Dashboard</a></p>
+  </div>
+</div>
+</body>
+</html>

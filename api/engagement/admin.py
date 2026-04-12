@@ -235,3 +235,21 @@ rewards = [
 for rank, coins in rewards:
     LeaderboardReward.objects.create(rank=rank, reward_coins=coins)
 """
+
+def _force_register_engagement():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(DailyCheckIn, DailyCheckInAdmin), (SpinWheel, SpinWheelAdmin), (LeaderboardReward, LeaderboardRewardAdmin), (Leaderboard, LeaderboardAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] engagement registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] engagement: {e}")
