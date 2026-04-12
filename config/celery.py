@@ -28,7 +28,7 @@ app.conf.beat_schedule = {
     
     # প্রতিদিন সকাল ৬টায় ব্যাকআপ ভেরিফিকেশন
     'verify-backups-daily': {
-        'task': 'api.tasks.backup_tasks.verify_backups_task',
+        'task': 'api.tasks.backup_tasks.verify_backups_task', 
         'schedule': crontab(hour=6, minute=0),  # প্রতিদিন
         'args': (),
     },

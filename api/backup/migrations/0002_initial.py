@@ -285,12 +285,4 @@ class Migration(migrations.Migration):
             model_name='backup',
             constraint=models.UniqueConstraint(fields=('name', 'database_name'), name='unique_backup_name_per_database'),
         ),
-        migrations.AddConstraint(
-            model_name='backup',
-            constraint=models.CheckConstraint(check=models.Q(('file_size__gte', 0)), name='file_size_non_negative'),
-        ),
-        migrations.AddConstraint(
-            model_name='backup',
-            constraint=models.CheckConstraint(check=models.Q(('health_score__gte', 0), ('health_score__lte', 100)), name='health_score_range'),
-        ),
     ]

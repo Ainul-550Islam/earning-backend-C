@@ -40,3 +40,8 @@ class PostbackConfig(AppConfig):
             receivers.on_postback_failed,
             dispatch_uid="postback.on_failed",
         )
+        try:
+            from api.postback.admin import _force_register_postback
+            _force_register_postback()
+        except Exception as e:
+            pass

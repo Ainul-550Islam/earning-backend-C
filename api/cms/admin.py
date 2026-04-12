@@ -3744,3 +3744,21 @@ for model in [
         print(f"[OK] Registered: {model.__name__}")
 
 print(f"[DOC] Registered {registered} CMS models in default admin")
+
+def _force_register_cms():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(ContentCategory, ContentCategoryAdmin), (ContentPage, ContentPageAdmin), (Banner, BannerAdmin), (FAQCategory, FAQCategoryAdmin), (FAQ, FAQAdmin), (SiteSettings, SiteSettingsAdmin), (ImageGallery, ImageGalleryAdmin), (FileManager, FileManagerAdmin), (Comment, CommentAdmin), (SiteAnalytics, SiteAnalyticsAdmin), (ContentPermission, ContentPermissionAdmin), (BannerImpression, BannerImpressionAdmin), (BannerClick, BannerClickAdmin), (BannerReward, BannerRewardAdmin), (FAQFeedback, FAQFeedbackAdmin), (ContentViewLog, ContentViewLogAdmin), (ContentShare, ContentShareAdmin), (CommentLike, CommentLikeAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] cms registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] cms: {e}")

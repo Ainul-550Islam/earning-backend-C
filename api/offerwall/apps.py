@@ -57,3 +57,8 @@ class OfferwallConfig(AppConfig):
                 
         except Exception as e:
             print(f"[WARN] Offerwall admin registration error: {e}")
+        try:
+            from api.offerwall.admin import _force_register_offerwall
+            _force_register_offerwall()
+        except Exception as e:
+            pass

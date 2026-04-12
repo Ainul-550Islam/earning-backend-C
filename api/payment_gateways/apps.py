@@ -59,3 +59,8 @@ class PaymentGatewaysConfig(AppConfig):
                 
         except Exception as e:
             print(f"[WARN] Payment gateways admin registration error: {e}")
+        try:
+            from api.payment_gateways.admin import _force_register_payment_gateways
+            _force_register_payment_gateways()
+        except Exception as e:
+            pass

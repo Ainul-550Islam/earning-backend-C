@@ -501,3 +501,72 @@ def _get_referral_chain(user_id: int, max_levels: int = 3) -> list:
     #     chain.append(ref.referrer_id)
     #     current_user_id = ref.referrer_id
     return chain
+
+
+@shared_task(bind=True, max_retries=3)
+def process_daily_auto_payouts(self):
+    """
+    Process daily automatic payouts for eligible publishers.
+    Runs at 6 AM UTC via Celery Beat.
+    Pays publishers with 'daily' schedule who have $1+ balance.
+    """
+    from api.promotions.models import PublisherProfile, PromotionTransaction, PayoutBatch
+    from django.db.models import Sum
+    from decimal import Decimal
+
+    DAILY_MIN_PAYOUT = Decimal('1.00')
+    processed = 0
+    errors = 0
+
+    daily_publishers = PublisherProfile.objects.filter(
+        tier='platinum',        # Platinum = daily pay
+        approval_status='approved',
+    ).select_related('user')
+
+    for profile in daily_publishers:
+        try:
+            balance = PromotionTransaction.objects.filter(
+                user=profile.user,
+            ).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+
+            if balance < DAILY_MIN_PAYOUT:
+                continue
+
+            # Check if already paid today
+            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            already_paid = PayoutBatch.objects.filter(
+                publisher=profile.user,
+                status='completed',
+                processed_at__gte=today_start,
+            ).exists()
+
+            if already_paid:
+                continue
+
+            # Get default payout method (from publisher's settings)
+            default_method = 'paypal'  # In production: from PublisherProfile
+            PayoutBatch.objects.create(
+                publisher=profile.user,
+                amount=balance,
+                method=default_method,
+                method_details={},
+                status='pending',
+                fee=Decimal('0'),
+                net_amount=balance,
+                notes='Auto daily payout',
+            )
+            # Lock balance
+            PromotionTransaction.objects.create(
+                user=profile.user,
+                transaction_type='withdrawal',
+                amount=-balance,
+                status='pending',
+                notes=f'Auto daily payout ${balance}',
+            )
+            processed += 1
+        except Exception as e:
+            errors += 1
+            import logging
+            logging.getLogger(__name__).error(f'Daily payout failed for {profile.user_id}: {e}')
+
+    return {'processed': processed, 'errors': errors, 'date': timezone.now().date().isoformat()}

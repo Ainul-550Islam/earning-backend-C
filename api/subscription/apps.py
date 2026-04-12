@@ -54,3 +54,8 @@ class SubscriptionConfig(AppConfig):
             receivers.on_trial_ending_soon,
             dispatch_uid="subscription.on_trial_ending_soon",
         )
+        try:
+            from api.subscription.admin import _force_register_subscription
+            _force_register_subscription()
+        except Exception as e:
+            pass

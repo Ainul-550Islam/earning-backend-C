@@ -30,3 +30,9 @@ class BehaviorAnalyticsConfig(AppConfig):
             logging.getLogger(__name__).exception(
                 "behavior_analytics.ready: failed to import receivers: %s", exc
             )
+    def ready(self):
+        try:
+            from api.behavior_analytics.admin import _force_register_behavior_analytics
+            _force_register_behavior_analytics()
+        except Exception as e:
+            pass

@@ -1,6 +1,7 @@
 # wallet/urls.py (Fixed)
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
+from .api_views import CryptoPayoutView, EarningsBreakdownView
 
 # Import ViewSets and Views from views.py
 from . import views
@@ -80,6 +81,9 @@ urlpatterns = [
     path('withdrawals/', WithdrawalHistoryView.as_view(), name='withdrawal-history'),
     path('statistics/', WalletStatisticsView.as_view(), name='wallet-statistics'),
     
+#
+    path('crypto-payout/', CryptoPayoutView.as_view(), name='crypto-payout'),
+    path('earnings/breakdown/', EarningsBreakdownView.as_view(), name='earnings-breakdown'),
     # Task endpoints
     path('tasks/', include(task_urlpatterns)),
     

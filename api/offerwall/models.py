@@ -37,23 +37,23 @@ class OfferProvider(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100, unique=True)
-    provider_type = models.CharField(max_length=50, choices=PROVIDER_TYPES)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    provider_type = models.CharField(max_length=50, choices=PROVIDER_TYPES, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', null=True, blank=True)
     
     # API Configuration
-    api_key = models.CharField(max_length=500, blank=True)
-    api_secret = models.CharField(max_length=500, blank=True)
-    app_id = models.CharField(max_length=200, blank=True)
-    publisher_id = models.CharField(max_length=200, blank=True)
+    api_key = models.CharField(max_length=500, null=True, blank=True)
+    api_secret = models.CharField(max_length=500, null=True, blank=True)
+    app_id = models.CharField(max_length=200, null=True, blank=True)
+    publisher_id = models.CharField(max_length=200, null=True, blank=True)
     
     # URLs
-    api_base_url = models.URLField(blank=True)
-    webhook_url = models.URLField(blank=True)
-    postback_url = models.URLField(blank=True)
+    api_base_url = models.URLField(null=True, blank=True)
+    webhook_url = models.URLField(null=True, blank=True)
+    postback_url = models.URLField(null=True, blank=True)
     
     # Security
-    secret_key = models.CharField(max_length=500, blank=True, help_text='For webhook signature verification')
+    secret_key = models.CharField(max_length=500, blank=True, help_text='For webhook signature verification', null=True)
     ip_whitelist = models.JSONField(default=list, blank=True)
     
     # Revenue Settings
@@ -72,7 +72,7 @@ class OfferProvider(models.Model):
     # Statistics
     total_offers = models.IntegerField(default=0)
     total_conversions = models.IntegerField(default=0)
-    total_revenue = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_revenue = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     
     # Settings
     auto_sync = models.BooleanField(default=True)
@@ -114,11 +114,11 @@ class OfferCategory(models.Model):
         db_index=True,
     )
 
-    name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True)
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, null=True, blank=True)
     description = models.TextField(blank=True)
-    icon = models.CharField(max_length=50, blank=True, help_text='Icon class name')
-    color = models.CharField(max_length=7, default='#3B82F6', help_text='Hex color code')
+    icon = models.CharField(max_length=50, blank=True, help_text='Icon class name', null=True)
+    color = models.CharField(max_length=7, default='#3B82F6', help_text='Hex color code', null=True, blank=True)
     
     # Display
     display_order = models.IntegerField(default=0)
@@ -126,7 +126,7 @@ class OfferCategory(models.Model):
     is_active = models.BooleanField(default=True)
     
     # SEO
-    meta_title = models.CharField(max_length=200, blank=True)
+    meta_title = models.CharField(max_length=200, null=True, blank=True)
     meta_description = models.TextField(blank=True)
     
     # Statistics
@@ -202,12 +202,12 @@ class Offer(models.Model):
         on_delete=models.CASCADE,
         related_name='%(app_label)s_%(class)s_tenant'
     )
-    external_offer_id = models.CharField(max_length=200, db_index=True)
+    external_offer_id = models.CharField(max_length=200, db_index=True, null=True, blank=True)
     
     # Basic Info
-    title = models.CharField(max_length=300)
+    title = models.CharField(max_length=300, null=True, blank=True)
     description = models.TextField()
-    short_description = models.CharField(max_length=500, blank=True)
+    short_description = models.CharField(max_length=500, null=True, blank=True)
     
     # Categorization
     category = models.ForeignKey(
@@ -217,24 +217,24 @@ class Offer(models.Model):
         blank=True,
         related_name='%(app_label)s_%(class)s_tenant'
     )
-    offer_type = models.CharField(max_length=50, choices=OFFER_TYPES)
+    offer_type = models.CharField(max_length=50, choices=OFFER_TYPES, null=True, blank=True)
     tags = models.JSONField(default=list, blank=True)
     
     # Platform & Location
-    platform = models.CharField(max_length=20, choices=PLATFORMS, default='all')
+    platform = models.CharField(max_length=20, choices=PLATFORMS, default='all', null=True, blank=True)
     countries = models.JSONField(default=list, blank=True, help_text='ISO 2-letter country codes')
     excluded_countries = models.JSONField(default=list, blank=True)
     
     # Media
     image_url = models.URLField(blank=True, validators=[URLValidator()])
-    thumbnail_url = models.URLField(blank=True)
-    icon_url = models.URLField(blank=True)
-    video_url = models.URLField(blank=True)
+    thumbnail_url = models.URLField(null=True, blank=True)
+    icon_url = models.URLField(null=True, blank=True)
+    video_url = models.URLField(null=True, blank=True)
     
     # URLs
-    click_url = models.URLField(max_length=2000)
-    tracking_url = models.URLField(max_length=2000, blank=True)
-    preview_url = models.URLField(blank=True)
+    click_url = models.URLField(max_length=2000, null=True, blank=True)
+    tracking_url = models.URLField(max_length=2000, null=True, blank=True)
+    preview_url = models.URLField(null=True, blank=True)
     
     # Reward Info
     payout = models.DecimalField(
@@ -242,18 +242,18 @@ class Offer(models.Model):
         decimal_places=6,
         validators=[MinValueValidator(Decimal('0.000001'))]
     )
-    currency = models.CharField(max_length=3, default='USD')
+    currency = models.CharField(max_length=3, default='USD', null=True, blank=True)
     
     # User-facing reward (after revenue share)
-    reward_amount = models.DecimalField(max_digits=12, decimal_places=6, default=0)
-    reward_currency = models.CharField(max_length=10, default='Points')
+    reward_amount = models.DecimalField(max_digits=12, decimal_places=6, default=0, null=True, blank=True)
+    reward_currency = models.CharField(max_length=10, default='Points', null=True, blank=True)
     
     # Bonus rewards
-    bonus_amount = models.DecimalField(max_digits=12, decimal_places=6, default=0)
+    bonus_amount = models.DecimalField(max_digits=12, decimal_places=6, default=0, null=True, blank=True)
     bonus_condition = models.TextField(blank=True, help_text='Condition for bonus reward')
     
     # Difficulty & Time
-    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_LEVELS, default='medium')
+    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_LEVELS, default='medium', null=True, blank=True)
     estimated_time_minutes = models.IntegerField(default=5, validators=[MinValueValidator(1)])
     
     # Requirements
@@ -273,7 +273,7 @@ class Offer(models.Model):
     user_limit = models.IntegerField(default=1, help_text='Times each user can complete')
     
     # Status & Validity
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', null=True, blank=True)
     is_featured = models.BooleanField(default=False)
     is_trending = models.BooleanField(default=False)
     is_recommended = models.BooleanField(default=False)
@@ -289,8 +289,8 @@ class Offer(models.Model):
     completion_rate = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     
     # Revenue tracking
-    total_revenue = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    total_payout = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_revenue = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
+    total_payout = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     
     # Quality Score (0-100)
     quality_score = models.FloatField(default=50, validators=[MinValueValidator(0), MaxValueValidator(100)])
@@ -447,29 +447,29 @@ class OfferClick(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offerwall_offerclick_user')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offerwall_offerclick_user', null=True, blank=True)
     
     # Click data
-    click_id = models.CharField(max_length=255, unique=True, db_index=True)
+    click_id = models.CharField(max_length=255, unique=True, db_index=True, null=True, blank=True)
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField()
     
     # Device info
-    device_type = models.CharField(max_length=50, blank=True)
-    device_model = models.CharField(max_length=100, blank=True)
-    os = models.CharField(max_length=50, blank=True)
-    os_version = models.CharField(max_length=50, blank=True)
-    browser = models.CharField(max_length=50, blank=True)
+    device_type = models.CharField(max_length=50, null=True, blank=True)
+    device_model = models.CharField(max_length=100, null=True, blank=True)
+    os = models.CharField(max_length=50, null=True, blank=True)
+    os_version = models.CharField(max_length=50, null=True, blank=True)
+    browser = models.CharField(max_length=50, null=True, blank=True)
     
     # Location
-    country = models.CharField(max_length=2, blank=True)
-    city = models.CharField(max_length=100, blank=True)
+    country = models.CharField(max_length=2, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
     
     # Referrer
-    referrer_url = models.URLField(blank=True, max_length=2000)
+    referrer_url = models.URLField(blank=True, max_length=2000, null=True)
     
     # Tracking
-    session_id = models.CharField(max_length=255, blank=True)
+    session_id = models.CharField(max_length=255, null=True, blank=True)
     tracking_params = models.JSONField(default=dict, blank=True)
     
     # Status
@@ -516,26 +516,26 @@ class OfferConversion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offerwall_offerconversion_user')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offerwall_offerconversion_user', null=True, blank=True)
     click = models.ForeignKey(OfferClick, on_delete=models.SET_NULL, null=True, blank=True, related_name='offerwall_offerconversion_click')
     
     # Conversion data
-    conversion_id = models.CharField(max_length=255, unique=True, db_index=True)
-    external_WalletTransaction_id = models.CharField(max_length=255, blank=True, db_index=True)
+    conversion_id = models.CharField(max_length=255, unique=True, db_index=True, null=True, blank=True)
+    external_WalletTransaction_id = models.CharField(max_length=255, blank=True, db_index=True, null=True)
     
     # Payout
-    payout_amount = models.DecimalField(max_digits=12, decimal_places=6)
-    payout_currency = models.CharField(max_length=3, default='USD')
+    payout_amount = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
+    payout_currency = models.CharField(max_length=3, default='USD', null=True, blank=True)
     
     # User reward
-    reward_amount = models.DecimalField(max_digits=12, decimal_places=6)
-    reward_currency = models.CharField(max_length=10, default='Points')
+    reward_amount = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
+    reward_currency = models.CharField(max_length=10, default='Points', null=True, blank=True)
     
     # Bonus
-    bonus_amount = models.DecimalField(max_digits=12, decimal_places=6, default=0)
+    bonus_amount = models.DecimalField(max_digits=12, decimal_places=6, default=0, null=True, blank=True)
     
     # Status
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
     
     # Verification
     is_verified = models.BooleanField(default=False)
@@ -646,14 +646,14 @@ class OfferWall(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
-    name = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=100, unique=True)
+    name = models.CharField(max_length=100, null=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, null=True, blank=True)
     description = models.TextField(blank=True)
     
     # Display settings
-    title = models.CharField(max_length=200)
-    subtitle = models.CharField(max_length=300, blank=True)
-    banner_image = models.URLField(blank=True)
+    title = models.CharField(max_length=200, null=True, blank=True)
+    subtitle = models.CharField(max_length=300, null=True, blank=True)
+    banner_image = models.URLField(null=True, blank=True)
     
     # Filters
     categories = models.ManyToManyField(OfferCategory, blank=True, related_name='%(app_label)s_%(class)s_tenant')
@@ -663,11 +663,11 @@ class OfferWall(models.Model):
     
     # Targeting
     countries = models.JSONField(default=list, blank=True)
-    min_payout = models.DecimalField(max_digits=12, decimal_places=6, default=0)
+    min_payout = models.DecimalField(max_digits=12, decimal_places=6, default=0, null=True, blank=True)
     
     # Display
     offers_per_page = models.IntegerField(default=20)
-    sort_by = models.CharField(max_length=50, default='quality_score')
+    sort_by = models.CharField(max_length=50, default='quality_score', null=True, blank=True)
     is_active = models.BooleanField(default=True)
     
     # Settings

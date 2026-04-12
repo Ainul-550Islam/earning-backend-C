@@ -3,7 +3,7 @@ Security App URLs Configuration
 """
 
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 from django.conf import settings
 from . import views
 from .views import (

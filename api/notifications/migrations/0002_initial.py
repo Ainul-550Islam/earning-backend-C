@@ -226,7 +226,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='notification',
-            constraint=models.CheckConstraint(check=models.Q(('progress_value__gte', 0.0), ('progress_value__lte', 100.0)), name='progress_value_range'),
+            constraint=models.CheckConstraint(check=models.Q(progress_value__gte=0.0) & models.Q(progress_value__lte=100.0), name='progress_value_range'),
         ),
         migrations.AlterUniqueTogether(
             name='notificationfeedback',

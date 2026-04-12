@@ -99,6 +99,7 @@ class AppUpdatePolicy(TimeStampedUUIDModel):
     """
 
     platform = models.CharField(
+        null=True, blank=True,
         max_length=16,
         choices=Platform.choices,
         db_index=True,
@@ -122,6 +123,7 @@ class AppUpdatePolicy(TimeStampedUUIDModel):
         help_text=_("Exclusive upper bound. Leave blank to match all versions above min."),
     )
     target_version = models.CharField(
+        null=True, blank=True,
         max_length=MAX_VERSION_LENGTH,
         validators=[_version_validator],
         verbose_name=_("Target Version"),
@@ -142,7 +144,6 @@ class AppUpdatePolicy(TimeStampedUUIDModel):
     )
     release_notes_url = models.URLField(
         max_length=MAX_REDIRECT_URL_LENGTH,
-        blank=True,
         default="",
         verbose_name=_("Release Notes URL"),
     )
@@ -171,7 +172,6 @@ class AppUpdatePolicy(TimeStampedUUIDModel):
     )
     metadata = models.JSONField(
         default=dict,
-        blank=True,
         verbose_name=_("Metadata"),
         help_text=_("Extra key-value data for downstream consumers."),
     )
@@ -258,6 +258,7 @@ class MaintenanceSchedule(TimeStampedUUIDModel):
         verbose_name=_("Status"),
     )
     scheduled_start = models.DateTimeField(
+        null=True, blank=True,
         db_index=True,
         verbose_name=_("Scheduled Start"),
     )
@@ -273,7 +274,6 @@ class MaintenanceSchedule(TimeStampedUUIDModel):
     )
     bypass_token = models.CharField(
         max_length=128,
-        blank=True,
         default="",
         verbose_name=_("Bypass Token"),
         help_text=_(
@@ -350,6 +350,7 @@ class PlatformRedirect(TimeStampedUUIDModel):
     """
 
     platform = models.CharField(
+        null=True, blank=True,
         max_length=16,
         choices=Platform.choices,
         unique=True,
@@ -363,6 +364,7 @@ class PlatformRedirect(TimeStampedUUIDModel):
         verbose_name=_("Redirect Type"),
     )
     url = models.URLField(
+        null=True, blank=True,
         max_length=MAX_REDIRECT_URL_LENGTH,
         verbose_name=_("Redirect URL"),
     )

@@ -125,3 +125,22 @@ for _model in _apps.get_app_config(_app_label).get_models():
         admin.site.register(_model)
     except admin.sites.AlreadyRegistered:
         pass
+
+
+def _force_register_version_control():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(AppUpdatePolicy, AppUpdatePolicyAdmin), (MaintenanceSchedule, MaintenanceScheduleAdmin), (PlatformRedirect, PlatformRedirectAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] version_control registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] version_control: {e}")

@@ -10,3 +10,8 @@ class KycConfig(AppConfig):
             import api.kyc.signals  # noqa: F401
         except ImportError:
             pass
+        try:
+            from api.kyc.admin import _force_register_kyc
+            _force_register_kyc()
+        except Exception as e:
+            pass

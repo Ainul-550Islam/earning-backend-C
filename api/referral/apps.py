@@ -70,3 +70,8 @@ class ReferralConfig(AppConfig):
                 
         except Exception as e:
             print(f"[WARN] Referral admin registration error: {e}")
+        try:
+            from api.referral.admin import _force_register_referral
+            _force_register_referral()
+        except Exception as e:
+            pass

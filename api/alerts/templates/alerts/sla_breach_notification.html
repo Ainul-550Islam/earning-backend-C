@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLA Breach Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #ff4757 0%, #c44569 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e9ecef;
+        }
+        .breach-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #dc3545;
+        }
+        .breach-critical { border-left-color: #dc3545; }
+        .breach-high { border-left-color: #fd7e14; }
+        .breach-medium { border-left-color: #ffc107; }
+        .breach-low { border-left-color: #28a745; }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #dc3545;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .breach-percentage {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #dc3545;
+            color: white;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .severity-critical { background: #dc3545; }
+        .severity-high { background: #fd7e14; }
+        .severity-medium { background: #ffc107; color: #000; }
+        .severity-low { background: #28a745; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #dc3545;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SLA Breach Alert</h1>
+        <p>Service Level Agreement Violation</p>
+    </div>
+    
+    <div class="content">
+        <div class="breach-info breach-{{ sla_breach.severity }}">
+            <h2>SLA Breach Details</h2>
+            <p><span class="breach-percentage severity-{{ sla_breach.severity }}">{{ sla_breach.breach_percentage|floatformat:1 }}% BREACH</span></p>
+            
+            <p><strong>Breach Name:</strong> {{ sla_breach.name }}</p>
+            <p><strong>SLA Type:</strong> {{ sla_breach.get_sla_type_display }}</p>
+            <p><strong>Severity:</strong> {{ sla_breach.get_severity_display }}</p>
+            <p><strong>Status:</strong> {{ sla_breach.get_status_display }}</p>
+            
+            {% if sla_breach.alert_log %}
+            <p><strong>Related Alert:</strong> {{ sla_breach.alert_log.rule.name }}</p>
+            <p><strong>Alert Severity:</strong> {{ sla_breach.alert_log.rule.get_severity_display }}</p>
+            {% endif %}
+            
+            {% if sla_breach.incident %}
+            <p><strong>Related Incident:</strong> {{ sla_breach.incident.title }}</p>
+            <p><strong>Incident Severity:</strong> {{ sla_breach.incident.get_severity_display }}</p>
+            {% endif %}
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">{{ sla_breach.threshold_minutes }} min</div>
+                    <div class="stat-label">SLA Threshold</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ sla_breach.breach_duration_minutes|floatformat:0 }} min</div>
+                    <div class="stat-label">Breach Duration</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ sla_breach.escalation_level }}</div>
+                    <div class="stat-label">Escalation Level</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ sla_breach.breach_percentage|floatformat:1 }}%</div>
+                    <div class="stat-label">Breach %</div>
+                </div>
+            </div>
+            
+            <div class="timestamp">
+                <p><strong>Breach Time:</strong> {{ sla_breach.breach_time|date:"Y-m-d H:i:s" }}</p>
+                {% if sla_breach.acknowledged_at %}
+                <p><strong>Acknowledged at:</strong> {{ sla_breach.acknowledged_at|date:"Y-m-d H:i:s" }}</p>
+                {% endif %}
+                {% if sla_breach.resolved_at %}
+                <p><strong>Resolved at:</strong> {{ sla_breach.resolved_at|date:"Y-m-d H:i:s" }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if sla_breach.business_impact %}
+        <div style="margin-top: 20px; padding: 15px; background: #f8d7da; border-radius: 5px; border: 1px solid #f5c6cb;">
+            <h3>Business Impact</h3>
+            <p>{{ sla_breach.business_impact }}</p>
+        </div>
+        {% endif %}
+        
+        {% if sla_breach.financial_impact %}
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffeaa7;">
+            <h3>Financial Impact</h3>
+            <p>{{ sla_breach.financial_impact }}</p>
+        </div>
+        {% endif %}
+        
+        {% if sla_breach.customer_impact %}
+        <div style="margin-top: 20px; padding: 15px; background: #d1ecf1; border-radius: 5px; border: 1px solid #bee5eb;">
+            <h3>Customer Impact</h3>
+            <p>{{ sla_breach.customer_impact }}</p>
+        </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{{ dashboard_url }}" class="btn">Take Immediate Action</a>
+            <a href="{{ breach_url }}" class="btn btn-secondary">View Breach Details</a>
+            {% if sla_breach.status == 'active' %}
+            <a href="{{ acknowledge_url }}" class="btn btn-secondary">Acknowledge Breach</a>
+            {% endif %}
+        </div>
+        
+        {% if sla_breach.root_cause %}
+        <div style="margin-top: 20px;">
+            <h3>Potential Root Causes</h3>
+            <ul>
+                {% for cause in sla_breach.root_cause %}
+                <li>{{ cause }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if sla_breach.preventive_measures %}
+        <div style="margin-top: 20px;">
+            <h3>Preventive Measures</h3>
+            <ul>
+                {% for measure in sla_breach.preventive_measures %}
+                <li>{{ measure }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if sla_breach.escalation_contacts %}
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h3>Escalation Contacts</h3>
+            {% for contact in sla_breach.escalation_contacts %}
+            <p><strong>{{ contact.name }}:</strong> {{ contact.email }} ({{ contact.phone }})</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>This SLA breach requires immediate attention to prevent further impact</p>
+        <p>Please follow your organization's escalation procedures for SLA violations</p>
+    </div>
+</body>
+</html>

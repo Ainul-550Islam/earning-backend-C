@@ -21,8 +21,8 @@ class AdminAction(TimeStampedModel):
         ('setting_change', 'Setting Change'),
     )
     
-    admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='admin_panel_adminaction_admin')
-    action_type = models.CharField(max_length=50, choices=ACTION_TYPES)
+    admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='admin_panel_adminaction_admin', null=True, blank=True)
+    action_type = models.CharField(max_length=50, choices=ACTION_TYPES, null=True, blank=True)
     target_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='admin_panel_adminaction_target_user')
     description = models.TextField()
     metadata = models.JSONField(default=dict, blank=True)
@@ -45,11 +45,11 @@ class Report(TimeStampedModel):
         ('activity', 'Activity Report'),
     )
     
-    title = models.CharField(max_length=255, default="New Report")
+    title = models.CharField(max_length=255, default="New Report", null=True, blank=True)
     description = models.TextField(null=True, blank=True) # অ্যাডমিনের search_fields ও fieldsets এর জন্য
     report_id = models.CharField(max_length=100, unique=True, editable=False, null=True)
-    report_type = models.CharField(max_length=50, choices=REPORT_TYPES)
-    generated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    report_type = models.CharField(max_length=50, choices=REPORT_TYPES, null=True, blank=True)
+    generated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -62,7 +62,7 @@ class Report(TimeStampedModel):
     file_format = models.CharField(max_length=10, blank=True, null=True)
     file_size = models.CharField(max_length=50, blank=True, null=True)
     
-    status = models.CharField(max_length=20, default='pending')
+    status = models.CharField(max_length=20, default='pending', null=True, blank=True)
     generated_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -95,38 +95,36 @@ class SystemSettings(models.Model):
 
     
     # ==================== Site Information ====================
-    site_name = models.CharField(max_length=255, default="Earning Platform")
-    site_tagline = models.CharField(max_length=255, blank=True, default="Earn Money Online")
+    site_name = models.CharField(max_length=255, default="Earning Platform", null=True, blank=True)
+    site_tagline = models.CharField(max_length=255, blank=True, default="Earn Money Online", null=True)
     site_description = models.TextField(blank=True)
     site_logo = models.ImageField(upload_to='site_logos/', blank=True, null=True)
     site_favicon = models.ImageField(upload_to='favicons/', blank=True, null=True)
-    site_url = models.URLField(default="https://earn.example.com")
+    site_url = models.URLField(default="https://earn.example.com", null=True, blank=True)
     contact_email = models.EmailField(default="support@earn.example.com")
     support_email = models.EmailField(default="help@earn.example.com")
     admin_email = models.EmailField(default="admin@earn.example.com")
     
     # ==================== Contact Information ====================
-    contact_phone = models.CharField(max_length=20, blank=True)
-    contact_whatsapp = models.CharField(max_length=20, blank=True)
+    contact_phone = models.CharField(max_length=20, null=True, blank=True)
+    contact_whatsapp = models.CharField(max_length=20, null=True, blank=True)
     contact_address = models.TextField(blank=True)
-    contact_facebook = models.URLField(blank=True)
-    contact_twitter = models.URLField(blank=True)
-    contact_instagram = models.URLField(blank=True)
-    contact_telegram = models.URLField(blank=True)
-    contact_youtube = models.URLField(blank=True)
-    contact_linkedin = models.URLField(blank=True)
+    contact_facebook = models.URLField(null=True, blank=True)
+    contact_twitter = models.URLField(null=True, blank=True)
+    contact_instagram = models.URLField(null=True, blank=True)
+    contact_telegram = models.URLField(null=True, blank=True)
+    contact_youtube = models.URLField(null=True, blank=True)
+    contact_linkedin = models.URLField(null=True, blank=True)
     
     # ==================== Currency & Payment Settings ====================
-    currency_code = models.CharField(max_length=3, default="BDT")
-    currency_symbol = models.CharField(max_length=5, default="৳")
+    currency_code = models.CharField(max_length=3, default="BDT", null=True, blank=True)
+    currency_symbol = models.CharField(max_length=5, default="৳", null=True, blank=True)
     min_withdrawal_amount = models.DecimalField(
         max_digits=10, decimal_places=2, default=100.00,
-        help_text="Minimum amount users can withdraw"
-    )
+        help_text="Minimum amount users can withdraw")
     max_withdrawal_amount = models.DecimalField(
         max_digits=10, decimal_places=2, default=10000.00,
-        help_text="Maximum amount users can withdraw at once"
-    )
+        help_text="Maximum amount users can withdraw at once")
     withdrawal_fee_percentage = models.DecimalField(
         max_digits=5, decimal_places=2, default=2.50,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
@@ -134,8 +132,7 @@ class SystemSettings(models.Model):
     )
     withdrawal_fee_fixed = models.DecimalField(
         max_digits=10, decimal_places=2, default=0.00,
-        help_text="Fixed withdrawal fee amount"
-    )
+        help_text="Fixed withdrawal fee amount")
     tax_percentage = models.DecimalField(
         max_digits=5, decimal_places=2, default=0.00,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
@@ -153,8 +150,7 @@ class SystemSettings(models.Model):
     # ==================== Points System ====================
     point_value = models.DecimalField(
         max_digits=10, decimal_places=4, default=0.01,
-        help_text="How much 1 point is worth in currency"
-    )
+        help_text="How much 1 point is worth in currency")
     min_points_withdrawal = models.IntegerField(
         default=1000,
         help_text="Minimum points needed to withdraw"
@@ -212,16 +208,14 @@ class SystemSettings(models.Model):
     # Android Version Control
     android_version = models.CharField(
         max_length=20, default="1.0.0",
-        help_text="Current Android app version in Play Store"
-    )
+        help_text="Current Android app version in Play Store")
     android_version_code = models.IntegerField(
         default=1,
         help_text="Android version code (integer)"
     )
     android_min_version = models.CharField(
         max_length=20, default="1.0.0",
-        help_text="Minimum required Android version to use app"
-    )
+        help_text="Minimum required Android version to use app")
     android_min_version_code = models.IntegerField(
         default=1,
         help_text="Minimum version code required"
@@ -236,26 +230,22 @@ class SystemSettings(models.Model):
     )
     android_app_link = models.URLField(
         blank=True,
-        help_text="Google Play Store link"
-    )
+        help_text="Google Play Store link")
     android_apk_link = models.URLField(
         blank=True,
-        help_text="Direct APK download link"
-    )
+        help_text="Direct APK download link")
     
     # iOS Version Control
     ios_version = models.CharField(
         max_length=20, default="1.0.0",
-        help_text="Current iOS app version in App Store"
-    )
+        help_text="Current iOS app version in App Store")
     ios_version_code = models.IntegerField(
         default=1,
         help_text="iOS version code (build number)"
     )
     ios_min_version = models.CharField(
         max_length=20, default="1.0.0",
-        help_text="Minimum required iOS version"
-    )
+        help_text="Minimum required iOS version")
     ios_min_version_code = models.IntegerField(
         default=1,
         help_text="Minimum iOS build number required"
@@ -269,11 +259,10 @@ class SystemSettings(models.Model):
     )
     ios_app_link = models.URLField(
         blank=True,
-        help_text="Apple App Store link"
-    )
+        help_text="Apple App Store link")
     
     # Web Version Control
-    web_version = models.CharField(max_length=20, default="1.0.0")
+    web_version = models.CharField(max_length=20, default="1.0.0", null=True, blank=True)
     web_force_reload = models.BooleanField(
         default=False,
         help_text="Force browser cache clear and reload"
@@ -283,12 +272,10 @@ class SystemSettings(models.Model):
     # Daily Limits
     max_daily_earning_limit = models.DecimalField(
         max_digits=10, decimal_places=2, default=1000.00,
-        help_text="Maximum amount a user can earn per day"
-    )
+        help_text="Maximum amount a user can earn per day")
     max_daily_withdrawal_limit = models.DecimalField(
         max_digits=10, decimal_places=2, default=5000.00,
-        help_text="Maximum withdrawal amount per day"
-    )
+        help_text="Maximum withdrawal amount per day")
     max_daily_ads = models.IntegerField(
         default=100,
         help_text="Maximum ads a user can view per day"
@@ -309,8 +296,7 @@ class SystemSettings(models.Model):
     # Suspicious Activity Detection
     suspicious_activity_threshold = models.DecimalField(
         max_digits=10, decimal_places=2, default=500.00,
-        help_text="If user earns this much in an hour, flag as suspicious"
-    )
+        help_text="If user earns this much in an hour, flag as suspicious")
     suspicious_click_speed = models.IntegerField(
         default=5,
         help_text="Number of clicks in 60 seconds to flag as bot"
@@ -405,8 +391,7 @@ class SystemSettings(models.Model):
     require_identity_for_large_withdrawal = models.BooleanField(default=False)
     large_withdrawal_threshold = models.DecimalField(
         max_digits=10, decimal_places=2, default=5000.00,
-        help_text="Amount that triggers identity verification requirement"
-    )
+        help_text="Amount that triggers identity verification requirement")
     
     # Login Security
     max_login_attempts = models.IntegerField(
@@ -451,8 +436,7 @@ class SystemSettings(models.Model):
     )
     withdrawal_auto_approve_limit = models.DecimalField(
         max_digits=10, decimal_places=2, default=100.00,
-        help_text="Auto-approve withdrawals below this amount"
-    )
+        help_text="Auto-approve withdrawals below this amount")
     withdrawal_processing_time = models.IntegerField(
         default=24,
         help_text="Hours to process withdrawal"
@@ -473,17 +457,16 @@ class SystemSettings(models.Model):
     )
     new_user_daily_limit = models.DecimalField(
         max_digits=10, decimal_places=2, default=100.00,
-        help_text="Daily earning limit for new users"
-    )
+        help_text="Daily earning limit for new users")
     
     # ==================== Email Settings ====================
-    smtp_host = models.CharField(max_length=255, blank=True)
+    smtp_host = models.CharField(max_length=255, null=True, blank=True)
     smtp_port = models.IntegerField(default=587)
-    smtp_username = models.CharField(max_length=255, blank=True)
-    smtp_password = models.CharField(max_length=255, blank=True)
+    smtp_username = models.CharField(max_length=255, null=True, blank=True)
+    smtp_password = models.CharField(max_length=255, null=True, blank=True)
     smtp_use_tls = models.BooleanField(default=True)
     smtp_use_ssl = models.BooleanField(default=False)
-    email_from_name = models.CharField(max_length=255, default="Earning Platform")
+    email_from_name = models.CharField(max_length=255, default="Earning Platform", null=True, blank=True)
     email_from_address = models.EmailField(blank=True)
     
     # Email Notifications
@@ -505,10 +488,10 @@ class SystemSettings(models.Model):
             ('custom', 'Custom'),
         ]
     )
-    sms_api_key = models.CharField(max_length=255, blank=True)
-    sms_api_secret = models.CharField(max_length=255, blank=True)
-    sms_sender_id = models.CharField(max_length=20, blank=True)
-    sms_api_url = models.URLField(blank=True)
+    sms_api_key = models.CharField(max_length=255, null=True, blank=True)
+    sms_api_secret = models.CharField(max_length=255, null=True, blank=True)
+    sms_sender_id = models.CharField(max_length=20, null=True, blank=True)
+    sms_api_url = models.URLField(null=True, blank=True)
     
     # SMS Notifications
     send_withdrawal_sms = models.BooleanField(default=False)
@@ -532,8 +515,7 @@ class SystemSettings(models.Model):
     )
     maintenance_reason = models.CharField(
         max_length=255, blank=True,
-        help_text="Internal reason for maintenance"
-    )
+        help_text="Internal reason for maintenance")
     
     # ==================== Cache & Performance ====================
     cache_timeout = models.IntegerField(
@@ -564,10 +546,10 @@ class SystemSettings(models.Model):
     
     # ==================== Analytics & Tracking ====================
     enable_analytics = models.BooleanField(default=True)
-    google_analytics_id = models.CharField(max_length=50, blank=True)
-    facebook_pixel_id = models.CharField(max_length=50, blank=True)
-    google_tag_manager_id = models.CharField(max_length=50, blank=True)
-    hotjar_id = models.CharField(max_length=50, blank=True)
+    google_analytics_id = models.CharField(max_length=50, null=True, blank=True)
+    facebook_pixel_id = models.CharField(max_length=50, null=True, blank=True)
+    google_tag_manager_id = models.CharField(max_length=50, null=True, blank=True)
+    hotjar_id = models.CharField(max_length=50, null=True, blank=True)
     
     # User Tracking
     track_user_activity = models.BooleanField(
@@ -579,15 +561,14 @@ class SystemSettings(models.Model):
     track_location = models.BooleanField(default=True)
     
     # ==================== Legal & Compliance ====================
-    terms_url = models.URLField(blank=True)
-    privacy_policy_url = models.URLField(blank=True)
-    refund_policy_url = models.URLField(blank=True)
-    cookie_policy_url = models.URLField(blank=True)
+    terms_url = models.URLField(null=True, blank=True)
+    privacy_policy_url = models.URLField(null=True, blank=True)
+    refund_policy_url = models.URLField(null=True, blank=True)
+    cookie_policy_url = models.URLField(null=True, blank=True)
     disclaimer_text = models.TextField(blank=True)
     copyright_text = models.CharField(
         max_length=255,
-        default="© 2024 Earning Platform. All rights reserved."
-    )
+        default="© 2024 Earning Platform. All rights reserved.")
     
     # GDPR Compliance
     enable_gdpr = models.BooleanField(
@@ -606,8 +587,8 @@ class SystemSettings(models.Model):
     # ==================== Notification Settings ====================
     # Push Notifications
     enable_push_notifications = models.BooleanField(default=True)
-    firebase_server_key = models.CharField(max_length=255, blank=True)
-    firebase_sender_id = models.CharField(max_length=50, blank=True)
+    firebase_server_key = models.CharField(max_length=255, null=True, blank=True)
+    firebase_sender_id = models.CharField(max_length=50, null=True, blank=True)
     
     # Notification Types
     notify_on_withdrawal = models.BooleanField(default=True)
@@ -648,8 +629,7 @@ class SystemSettings(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='admin_panel_systemsettings_last_modified_by'
-    )
+        related_name='admin_panel_systemsettings_last_modified_by')
     
     class Meta:
         db_table = 'system_settings'
@@ -818,9 +798,9 @@ class SiteNotification(models.Model):
         ('PROMOTION', 'Promotion'),
     ]
     
-    title = models.CharField(max_length=200)
+    title = models.CharField(max_length=200, null=True, blank=True)
     message = models.TextField()
-    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPE_CHOICES, default='INFO')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPE_CHOICES, default='INFO', null=True, blank=True)
     is_active = models.BooleanField(default=True)
     show_on_login = models.BooleanField(default=False)
     start_date = models.DateTimeField(default=timezone.now)
@@ -868,15 +848,15 @@ class SiteContent(models.Model):
         ('POPUP', 'Popup'),
     ]
     
-    identifier = models.SlugField(max_length=100, unique=True)
-    title = models.CharField(max_length=200)
+    identifier = models.SlugField(max_length=100, unique=True, null=True, blank=True)
+    title = models.CharField(max_length=200, null=True, blank=True)
     content = models.TextField()
-    content_type = models.CharField(max_length=20, choices=CONTENT_TYPE_CHOICES, default='PAGE')
+    content_type = models.CharField(max_length=20, choices=CONTENT_TYPE_CHOICES, default='PAGE', null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    language = models.CharField(max_length=10, default='en')
-    meta_title = models.CharField(max_length=200, blank=True)
+    language = models.CharField(max_length=10, default='en', null=True, blank=True)
+    meta_title = models.CharField(max_length=200, null=True, blank=True)
     meta_description = models.TextField(blank=True)
-    meta_keywords = models.CharField(max_length=500, blank=True)
+    meta_keywords = models.CharField(max_length=500, null=True, blank=True)
     order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

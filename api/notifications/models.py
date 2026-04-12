@@ -349,15 +349,13 @@ class Notification(models.Model):
         on_delete=models.CASCADE,
         related_name='api_notifications',
         verbose_name='Recipient User',
-        help_text='User who will receive this notification'
-    )
+        help_text='User who will receive this notification')
     
     # Title and Message
     title = models.CharField(
         max_length=255,
         verbose_name='Notification Title',
-        help_text='Title of the notification'
-    )
+        help_text='Title of the notification')
     
     message = models.TextField(
         verbose_name='Notification Message',
@@ -371,32 +369,28 @@ class Notification(models.Model):
         choices=NOTIFICATION_TYPES,
         default='general',
         verbose_name='Notification Type',
-        help_text='Type/category of notification'
-    )
+        help_text='Type/category of notification')
     
     priority = models.CharField(
         max_length=20,
         choices=PRIORITY_LEVELS,
         default='medium',
         verbose_name='Priority Level',
-        help_text='Importance level of notification'
-    )
+        help_text='Importance level of notification')
     
     channel = models.CharField(
         max_length=20,
         choices=CHANNEL_CHOICES,
         default='in_app',
         verbose_name='Delivery Channel',
-        help_text='Channel through which to send notification'
-    )
+        help_text='Channel through which to send notification')
     
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='draft',
         verbose_name='Notification Status',
-        help_text='Current status of notification'
-    )
+        help_text='Current status of notification')
     
     # ==================== STATUS TRACKING ====================
     
@@ -510,16 +504,14 @@ class Notification(models.Model):
         blank=True,
         null=True,
         verbose_name='Icon URL',
-        help_text='URL of notification icon'
-    )
+        help_text='URL of notification icon')
     
     thumbnail_url = models.URLField(
         max_length=1000,
         blank=True,
         null=True,
         verbose_name='Thumbnail URL',
-        help_text='URL of notification thumbnail'
-    )
+        help_text='URL of notification thumbnail')
     
     # Action Elements
     action_url = models.URLField(
@@ -527,24 +519,21 @@ class Notification(models.Model):
         blank=True,
         null=True,
         verbose_name='Action URL',
-        help_text='URL to navigate when notification is clicked'
-    )
+        help_text='URL to navigate when notification is clicked')
     
     action_text = models.CharField(
         max_length=100,
         blank=True,
         null=True,
         verbose_name='Action Text',
-        help_text='Text for action button'
-    )
+        help_text='Text for action button')
     
     deep_link = models.CharField(
         max_length=1000,
         blank=True,
         null=True,
         verbose_name='Deep Link',
-        help_text='App deep link for mobile notifications'
-    )
+        help_text='App deep link for mobile notifications')
     
     # Device Information
     device_type = models.CharField(
@@ -552,16 +541,14 @@ class Notification(models.Model):
         choices=DEVICE_TYPES,
         default='unknown',
         verbose_name='Device Type',
-        help_text='Type of device receiving notification'
-    )
+        help_text='Type of device receiving notification')
     
     platform = models.CharField(
         max_length=50,
         choices=PLATFORM_CHOICES,
         default='web',
         verbose_name='Platform',
-        help_text='Platform where notification will be shown'
-    )
+        help_text='Platform where notification will be shown')
     
     # Language and Localization
     language = models.CharField(
@@ -569,8 +556,7 @@ class Notification(models.Model):
         choices=LANGUAGE_CHOICES,
         default='en',
         verbose_name='Language',
-        help_text='Language of notification content'
-    )
+        help_text='Language of notification content')
     
     # Analytics
     click_count = models.PositiveIntegerField(
@@ -620,8 +606,7 @@ class Notification(models.Model):
         blank=True,
         related_name='replies',
         verbose_name='Parent Notification',
-        help_text='Parent notification for threaded notifications'
-    )
+        help_text='Parent notification for threaded notifications')
     
     # Grouping
     group_id = models.CharField(
@@ -629,8 +614,7 @@ class Notification(models.Model):
         blank=True,
         null=True,
         verbose_name='Group ID',
-        help_text='ID for grouping related notifications'
-    )
+        help_text='ID for grouping related notifications')
     
     # Tags
     tags = models.JSONField(
@@ -646,16 +630,14 @@ class Notification(models.Model):
         blank=True,
         null=True,
         verbose_name='Campaign ID',
-        help_text='ID of marketing campaign'
-    )
+        help_text='ID of marketing campaign')
     
     campaign_name = models.CharField(
         max_length=255,
         blank=True,
         null=True,
         verbose_name='Campaign Name',
-        help_text='Name of marketing campaign'
-    )
+        help_text='Name of marketing campaign')
     
     # A/B Testing
     variant = models.CharField(
@@ -663,8 +645,7 @@ class Notification(models.Model):
         blank=True,
         null=True,
         verbose_name='Variant',
-        help_text='A/B testing variant identifier'
-    )
+        help_text='A/B testing variant identifier')
     
     # Priority Boost
     priority_boost = models.IntegerField(
@@ -698,8 +679,7 @@ class Notification(models.Model):
         blank=True,
         null=True,
         verbose_name='Sound Name',
-        help_text='Name of notification sound'
-    )
+        help_text='Name of notification sound')
     
     # Vibration
     vibration_enabled = models.BooleanField(
@@ -713,8 +693,7 @@ class Notification(models.Model):
         blank=True,
         null=True,
         verbose_name='Vibration Pattern',
-        help_text='Pattern for vibration'
-    )
+        help_text='Pattern for vibration')
     
     # LED Light
     led_color = models.CharField(
@@ -722,16 +701,14 @@ class Notification(models.Model):
         blank=True,
         null=True,
         verbose_name='LED Color',
-        help_text='LED light color for notification'
-    )
+        help_text='LED light color for notification')
     
     led_blink_pattern = models.CharField(
         max_length=100,
         blank=True,
         null=True,
         verbose_name='LED Blink Pattern',
-        help_text='Blink pattern for LED light'
-    )
+        help_text='Blink pattern for LED light')
     
     # Notification Badge
     badge_count = models.PositiveIntegerField(
@@ -845,15 +822,13 @@ class Notification(models.Model):
         decimal_places=4,
         default=0.00,
         verbose_name='Cost',
-        help_text='Cost of sending notification'
-    )
+        help_text='Cost of sending notification')
     
     cost_currency = models.CharField(
         max_length=3,
         default='USD',
         verbose_name='Cost Currency',
-        help_text='Currency for cost calculation'
-    )
+        help_text='Currency for cost calculation')
     
     # Performance Metrics
     open_rate = models.FloatField(
@@ -887,8 +862,7 @@ class Notification(models.Model):
         blank=True,
         null=True,
         verbose_name='Batch Name',
-        help_text='Name for batch notifications'
-    )
+        help_text='Name for batch notifications')
     
     # Retry Configuration
     max_retries = models.PositiveIntegerField(
@@ -915,8 +889,7 @@ class Notification(models.Model):
         blank=True,
         null=True,
         verbose_name='Encryption Key',
-        help_text='Key for encryption/decryption'
-    )
+        help_text='Key for encryption/decryption')
     
     # Audit Logging
     created_by = models.ForeignKey(
@@ -926,8 +899,7 @@ class Notification(models.Model):
         blank=True,
         related_name='created_notifications',
         verbose_name='Created By',
-        help_text='User who created the notification'
-    )
+        help_text='User who created the notification')
     
     modified_by = models.ForeignKey(
         User,
@@ -936,8 +908,7 @@ class Notification(models.Model):
         blank=True,
         related_name='modified_notifications',
         verbose_name='Modified By',
-        help_text='User who last modified the notification'
-    )
+        help_text='User who last modified the notification')
     
     # Versioning
     version = models.PositiveIntegerField(
@@ -953,8 +924,7 @@ class Notification(models.Model):
         blank=True,
         related_name='next_versions',
         verbose_name='Previous Version',
-        help_text='Previous version of notification'
-    )
+        help_text='Previous version of notification')
     
     # Archive Information
     archive_reason = models.TextField(
@@ -985,8 +955,7 @@ class Notification(models.Model):
         blank=True,
         related_name='deleted_notifications',
         verbose_name='Deleted By',
-        help_text='User who deleted the notification'
-    )
+        help_text='User who deleted the notification')
     
     # Custom Fields
     custom_fields = models.JSONField(
@@ -1015,12 +984,6 @@ class Notification(models.Model):
             models.Index(fields=['group_id']),
             models.Index(fields=['is_deleted']),
             models.Index(fields=['language']),
-        ]
-        constraints = [
-            models.CheckConstraint(
-                check=Q(progress_value__gte=0.0) & Q(progress_value__lte=100.0),
-                name='progress_value_range'
-            ),
         ]
     
     def __str__(self):
@@ -1925,8 +1888,7 @@ class NotificationTemplate(models.Model):
     name = models.CharField(
         max_length=255,
         unique=True,
-        verbose_name='Template Name'
-    )
+        verbose_name='Template Name')
     
     description = models.TextField(
         blank=True,
@@ -1938,19 +1900,18 @@ class NotificationTemplate(models.Model):
         max_length=50,
         choices=Notification.NOTIFICATION_TYPES,
         default='general',
-        verbose_name='Template Type'
-    )
+        verbose_name='Template Type')
     
     # Content in multiple languages
     title_en = models.CharField(
         max_length=255,
-        verbose_name='Title (English)'
+        verbose_name='Title (English, null=True, blank=True)'
     )
     
     title_bn = models.CharField(
         max_length=255,
         blank=True,
-        verbose_name='Title (Bengali)'
+        verbose_name='Title (Bengali, null=True, blank=True)'
     )
     
     message_en = models.TextField(
@@ -1966,20 +1927,17 @@ class NotificationTemplate(models.Model):
     default_priority = models.CharField(
         max_length=20,
         choices=Notification.PRIORITY_LEVELS,
-        default='medium'
-    )
+        default='medium')
     
     default_channel = models.CharField(
         max_length=20,
         choices=Notification.CHANNEL_CHOICES,
-        default='in_app'
-    )
+        default='in_app')
     
     default_language = models.CharField(
         max_length=10,
         choices=Notification.LANGUAGE_CHOICES,
-        default='en'
-    )
+        default='en')
     
     # Template variables
     variables = models.JSONField(
@@ -1998,14 +1956,12 @@ class NotificationTemplate(models.Model):
     icon_url = models.URLField(
         max_length=1000,
         blank=True,
-        null=True
-    )
+        null=True)
     
     image_url = models.URLField(
         max_length=1000,
         blank=True,
-        null=True
-    )
+        null=True)
     
     # Action elements
     action_url_template = models.TextField(
@@ -2015,13 +1971,11 @@ class NotificationTemplate(models.Model):
     
     action_text_en = models.CharField(
         max_length=100,
-        blank=True
-    )
+        blank=True)
     
     action_text_bn = models.CharField(
         max_length=100,
-        blank=True
-    )
+        blank=True)
     
     deep_link_template = models.TextField(
         blank=True,
@@ -2101,16 +2055,14 @@ class NotificationTemplate(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='child_templates'
-    )
+        related_name='child_templates')
     
     # Audit fields
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='created_templates'
-    )
+        related_name='created_templates')
     
     created_at = models.DateTimeField(
         auto_now_add=True
@@ -2124,8 +2076,7 @@ class NotificationTemplate(models.Model):
         User,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='updated_templates'
-    )
+        related_name='updated_templates')
     
     class Meta:
         verbose_name = 'Notification Template'
@@ -2252,8 +2203,7 @@ class NotificationPreference(models.Model):
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
-        related_name='notification_preferences'
-    )
+        related_name='notification_preferences')
     
     # Channel preferences
     enable_in_app = models.BooleanField(default=True)
@@ -2302,8 +2252,7 @@ class NotificationPreference(models.Model):
     preferred_language = models.CharField(
         max_length=10,
         choices=Notification.LANGUAGE_CHOICES,
-        default='en'
-    )
+        default='en')
     
     # Delivery preferences
     prefer_in_app = models.BooleanField(default=True)
@@ -2657,59 +2606,48 @@ class DeviceToken(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='device_tokens'
-    )
+        related_name='device_tokens')
     
     token = models.CharField(
         max_length=500,
-        unique=True
-    )
+        unique=True)
     
     device_type = models.CharField(
         max_length=50,
-        choices=Notification.DEVICE_TYPES
-    )
+        choices=Notification.DEVICE_TYPES)
     
     platform = models.CharField(
         max_length=50,
-        choices=Notification.PLATFORM_CHOICES
-    )
+        choices=Notification.PLATFORM_CHOICES)
     
     app_version = models.CharField(
         max_length=20,
-        blank=True
-    )
+        blank=True)
     
     os_version = models.CharField(
         max_length=20,
-        blank=True
-    )
+        blank=True)
     
     device_model = models.CharField(
         max_length=100,
-        blank=True
-    )
+        blank=True)
     
     device_name = models.CharField(
         max_length=100,
-        blank=True
-    )
+        blank=True)
     
     manufacturer = models.CharField(
         max_length=100,
-        blank=True
-    )
+        blank=True)
     
     # Push service specific
     fcm_token = models.CharField(
         max_length=500,
-        blank=True
-    )
+        blank=True)
     
     apns_token = models.CharField(
         max_length=500,
-        blank=True
-    )
+        blank=True)
     
     web_push_token = models.JSONField(
         default=dict,
@@ -2729,24 +2667,20 @@ class DeviceToken(models.Model):
     
     country = models.CharField(
         max_length=100,
-        blank=True
-    )
+        blank=True)
     
     city = models.CharField(
         max_length=100,
-        blank=True
-    )
+        blank=True)
     
     timezone = models.CharField(
         max_length=50,
-        blank=True
-    )
+        blank=True)
     
     language = models.CharField(
         max_length=10,
         choices=Notification.LANGUAGE_CHOICES,
-        default='en'
-    )
+        default='en')
     
     # Settings
     push_enabled = models.BooleanField(default=True)
@@ -2848,8 +2782,7 @@ class NotificationCampaign(models.Model):
     )
     
     name = models.CharField(
-        max_length=255
-    )
+        max_length=255)
     
     description = models.TextField(
         blank=True
@@ -2896,14 +2829,12 @@ class NotificationCampaign(models.Model):
     # Delivery Settings
     channel = models.CharField(
         max_length=20,
-        choices=Notification.CHANNEL_CHOICES
-    )
+        choices=Notification.CHANNEL_CHOICES)
     
     priority = models.CharField(
         max_length=20,
         choices=Notification.PRIORITY_LEVELS,
-        default='medium'
-    )
+        default='medium')
     
     scheduled_for = models.DateTimeField(
         null=True,
@@ -2967,13 +2898,11 @@ class NotificationCampaign(models.Model):
     total_cost = models.DecimalField(
         max_digits=10,
         decimal_places=4,
-        default=0.00
-    )
+        default=0.00)
     
     cost_currency = models.CharField(
         max_length=3,
-        default='USD'
-    )
+        default='USD')
     
     # A/B Testing
     ab_test_enabled = models.BooleanField(
@@ -3019,8 +2948,7 @@ class NotificationCampaign(models.Model):
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
-        null=True
-    )
+        null=True)
     
     class Meta:
         verbose_name = 'Notification Campaign'
@@ -3220,14 +3148,12 @@ class NotificationAnalytics(models.Model):
     total_cost = models.DecimalField(
         max_digits=10,
         decimal_places=4,
-        default=0.00
-    )
+        default=0.00)
     
     average_cost_per_notification = models.DecimalField(
         max_digits=10,
         decimal_places=4,
-        default=0.00
-    )
+        default=0.00)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -3357,7 +3283,7 @@ class NotificationRule(models.Model):
     Rules for automated notifications
     """
     
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, null=True, blank=True)
     
     description = models.TextField(blank=True)
     
@@ -3436,8 +3362,7 @@ class NotificationRule(models.Model):
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
-        null=True
-    )
+        null=True)
     
     class Meta:
         verbose_name = 'Notification Rule'
@@ -3514,14 +3439,12 @@ class NotificationFeedback(models.Model):
     notification = models.ForeignKey(
         Notification,
         on_delete=models.CASCADE,
-        related_name='feedbacks'
-    )
+        related_name='feedbacks')
     
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='notification_feedbacks'
-    )
+        related_name='notification_feedbacks')
     
     # Feedback
     rating = models.PositiveSmallIntegerField(
@@ -3615,27 +3538,23 @@ class NotificationLog(models.Model):
         on_delete=models.CASCADE,
         related_name='logs',
         null=True,
-        blank=True
-    )
+        blank=True)
     
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
-    )
+        blank=True)
     
     # Log Details
     log_type = models.CharField(
         max_length=50,
-        choices=LOG_TYPES
-    )
+        choices=LOG_TYPES)
     
     log_level = models.CharField(
         max_length=20,
         choices=LOG_LEVELS,
-        default='info'
-    )
+        default='info')
     
     message = models.TextField()
     
@@ -3647,8 +3566,7 @@ class NotificationLog(models.Model):
     # Source
     source = models.CharField(
         max_length=100,
-        blank=True
-    )
+        blank=True)
     
     ip_address = models.GenericIPAddressField(
         null=True,
@@ -3808,8 +3726,7 @@ class Notice(models.Model):
     title = models.CharField(
         max_length=255,
         verbose_name='Notice Title',
-        help_text='Title of the notice'
-    )
+        help_text='Title of the notice')
     
     content = models.TextField(
         verbose_name='Notice Content',
@@ -3821,8 +3738,7 @@ class Notice(models.Model):
         blank=True,
         null=True,
         verbose_name='Short Description',
-        help_text='Brief description of the notice'
-    )
+        help_text='Brief description of the notice')
     
     # ==================== CLASSIFICATION ====================
     
@@ -3830,29 +3746,25 @@ class Notice(models.Model):
         max_length=50,
         choices=NOTICE_TYPES,
         default='announcement',
-        verbose_name='Notice Type'
-    )
+        verbose_name='Notice Type')
     
     priority = models.CharField(
         max_length=20,
         choices=PRIORITY_LEVELS,
         default='medium',
-        verbose_name='Priority Level'
-    )
+        verbose_name='Priority Level')
     
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='draft',
-        verbose_name='Notice Status'
-    )
+        verbose_name='Notice Status')
     
     audience = models.CharField(
         max_length=50,
         choices=AUDIENCE_CHOICES,
         default='all',
-        verbose_name='Target Audience'
-    )
+        verbose_name='Target Audience')
     
     # ==================== VISIBILITY SETTINGS ====================
     
@@ -3927,15 +3839,14 @@ class Notice(models.Model):
         blank=True,
         null=True,
         verbose_name='Icon Name',
-        help_text='FontAwesome or Material icon name'
-    )
+        help_text='FontAwesome or Material icon name')
     
     color = models.CharField(
         max_length=20,
         blank=True,
         null=True,
         verbose_name='Accent Color',
-        help_text='Hex color code (e.g., #FF0000)'
+        help_text='Hex color code (e.g., #FF0000, null=True, blank=True)'
     )
     
     # ==================== LINKS & ACTIONS ====================
@@ -3945,24 +3856,21 @@ class Notice(models.Model):
         blank=True,
         null=True,
         verbose_name='Action URL',
-        help_text='URL to navigate when clicked'
-    )
+        help_text='URL to navigate when clicked')
     
     action_text = models.CharField(
         max_length=100,
         blank=True,
         null=True,
         verbose_name='Action Text',
-        help_text='Text for action button'
-    )
+        help_text='Text for action button')
     
     external_link = models.URLField(
         max_length=1000,
         blank=True,
         null=True,
         verbose_name='External Link',
-        help_text='External website link'
-    )
+        help_text='External website link')
     
     # ==================== TARGETING ====================
     
@@ -4028,8 +3936,7 @@ class Notice(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         related_name='created_notices',
-        verbose_name='Created By'
-    )
+        verbose_name='Created By')
     
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -4037,8 +3944,7 @@ class Notice(models.Model):
         null=True,
         blank=True,
         related_name='updated_notices',
-        verbose_name='Updated By'
-    )
+        verbose_name='Updated By')
     
     # ==================== VERSIONING ====================
     
@@ -4053,8 +3959,7 @@ class Notice(models.Model):
         null=True,
         blank=True,
         related_name='next_versions',
-        verbose_name='Previous Version'
-    )
+        verbose_name='Previous Version')
     
     class Meta:
         verbose_name = 'Notice'

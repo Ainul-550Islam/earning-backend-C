@@ -2,7 +2,7 @@ from django.urls import path, include
 from . import views
 from api.views import signup, login, refresh_token, get_profile
 from api.admin_panel.views import admin_dashboard
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 from api.notifications.views import NotificationViewSet
 from .views import (
     UserViewSet, WalletViewSet, TransactionViewSet,
@@ -73,6 +73,7 @@ urlpatterns = [
     path('promotions/', include('api.promotions.urls')),
     path('analytics/', include('api.analytics.urls')),
     path('engagement/', include('api.engagement.urls')),
-    path('subscriptions/', include('api.subscription.urls')),
+    # path('subscriptions/', include('api.subscription.urls')),
+    path('webhooks/', include('api.webhooks.urls', namespace='webhooks')),
     
 ]    

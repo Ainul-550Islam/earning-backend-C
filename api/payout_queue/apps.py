@@ -17,3 +17,9 @@ class PayoutQueueConfig(AppConfig):
             logging.getLogger(__name__).error(
                 "PayoutQueueConfig.ready(): failed to import receivers: %s", exc
             )
+    def ready(self):
+        try:
+            from api.payout_queue.admin import _force_register_payout_queue
+            _force_register_payout_queue()
+        except Exception as e:
+            pass

@@ -11,7 +11,7 @@ class Customer(models.Model):
         db_index=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    code = models.CharField(max_length=32, unique=True)
+    code = models.CharField(max_length=32, unique=True, null=True, blank=True)
     firstname = models.CharField(max_length=64, null=True, blank=True)
     lastname = models.CharField(max_length=64, null=True, blank=True)
     street = models.CharField(max_length=64, null=True, blank=True)
@@ -50,7 +50,7 @@ class Txn(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     # এখানে on_delete যোগ করা হয়েছে
     customer = models.ForeignKey('Customer', related_name='%(app_label)s_%(class)s_tenant', on_delete=models.CASCADE)
-    value = models.DecimalField(decimal_places=2, max_digits=7)
+    value = models.DecimalField(decimal_places=2, max_digits=7, null=True, blank=True)
     is_discount = models.BooleanField(default=False)
 
     objects = models.Manager()
@@ -78,7 +78,7 @@ class Event(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     # এখানেও on_delete যোগ করা হয়েছে
     customer = models.ForeignKey('Customer', related_name='%(app_label)s_%(class)s_tenant', null=True, blank=True, on_delete=models.CASCADE)
-    action = models.CharField(max_length=128)
+    action = models.CharField(max_length=128, null=True, blank=True)
     description = models.TextField(null=True, blank=True) # DateTime এর বদলে TextField করা হয়েছে
 
     objects = models.Manager()

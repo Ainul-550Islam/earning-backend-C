@@ -640,6 +640,16 @@ class KYCVerificationViewSet(viewsets.ModelViewSet):
     def submit_kyc(self, request):
         """Submit KYC documents"""
         try:
+            def to_high_level_status(verification_status: str) -> str:
+                vs = (verification_status or "").lower()
+                if vs in ("pending", "submitted", "under_review"):
+                    return "PENDING"
+                if vs == "approved":
+                    return "APPROVED"
+                if vs == "rejected":
+                    return "REJECTED"
+                return verification_status
+
             # Check if KYC already exists
             if KYCVerification.objects.filter(user=request.user).exists():
                 return Response(
@@ -655,7 +665,11 @@ class KYCVerificationViewSet(viewsets.ModelViewSet):
                 
                 return Response({
                     'message': 'KYC submitted successfully',
-                    'status': kyc.verification_status
+                    'status': to_high_level_status(kyc.verification_status),
+                    'verification_status': kyc.verification_status,
+                    'document_type': kyc.document_type,
+                    'submitted_at': kyc.submitted_at,
+                    'rejection_reason': kyc.rejection_reason,
                 }, status=status.HTTP_201_CREATED)
             
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -672,11 +686,22 @@ class KYCVerificationViewSet(viewsets.ModelViewSet):
         """Get KYC status"""
         try:
             kyc = KYCVerification.objects.get(user=request.user)
+            def to_high_level_status(verification_status: str) -> str:
+                vs = (verification_status or "").lower()
+                if vs in ("pending", "submitted", "under_review"):
+                    return "PENDING"
+                if vs == "approved":
+                    return "APPROVED"
+                if vs == "rejected":
+                    return "REJECTED"
+                return verification_status
             return Response({
-                'status': kyc.verification_status,
+                'status': to_high_level_status(kyc.verification_status),
+                'verification_status': kyc.verification_status,
                 'document_type': kyc.document_type,
                 'submitted_at': kyc.submitted_at,
-                'reviewed_at': kyc.reviewed_at
+                'reviewed_at': kyc.reviewed_at,
+                'rejection_reason': kyc.rejection_reason,
             })
         except KYCVerification.DoesNotExist:
             return Response({
@@ -1071,7 +1096,7 @@ def send_otp_view(request):
 
 
 @api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([AllowAny])
 def check_username_availability(request):
     """Check if username is available"""
     username = request.GET.get('username', '')

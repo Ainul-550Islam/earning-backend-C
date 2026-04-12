@@ -97,8 +97,7 @@ class AuditLog(models.Model):
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
-        related_name='audit_logs_auditlog_user'
-    )
+        related_name='audit_logs_auditlog_user')
     anonymous_id = models.CharField(max_length=100, blank=True, null=True)
     user_ip = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True, null=True)
@@ -106,8 +105,8 @@ class AuditLog(models.Model):
     device_id = models.CharField(max_length=100, blank=True, null=True)
     
     # Action details
-    action = models.CharField(max_length=50, choices=AuditLogAction.choices)
-    level = models.CharField(max_length=10, choices=AuditLogLevel.choices, default=AuditLogLevel.INFO)
+    action = models.CharField(max_length=50, choices=AuditLogAction.choices, null=True, blank=True)
+    level = models.CharField(max_length=10, choices=AuditLogLevel.choices, default=AuditLogLevel.INFO, null=True, blank=True)
     
     # Resource being acted upon
     resource_type = models.CharField(max_length=100, blank=True, null=True)  # e.g., 'User', 'Wallet', 'Offer'
@@ -225,9 +224,9 @@ class AuditLogConfig(models.Model):
     )
 
     
-    action = models.CharField(max_length=50, unique=True)
+    action = models.CharField(max_length=50, unique=True, null=True, blank=True)
     enabled = models.BooleanField(default=True)
-    log_level = models.CharField(max_length=10, choices=AuditLogLevel.choices, default=AuditLogLevel.INFO)
+    log_level = models.CharField(max_length=10, choices=AuditLogLevel.choices, default=AuditLogLevel.INFO, null=True, blank=True)
     log_request_body = models.BooleanField(default=True)
     log_response_body = models.BooleanField(default=True)
     log_headers = models.BooleanField(default=False)
@@ -262,10 +261,10 @@ class AuditLogArchive(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     total_logs = models.IntegerField()
-    compressed_size_mb = models.DecimalField(max_digits=10, decimal_places=2)
-    original_size_mb = models.DecimalField(max_digits=10, decimal_places=2)
-    compression_ratio = models.DecimalField(max_digits=5, decimal_places=2)
-    storage_path = models.CharField(max_length=500)
+    compressed_size_mb = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    original_size_mb = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    compression_ratio = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    storage_path = models.CharField(max_length=500, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -287,7 +286,7 @@ class AuditDashboard(models.Model):
     )
 
     
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     filters = models.JSONField(default=dict)
     columns = models.JSONField(default=list)
@@ -317,7 +316,7 @@ class AuditAlertRule(models.Model):
     )
 
     
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     condition = models.JSONField()  # JSON condition for matching logs
     action = models.CharField(max_length=50, choices=[
@@ -329,7 +328,7 @@ class AuditAlertRule(models.Model):
         ('FLAG_TRANSACTION', 'Flag Transaction')
     ])
     action_config = models.JSONField()  # Configuration for the action
-    severity = models.CharField(max_length=10, choices=AuditLogLevel.choices, default=AuditLogLevel.WARNING)
+    severity = models.CharField(max_length=10, choices=AuditLogLevel.choices, default=AuditLogLevel.WARNING, null=True, blank=True)
     enabled = models.BooleanField(default=True)
     cooldown_minutes = models.IntegerField(default=5)
     last_triggered = models.DateTimeField(null=True, blank=True)

@@ -37,3 +37,22 @@ class TenantBillingAdmin(admin.ModelAdmin):
 class TenantInvoiceAdmin(admin.ModelAdmin):
     list_display = ["invoice_number", "tenant", "amount", "status", "due_date", "paid_at"]
     list_filter = ["status"]
+
+
+def _force_register_tenants():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(Tenant, TenantAdmin), (TenantBilling, TenantBillingAdmin), (TenantInvoice, TenantInvoiceAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] tenants registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] tenants: {e}")

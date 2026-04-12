@@ -10,6 +10,7 @@ Beautiful & Bulletproof Admin Panel for Task Management System
 
 from django.contrib import admin
 from django.utils.html import format_html, escape
+from django.utils.safestring import mark_safe
 from django.urls import reverse, path
 from django.db.models import Sum, Count, Avg, Q, F
 from django.utils import timezone
@@ -1803,11 +1804,11 @@ class AdminLedgerAdmin(admin.ModelAdmin):
 # ==================== ADMIN SITE CUSTOMIZATION ====================
 
 # Customize admin site headers
-admin.site.site_header = format_html(
+admin.site.site_header = mark_safe(
     '<span style="color: #667eea; font-weight: bold; font-size: 20px;">🎯 Task Management System</span>'
 )
 admin.site.site_title = 'Tasks Admin Portal'
-admin.site.index_title = format_html(
+admin.site.index_title = mark_safe(
     '<h2 style="color: #667eea; font-weight: bold;">Welcome to Task Management Dashboard</h2>'
     '<p style="color: #999;">Manage tasks, completions, and admin profits</p>'
 )
@@ -1838,3 +1839,21 @@ try:
     
 except Exception as e:
     print(f"[ERROR] Tasks registration error: {e}")
+
+def _force_register_tasks():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(MasterTask, MasterTaskAdmin), (UserTaskCompletion, UserTaskCompletionAdmin), (AdminLedger, AdminLedgerAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] tasks registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] tasks: {e}")

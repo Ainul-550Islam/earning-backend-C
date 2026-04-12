@@ -20,6 +20,8 @@ handler500 = wallet_views.handler500
 sitemaps = {}
 
 urlpatterns = [
+    # path('', include('api.smartlink.urls')),
+    # path('', include('api.smartlink.postback.urls')),
 
     # ── Django Admin ────────────────────────────────────────────────────
     path('admin/',          admin.site.urls),
@@ -79,7 +81,7 @@ urlpatterns = [
     path('api/admin-panel/',      include(('api.admin_panel.urls', 'admin_panel'), namespace='admin_panel')),
     path('api/engagement/',       include(('api.engagement.urls', 'engagement'), namespace='engagement')),
     path('api/support/',          include(('api.support.urls', 'support'), namespace='support')),
-    path('api/notifications/',    include(('api.notifications.urls', 'notifications'), namespace='notifications')),
+    # path('api/notifications/',    include(('api.notifications.urls', 'notifications'), namespace='notifications')),
     path('api/referral/',         include(('api.referral.urls', 'referral'), namespace='referral')),
     path('api/localization/',     include(('api.localization.urls', 'localization'), namespace='localization')),
     path('api/kyc/',              include(('api.kyc.urls', 'kyc'), namespace='kyc')),
@@ -94,7 +96,7 @@ urlpatterns = [
     #           Keep ONE namespaced version only
     path('api/rate-limit/',       include(('api.rate_limit.urls', 'limit'), namespace='limit')),
 
-    path('api/subscription/',     include('api.subscription.urls')),
+    # path('api/subscription/',     include('api.subscription.urls')),
     path('api/gamification/',     include('api.gamification.urls')),
     path('api/auto-mod/',         include('api.auto_mod.urls')),
     path('api/version-control/',  include('api.version_control.urls')),
@@ -111,6 +113,14 @@ urlpatterns = [
     path('security/',             include('api.security.urls')),   # legacy bare path kept
     path('publisher-tools/',      include('api.publisher_tools.urls')),
     path('monetization-tools/',   include('api.monetization_tools.urls')),
+    path('marketplace/',          include('api.marketplace.urls')),
+    path('postback-engine/',      include('api.postback_engine.urls')),
+    path('proxy-intelligence/',   include('api.proxy_intelligence.urls')),
+    path('ai-engine/',            include('api.ai_engine.urls')),
+    path('advertiser-portal/',    include('api.advertiser_portal.urls')),
+    path('offer-inventory/',      include('api.offer_inventory.urls')),
+    path('disaster-recovery/',    include('api.disaster_recovery.urls')),
+    path('dr-integration/',        include('api.dr_integration.urls')),
 
     # ── Sitemaps & Feeds ────────────────────────────────────────────────
     path('sitemap.xml',           sitemap_index, {'sitemaps': sitemaps}, name='sitemap_index'),

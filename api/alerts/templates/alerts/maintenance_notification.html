@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e9ecef;
+        }
+        .maintenance-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #f39c12;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #f39c12;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .maintenance-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #f39c12;
+            color: white;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .urgency-high { color: #dc3545; font-weight: bold; }
+        .urgency-medium { color: #f39c12; font-weight: bold; }
+        .urgency-low { color: #28a745; font-weight: bold; }
+        .timeline-item {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 3px solid #f39c12;
+        }
+        .impact-box {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ffeaa7;
+            margin: 15px 0;
+        }
+        .service-box {
+            background: #d1ecf1;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Maintenance Notification</h1>
+        <p>{{ maintenance_type|title }} Maintenance</p>
+    </div>
+    
+    <div class="content">
+        <div class="maintenance-info">
+            <h2>Maintenance Details</h2>
+            <p><span class="maintenance-badge">{{ maintenance_type|upper }}</span></p>
+            
+            <p><strong>Maintenance Type:</strong> {{ maintenance.get_type_display }}</p>
+            <p><strong>Status:</strong> {{ maintenance.get_status_display }}</p>
+            <p><strong>Priority:</strong> {{ maintenance.get_priority_display }}</p>
+            
+            <p><strong>Scheduled Start:</strong> {{ maintenance.scheduled_start|date:"Y-m-d H:i:s" }}</p>
+            <p><strong>Scheduled End:</strong> {{ maintenance.scheduled_end|date:"Y-m-d H:i:s" }}</p>
+            <p><strong>Duration:</strong> {{ maintenance.duration_minutes }} minutes</p>
+            
+            {% if maintenance.actual_start %}
+            <p><strong>Actual Start:</strong> {{ maintenance.actual_start|date:"Y-m-d H:i:s" }}</p>
+            {% endif %}
+            {% if maintenance.actual_end %}
+            <p><strong>Actual End:</strong> {{ maintenance.actual_end|date:"Y-m-d H:i:s" }}</p>
+            {% endif %}
+            
+            <div class="timestamp">
+                <p><strong>Notification Time:</strong> {{ notification_time|date:"Y-m-d H:i:s" }}</p>
+                {% if maintenance.last_updated %}
+                <p><strong>Last Updated:</strong> {{ maintenance.last_updated|date:"Y-m-d H:i:s" }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if maintenance.description %}
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h3>Maintenance Description</h3>
+            <p>{{ maintenance.description }}</p>
+        </div>
+        {% endif %}
+        
+        {% if affected_services %}
+        <div style="margin-top: 20px;">
+            <h3>Affected Services</h3>
+            {% for service in affected_services %}
+            <div class="service-box">
+                <p><strong>{{ service.name }}</strong></p>
+                <p><small>Status: {{ service.status }} | Impact: {{ service.impact }}</small></p>
+                {% if service.downtime %}
+                <p><small>Expected Downtime: {{ service.downtime }} minutes</small></p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if maintenance.impact_assessment %}
+        <div class="impact-box">
+            <h3>Impact Assessment</h3>
+            <p><strong>Expected Impact:</strong> {{ maintenance.impact_assessment.expected_impact }}</p>
+            <p><strong>Users Affected:</strong> {{ maintenance.impact_assessment.users_affected }}</p>
+            <p><strong>Business Impact:</strong> {{ maintenance.impact_assessment.business_impact }}</p>
+            {% if maintenance.impact_assessment.mitigation_measures %}
+            <p><strong>Mitigation Measures:</strong></p>
+            <ul>
+                {% for measure in maintenance.impact_assessment.mitigation_measures %}
+                <li>{{ measure }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if maintenance.timeline %}
+        <div style="margin-top: 20px;">
+            <h3>Maintenance Timeline</h3>
+            {% for event in maintenance.timeline %}
+            <div class="timeline-item">
+                <p><strong>{{ event.event_type|title }}:</strong> {{ event.description }}</p>
+                <p><small>{{ event.timestamp|date:"Y-m-d H:i:s" }}</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if maintenance.assigned_to %}
+        <div style="margin-top: 20px; padding: 15px; background: #d1ecf1; border-radius: 5px; border: 1px solid #bee5eb;">
+            <h3>Assigned Personnel</h3>
+            <p><strong>Lead Engineer:</strong> {{ maintenance.assigned_to.get_full_name|default:maintenance.assigned_to.username }}</p>
+            {% if maintenance.team_members %}
+            <p><strong>Team Members:</strong></p>
+            <ul>
+                {% for member in maintenance.team_members %}
+                <li>{{ member.get_full_name|default:member.username }} ({{ member.role }})</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if maintenance.contact_information %}
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h3>Contact Information</h3>
+            <p><strong>Primary Contact:</strong> {{ maintenance.contact_information.primary }}</p>
+            <p><strong>Secondary Contact:</strong> {{ maintenance.contact_information.secondary }}</p>
+            <p><strong>Emergency Contact:</strong> {{ maintenance.contact_information.emergency }}</p>
+        </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{{ dashboard_url }}" class="btn">View Maintenance Dashboard</a>
+            <a href="{{ maintenance_url }}" class="btn btn-secondary">View Maintenance Details</a>
+            {% if maintenance.status == 'scheduled' %}
+            <a href="{{ acknowledge_url }}" class="btn btn-secondary">Acknowledge Maintenance</a>
+            {% endif %}
+        </div>
+        
+        {% if maintenance.preparation_steps %}
+        <div style="margin-top: 20px;">
+            <h3>Preparation Steps</h3>
+            <ol>
+                {% for step in maintenance.preparation_steps %}
+                <li>{{ step }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+        
+        {% if maintenance.rollback_plan %}
+        <div style="margin-top: 20px; padding: 15px; background: #f8d7da; border-radius: 5px; border: 1px solid #f5c6cb;">
+            <h3>Rollback Plan</h3>
+            <p>{{ maintenance.rollback_plan.description }}</p>
+            {% if maintenance.rollback_plan.steps %}
+            <p><strong>Rollback Steps:</strong></p>
+            <ol>
+                {% for step in maintenance.rollback_plan.steps %}
+                <li>{{ step }}</li>
+                {% endfor %}
+            </ol>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if maintenance.notifications %}
+        <div style="margin-top: 20px;">
+            <h3>Notification Schedule</h3>
+            {% for notification in maintenance.notifications %}
+            <div style="margin: 5px 0; padding: 8px; background: #f8f9fa; border-radius: 3px;">
+                <p><strong>{{ notification.type|title }}:</strong> {{ notification.message }}</p>
+                <p><small>Scheduled: {{ notification.scheduled_time|date:"Y-m-d H:i:s" }}</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if maintenance.post_maintenance_tasks %}
+        <div style="margin-top: 20px;">
+            <h3>Post-Maintenance Tasks</h3>
+            <ul>
+                {% for task in maintenance.post_maintenance_tasks %}
+                <li>{{ task }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>This maintenance notification was generated by the Alert Management System</p>
+        <p>Please plan accordingly for the scheduled maintenance window</p>
+        <p>If you have any questions, please contact the maintenance team</p>
+    </div>
+</body>
+</html>

@@ -3,7 +3,7 @@ Gamification URLs — DRF Router registration.
 """
 
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 
 from .viewsets import (
     ContestCycleViewSet,

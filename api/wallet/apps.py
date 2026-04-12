@@ -15,3 +15,8 @@ class WalletConfig(AppConfig):
             print("[OK] Wallet app ready - signals imported")
         except ImportError as e:
             print(f"[ERROR] Failed to import wallet signals: {e}")
+        try:
+            from api.wallet.admin import _force_register_wallet
+            _force_register_wallet()
+        except Exception as e:
+            pass

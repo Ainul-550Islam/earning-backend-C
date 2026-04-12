@@ -1181,3 +1181,22 @@ except Exception as e:
     print(f"[ERROR] Error registering in default admin: {e}")
 
 
+
+
+def _force_register_referral():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(ReferralSettings, ReferralSettingsAdmin), (Referral, ReferralAdmin), (ReferralEarning, ReferralEarningAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] referral registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] referral: {e}")

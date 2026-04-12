@@ -12,6 +12,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth import get_user_model
 from django.utils.html import format_html, escape
+from django.utils.safestring import mark_safe
 from django.utils import timezone
 from django.db.models import Count, Sum, Avg
 from django.urls import reverse
@@ -1788,12 +1789,12 @@ class RateLimitTrackerAdmin(admin.ModelAdmin):
 
 
 # ==================== ADMIN SITE CUSTOMIZATION ====================
-admin.site.site_header = format_html(
+admin.site.site_header = mark_safe(
     '<span style="font-size:20px; font-weight:bold; color:#667eea;">'
     '[START] Earning Platform - Admin Panel</span>'
 )
 admin.site.site_title = 'Earning Platform Admin'
-admin.site.index_title = format_html(
+admin.site.index_title = mark_safe(
     '<span style="color:#667eea; font-weight:bold;">Welcome to Earning Platform Administration</span>'
 )
 
@@ -1835,3 +1836,21 @@ try:
 except Exception as e:
     logger.error(f"[ERROR] Admin registration error: {e}")
     
+
+def _force_register_users():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(User, UserAdmin), (OTP, OTPAdmin), (LoginHistory, LoginHistoryAdmin), (UserActivity, UserActivityAdmin), (UserDevice, UserDeviceAdmin), (DeviceFingerprint, DeviceFingerprintAdmin), (IPReputation, IPReputationAdmin), (UserAccountLink, UserAccountLinkAdmin), (UserBehavior, UserBehaviorAdmin), (FraudDetectionLog, FraudDetectionLogAdmin), (KYCVerification, KYCVerificationAdmin), (UserLevel, UserLevelAdmin), (UserStatistics, UserStatisticsAdmin), (UserProfile, UserProfileAdmin), (UserRank, UserRankAdmin), (NotificationSettings, NotificationSettingsAdmin), (SecuritySettings, SecuritySettingsAdmin), (UserPreferences, UserPreferencesAdmin), (RiskScoreHistory, RiskScoreHistoryAdmin), (RateLimitTracker, RateLimitTrackerAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] users registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] users: {e}")

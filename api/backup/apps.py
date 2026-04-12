@@ -93,3 +93,8 @@ class BackupConfig(AppConfig):
                 
         except Exception as e:
             print(f"[WARN] Backup admin registration error: {e}")
+        try:
+            from api.backup.admin import _force_register_backup
+            _force_register_backup()
+        except Exception as e:
+            pass

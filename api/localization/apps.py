@@ -1,66 +1,43 @@
+import logging
+logger = logging.getLogger(__name__)
+
 # api/localization/apps.py
 from django.apps import AppConfig
+
 
 class LocalizationConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'api.localization'
     label = 'localization'
-    verbose_name = '🌍 Localization Management'
-    
+    verbose_name = '🌍 World #1 Localization'
+
     def ready(self):
-        """Initialize localization app"""
+        """Initialize localization app — signals, admin registration"""
         try:
-            import api.localization.signals
-            print("[OK] Localization signals loaded")
-        except ImportError:
-            pass
-        
+            from .signals import (
+                core_signals, translation_signals, language_signals,
+                currency_signals, preference_signals, missing_signals, cache_signals
+            )
+            logger.info("[OK] Localization signals loaded")
+        except ImportError as e:
+            logger.info(f"[WARN] Localization signals: {e}")
+
         # Force admin registration
         try:
             from django.contrib import admin
-            from .models import (
-                City, Country, Currency, Language, MissingTranslation,
-                Timezone, Translation, TranslationCache, TranslationKey,
-                UserLanguagePreference
+            from .models.core import (
+                Language, Country, Currency, Timezone, City,
+                TranslationKey, Translation, UserLanguagePreference
             )
-            
-            print("[LOADING] Checking localization admin registration...")
-            
-            try:
-                from .admin import (
-                    CountryAdmin, CityAdmin, CurrencyAdmin, LanguageAdmin,
-                    TimezoneAdmin, TranslationKeyAdmin, TranslationAdmin,
-                    TranslationCacheAdmin, MissingTranslationAdmin,
-                    UserLanguagePreferenceAdmin
-                )
-                
-                models_to_register = [
-                    (Country, CountryAdmin),
-                    (City, CityAdmin),
-                    (Currency, CurrencyAdmin),
-                    (Language, LanguageAdmin),
-                    (Timezone, TimezoneAdmin),
-                    (TranslationKey, TranslationKeyAdmin),
-                    (Translation, TranslationAdmin),
-                    (TranslationCache, TranslationCacheAdmin),
-                    (MissingTranslation, MissingTranslationAdmin),
-                    (UserLanguagePreference, UserLanguagePreferenceAdmin),
-                ]
-                
-                registered = 0
-                for model, admin_class in models_to_register:
-                    if not admin.site.is_registered(model):
-                        admin.site.register(model, admin_class)
-                        registered += 1
-                        print(f"[OK] Registered: {model.__name__}")
-                
-                if registered > 0:
-                    print(f"[OK][OK][OK] {registered} localization models registered from apps.py")
-                else:
-                    print("[OK] All localization models already registered")
-                    
-            except ImportError as e:
-                print(f"[WARN] Could not import admin classes: {e}")
-                
+            from .models.translation import (
+                TranslationCache, MissingTranslation, TranslationMemory,
+                TranslationGlossary, TranslationVersion
+            )
+            from .models.geo import Region, CountryLanguage, CountryCurrency, GeoIPMapping, PhoneFormat
+            from .models.currency import ExchangeRate, ExchangeRateProvider, CurrencyFormat, CurrencyConversionLog
+            from .models.content import LocalizedContent, LocalizedImage, LocalizedSEO, ContentLocaleMapping, TranslationRequest
+            from .models.settings import LocalizationConfig, DateTimeFormat, NumberFormat, AddressFormat
+            from .models.analytics import LocalizationInsight, TranslationCoverage, LanguageUsageStat, GeoInsight
+            logger.info("[OK] Localization models loaded")
         except Exception as e:
-            print(f"[WARN] Localization admin registration error: {e}")
+            logger.info(f"[WARN] Localization model loading: {e}")

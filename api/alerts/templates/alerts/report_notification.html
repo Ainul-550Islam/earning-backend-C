@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alert Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e9ecef;
+        }
+        .report-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #007bff;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .chart-placeholder {
+            background: #e9ecef;
+            padding: 40px;
+            border-radius: 5px;
+            text-align: center;
+            color: #6c757d;
+            margin: 15px 0;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .table th, .table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: left;
+        }
+        .table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .severity-critical { color: #dc3545; font-weight: bold; }
+        .severity-high { color: #fd7e14; font-weight: bold; }
+        .severity-medium { color: #ffc107; font-weight: bold; }
+        .severity-low { color: #28a745; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ report.title }}</h1>
+        <p>{{ report.get_report_type_display|title }} Report</p>
+    </div>
+    
+    <div class="content">
+        <div class="report-info">
+            <h2>Report Information</h2>
+            <p><strong>Report Type:</strong> {{ report.get_report_type_display }}</p>
+            <p><strong>Format:</strong> {{ report.get_format_type_display }}</p>
+            <p><strong>Period:</strong> {{ report.start_date|date:"Y-m-d" }} to {{ report.end_date|date:"Y-m-d" }}</p>
+            <p><strong>Status:</strong> {{ report.get_status_display }}</p>
+            
+            {% if report.is_recurring %}
+            <p><strong>Next Run:</strong> {{ report.next_run|date:"Y-m-d H:i:s" }}</p>
+            {% endif %}
+            
+            <div class="timestamp">
+                <p><strong>Generated at:</strong> {{ report.generated_at|date:"Y-m-d H:i:s" }}</p>
+                <p><strong>Generation Time:</strong> {{ report.generation_duration_ms|default:"N/A" }}ms</p>
+            </div>
+        </div>
+        
+        {% if report.summary %}
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h3>Executive Summary</h3>
+            <p>{{ report.summary }}</p>
+        </div>
+        {% endif %}
+        
+        {% if report.metrics %}
+        <div style="margin-top: 20px;">
+            <h3>Key Metrics</h3>
+            <div class="stats-grid">
+                {% for key, value in report.metrics.items %}
+                <div class="stat-box">
+                    <div class="stat-value">{{ value }}</div>
+                    <div class="stat-label">{{ key|title }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if report.alert_breakdown %}
+        <div style="margin-top: 20px;">
+            <h3>Alert Breakdown</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                        <th>Avg Resolution Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in report.alert_breakdown %}
+                    <tr>
+                        <td class="severity-{{ item.severity }}">{{ item.severity|title }}</td>
+                        <td>{{ item.count }}</td>
+                        <td>{{ item.percentage|floatformat:1 }}%</td>
+                        <td>{{ item.avg_resolution_time|default:"N/A" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        {% if report.top_alert_rules %}
+        <div style="margin-top: 20px;">
+            <h3>Top Alert Rules</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Rule Name</th>
+                        <th>Alert Count</th>
+                        <th>Severity</th>
+                        <th>Resolution Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in report.top_alert_rules %}
+                    <tr>
+                        <td>{{ rule.name }}</td>
+                        <td>{{ rule.alert_count }}</td>
+                        <td class="severity-{{ rule.severity }}">{{ rule.severity|title }}</td>
+                        <td>{{ rule.resolution_rate|floatformat:1 }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        {% if report.trends %}
+        <div style="margin-top: 20px;">
+            <h3>Trends Analysis</h3>
+            <div class="chart-placeholder">
+                <p>Chart visualization would be displayed here</p>
+                <p>Showing: {{ report.trends.chart_type|title }} for {{ report.trends.period }}</p>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if report.recommendations %}
+        <div style="margin-top: 20px; padding: 15px; background: #d1ecf1; border-radius: 5px; border: 1px solid #bee5eb;">
+            <h3>Recommendations</h3>
+            <ul>
+                {% for recommendation in report.recommendations %}
+                <li>{{ recommendation }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if report.action_items %}
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffeaa7;">
+            <h3>Action Items</h3>
+            <ol>
+                {% for item in report.action_items %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{{ dashboard_url }}" class="btn">View in Dashboard</a>
+            <a href="{{ report_url }}" class="btn btn-secondary">View Full Report</a>
+            {% if report.file_path %}
+            <a href="{{ download_url }}" class="btn btn-secondary">Download Report</a>
+            {% endif %}
+        </div>
+        
+        {% if report.next_steps %}
+        <div style="margin-top: 20px;">
+            <h3>Next Steps</h3>
+            <ul>
+                {% for step in report.next_steps %}
+                <li>{{ step }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>This report was generated automatically by the Alert Management System</p>
+        <p>For questions about this report, please contact your system administrator</p>
+    </div>
+</body>
+</html>

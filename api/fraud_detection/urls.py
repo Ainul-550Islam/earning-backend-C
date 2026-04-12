@@ -3,7 +3,7 @@ Fraud Detection App URLs Configuration
 """
 
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter as DefaultRouter
 from . import views
 
 router = DefaultRouter()

@@ -12,3 +12,8 @@ class CMSConfig(AppConfig):
             pass
         import api.cms.admin  # noqa: F401
         print("[OK] CMS Admin successfully loaded!")
+        try:
+            from api.cms.admin import _force_register_cms
+            _force_register_cms()
+        except Exception as e:
+            pass

@@ -25,3 +25,8 @@ class InventoryConfig(AppConfig):
         low_stock_alert.connect(receivers.on_low_stock_alert, dispatch_uid="inventory.on_low_stock")
         stock_depleted.connect(receivers.on_stock_depleted, dispatch_uid="inventory.on_stock_depleted")
         code_redeemed.connect(receivers.on_code_redeemed, dispatch_uid="inventory.on_code_redeemed")
+        try:
+            from api.inventory.admin import _force_register_inventory
+            _force_register_inventory()
+        except Exception as e:
+            pass

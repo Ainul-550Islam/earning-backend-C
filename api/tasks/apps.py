@@ -49,3 +49,8 @@ class TasksConfig(AppConfig):
                 
         except Exception as e:
             print(f"[WARN] Tasks admin registration error: {e}")
+        try:
+            from api.tasks.admin import _force_register_tasks
+            _force_register_tasks()
+        except Exception as e:
+            pass

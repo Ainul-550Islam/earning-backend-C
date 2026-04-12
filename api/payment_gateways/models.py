@@ -23,10 +23,10 @@ class PaymentGateway(TimeStampedModel):
         ('maintenance', 'Maintenance'),
     )
     
-    name = models.CharField(max_length=50, choices=GATEWAY_CHOICES, unique=True)
-    display_name = models.CharField(max_length=100)
+    name = models.CharField(max_length=50, choices=GATEWAY_CHOICES, unique=True, null=True, blank=True)
+    display_name = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', null=True, blank=True)
     
     # API Credentials
     merchant_id = models.CharField(max_length=200, blank=True, null=True)
@@ -37,18 +37,18 @@ class PaymentGateway(TimeStampedModel):
     
     # Configuration
     is_test_mode = models.BooleanField(default=True)
-    transaction_fee_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=1.5)
-    minimum_amount = models.DecimalField(max_digits=10, decimal_places=2, default=10.00)
-    maximum_amount = models.DecimalField(max_digits=10, decimal_places=2, default=50000.00)
+    transaction_fee_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=1.5, null=True, blank=True)
+    minimum_amount = models.DecimalField(max_digits=10, decimal_places=2, default=10.00, null=True, blank=True)
+    maximum_amount = models.DecimalField(max_digits=10, decimal_places=2, default=50000.00, null=True, blank=True)
     
     # Settings
     supports_deposit = models.BooleanField(default=True)
     supports_withdrawal = models.BooleanField(default=True)
-    supported_currencies = models.CharField(max_length=100, default='BDT,USD')
+    supported_currencies = models.CharField(max_length=100, default='BDT,USD', null=True, blank=True)
     
     # Visual
     logo = models.ImageField(upload_to='gateway_logos/', blank=True, null=True)
-    color_code = models.CharField(max_length=7, default='#0066CC')
+    color_code = models.CharField(max_length=7, default='#0066CC', null=True, blank=True)
     sort_order = models.IntegerField(default=0)
     
     # Metadata
@@ -78,11 +78,10 @@ class PaymentGatewayMethod(TimeStampedModel):  # [ERROR] PaymentMethod থেক
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
-        related_name='payment_gateways_paymentgatewaymethod_user'  # [ERROR] unique related_name দিন
-    )
-    gateway = models.CharField(max_length=20, choices=GATEWAY_CHOICES)
-    account_number = models.CharField(max_length=100)
-    account_name = models.CharField(max_length=100)
+        related_name='payment_gateways_paymentgatewaymethod_user')
+    gateway = models.CharField(max_length=20, choices=GATEWAY_CHOICES, null=True, blank=True)
+    account_number = models.CharField(max_length=100, null=True, blank=True)
+    account_name = models.CharField(max_length=100, null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     is_default = models.BooleanField(default=False)
     
@@ -114,22 +113,21 @@ class GatewayTransaction(TimeStampedModel):  # [ERROR] Transaction থেকে 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
-        related_name='payment_gateways_gatewaytransaction_user'  # [ERROR] unique related_name দিন
+        related_name='payment_gateways_gatewaytransaction_user',
     )
-    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
-    gateway = models.CharField(max_length=20)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    net_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    reference_id = models.CharField(max_length=100, unique=True)
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES, null=True, blank=True)
+    gateway = models.CharField(max_length=20, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    fee = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+    net_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
+    reference_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
     gateway_reference = models.CharField(max_length=100, blank=True, null=True)
     payment_method = models.ForeignKey(
         PaymentGatewayMethod,  # [ERROR] PaymentGatewayMethod এর সাথে সম্পর্ক
         on_delete=models.SET_NULL, 
         null=True, 
-        blank=True
-    )
+        blank=True)
     metadata = models.JSONField(default=dict, blank=True)
     notes = models.TextField(blank=True, null=True)
     
@@ -169,24 +167,22 @@ class PayoutRequest(TimeStampedModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
-        related_name='payment_gateways_payoutrequest_user'
-    )
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    net_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payout_method = models.CharField(max_length=20, choices=PAYOUT_METHODS)
-    account_number = models.CharField(max_length=100)
-    account_name = models.CharField(max_length=100)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    reference_id = models.CharField(max_length=100, unique=True)
+        related_name='payment_gateways_payoutrequest_user')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    fee = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+    net_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    payout_method = models.CharField(max_length=20, choices=PAYOUT_METHODS, null=True, blank=True)
+    account_number = models.CharField(max_length=100, null=True, blank=True)
+    account_name = models.CharField(max_length=100, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
+    reference_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
     admin_notes = models.TextField(blank=True, null=True)
     processed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True, 
-        related_name='payment_gateways_payoutrequest_processed_by'
-    )
+        related_name='payment_gateways_payoutrequest_processed_by')
     processed_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
@@ -210,8 +206,8 @@ class PayoutRequest(TimeStampedModel):
 
 class GatewayConfig(TimeStampedModel):
     """Gateway Specific Configuration"""
-    gateway = models.ForeignKey(PaymentGateway, on_delete=models.CASCADE, related_name='configs')
-    key = models.CharField(max_length=100)
+    gateway = models.ForeignKey(PaymentGateway, on_delete=models.CASCADE, related_name='configs', null=True, blank=True)
+    key = models.CharField(max_length=100, null=True, blank=True)
     value = models.TextField()
     is_secret = models.BooleanField(default=False)
     description = models.TextField(blank=True, null=True)
@@ -227,10 +223,10 @@ class GatewayConfig(TimeStampedModel):
 
 class Currency(TimeStampedModel):
     """Currency Model"""
-    code = models.CharField(max_length=3, unique=True)
-    name = models.CharField(max_length=50)
-    symbol = models.CharField(max_length=10)
-    exchange_rate = models.DecimalField(max_digits=10, decimal_places=4, default=1.0)
+    code = models.CharField(max_length=3, unique=True, null=True, blank=True)
+    name = models.CharField(max_length=50, null=True, blank=True)
+    symbol = models.CharField(max_length=10, null=True, blank=True)
+    exchange_rate = models.DecimalField(max_digits=10, decimal_places=4, default=1.0, null=True, blank=True)
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     
@@ -250,7 +246,7 @@ class Currency(TimeStampedModel):
 
 
 class PaymentGatewayWebhookLog(TimeStampedModel):  # [ERROR] PaymentWebhookLog থেকে PaymentGatewayWebhookLog নাম পরিবর্তন করুন
-    gateway = models.CharField(max_length=20)
+    gateway = models.CharField(max_length=20, null=True, blank=True)
     payload = models.JSONField()
     headers = models.TextField(default='{}')
     ip_address = models.GenericIPAddressField(null=True, blank=True)

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On-Call Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #3742fa 0%, #2f3542 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e9ecef;
+        }
+        .oncall-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3742fa;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #3742fa;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .oncall-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #3742fa;
+            color: white;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .schedule-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .handover-info {
+            background: #d1ecf1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border: 1px solid #bee5eb;
+        }
+        .urgency-high { color: #dc3545; font-weight: bold; }
+        .urgency-medium { color: #ffc107; font-weight: bold; }
+        .urgency-low { color: #28a745; font-weight: bold; }
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .contact-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>On-Call Notification</h1>
+        <p>{{ notification_type|title }}</p>
+    </div>
+    
+    <div class="content">
+        <div class="oncall-info">
+            <h2>{{ notification_type|title }} Details</h2>
+            <p><span class="oncall-badge">{{ schedule.name }}</span></p>
+            
+            <p><strong>Schedule:</strong> {{ schedule.name }}</p>
+            <p><strong>Schedule Type:</strong> {{ schedule.get_schedule_type_display }}</p>
+            <p><strong>Timezone:</strong> {{ schedule.timezone }}</p>
+            
+            {% if current_oncall %}
+            <p><strong>Current On-Call:</strong> {{ current_oncall.get_full_name|default:current_oncall.username }}</p>
+            <p><strong>Start Time:</strong> {{ current_oncall.start_time|date:"H:i" }}</p>
+            <p><strong>End Time:</strong> {{ current_oncall.end_time|date:"H:i" }}</p>
+            {% endif %}
+            
+            {% if upcoming_oncall %}
+            <p><strong>Next On-Call:</strong> {{ upcoming_oncall.get_full_name|default:upcoming_oncall.username }}</p>
+            <p><strong>Starts:</strong> {{ upcoming_oncall.start_time|date:"Y-m-d H:i" }}</p>
+            {% endif %}
+            
+            <div class="timestamp">
+                <p><strong>Notification Time:</strong> {{ notification_time|date:"Y-m-d H:i:s" }}</p>
+                {% if rotation_start %}
+                <p><strong>Rotation Start:</strong> {{ rotation_start|date:"Y-m-d H:i:s" }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if active_incidents %}
+        <div style="margin-top: 20px; padding: 15px; background: #f8d7da; border-radius: 5px; border: 1px solid #f5c6cb;">
+            <h3>Active Incidents</h3>
+            {% for incident in active_incidents %}
+            <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 3px;">
+                <p><strong>{{ incident.title }}</strong> - {{ incident.get_severity_display }}</p>
+                <p><small>Status: {{ incident.get_status_display }} | Detected: {{ incident.detected_at|date:"Y-m-d H:i:s" }}</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if handover_info %}
+        <div class="handover-info">
+            <h3>Handover Information</h3>
+            <p><strong>From:</strong> {{ handover_info.from_user.get_full_name|default:handover_info.from_user.username }}</p>
+            <p><strong>To:</strong> {{ handover_info.to_user.get_full_name|default:handover_info.to_user.username }}</p>
+            <p><strong>Handover Time:</strong> {{ handover_info.time|date:"Y-m-d H:i:s" }}</p>
+            {% if handover_info.notes %}
+            <p><strong>Notes:</strong> {{ handover_info.notes }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if schedule_info %}
+        <div class="schedule-info">
+            <h3>Schedule Details</h3>
+            <p><strong>Rotation Period:</strong> {{ schedule.rotation_period_days }} days</p>
+            <p><strong>Days of Week:</strong> {{ schedule.days_of_week|join:", " }}</p>
+            {% if schedule.schedule_type == 'rotation' %}
+            <p><strong>Rotation Pattern:</strong> {{ schedule.rotation_pattern }}</p>
+            {% endif %}
+            {% if schedule.coverage_requirements %}
+            <p><strong>Coverage Requirements:</strong> {{ schedule.coverage_requirements }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if contact_information %}
+        <div style="margin-top: 20px;">
+            <h3>Contact Information</h3>
+            <div class="contact-grid">
+                {% if contact_information.primary %}
+                <div class="contact-item">
+                    <h4>Primary Contact</h4>
+                    <p><strong>{{ contact_information.primary.name }}</strong></p>
+                    <p>Phone: {{ contact_information.primary.phone }}</p>
+                    <p>Email: {{ contact_information.primary.email }}</p>
+                </div>
+                {% endif %}
+                {% if contact_information.secondary %}
+                <div class="contact-item">
+                    <h4>Secondary Contact</h4>
+                    <p><strong>{{ contact_information.secondary.name }}</strong></p>
+                    <p>Phone: {{ contact_information.secondary.phone }}</p>
+                    <p>Email: {{ contact_information.secondary.email }}</p>
+                </div>
+                {% endif %}
+                {% if contact_information.escalation %}
+                <div class="contact-item">
+                    <h4>Escalation Contact</h4>
+                    <p><strong>{{ contact_information.escalation.name }}</strong></p>
+                    <p>Phone: {{ contact_information.escalation.phone }}</p>
+                    <p>Email: {{ contact_information.escalation.email }}</p>
+                </div>
+                {% endif %}
+                {% if contact_information.manager %}
+                <div class="contact-item">
+                    <h4>Manager Contact</h4>
+                    <p><strong>{{ contact_information.manager.name }}</strong></p>
+                    <p>Phone: {{ contact_information.manager.phone }}</p>
+                    <p>Email: {{ contact_information.manager.email }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if responsibilities %}
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h3>Responsibilities</h3>
+            <ul>
+                {% for responsibility in responsibilities %}
+                <li>{{ responsibility }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if escalation_procedures %}
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffeaa7;">
+            <h3>Escalation Procedures</h3>
+            <ol>
+                {% for procedure in escalation_procedures %}
+                <li>{{ procedure }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{{ dashboard_url }}" class="btn">View On-Call Dashboard</a>
+            <a href="{{ schedule_url }}" class="btn btn-secondary">View Schedule</a>
+            {% if notification_type == 'escalation' %}
+            <a href="{{ acknowledge_url }}" class="btn btn-danger">Acknowledge Escalation</a>
+            {% endif %}
+        </div>
+        
+        {% if recent_alerts %}
+        <div style="margin-top: 20px;">
+            <h3>Recent Alerts (Last 24 Hours)</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 8px; text-align: left;">Alert</th>
+                        <th style="padding: 8px; text-align: left;">Severity</th>
+                        <th style="padding: 8px; text-align: left;">Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in recent_alerts %}
+                    <tr>
+                        <td style="padding: 8px;">{{ alert.rule.name }}</td>
+                        <td style="padding: 8px;" class="urgency-{{ alert.rule.severity }}">{{ alert.rule.severity|title }}</td>
+                        <td style="padding: 8px;">{{ alert.triggered_at|date:"H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        {% if system_status %}
+        <div style="margin-top: 20px; padding: 15px; background: #d4edda; border-radius: 5px; border: 1px solid #c3e6cb;">
+            <h3>System Status</h3>
+            <p><strong>Overall Health:</strong> {{ system_status.overall|title }}</p>
+            <p><strong>Critical Systems:</strong> {{ system_status.critical_count }} issues</p>
+            <p><strong>Warning Systems:</strong> {{ system_status.warning_count }} issues</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>This on-call notification was generated by the Alert Management System</p>
+        <p>Please ensure you are available during your scheduled on-call hours</p>
+    </div>
+</body>
+</html>

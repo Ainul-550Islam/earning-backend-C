@@ -7,7 +7,7 @@ from django.urls import reverse
 from unittest.mock import patch, MagicMock
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from api.kyc.models import KYCVerification
+from api.kyc.models import KYCSubmission
 
 
 @pytest.mark.django_db
@@ -15,21 +15,19 @@ class TestKYCIntegration:
     """Test KYC verification integration."""
     
     def test_kyc_submission(self, authenticated_client):
-        """Test KYC document submission."""
+        """Test KYCSubmission multipart creation."""
         client, user = authenticated_client
         
-        # Create a dummy document
-        document = SimpleUploadedFile(
-            "id_card.jpg",
-            b"file_content",
-            content_type="image/jpeg"
-        )
+        nid_front = SimpleUploadedFile("nid_front.jpg", b"file_front", content_type="image/jpeg")
+        nid_back = SimpleUploadedFile("nid_back.jpg", b"file_back", content_type="image/jpeg")
+        selfie_with_note = SimpleUploadedFile("selfie_with_note.jpg", b"file_selfie", content_type="image/jpeg")
         
         data = {
-            'document_type': 'id_card',
+            'document_type': 'nid',
             'document_number': 'ABC123456',
-            'document_front': document,
-            'country': 'US'
+            'nid_front': nid_front,
+            'nid_back': nid_back,
+            'selfie_with_note': selfie_with_note,
         }
         
         url = reverse('kyc-submit')
@@ -37,47 +35,60 @@ class TestKYCIntegration:
         
         assert response.status_code == 201
         
-        # Check KYC record
-        kyc = KYCVerification.objects.get(user=user)
-        assert kyc.status == 'pending'
-        assert kyc.document_type == 'id_card'
+        # Check KYCSubmission record
+        submission = KYCSubmission.objects.get(user=user)
+        assert submission.status == 'submitted'
+        assert submission.verification_progress == 10
+        assert submission.document_type == 'nid'
     
-    @patch('api.kyc.services.KYCService.verify_document')
-    def test_kyc_auto_verification(self, mock_verify, authenticated_client):
-        """Test automatic KYC verification by third-party service."""
-        mock_verify.return_value = {
-            'verified': True,
-            'score': 0.95,
-            'details': {'name_match': True, 'dob_match': True}
-        }
-        
+    def test_kyc_fraud_check_endpoint(self, authenticated_client):
+        """Test fraud-check placeholder updates progress and audit scores."""
         client, user = authenticated_client
-        
-        # Submit KYC
-        kyc = KYCVerification.objects.create(
-            user=user,
-            document_type='id_card',
-            document_number='XYZ789',
-            status='pending'
-        )
-        
-        # Trigger verification (this might be done by a Celery task)
-        from api.kyc.services import KYCService
-        result = KYCService.verify_document(kyc)
-        
-        kyc.refresh()
-        assert kyc.status == 'verified'
-        assert kyc.verification_score == 0.95
+
+        nid_front = SimpleUploadedFile("nid_front.jpg", b"file_front_x", content_type="image/jpeg")
+        nid_back = SimpleUploadedFile("nid_back.jpg", b"file_back_x", content_type="image/jpeg")
+        selfie_with_note = SimpleUploadedFile("selfie_with_note.jpg", b"file_selfie_x", content_type="image/jpeg")
+
+        submit_url = reverse('kyc-submit')
+        submit_data = {
+            'document_type': 'passport',
+            'document_number': 'XYZ789',
+            'nid_front': nid_front,
+            'nid_back': nid_back,
+            'selfie_with_note': selfie_with_note,
+        }
+        submit_resp = client.post(submit_url, submit_data, format='multipart')
+        assert submit_resp.status_code == 201
+
+        fraud_url = reverse('kyc-fraud-check')
+        fraud_resp = client.post(fraud_url, data={}, format='json')
+        assert fraud_resp.status_code == 200
+
+        submission = KYCSubmission.objects.get(user=user)
+        assert submission.image_clarity_score > 0
+        assert submission.document_matching_score > 0
+        assert submission.face_liveness_check in ['pending', 'success', 'failure']
+        assert 60 <= submission.verification_progress <= 75
     
     def test_kyc_status_check(self, authenticated_client):
         """Test endpoint to check KYC status."""
         client, user = authenticated_client
         
-        KYCVerification.objects.create(
+        # Create a verified submission (files required for the model)
+        nid_front = SimpleUploadedFile("nid_front.jpg", b"file_front_y", content_type="image/jpeg")
+        nid_back = SimpleUploadedFile("nid_back.jpg", b"file_back_y", content_type="image/jpeg")
+        selfie_with_note = SimpleUploadedFile("selfie_with_note.jpg", b"file_selfie_y", content_type="image/jpeg")
+
+        submission = KYCSubmission.objects.create(
             user=user,
-            document_type='passport',
+            document_type='driving_license',
             document_number='P123456',
-            status='verified'
+            nid_front=nid_front,
+            nid_back=nid_back,
+            selfie_with_note=selfie_with_note,
+            status='verified',
+            verification_progress=100,
+            submitted_at=None,
         )
         
         url = reverse('kyc-status')

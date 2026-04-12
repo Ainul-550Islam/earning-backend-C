@@ -4,6 +4,7 @@
 # =============================================================================
 
 import logging
+from django.conf import settings
 from decimal import Decimal
 
 from django.db import transaction
@@ -466,3 +467,71 @@ def _invalidate_user_sessions(user_id_str: str):
         logger.info(f'Sessions invalidated for blacklisted user #{user_id_str}')
     except Exception as e:
         logger.exception(f'Error invalidating sessions for user #{user_id_str}: {e}')
+
+
+# =============================================================================
+# NEW MODEL SIGNALS
+# =============================================================================
+from django.db.models.signals import post_save
+from api.promotions.models import (
+    PublisherProfile, EmailSubmitConversion, PayoutBatch,
+    CPIAppCampaign, QuizCampaign,
+)
+
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL if hasattr(settings, 'AUTH_USER_MODEL') else 'auth.User')
+def create_user_profiles(sender, instance, created, **kwargs):
+    """Auto-create Publisher + Advertiser profiles on user registration."""
+    if created:
+        try:
+            PublisherProfile.objects.get_or_create(user=instance)
+        except Exception:
+            pass
+
+
+@receiver(post_save, sender=EmailSubmitConversion)
+def on_email_submit_conversion(sender, instance, created, **kwargs):
+    """When DOI email is confirmed — trigger payout."""
+    if not created and instance.is_confirmed and instance.is_paid is False:
+        try:
+            from api.promotions.models import PromotionTransaction
+            PromotionTransaction.objects.create(
+                user=instance.publisher,
+                transaction_type='reward',
+                amount=instance.payout_amount,
+                status='completed',
+                notes=f'Email Submit DOI — Campaign #{instance.campaign_id}',
+                metadata={'campaign_id': instance.campaign_id, 'type': 'email_submit_doi'},
+            )
+            instance.is_paid = True
+            instance.paid_at = __import__('django.utils.timezone', fromlist=['now']).now()
+            EmailSubmitConversion.objects.filter(pk=instance.pk).update(
+                is_paid=True, paid_at=instance.paid_at
+            )
+        except Exception as e:
+            logging.getLogger(__name__).error(f'Email submit payout signal failed: {e}')
+
+
+@receiver(post_save, sender=PayoutBatch)
+def on_payout_batch_status_change(sender, instance, created, **kwargs):
+    """Send notification when payout status changes."""
+    if not created:
+        if instance.status == 'completed':
+            try:
+                profile = PublisherProfile.objects.filter(user=instance.publisher).first()
+                if profile and profile.device_token_fcm:
+                    from api.promotions.notifications.fcm_push import FCMPushNotification
+                    FCMPushNotification().notify_payout_processed(
+                        device_token=profile.device_token_fcm,
+                        amount=str(instance.net_amount),
+                        method=instance.method,
+                    )
+                if profile and profile.phone_number:
+                    from api.promotions.notifications.sms_sender import SMSSender
+                    SMSSender().send_payout_confirmation(
+                        phone=profile.phone_number,
+                        amount=str(instance.net_amount),
+                        method=instance.method,
+                    )
+            except Exception:
+                pass

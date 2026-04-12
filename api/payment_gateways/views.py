@@ -3,7 +3,7 @@
 
 from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -308,3 +308,20 @@ class PaymentWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAdminUser]
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ['gateway', 'processed']
+
+
+# ── User-facing: available gateways (for withdrawal UI) ────────────────
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_active_gateways(request):
+    """
+    Return active gateways that support withdrawals.
+    This powers the user-side gateway selector (bKash/Nagad/PayPal style).
+    """
+    qs = (
+        PaymentGateway.objects.filter(status="active", supports_withdrawal=True)
+        .order_by("sort_order", "name")
+    )
+    return Response(
+        {"success": True, "message": "Success", "data": PaymentGatewaySerializer(qs, many=True).data}
+    )

@@ -127,3 +127,122 @@ def _verify_stripe_signature(payload: bytes, sig_header: str) -> bool:
         return True
     except Exception:
         return False
+
+
+# =============================================================================
+# STRIPE COMPLETE INTEGRATION — Advertiser deposits
+# =============================================================================
+from decimal import Decimal
+import stripe
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status as drf_status
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class StripeAdvertiserBilling:
+    """Complete Stripe integration for advertiser deposits."""
+
+    def __init__(self):
+        stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+
+    def create_deposit_intent(self, advertiser_id: int, amount_usd: Decimal) -> dict:
+        """Create PaymentIntent for advertiser to deposit funds."""
+        if not stripe.api_key:
+            return {'error': 'Stripe not configured'}
+        try:
+            intent = stripe.PaymentIntent.create(
+                amount=int(amount_usd * 100),  # Stripe uses cents
+                currency='usd',
+                metadata={
+                    'advertiser_id': str(advertiser_id),
+                    'purpose': 'campaign_deposit',
+                },
+                description=f'Campaign deposit — Advertiser #{advertiser_id}',
+            )
+            return {
+                'client_secret': intent.client_secret,
+                'payment_intent_id': intent.id,
+                'amount': str(amount_usd),
+                'currency': 'USD',
+            }
+        except stripe.error.StripeError as e:
+            logger.error(f'Stripe error: {e}')
+            return {'error': str(e)}
+
+    def handle_payment_success(self, payment_intent_id: str) -> dict:
+        """Called when Stripe confirms payment succeeded."""
+        try:
+            intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            amount = Decimal(str(intent.amount / 100))
+            advertiser_id = int(intent.metadata.get('advertiser_id', 0))
+            self._credit_advertiser(advertiser_id, amount, payment_intent_id)
+            return {'success': True, 'amount': str(amount), 'advertiser_id': advertiser_id}
+        except stripe.error.StripeError as e:
+            return {'error': str(e)}
+
+    def create_subscription(self, advertiser_id: int, plan: str) -> dict:
+        """Create monthly subscription for premium advertiser features."""
+        plans = {
+            'starter': 'price_starter_monthly',
+            'pro': 'price_pro_monthly',
+            'enterprise': 'price_enterprise_monthly',
+        }
+        if plan not in plans:
+            return {'error': 'Invalid plan'}
+        return {'plan': plan, 'message': 'Configure Stripe Price IDs in settings'}
+
+    def _credit_advertiser(self, advertiser_id: int, amount: Decimal, tx_id: str):
+        from api.promotions.models import AdvertiserProfile, PromotionTransaction
+        from django.db.models import F
+        try:
+            AdvertiserProfile.objects.filter(user_id=advertiser_id).update(
+                total_deposited=F('total_deposited') + amount,
+                credit_balance=F('credit_balance') + amount,
+            )
+            PromotionTransaction.objects.create(
+                user_id=advertiser_id,
+                transaction_type='deposit',
+                amount=amount,
+                status='completed',
+                notes=f'Stripe deposit — {tx_id}',
+                metadata={'stripe_payment_intent': tx_id},
+            )
+        except Exception as e:
+            logger.error(f'Failed to credit advertiser {advertiser_id}: {e}')
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_deposit_view(request):
+    """POST /api/promotions/billing/deposit/ — Advertiser deposits funds"""
+    billing = StripeAdvertiserBilling()
+    amount = Decimal(str(request.data.get('amount', '0')))
+    if amount < Decimal('10.00'):
+        return Response({'error': 'Minimum deposit $10'}, status=drf_status.HTTP_400_BAD_REQUEST)
+    result = billing.create_deposit_intent(request.user.id, amount)
+    if 'error' in result:
+        return Response(result, status=drf_status.HTTP_400_BAD_REQUEST)
+    return Response(result)
+
+
+@csrf_exempt
+def stripe_complete_webhook(request):
+    """Stripe webhook — payment.intent.succeeded"""
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+    webhook_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', '')
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except stripe.error.SignatureVerificationError:
+        return HttpResponse(status=400)
+    if event['type'] == 'payment_intent.succeeded':
+        billing = StripeAdvertiserBilling()
+        billing.handle_payment_success(event['data']['object']['id'])
+    return HttpResponse(status=200)

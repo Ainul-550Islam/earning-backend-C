@@ -1057,3 +1057,21 @@ try:
         
 except Exception as e:
     print(f"[ERROR] Error registering payment_gateways models: {e}")
+
+def _force_register_payment_gateways():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(PaymentGateway, PaymentGatewayAdmin), (PaymentGatewayMethod, PaymentGatewayMethodAdmin), (GatewayTransaction, GatewayTransactionAdmin), (PayoutRequest, PayoutRequestAdmin), (GatewayConfig, GatewayConfigAdmin), (Currency, CurrencyAdmin), (PaymentGatewayWebhookLog, PaymentGatewayWebhookLogAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] payment_gateways registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] payment_gateways: {e}")

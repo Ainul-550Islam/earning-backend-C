@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alert Digest</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #4834d4 0%, #686de0 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e9ecef;
+        }
+        .digest-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4834d4;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #4834d4;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .digest-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #4834d4;
+            color: white;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .severity-critical { color: #dc3545; font-weight: bold; }
+        .severity-high { color: #fd7e14; font-weight: bold; }
+        .severity-medium { color: #ffc107; font-weight: bold; }
+        .severity-low { color: #28a745; font-weight: bold; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4834d4;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .section {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border: 1px solid #e9ecef;
+        }
+        .section h3 {
+            color: #4834d4;
+            border-bottom: 2px solid #4834d4;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        .alert-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 3px solid #6c757d;
+        }
+        .trend-positive { color: #28a745; }
+        .trend-negative { color: #dc3545; }
+        .trend-neutral { color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Alert Digest</h1>
+        <p>{{ digest_type|title }} Summary</p>
+    </div>
+    
+    <div class="content">
+        <div class="digest-info">
+            <h2>Digest Information</h2>
+            <p><span class="digest-badge">{{ digest_type|upper }}</span></p>
+            
+            <p><strong>Digest Type:</strong> {{ digest.get_type_display }}</p>
+            <p><strong>Period:</strong> {{ digest.start_date|date:"Y-m-d" }} to {{ digest.end_date|date:"Y-m-d" }}</p>
+            <p><strong>Generated:</strong> {{ digest.generated_at|date:"Y-m-d H:i:s" }}</p>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">{{ digest.total_alerts }}</div>
+                    <div class="stat-label">Total Alerts</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ digest.critical_alerts }}</div>
+                    <div class="stat-label">Critical</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ digest.resolved_alerts }}</div>
+                    <div class="stat-label">Resolved</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ digest.resolution_rate|floatformat:1 }}%</div>
+                    <div class="stat-label">Resolution Rate</div>
+                </div>
+            </div>
+        </div>
+        
+        {% if digest.summary %}
+        <div class="section">
+            <h3>Executive Summary</h3>
+            <p>{{ digest.summary }}</p>
+        </div>
+        {% endif %}
+        
+        {% if digest.top_alert_rules %}
+        <div class="section">
+            <h3>Top Alert Rules</h3>
+            {% for rule in digest.top_alert_rules %}
+            <div class="alert-item">
+                <p><strong>{{ rule.name }}</strong> - {{ rule.alert_count }} alerts</p>
+                <p><small>Severity: {{ rule.severity|title }} | Resolution Rate: {{ rule.resolution_rate|floatformat:1 }}%</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if digest.severity_breakdown %}
+        <div class="section">
+            <h3>Severity Breakdown</h3>
+            <div class="stats-grid">
+                {% for severity, count in digest.severity_breakdown.items %}
+                <div class="stat-box">
+                    <div class="stat-value severity-{{ severity }}">{{ count }}</div>
+                    <div class="stat-label">{{ severity|title }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if digest.unresolved_alerts %}
+        <div class="section">
+            <h3>Unresolved Alerts ({{ digest.unresolved_alerts|length }})</h3>
+            {% for alert in digest.unresolved_alerts|slice:":5" %}
+            <div class="alert-item">
+                <p><strong>{{ alert.rule.name }}</strong> - {{ alert.rule.get_severity_display }}</p>
+                <p><small>{{ alert.message|truncatechars:80 }}</small></p>
+                <p><small>Age: {{ alert.get_age_in_hours|floatformat:1 }} hours</small></p>
+            </div>
+            {% endfor %}
+            {% if digest.unresolved_alerts|length > 5 %}
+            <p><em>... and {{ digest.unresolved_alerts|length|add:"-5" }} more</em></p>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if digest.incidents %}
+        <div class="section">
+            <h3>Active Incidents ({{ digest.incidents|length }})</h3>
+            {% for incident in digest.incidents %}
+            <div class="alert-item">
+                <p><strong>{{ incident.title }}</strong> - {{ incident.get_severity_display }}</p>
+                <p><small>Status: {{ incident.get_status_display }} | Duration: {{ incident.get_duration_hours|floatformat:1 }} hours</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if digest.sla_breaches %}
+        <div class="section">
+            <h3>SLA Breaches ({{ digest.sla_breaches|length }})</h3>
+            {% for breach in digest.sla_breaches %}
+            <div class="alert-item">
+                <p><strong>{{ breach.name }}</strong> - {{ breach.get_severity_display }}</p>
+                <p><small>Breach: {{ breach.breach_percentage|floatformat:1 }}% | Duration: {{ breach.breach_duration_minutes }} min</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if digest.trends %}
+        <div class="section">
+            <h3>Trends Analysis</h3>
+            {% for trend in digest.trends %}
+            <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px;">
+                <p><strong>{{ trend.metric }}</strong>: 
+                    <span class="trend-{{ trend.direction }}">{{ trend.change|floatformat:1 }}% {{ trend.direction }}</span>
+                </p>
+                <p><small>{{ trend.description }}</small></p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if digest.performance_metrics %}
+        <div class="section">
+            <h3>Performance Metrics</h3>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">{{ digest.performance_metrics.avg_mttr|default:"N/A" }}</div>
+                    <div class="stat-label">Avg MTTR (min)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ digest.performance_metrics.avg_mttd|default:"N/A" }}</div>
+                    <div class="stat-label">Avg MTTD (min)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ digest.performance_metrics.alert_volume|default:"N/A" }}</div>
+                    <div class="stat-label">Alert Volume</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ digest.performance_metrics.noise_ratio|floatformat:1 }}%</div>
+                    <div class="stat-label">Noise Ratio</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if digest.recommendations %}
+        <div class="section">
+            <h3>Recommendations</h3>
+            <ol>
+                {% for recommendation in digest.recommendations %}
+                <li>{{ recommendation }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+        
+        {% if digest.action_items %}
+        <div class="section">
+            <h3>Action Items</h3>
+            <ul>
+                {% for item in digest.action_items %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{{ dashboard_url }}" class="btn">View Dashboard</a>
+            <a href="{{ digest_url }}" class="btn btn-secondary">View Full Digest</a>
+            <a href="{{ export_url }}" class="btn btn-secondary">Export Digest</a>
+        </div>
+        
+        {% if digest.next_digest %}
+        <div style="margin-top: 20px; padding: 15px; background: #d1ecf1; border-radius: 5px; border: 1px solid #bee5eb;">
+            <h3>Next Digest</h3>
+            <p><strong>Scheduled:</strong> {{ digest.next_digest.scheduled_at|date:"Y-m-d H:i:s" }}</p>
+            <p><strong>Type:</strong> {{ digest.next_digest.type }}</p>
+        </div>
+        {% endif %}
+        
+        {% if digest.contact_preferences %}
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h3>Contact Preferences</h3>
+            <p><strong>Delivery Method:</strong> {{ digest.contact_preferences.delivery_method }}</p>
+            <p><strong>Frequency:</strong> {{ digest.contact_preferences.frequency }}</p>
+            <p><strong>Categories:</strong> {{ digest.contact_preferences.categories|join:", " }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>This alert digest was generated automatically by the Alert Management System</p>
+        <p>For questions about this digest, please contact your system administrator</p>
+        <p>To update your digest preferences, visit your dashboard settings</p>
+    </div>
+</body>
+</html>

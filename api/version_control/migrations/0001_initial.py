@@ -109,7 +109,6 @@ class Migration(migrations.Migration):
             model_name="appupdatepolicy",
             constraint=models.UniqueConstraint(
                 fields=["platform", "min_version", "target_version"],
-                condition=models.Q(status="active"),
                 name="unique_active_policy_per_platform_version",
             ),
         ),

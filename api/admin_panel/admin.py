@@ -1234,10 +1234,10 @@ class SystemSettingsAdmin(admin.ModelAdmin):
     def status_indicator(self, obj):
         """Display system status"""
         if obj.maintenance_mode:
-            return format_html(
+            return mark_safe(
                 '<span style="background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 3px; font-weight: bold;">🚧 MAINTENANCE</span>'
             )
-        return format_html(
+        return mark_safe(
             '<span style="background-color: #28a745; color: white; padding: 5px 10px; border-radius: 3px; font-weight: bold;">[OK] ONLINE</span>'
         )
     status_indicator.short_description = 'Status'
@@ -1277,7 +1277,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
                 '<span style="color: orange;">[WARN] {}</span>',
                 ', '.join(issues)
             )
-        return format_html('<span style="color: green;">[OK] Secure</span>')
+        return mark_safe('<span style="color: green;">[OK] Secure</span>')
     security_status.short_description = 'Security'
     
     def last_updated(self, obj):
@@ -1353,7 +1353,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
             html_parts.append('<br>'.join(checks))
             html_parts.append('</div>')
         
-        return format_html(''.join(html_parts))
+        return mark_safe(''.join(html_parts))
     settings_health_check.short_description = '🏥 System Health Status'
     
     def security_summary(self, obj):
@@ -1379,7 +1379,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
             html += f'<td style="padding: 5px; color: {color};">{status}</td></tr>'
         
         html += '</table>'
-        return format_html(html)
+        return mark_safe(html)
     security_summary.short_description = '[SECURE] Security Overview'
     
     def version_summary(self, obj):
@@ -1407,7 +1407,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
             html += '<div style="background: #fff3cd; padding: 10px; margin-top: 10px; border-left: 4px solid #ffc107;">'
             html += '<strong>[WARN] Warning:</strong> Force update is enabled. Users with older versions cannot access the app.</div>'
         
-        return format_html(html)
+        return mark_safe(html)
     version_summary.short_description = '📱 App Version Status'
     
     def limits_summary(self, obj):
@@ -1431,7 +1431,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
             html += f'<td style="padding: 5px;">{value}</td></tr>'
         
         html += '</table>'
-        return format_html(html)
+        return mark_safe(html)
     limits_summary.short_description = '[STATS] Limits & Thresholds'
     
     def quick_stats(self, obj):
@@ -1456,7 +1456,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
             html += '</div>'
         
         html += '</div>'
-        return format_html(html)
+        return mark_safe(html)
     quick_stats.short_description = '📈 Quick Stats'
     
     # ==================== Admin Actions ====================
@@ -1700,7 +1700,7 @@ class AdminActionAdmin(admin.ModelAdmin):
         if obj.ip_address:
             details.append(f"IP Address: {obj.ip_address}")
         
-        return format_html("<br>".join(details)) if details else "No additional details"
+        return mark_safe("<br>".join(details)) if details else "No additional details"
     action_details.short_description = 'Details'
 
     
@@ -1792,3 +1792,35 @@ safe_register(UserProfile, UserProfileAdmin, "User Profiles")
 
 
 
+
+
+def _force_register_admin_panel():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(SystemSettings, SystemSettingsAdmin), (Report, ReportAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] admin_panel registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] admin_panel: {e}")
+
+
+def _sync_all_apps_to_modern_site():
+    from django.contrib import admin as default_admin
+    count = 0
+    for model, model_admin in list(default_admin.site._registry.items()):
+        try:
+            if model not in admin_site._registry:
+                admin_site.register(model, type(model_admin))
+                count += 1
+        except Exception:
+            pass
+    print(f"[OK] Synced {count} additional models to modern_site")

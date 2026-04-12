@@ -359,3 +359,21 @@ try:
         
 except Exception as e:
     print(f"[ERROR] Error in force registration: {e}")
+
+def _force_register_offerwall():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(OfferProvider, OfferProviderAdmin), (OfferCategory, OfferCategoryAdmin), (Offer, OfferAdmin), (OfferClick, OfferClickAdmin), (OfferConversion, OfferConversionAdmin), (OfferWall, OfferWallAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] offerwall registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] offerwall: {e}")

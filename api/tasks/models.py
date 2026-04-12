@@ -67,21 +67,19 @@ class MasterTask(models.Model):
         ADVANCED_API = 'advanced_api', 'Advanced & API'
     
     # Basic Fields
-    task_id = models.CharField(max_length=50, unique=True, db_index=True)
-    name = models.CharField(max_length=200)
+    task_id = models.CharField(max_length=50, unique=True, db_index=True, null=True, blank=True)
+    name = models.CharField(max_length=200, null=True, blank=True)
     description = models.TextField(blank=True, default='')
     
     # Categorization
     system_type = models.CharField(
         max_length=20, 
         choices=SystemType.choices,
-        db_index=True
-    )
+        db_index=True)
     category = models.CharField(
         max_length=20, 
         choices=TaskCategory.choices,
-        db_index=True
-    )
+        db_index=True)
     
     # Task Configuration (Metadata - Core of the system)
     task_metadata = models.JSONField(default=dict, blank=True)
@@ -1014,8 +1012,7 @@ class UserTaskCompletion(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='tasks_usertaskcompletion_user',
-        db_index=True
-    )
+        db_index=True)
     task = models.ForeignKey(
         MasterTask, 
         on_delete=models.CASCADE, 
@@ -1040,7 +1037,7 @@ class UserTaskCompletion(models.Model):
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     verified_at = models.DateTimeField(null=True, blank=True)
-    admin_revenue_received = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    admin_revenue_received = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True, default='')
@@ -1229,7 +1226,7 @@ class AdminLedger(models.Model):
         max_length=50, 
         unique=True, 
         db_index=True,
-        help_text="Unique ledger entry ID (format: PREFIX-YYYYMMDDHHMMSS-XXXXXXXX)"
+        help_text="Unique ledger entry ID (format: PREFIX-YYYYMMDDHHMMSS-XXXXXXXX, null=True, blank=True)"
     )
     
     amount = models.DecimalField(
@@ -1244,7 +1241,7 @@ class AdminLedger(models.Model):
     source = models.CharField(
         max_length=50,
         db_index=True,
-        help_text="Source of profit (task, withdrawal_fee, etc.)"
+        help_text="Source of profit (task, withdrawal_fee, etc., null=True, blank=True)"
     )
     
     source_type = models.CharField(
@@ -1252,8 +1249,7 @@ class AdminLedger(models.Model):
         choices=SOURCE_CHOICES,
         default=SOURCE_TASK,
         db_index=True,
-        help_text="Category of profit source"
-    )
+        help_text="Category of profit source")
     
     # Related Objects
     task = models.ForeignKey(
@@ -1271,7 +1267,7 @@ class AdminLedger(models.Model):
         null=True,
         blank=True,
         related_name='tasks_adminledger_user',
-        help_text="User who generated this profit (if applicable)"
+        help_text="User who generated this profit (if applicable, null=True, blank=True)"
     )
     
     completion = models.ForeignKey(

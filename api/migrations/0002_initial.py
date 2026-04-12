@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('api', '0001_initial'),
         ('auth', '0012_alter_user_first_name_max_length'),
-        ('users', '0001_initial'),
+        ('users', '__first__'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

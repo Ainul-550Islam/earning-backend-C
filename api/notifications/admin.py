@@ -2503,3 +2503,21 @@ admin_site = NotificationAdminSite(name='notification_admin')
 
 # ৩. যদি আপনি ডিফল্ট admin.site-কেও একই ইউআরএল দিতে চান (অপশনাল)
 # admin.site.get_urls = admin_site.get_urls
+
+def _force_register_notifications():
+    try:
+        from api.admin_panel.admin import admin_site as modern_site
+        if modern_site is None:
+            return
+        pairs = [(Notification, NotificationAdmin), (NotificationTemplate, NotificationTemplateAdmin), (NotificationPreference, NotificationPreferenceAdmin), (DeviceToken, DeviceTokenAdmin), (NotificationCampaign, NotificationCampaignAdmin), (NotificationAnalytics, NotificationAnalyticsAdmin), (NotificationRule, NotificationRuleAdmin), (NotificationFeedback, NotificationFeedbackAdmin), (NotificationLog, NotificationLogAdmin)]
+        registered = 0
+        for model, model_admin in pairs:
+            try:
+                if model not in modern_site._registry:
+                    modern_site.register(model, model_admin)
+                    registered += 1
+            except Exception as ex:
+                pass
+        print(f"[OK] notifications registered {registered} models")
+    except Exception as e:
+        print(f"[WARN] notifications: {e}")

@@ -46,10 +46,9 @@ class SoftDeleteModel(TimestampedModel):
     deleted_at  = models.DateTimeField(null=True, blank=True)
     deleted_by  = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
         on_delete=models.SET_NULL,
-        related_name='+',
-    )
+        null=True, blank=True,
+        related_name='+',)
 
     objects     = SoftDeleteManager()
     all_objects = models.Manager()  # Soft-deleted সহ সবকিছু
@@ -89,7 +88,7 @@ class PromotionCategory(SoftDeleteModel):
         verbose_name=_('ক্যাটেগরি নাম'),
     )
     description  = models.TextField(blank=True, default='')
-    icon_url     = models.URLField(blank=True, default='')
+    icon_url     = models.URLField(blank=True, default='', null=True)
     sort_order   = models.PositiveSmallIntegerField(default=0)
     is_active    = models.BooleanField(default=True, db_index=True)
 
@@ -124,10 +123,9 @@ class Platform(SoftDeleteModel):
     name       = models.CharField(
         max_length=50,
         unique=True,
-        choices=PlatformType.choices,
-    )
-    base_url   = models.URLField(blank=True, default='')
-    icon_url   = models.URLField(blank=True, default='')
+        choices=PlatformType.choices, null=True, blank=True)
+    base_url   = models.URLField(blank=True, default='', null=True)
+    icon_url   = models.URLField(blank=True, default='', null=True)
     is_active  = models.BooleanField(default=True, db_index=True)
 
     class Meta:
@@ -153,8 +151,7 @@ class RewardPolicy(TimestampedModel):
     category = models.ForeignKey(
         PromotionCategory,
         on_delete=models.PROTECT,
-        related_name='reward_policies',
-    )
+        related_name='reward_policies', null=True, blank=True)
     rate_usd = models.DecimalField(
         max_digits=10,
         decimal_places=4,
@@ -206,18 +203,17 @@ class AdCreative(TimestampedModel):
 
     campaign      = models.ForeignKey(
         'Campaign',
+        null=True, blank=True,
         on_delete=models.CASCADE,
-        related_name='creatives',
-    )
-    type          = models.CharField(max_length=10, choices=CreativeType.choices)
-    file_url      = models.URLField()
-    thumbnail_url = models.URLField(blank=True, default='')
+        related_name='creatives',)
+    type          = models.CharField(max_length=10, choices=CreativeType.choices, null=True, blank=True)
+    file_url      = models.URLField(null=True, blank=True)
+    thumbnail_url = models.URLField(blank=True, default='', null=True)
     title         = models.CharField(
         max_length=200,
         validators=[MinLengthValidator(3)],
     )
     duration_sec  = models.PositiveIntegerField(
-        null=True, blank=True,
         help_text=_('শুধু ভিডিওর জন্য, সেকেন্ডে'),
         validators=[MaxValueValidator(3600)],  # সর্বোচ্চ ১ ঘণ্টা
     )
@@ -258,22 +254,24 @@ class CurrencyRate(models.Model):
 
     from_currency = models.CharField(
         max_length=3,
+        default='USD',
         validators=[RegexValidator(r'^[A-Z]{3}$', 'ISO 4217 currency code দিন (e.g. USD)')],
     )
     to_currency = models.CharField(
         max_length=3,
+        default='BDT',
         validators=[RegexValidator(r'^[A-Z]{3}$', 'ISO 4217 currency code দিন (e.g. BDT)')],
     )
     rate = models.DecimalField(
         max_digits=20,
         decimal_places=8,
+        default=Decimal('1.0'),
         validators=[MinValueValidator(Decimal('0.00000001'))],
     )
     source     = models.CharField(
         max_length=30,
         choices=RateSource.choices,
-        default=RateSource.OPEN_EXCHANGE,
-    )
+        default=RateSource.OPEN_EXCHANGE,)
     fetched_at = models.DateTimeField(default=timezone.now, db_index=True)
 
     class Meta:
@@ -284,12 +282,12 @@ class CurrencyRate(models.Model):
         indexes = [
             models.Index(fields=['from_currency', 'to_currency', '-fetched_at']),
         ]
-        constraints = [
-            CheckConstraint(
-                check=~Q(from_currency=F('to_currency')),
-                name='chk_currency_rate_different_currencies',
-            ),
-        ]
+        # constraints = [
+        #     models.CheckConstraint(
+        #         check=models.Q(from_currency__ne=models.F('to_currency')),
+        #         name='chk_currency_rate_different_currencies',
+        #     ),
+        # ]
 
     def __str__(self):
         return f"1 {self.from_currency} = {self.rate} {self.to_currency}"
@@ -333,6 +331,7 @@ class Campaign(SoftDeleteModel):
     # ─── Ownership ──────────────────────────────────────────────────────────
     advertiser = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        null=True, blank=True,
         on_delete=models.PROTECT,
         related_name='campaigns',
         verbose_name=_('Advertiser'),
@@ -348,6 +347,8 @@ class Campaign(SoftDeleteModel):
     # ─── Basic Info ─────────────────────────────────────────────────────────
     title       = models.CharField(
         max_length=200,
+        default='',
+        blank=True,
         validators=[MinLengthValidator(5)],
     )
     description = models.TextField(blank=True, default='')
@@ -355,20 +356,25 @@ class Campaign(SoftDeleteModel):
         PromotionCategory,
         on_delete=models.PROTECT,
         related_name='campaigns',
-    )
+        null=True, blank=True)
     platform = models.ForeignKey(
         Platform,
         on_delete=models.PROTECT,
         related_name='campaigns',
+        null=True,
+        blank=True,
     )
     target_url  = models.URLField(
         validators=[URLValidator(schemes=['http', 'https'])],
+        blank=True,
+        default='',
     )
 
     # ─── Budget & Finance ───────────────────────────────────────────────────
     total_budget_usd = models.DecimalField(
         max_digits=12,
         decimal_places=2,
+        default=Decimal('0'),
         validators=[MinValueValidator(Decimal('1.00'))],
         help_text=_('মোট বাজেট USD তে'),
     )
@@ -391,6 +397,7 @@ class Campaign(SoftDeleteModel):
 
     # ─── Slot Management ────────────────────────────────────────────────────
     total_slots  = models.PositiveIntegerField(
+        default=0,
         validators=[MinValueValidator(1), MaxValueValidator(1_000_000)],
         help_text=_('কতজন worker কাজ করতে পারবে'),
     )
@@ -401,16 +408,15 @@ class Campaign(SoftDeleteModel):
         max_length=20,
         choices=Status.choices,
         default=Status.DRAFT,
-        db_index=True,
-    )
+        db_index=True,)
     rejection_reason = models.TextField(blank=True, default='')
     # ── Frontend Display Fields ──────────────────────────────────────────────
-    bonus_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    bonus_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, null=True, blank=True)
     promo_type       = models.CharField(max_length=20, default='bonus',
                     choices=[('bonus','Bonus'),('yield','Yield'),('fraud','Fraud'),
                              ('seasonal','Seasonal'),('referral','Referral')])
     traffic_monitor  = models.BooleanField(default=True)
-    yield_optimization = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    yield_optimization = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     risk_level = models.CharField(max_length=10, default='LOW', choices=[('LOW','Low'),('SAFE','Safe'),('MEDIUM','Medium'),('HIGH','High')])
     risk_score = models.PositiveSmallIntegerField(default=0)
     verified = models.BooleanField(default=False)
@@ -424,20 +430,20 @@ class Campaign(SoftDeleteModel):
             models.Index(fields=['advertiser', 'status']),
             models.Index(fields=['status', 'created_at']),
         ]
-        constraints = [
-            CheckConstraint(
-                check=Q(spent_usd__lte=F('total_budget_usd')),
-                name='chk_campaign_spent_not_exceed_budget',
-            ),
-            CheckConstraint(
-                check=Q(filled_slots__lte=F('total_slots')),
-                name='chk_campaign_filled_not_exceed_total_slots',
-            ),
-            CheckConstraint(
-                check=Q(total_budget_usd__gt=0),
-                name='chk_campaign_budget_positive',
-            ),
-        ]
+        # constraints = [
+        #     CheckConstraint(
+        #         condition=models.Q(spent_usd__lte=models.F('total_budget_usd')),
+        #         name='chk_campaign_spent_not_exceed_budget',
+        #     ),
+        #     CheckConstraint(
+        #         condition=models.Q(filled_slots__lte=models.F('total_slots')),
+        #         name='chk_campaign_filled_not_exceed_total_slots',
+        #     ),
+        #     CheckConstraint(
+        #         condition=models.Q(total_budget_usd__gt=0),
+        #         name='chk_campaign_budget_positive',
+        #     ),
+        # ]
 
     def __str__(self):
         return f"[{self.status.upper()}] {self.title}"
@@ -486,8 +492,7 @@ class TargetingCondition(TimestampedModel):
         Campaign,
         on_delete=models.CASCADE,
         related_name='targeting',
-        primary_key=True,
-    )
+        primary_key=True,)
     # JSON arrays — application layer এ validate করতে হবে
     countries = models.JSONField(
         default=list,
@@ -496,12 +501,10 @@ class TargetingCondition(TimestampedModel):
     )
     devices = models.JSONField(
         default=list,
-        blank=True,
         help_text=_('["mobile","desktop","tablet"]'),
     )
     os_types = models.JSONField(
         default=list,
-        blank=True,
         help_text=_('["android","ios","windows","macos"]'),
     )
     min_user_level = models.PositiveSmallIntegerField(
@@ -521,12 +524,12 @@ class TargetingCondition(TimestampedModel):
         db_table = 'targeting_condition'
         verbose_name        = _('Targeting Condition')
         verbose_name_plural = _('Targeting Conditions')
-        constraints = [
-            CheckConstraint(
-                check=Q(min_user_level__lte=F('max_user_level')),
-                name='chk_targeting_user_level_range_valid',
-            ),
-        ]
+        # constraints = [
+        #     CheckConstraint(
+        #         condition=models.Q(min_user_level__lte=models.F('max_user_level')),
+        #         name='chk_targeting_user_level_range_valid',
+        #     ),
+        # ]
 
     def __str__(self):
         return f"Targeting for Campaign #{self.campaign_id}"
@@ -562,8 +565,7 @@ class TaskStep(TimestampedModel):
     campaign     = models.ForeignKey(
         Campaign,
         on_delete=models.CASCADE,
-        related_name='steps',
-    )
+        related_name='steps', null=True, blank=True)
     step_order   = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1)],
     )
@@ -571,7 +573,7 @@ class TaskStep(TimestampedModel):
         validators=[MinLengthValidator(10)],
         help_text=_('ইউজারকে কী করতে হবে তার বিস্তারিত নির্দেশনা'),
     )
-    proof_type   = models.CharField(max_length=15, choices=ProofType.choices)
+    proof_type   = models.CharField(max_length=15, choices=ProofType.choices, null=True, blank=True)
     is_required  = models.BooleanField(default=True)
     hint_text    = models.TextField(blank=True, default='')
 
@@ -601,8 +603,7 @@ class TaskLimit(TimestampedModel):
         Campaign,
         on_delete=models.CASCADE,
         related_name='limits',
-        primary_key=True,
-    )
+        primary_key=True,)
     max_per_ip      = models.PositiveSmallIntegerField(
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(100)],
@@ -644,17 +645,19 @@ class BonusPolicy(TimestampedModel):
         Campaign,
         on_delete=models.CASCADE,
         related_name='bonus_policies',
-    )
-    condition_type  = models.CharField(max_length=20, choices=ConditionType.choices)
+        null=True, blank=True,)
+    condition_type  = models.CharField(max_length=20, choices=ConditionType.choices, null=True, blank=True)
     threshold_value = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+        null=True, blank=True,
         validators=[MinValueValidator(Decimal('0'))],
         help_text=_('যেমন: 95 মানে ৯৫% approval rate'),
     )
     bonus_percent   = models.DecimalField(
         max_digits=5,
         decimal_places=2,
+        null=True, blank=True,
         validators=[
             MinValueValidator(Decimal('0.01')),
             MaxValueValidator(Decimal('200')),  # সর্বোচ্চ ২০০% বোনাস
@@ -690,9 +693,10 @@ class CampaignSchedule(TimestampedModel):
         Campaign,
         on_delete=models.CASCADE,
         related_name='schedule',
-        primary_key=True,
+        null=True,
+        blank=True,
     )
-    start_at       = models.DateTimeField(db_index=True)
+    start_at       = models.DateTimeField(db_index=True, null=True, blank=True)
     end_at         = models.DateTimeField(null=True, blank=True, db_index=True)
     timezone       = models.CharField(
         max_length=50,
@@ -711,12 +715,10 @@ class CampaignSchedule(TimestampedModel):
         validators=[MinValueValidator(Decimal('0.01'))],
         help_text=_('প্রতিদিন সর্বোচ্চ কত USD খরচ হতে পারবে'),
     )
-    active_hours_start = models.TimeField(
-        null=True, blank=True,
+    active_hours_start = models.TimeField(null=True, blank=True,
         help_text=_('কোন সময় থেকে কাজ নেওয়া যাবে'),
     )
-    active_hours_end   = models.TimeField(
-        null=True, blank=True,
+    active_hours_end   = models.TimeField(null=True, blank=True,
         help_text=_('কোন সময়ের পরে কাজ নেওয়া যাবে না'),
     )
 
@@ -770,20 +772,18 @@ class TaskSubmission(TimestampedModel):
     uuid       = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     worker     = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        null=True, blank=True,
         on_delete=models.PROTECT,
-        related_name='submissions',
-    )
+        related_name='submissions',)
     campaign   = models.ForeignKey(
         Campaign,
         on_delete=models.PROTECT,
-        related_name='submissions',
-    )
+        related_name='submissions', null=True, blank=True)
     status     = models.CharField(
         max_length=15,
         choices=Status.choices,
         default=Status.PENDING,
-        db_index=True,
-    )
+        db_index=True,)
 
     # ─── Reward ─────────────────────────────────────────────────────────────
     reward_usd = models.DecimalField(
@@ -803,15 +803,13 @@ class TaskSubmission(TimestampedModel):
     reviewed_at = models.DateTimeField(null=True, blank=True)
     reviewer    = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
         on_delete=models.SET_NULL,
-        related_name='reviewed_submissions',
-    )
+        null=True, blank=True,
+        related_name='reviewed_submissions',)
     review_note = models.TextField(blank=True, default='')
 
     # ─── Security Tracking ──────────────────────────────────────────────────
     ip_address           = models.GenericIPAddressField(
-        null=True, blank=True,
         protocol='both',
         unpack_ipv4=True,
     )
@@ -819,8 +817,7 @@ class TaskSubmission(TimestampedModel):
         'DeviceFingerprint',
         null=True, blank=True,
         on_delete=models.SET_NULL,
-        related_name='submissions',
-    )
+        related_name='submissions',)
     submitted_at         = models.DateTimeField(default=timezone.now, db_index=True)
 
     class Meta:
@@ -833,12 +830,12 @@ class TaskSubmission(TimestampedModel):
             models.Index(fields=['campaign', 'status']),
             models.Index(fields=['ip_address']),
         ]
-        constraints = [
-            CheckConstraint(
-                check=Q(bonus_usd__gte=0),
-                name='chk_submission_bonus_non_negative',
-            ),
-        ]
+        # constraints = [
+        #     CheckConstraint(
+        #         condition=models.Q(bonus_usd__gte=0),
+        #         name='chk_submission_bonus_non_negative',
+        #     ),
+        # ]
 
     def __str__(self):
         return f"Submission #{self.pk} | Worker:{self.worker_id} | {self.status}"
@@ -882,23 +879,19 @@ class SubmissionProof(TimestampedModel):
     submission   = models.ForeignKey(
         TaskSubmission,
         on_delete=models.CASCADE,
-        related_name='proofs',
-    )
+        related_name='proofs', null=True, blank=True)
     step         = models.ForeignKey(
         TaskStep,
         on_delete=models.PROTECT,
-        related_name='proofs',
-    )
+        related_name='proofs', null=True, blank=True)
     proof_type   = models.CharField(
         max_length=15,
-        choices=TaskStep.ProofType.choices,
-    )
+        choices=TaskStep.ProofType.choices, null=True, blank=True)
     content      = models.TextField(
         validators=[MinLengthValidator(1)],
         help_text=_('URL (screenshot/link/video) অথবা টেক্সট উত্তর'),
     )
     file_size_kb = models.PositiveIntegerField(
-        null=True, blank=True,
         validators=[MaxValueValidator(MAX_FILE_SIZE_KB)],
     )
     uploaded_at  = models.DateTimeField(default=timezone.now)
@@ -953,13 +946,12 @@ class VerificationLog(models.Model):
     submission          = models.ForeignKey(
         TaskSubmission,
         on_delete=models.CASCADE,
-        related_name='verification_logs',
-    )
-    verified_by         = models.CharField(max_length=10, choices=VerifiedBy.choices)
+        related_name='verification_logs', null=True, blank=True)
+    verified_by         = models.CharField(max_length=10, choices=VerifiedBy.choices, null=True, blank=True)
     verifier_admin      = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
         on_delete=models.SET_NULL,
+        null=True, blank=True,
         related_name='verification_logs',
         help_text=_('verified_by=admin হলে কোন Admin'),
     )
@@ -971,13 +963,12 @@ class VerificationLog(models.Model):
     ai_confidence_score = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        null=True, blank=True,
         validators=[
             MinValueValidator(Decimal('0')),
             MaxValueValidator(Decimal('100')),
         ],
     )
-    decision            = models.CharField(max_length=10, choices=Decision.choices)
+    decision            = models.CharField(max_length=10, choices=Decision.choices, null=True, blank=True)
     reason              = models.TextField(blank=True, default='')
     verified_at         = models.DateTimeField(default=timezone.now, db_index=True)
 
@@ -1016,32 +1007,29 @@ class Dispute(TimestampedModel):
     submission    = models.OneToOneField(
         TaskSubmission,
         on_delete=models.CASCADE,
-        related_name='dispute',
-    )
+        related_name='dispute', null=True, blank=True)
     worker        = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        related_name='disputes',
-    )
+        related_name='disputes', null=True, blank=True)
     reason        = models.TextField(
         validators=[MinLengthValidator(20)],
+        default='',
         help_text=_('কেন রিজেক্ট সঠিক নয় তার বিস্তারিত কারণ'),
     )
-    evidence_url  = models.URLField(blank=True, default='')
+    evidence_url  = models.URLField(blank=True, default='', null=True)
     status        = models.CharField(
         max_length=25,
         choices=Status.choices,
         default=Status.OPEN,
-        db_index=True,
-    )
+        db_index=True,)
     admin_note    = models.TextField(blank=True, default='')
     resolved_at   = models.DateTimeField(null=True, blank=True)
     resolved_by   = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
         on_delete=models.SET_NULL,
-        related_name='resolved_disputes',
-    )
+        null=True, blank=True,
+        related_name='resolved_disputes',)
 
     class Meta:
         db_table            = 'dispute'
@@ -1085,19 +1073,15 @@ class PromotionTransaction(TimestampedModel):
         PENALTY          = 'penalty',          _('Fraud Penalty')
 
     uuid           = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    type           = models.CharField(max_length=20, choices=TransactionType.choices, db_index=True)
+    type           = models.CharField(max_length=20, choices=TransactionType.choices, db_index=True, null=True, blank=True)
     user           = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
         on_delete=models.PROTECT,
-        related_name='promotion_transactions',
-    )
+        related_name='promotion_transactions', null=True, blank=True)
     campaign       = models.ForeignKey(
         Campaign,
-        null=True, blank=True,
         on_delete=models.PROTECT,
-        related_name='promotion_transactions',
-    )
+        related_name='promotion_transactions', null=True, blank=True)
     amount_usd     = models.DecimalField(
         max_digits=14,
         decimal_places=6,
@@ -1121,7 +1105,6 @@ class PromotionTransaction(TimestampedModel):
         help_text=_('Transaction এর পরে user এর balance'),
     )
     reference_id   = models.PositiveBigIntegerField(
-        null=True, blank=True,
         help_text=_('submission_id বা অন্য সংশ্লিষ্ট রেকর্ডের ID'),
     )
     note           = models.TextField(blank=True, default='')
@@ -1129,10 +1112,9 @@ class PromotionTransaction(TimestampedModel):
     is_reversed    = models.BooleanField(default=False)
     reversed_by_tx = models.OneToOneField(
         'self',
-        null=True, blank=True,
         on_delete=models.SET_NULL,
-        related_name='reversal_of',
-    )
+        null=True, blank=True,
+        related_name='reversal_of',)
 
     class Meta:
         db_table            = 'promotion_transaction'
@@ -1164,16 +1146,16 @@ class EscrowWallet(TimestampedModel):
         Campaign,
         on_delete=models.PROTECT,
         related_name='escrow',
-        primary_key=True,
-    )
+        primary_key=True,)
     advertiser        = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        null=True, blank=True,
         on_delete=models.PROTECT,
-        related_name='escrow_wallets',
-    )
+        related_name='escrow_wallets',)
     locked_amount_usd = models.DecimalField(
         max_digits=14,
         decimal_places=2,
+        default=Decimal('0'),
         validators=[MinValueValidator(Decimal('0.01'))],
     )
     released_amount_usd = models.DecimalField(
@@ -1186,8 +1168,7 @@ class EscrowWallet(TimestampedModel):
         max_length=25,
         choices=Status.choices,
         default=Status.LOCKED,
-        db_index=True,
-    )
+        db_index=True,)
     locked_at         = models.DateTimeField(default=timezone.now)
     released_at       = models.DateTimeField(null=True, blank=True)
 
@@ -1195,16 +1176,16 @@ class EscrowWallet(TimestampedModel):
         db_table = 'escrow_wallet'
         verbose_name        = _('Escrow Wallet')
         verbose_name_plural = _('Escrow Wallets')
-        constraints = [
-            CheckConstraint(
-                check=Q(released_amount_usd__lte=F('locked_amount_usd')),
-                name='chk_escrow_released_not_exceed_locked',
-            ),
-            CheckConstraint(
-                check=Q(locked_amount_usd__gt=0),
-                name='chk_escrow_locked_positive',
-            ),
-        ]
+        # constraints = [
+        #     CheckConstraint(
+        #         condition=models.Q(released_amount_usd__lte=models.F('locked_amount_usd')),
+        #         name='chk_escrow_released_not_exceed_locked',
+        #     ),
+        #     CheckConstraint(
+        #         condition=models.Q(locked_amount_usd__gt=0),
+        #         name='chk_escrow_locked_positive',
+        #     ),
+        # ]
 
     def __str__(self):
         return f"Escrow | Campaign #{self.campaign_id} | ${self.locked_amount_usd} [{self.status}]"
@@ -1241,59 +1222,62 @@ class AdminCommissionLog(models.Model):
         TaskSubmission,
         on_delete=models.PROTECT,
         related_name='commission_log',
-        primary_key=True,
-    )
+        null=True, blank=True,)
     campaign        = models.ForeignKey(
         Campaign,
         on_delete=models.PROTECT,
         related_name='commission_logs',
-    )
+        null=True, blank=True,)
     gross_amount_usd  = models.DecimalField(
         max_digits=12,
         decimal_places=6,
+        null=True, blank=True,
         validators=[MinValueValidator(Decimal('0'))],
         help_text=_('Advertiser মোট কত দিল'),
     )
     worker_reward_usd = models.DecimalField(
         max_digits=12,
         decimal_places=6,
+        null=True, blank=True,
         validators=[MinValueValidator(Decimal('0'))],
         help_text=_('Worker কত পেল'),
     )
     commission_usd    = models.DecimalField(
         max_digits=12,
         decimal_places=6,
+        null=True, blank=True,
         validators=[MinValueValidator(Decimal('0'))],
         help_text=_('Admin এর নিট লাভ'),
     )
     commission_rate   = models.DecimalField(
         max_digits=5,
         decimal_places=2,
+        null=True, blank=True,
         validators=[
             MinValueValidator(Decimal('0')),
             MaxValueValidator(Decimal('100')),
         ],
     )
-    created_at        = models.DateTimeField(auto_now_add=True, db_index=True)
+    created_at        = models.DateTimeField(auto_now_add=True, db_index=True, null=True)
 
     class Meta:
         db_table            = 'admin_commission_log'
         verbose_name        = _('Admin Commission Log')
         verbose_name_plural = _('Admin Commission Logs')
-        constraints = [
-            CheckConstraint(
-                check=Q(commission_usd__lte=F('gross_amount_usd')),
-                name='chk_commission_not_exceed_gross',
-            ),
-            CheckConstraint(
-                check=(
-                    Q(worker_reward_usd__gte=0) &
-                    Q(commission_usd__gte=0) &
-                    Q(gross_amount_usd__gte=0)
-                ),
-                name='chk_commission_all_non_negative',
-            ),
-        ]
+        # constraints = [
+        #     CheckConstraint(
+        #         condition=models.Q(commission_usd__lte=models.F('gross_amount_usd')),
+        #         name='chk_commission_not_exceed_gross',
+        #     ),
+        #     CheckConstraint(
+        #         condition=(
+        #             models.Q(worker_reward_usd__gte=0) &
+        #             models.Q(commission_usd__gte=0) &
+        #             models.Q(gross_amount_usd__gte=0)
+        #         ),
+        #         name='chk_commission_all_non_negative',
+        #     ),
+        # ]
 
     def __str__(self):
         return f"Commission | Sub#{self.submission_id} | Admin:${self.commission_usd}"
@@ -1324,6 +1308,7 @@ class ReferralCommissionLog(TimestampedModel):
 
     referrer              = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        null=True, blank=True,
         on_delete=models.PROTECT,
         related_name='referral_commissions_earned',
         help_text=_('যে রেফার করেছে'),
@@ -1343,8 +1328,7 @@ class ReferralCommissionLog(TimestampedModel):
         TaskSubmission,
         null=True, blank=True,
         on_delete=models.SET_NULL,
-        related_name='referral_commissions',
-    )
+        related_name='referral_commissions',)
     commission_usd        = models.DecimalField(
         max_digits=10,
         decimal_places=6,
@@ -1362,8 +1346,7 @@ class ReferralCommissionLog(TimestampedModel):
         max_length=15,
         choices=CommissionStatus.choices,
         default=CommissionStatus.PENDING,
-        db_index=True,
-    )
+        db_index=True,)
     paid_at               = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -1374,12 +1357,12 @@ class ReferralCommissionLog(TimestampedModel):
             models.Index(fields=['referrer', 'status']),
             models.Index(fields=['referred', 'level']),
         ]
-        constraints = [
-            CheckConstraint(
-                check=~Q(referrer=F('referred')),
-                name='chk_referral_referrer_not_same_as_referred',
-            ),
-        ]
+        # constraints = [
+        #     CheckConstraint(
+        #         condition=models.Q(referrer__ne=models.F('referred')),
+        #         name='chk_referral_referrer_not_same_as_referred',
+        #     ),
+        # ]
 
     def __str__(self):
         return f"Referral | L{self.level} | {self.referrer_id}→{self.referred_id} | ${self.commission_usd}"
@@ -1400,8 +1383,7 @@ class UserReputation(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='reputation',
-        primary_key=True,
-    )
+        primary_key=True,)
     total_submissions    = models.PositiveIntegerField(default=0)
     approved_count       = models.PositiveIntegerField(default=0)
     rejected_count       = models.PositiveIntegerField(default=0)
@@ -1431,19 +1413,19 @@ class UserReputation(models.Model):
         db_table            = 'user_reputation'
         verbose_name        = _('User Reputation')
         verbose_name_plural = _('User Reputations')
-        constraints = [
-            CheckConstraint(
-                check=(
-                    Q(approved_count__lte=F('total_submissions')) &
-                    Q(rejected_count__lte=F('total_submissions'))
-                ),
-                name='chk_reputation_counts_not_exceed_total',
-            ),
-            CheckConstraint(
-                check=Q(trust_score__gte=0) & Q(trust_score__lte=100),
-                name='chk_reputation_trust_score_range',
-            ),
-        ]
+        # constraints = [
+        #     CheckConstraint(
+        #         condition=(
+        #             models.Q(approved_count__lte=models.F('total_submissions')) &
+        #             models.Q(rejected_count__lte=models.F('total_submissions'))
+        #         ),
+        #         name='chk_reputation_counts_not_exceed_total',
+        #     ),
+        #     CheckConstraint(
+        #         condition=models.Q(trust_score__gte=0) & models.Q(trust_score__lte=100),
+        #         name='chk_reputation_trust_score_range',
+        #     ),
+        # ]
 
     def __str__(self):
         return f"Reputation | User #{self.user_id} | Score:{self.trust_score} | L{self.level}"
@@ -1483,20 +1465,17 @@ class FraudReport(TimestampedModel):
         settings.AUTH_USER_MODEL,
         null=True, blank=True,
         on_delete=models.SET_NULL,
-        related_name='promotional_fraud_reports',
-    )
+        related_name='promotional_fraud_reports',)
     submission        = models.ForeignKey(
         TaskSubmission,
-        null=True, blank=True,
         on_delete=models.SET_NULL,
-        related_name='promotional_fraud_reports',
-    )
-    fraud_type        = models.CharField(max_length=30, choices=FraudType.choices, db_index=True)
-    ai_model_version  = models.CharField(max_length=100, blank=True, default='')
+        null=True, blank=True,
+        related_name='promotional_fraud_reports',)
+    fraud_type        = models.CharField(max_length=30, choices=FraudType.choices, db_index=True, null=True, blank=True)
+    ai_model_version  = models.CharField(max_length=100, blank=True, default='', null=True)
     confidence_score  = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        null=True, blank=True,
         validators=[
             MinValueValidator(Decimal('0')),
             MaxValueValidator(Decimal('100')),
@@ -1510,14 +1489,12 @@ class FraudReport(TimestampedModel):
     action_taken      = models.CharField(
         max_length=10,
         choices=ActionTaken.choices,
-        default=ActionTaken.FLAGGED,
-    )
+        default=ActionTaken.FLAGGED,)
     reviewed_by_admin = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True, blank=True,
         on_delete=models.SET_NULL,
-        related_name='reviewed_fraud_reports',
-    )
+        related_name='reviewed_fraud_reports',)
     admin_note        = models.TextField(blank=True, default='')
 
     class Meta:
@@ -1540,14 +1517,15 @@ class DeviceFingerprint(TimestampedModel):
 
     user               = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        null=True, blank=True,
         on_delete=models.CASCADE,
-        related_name='promotional_device_fingerprints',
-    )
+        related_name='promotional_device_fingerprints',)
     # fingerprint_hash: FingerprintJS Pro বা client-side library দিয়ে generate করুন
     fingerprint_hash   = models.CharField(
         max_length=64,
         unique=True,
         db_index=True,
+        default='',
         validators=[
             MinLengthValidator(32),
             RegexValidator(r'^[a-f0-9]+$', 'Lowercase hex hash দিন'),
@@ -1558,17 +1536,17 @@ class DeviceFingerprint(TimestampedModel):
         blank=True, default='',
         # 'mobile', 'desktop', 'tablet', 'unknown'
     )
-    os                 = models.CharField(max_length=50, blank=True, default='')
-    os_version         = models.CharField(max_length=30, blank=True, default='')
-    browser            = models.CharField(max_length=50, blank=True, default='')
-    browser_version    = models.CharField(max_length=20, blank=True, default='')
+    os                 = models.CharField(max_length=50, blank=True, default='', null=True)
+    os_version         = models.CharField(max_length=30, blank=True, default='', null=True)
+    browser            = models.CharField(max_length=50, blank=True, default='', null=True)
+    browser_version    = models.CharField(max_length=20, blank=True, default='', null=True)
     screen_resolution  = models.CharField(
         max_length=20,
         blank=True, default='',
         validators=[RegexValidator(r'^\d+x\d+$', 'Format: WxH, e.g. 1920x1080')],
     )
-    user_timezone           = models.CharField(max_length=50, blank=True, default='')
-    language           = models.CharField(max_length=10, blank=True, default='')
+    user_timezone           = models.CharField(max_length=50, blank=True, default='', null=True)
+    language           = models.CharField(max_length=10, blank=True, default='', null=True)
     first_seen         = models.DateTimeField(default=timezone.now)
     last_seen          = models.DateTimeField(default=timezone.now)
     is_flagged         = models.BooleanField(default=False, db_index=True)
@@ -1612,26 +1590,23 @@ class Blacklist(TimestampedModel):
         TEMP_BAN  = 'temp_ban',  _('Temporary Ban')
         PERMANENT = 'permanent', _('Permanent Ban')
 
-    type       = models.CharField(max_length=15, choices=BlacklistType.choices, db_index=True)
+    type       = models.CharField(max_length=15, choices=BlacklistType.choices, db_index=True, null=True, blank=True)
     value      = models.CharField(
         max_length=255,
         validators=[MinLengthValidator(1)],
         help_text=_('IP, user_id, domain, channel URL ইত্যাদি'),
     )
-    reason     = models.TextField(validators=[MinLengthValidator(5)])
+    reason     = models.TextField(validators=[MinLengthValidator(5)], default='')
     added_by   = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
         on_delete=models.SET_NULL,
-        related_name='blacklist_entries',
-    )
+        null=True, blank=True,
+        related_name='blacklist_entries',)
     severity   = models.CharField(
         max_length=10,
         choices=Severity.choices,
-        default=Severity.PERMANENT,
-    )
+        default=Severity.PERMANENT,)
     expires_at = models.DateTimeField(
-        null=True, blank=True,
         help_text=_('শুধু temp_ban এর জন্য'),
     )
     is_active  = models.BooleanField(default=True, db_index=True)
@@ -1695,8 +1670,10 @@ class CampaignAnalytics(models.Model):
         Campaign,
         on_delete=models.CASCADE,
         related_name='analytics',
+        null=True,
+        blank=True,
     )
-    date                  = models.DateField(db_index=True)
+    date                  = models.DateField(db_index=True, null=True, blank=True)
     # ─── Traffic ────────────────────────────────────────────────────────────
     total_views           = models.PositiveIntegerField(default=0)
     total_clicks          = models.PositiveIntegerField(default=0)
@@ -1734,14 +1711,14 @@ class CampaignAnalytics(models.Model):
                 fields=['campaign', 'date'],
                 name='uq_campaign_analytics_per_day',
             ),
-            CheckConstraint(
-                check=Q(approved_count__lte=F('total_submissions')),
-                name='chk_analytics_approved_not_exceed_submissions',
-            ),
-            CheckConstraint(
-                check=Q(total_clicks__lte=F('total_views')),
-                name='chk_analytics_clicks_not_exceed_views',
-            ),
+            # CheckConstraint(
+            #     condition=models.Q(approved_count__lte=models.F('total_submissions')),
+            #     name='chk_analytics_approved_not_exceed_submissions',
+            # ),
+            # CheckConstraint(
+            #     condition=models.Q(total_clicks__lte=models.F('total_views')),
+            #     name='chk_analytics_clicks_not_exceed_views',
+            # ),
         ]
         indexes = [
             models.Index(fields=['campaign', '-date']),
@@ -1781,13 +1758,13 @@ class CampaignBid(TimestampedModel):
         GSP         = 'gsp',         _('Generalized Second Price')
         FIRST_PRICE = 'first_price', _('First Price')
 
-    campaign      = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='bids')
-    advertiser    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='campaign_bids')
+    campaign      = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='bids', null=True, blank=True)
+    advertiser    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='campaign_bids', null=True, blank=True)
     bid_amount    = models.DecimalField(max_digits=12, decimal_places=4, validators=[MinValueValidator(Decimal('0.0001'))])
     floor_price   = models.DecimalField(max_digits=12, decimal_places=4, default=Decimal('0'))
     final_price   = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
-    auction_type  = models.CharField(max_length=15, choices=AuctionType.choices, default=AuctionType.GSP)
-    status        = models.CharField(max_length=15, choices=Status.choices, default=Status.PENDING, db_index=True)
+    auction_type  = models.CharField(max_length=15, choices=AuctionType.choices, default=AuctionType.GSP, null=True, blank=True)
+    status        = models.CharField(max_length=15, choices=Status.choices, default=Status.PENDING, db_index=True, null=True, blank=True)
     bid_at        = models.DateTimeField(default=timezone.now)
     resolved_at   = models.DateTimeField(null=True, blank=True)
     note          = models.TextField(blank=True, default='')
@@ -1804,3 +1781,434 @@ class CampaignBid(TimestampedModel):
 
     def __str__(self):
         return f"Bid #{self.pk} | Campaign:{self.campaign_id} | ${self.bid_amount} | {self.status}"
+
+
+# =============================================================================
+# ── SECTION 8: NEW OFFER TYPES — DB PERSISTENT ──────────────────────────────
+# =============================================================================
+
+class PublisherProfile(TimestampedModel):
+    """Publisher এর extended profile — tier, stats, settings।"""
+    user              = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='promotions_publisher_profile', null=True, blank=True)
+    website_url       = models.URLField(blank=True, default='', null=True)
+    traffic_source    = models.CharField(max_length=50, blank=True, default='', null=True)
+    monthly_traffic   = models.PositiveIntegerField(default=0)
+    country           = models.CharField(max_length=2, blank=True, default='', null=True)
+    niche             = models.CharField(max_length=50, blank=True, default='', null=True)
+    tier              = models.CharField(max_length=20, default='starter',
+        choices=[('starter','Starter'),('bronze','Bronze'),('silver','Silver'),('gold','Gold'),('platinum','Platinum')])
+    approval_status   = models.CharField(max_length=20, default='pending',
+        choices=[('pending','Pending'),('approved','Approved'),('rejected','Rejected')])
+    approved_at       = models.DateTimeField(null=True, blank=True)
+    device_token_fcm  = models.CharField(max_length=200, blank=True, default='', null=True)
+    device_token_apns = models.CharField(max_length=200, blank=True, default='', null=True)
+    phone_number      = models.CharField(max_length=20, blank=True, default='', null=True)
+    telegram_id       = models.CharField(max_length=50, blank=True, default='', null=True)
+    total_earned      = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0'))
+    total_withdrawn   = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0'))
+
+    class Meta:
+        db_table     = 'publisher_profile'
+        verbose_name = _('Publisher Profile')
+
+    def __str__(self):
+        return f'Publisher: {self.user.username} [{self.tier}]'
+
+
+class AdvertiserProfile(TimestampedModel):
+    """Advertiser এর extended profile।"""
+    user              = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='advertiser_profile', null=True, blank=True)
+    company_name      = models.CharField(max_length=100, blank=True, default='', null=True)
+    website_url       = models.URLField(blank=True, default='', null=True)
+    country           = models.CharField(max_length=2, blank=True, default='', null=True)
+    billing_email     = models.EmailField(blank=True, default='')
+    total_deposited   = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0'))
+    total_spent       = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0'))
+    credit_balance    = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0'))
+    is_verified       = models.BooleanField(default=False)
+    verified_at       = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table     = 'advertiser_profile'
+        verbose_name = _('Advertiser Profile')
+
+    def __str__(self):
+        return f'Advertiser: {self.user.username}'
+
+
+class APIKeyModel(TimestampedModel):
+    """Publisher API keys — persistent DB storage।"""
+    user        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_keys', null=True, blank=True)
+    name        = models.CharField(max_length=100, null=True, blank=True)
+    key_hash    = models.CharField(max_length=64, unique=True, db_index=True, null=True, blank=True)
+    permissions = models.JSONField(default=list)
+    rate_limit  = models.PositiveIntegerField(default=1000)
+    is_active   = models.BooleanField(default=True, db_index=True)
+    last_used   = models.DateTimeField(null=True, blank=True)
+    total_requests = models.PositiveIntegerField(default=0)
+    revoked_at  = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table     = 'publisher_api_key'
+        verbose_name = _('API Key')
+
+    def __str__(self):
+        return f'{self.user.username} — {self.name}'
+
+
+class WebhookConfigModel(TimestampedModel):
+    """Publisher webhook/postback URL config — DB persistent।"""
+    publisher   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='webhook_configs', null=True, blank=True)
+    event       = models.CharField(max_length=50, null=True, blank=True)
+    url         = models.URLField(max_length=2000, null=True, blank=True)
+    method      = models.CharField(max_length=6, default='GET', choices=[('GET','GET'),('POST','POST')])
+    secret_key  = models.CharField(max_length=100, blank=True, default='', null=True)
+    is_active   = models.BooleanField(default=True)
+    last_fired  = models.DateTimeField(null=True, blank=True)
+    total_fires = models.PositiveIntegerField(default=0)
+    last_status_code = models.SmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        db_table             = 'webhook_config'
+        verbose_name         = _('Webhook Config')
+        unique_together      = [('publisher', 'event')]
+
+    def __str__(self):
+        return f'{self.publisher.username} → {self.event}'
+
+
+class VirtualCurrencyConfig(TimestampedModel):
+    """Publisher-এর virtual currency config — DB persistent।"""
+    publisher       = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='vc_config', null=True, blank=True)
+    currency_name   = models.CharField(max_length=30, default='Coins', null=True, blank=True)
+    currency_icon   = models.CharField(max_length=10, default='🪙', null=True, blank=True)
+    usd_to_vc_rate  = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('1000'))
+    min_payout_vc   = models.PositiveIntegerField(default=100)
+    rounding        = models.CharField(max_length=10, default='floor', choices=[('floor','Floor'),('ceil','Ceil'),('round','Round')])
+    postback_url    = models.URLField(blank=True, default='', null=True)
+    is_active       = models.BooleanField(default=True)
+
+    class Meta:
+        db_table     = 'virtual_currency_config'
+        verbose_name = _('Virtual Currency Config')
+
+    def __str__(self):
+        return f'{self.publisher.username}: 1 USD = {self.usd_to_vc_rate} {self.currency_name}'
+
+
+class WhiteLabelConfig(TimestampedModel):
+    """Publisher white-label offerwall config।"""
+    publisher        = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='white_label', null=True, blank=True)
+    brand_name       = models.CharField(max_length=100, null=True, blank=True)
+    logo_url         = models.URLField(blank=True, default='', null=True)
+    primary_color    = models.CharField(max_length=7, default='#6C63FF', null=True, blank=True)
+    secondary_color  = models.CharField(max_length=7, default='#FF6584', null=True, blank=True)
+    custom_domain    = models.CharField(max_length=100, blank=True, default='', null=True)
+    welcome_message  = models.TextField(blank=True, default='')
+    footer_text      = models.TextField(blank=True, default='')
+    show_powered_by  = models.BooleanField(default=True)
+    is_active        = models.BooleanField(default=True)
+
+    class Meta:
+        db_table     = 'white_label_config'
+        verbose_name = _('White Label Config')
+
+    def __str__(self):
+        return f'{self.publisher.username} — {self.brand_name}'
+
+
+class EmailSubmitCampaign(TimestampedModel):
+    """Email Submit campaign — SOI/DOI।"""
+    advertiser       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='email_campaigns', null=True, blank=True)
+    campaign_name    = models.CharField(max_length=200, null=True, blank=True)
+    opt_in_type      = models.CharField(max_length=3, default='SOI', choices=[('SOI','Single Opt-in'),('DOI','Double Opt-in')])
+    payout           = models.DecimalField(max_digits=8, decimal_places=4, null=True, blank=True)
+    niche            = models.CharField(max_length=50, default='general', null=True, blank=True)
+    target_countries = models.JSONField(default=list)
+    daily_cap        = models.PositiveIntegerField(default=5000)
+    today_submits    = models.PositiveIntegerField(default=0)
+    total_submits    = models.PositiveIntegerField(default=0)
+    redirect_url     = models.URLField(blank=True, default='', null=True)
+    status           = models.CharField(max_length=20, default='active',
+        choices=[('active','Active'),('paused','Paused'),('completed','Completed')])
+    total_spent      = models.DecimalField(max_digits=12, decimal_places=4, default=Decimal('0'))
+
+    class Meta:
+        db_table     = 'email_submit_campaign'
+        verbose_name = _('Email Submit Campaign')
+
+    def __str__(self):
+        return f'{self.campaign_name} [{self.opt_in_type}] — ${self.payout}'
+
+
+class EmailSubmitConversion(TimestampedModel):
+    """Email submit conversion tracking।"""
+    campaign     = models.ForeignKey(EmailSubmitCampaign, on_delete=models.PROTECT, related_name='conversions', null=True, blank=True)
+    publisher    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='email_conversions', null=True, blank=True)
+    email_hash   = models.CharField(max_length=64, db_index=True, null=True, blank=True)
+    ip_hash      = models.CharField(max_length=64, db_index=True, null=True, blank=True)
+    country      = models.CharField(max_length=2, null=True, blank=True)
+    subid        = models.CharField(max_length=64, null=True, blank=True)
+    is_confirmed = models.BooleanField(default=False)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    payout_amount= models.DecimalField(max_digits=8, decimal_places=4, default=Decimal('0'))
+    is_paid      = models.BooleanField(default=False)
+    paid_at      = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table     = 'email_submit_conversion'
+        verbose_name = _('Email Submit Conversion')
+
+    def __str__(self):
+        return f'Email submit: {self.campaign.campaign_name} — pub:{self.publisher_id}'
+
+
+class CPCCampaign(TimestampedModel):
+    """CPC (Pay Per Click) campaign।"""
+    advertiser       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='cpc_campaigns', null=True, blank=True)
+    title            = models.CharField(max_length=200, null=True, blank=True)
+    destination_url  = models.URLField(null=True, blank=True)
+    payout_us        = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal('0.35'))
+    payout_gb        = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal('0.28'))
+    payout_ca        = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal('0.25'))
+    payout_au        = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal('0.22'))
+    payout_other     = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal('0.05'))
+    daily_cap        = models.PositiveIntegerField(default=10000)
+    total_budget     = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
+    total_spent      = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
+    total_clicks     = models.PositiveIntegerField(default=0)
+    today_clicks     = models.PositiveIntegerField(default=0)
+    dedup_window_sec = models.PositiveIntegerField(default=3600)
+    status           = models.CharField(max_length=20, default='active',
+        choices=[('active','Active'),('paused','Paused'),('completed','Completed')])
+
+    class Meta:
+        db_table     = 'cpc_campaign'
+        verbose_name = _('CPC Campaign')
+
+    def __str__(self):
+        return f'{self.title} — avg $0.{self.payout_us}'
+
+
+class CPIAppCampaign(TimestampedModel):
+    """CPI (Cost Per Install) app campaign।"""
+    advertiser        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='cpi_campaigns', null=True, blank=True)
+    app_name          = models.CharField(max_length=200, null=True, blank=True)
+    bundle_id         = models.CharField(max_length=200, null=True, blank=True)
+    platform          = models.CharField(max_length=10, choices=[('android','Android'),('ios','iOS'),('both','Both')], default='')
+
+    app_store_url     = models.URLField(null=True, blank=True)
+    payout_per_install= models.DecimalField(max_digits=8, decimal_places=4, null=True, blank=True)
+    mmp_provider      = models.CharField(max_length=20, default='appsflyer',
+        choices=[('appsflyer','AppsFlyer'),('adjust','Adjust'),('firebase','Firebase'),('branch','Branch'),('kochava','Kochava')])
+    mmp_app_id        = models.CharField(max_length=200, null=True, blank=True)
+    target_countries  = models.JSONField(default=list)
+    target_os_version = models.CharField(max_length=20, null=True, blank=True)
+    daily_cap         = models.PositiveIntegerField(default=1000)
+    total_budget      = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
+    total_installs    = models.PositiveIntegerField(default=0)
+    today_installs    = models.PositiveIntegerField(default=0)
+    total_spent       = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
+    status            = models.CharField(max_length=20, default='active',
+        choices=[('active','Active'),('paused','Paused'),('completed','Completed')])
+
+    class Meta:
+        db_table     = 'cpi_app_campaign'
+        verbose_name = _('CPI App Campaign')
+
+    def __str__(self):
+        return f'{self.app_name} [{self.platform}] — ${self.payout_per_install}/install'
+
+
+class QuizCampaign(TimestampedModel):
+    """Quiz/Survey campaign — Co-reg।"""
+    advertiser       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='quiz_campaigns', null=True, blank=True)
+    title            = models.CharField(max_length=200, null=True, blank=True)
+    quiz_type        = models.CharField(max_length=20, default='personality',
+        choices=[('personality','Personality'),('trivia','Trivia'),('survey','Survey'),('sweepstakes','Sweepstakes'),('iq','IQ Test')])
+    questions        = models.JSONField(default=list)
+    lead_form_fields = models.JSONField(default=list)
+    payout           = models.DecimalField(max_digits=8, decimal_places=4, null=True, blank=True)
+    target_countries = models.JSONField(default=list)
+    daily_cap        = models.PositiveIntegerField(default=2000)
+    total_completions= models.PositiveIntegerField(default=0)
+    today_completions= models.PositiveIntegerField(default=0)
+    total_spent      = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
+    status           = models.CharField(max_length=20, default='active',
+        choices=[('active','Active'),('paused','Paused'),('completed','Completed')])
+
+    class Meta:
+        db_table     = 'quiz_campaign'
+        verbose_name = _('Quiz Campaign')
+
+    def __str__(self):
+        return f'{self.title} [{self.quiz_type}] — ${self.payout}'
+
+
+class SmartLinkConfig(TimestampedModel):
+    """Publisher SmartLink configuration — DB persistent।"""
+    publisher     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='promotions_smartlinks', null=True, blank=True)
+    name          = models.CharField(max_length=100, null=True, blank=True)
+    link_hash     = models.CharField(max_length=20, unique=True, db_index=True, null=True, blank=True)
+    total_clicks  = models.PositiveIntegerField(default=0)
+    total_earnings= models.DecimalField(max_digits=12, decimal_places=4, default=Decimal('0'))
+    is_active     = models.BooleanField(default=True)
+
+    class Meta:
+        db_table     = 'smartlink_config'
+        verbose_name = _('SmartLink Config')
+
+    def __str__(self):
+        return f'{self.publisher.username} — {self.name}'
+
+
+class ContentLockModel(TimestampedModel):
+    """Content locker config — DB persistent।"""
+    publisher       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='content_locks', null=True, blank=True)
+    lock_type       = models.CharField(max_length=10, choices=[('link','Link'),('file','File'),('content','Content')])
+    lock_token      = models.CharField(max_length=40, unique=True, db_index=True, null=True, blank=True)
+    title           = models.CharField(max_length=200, null=True, blank=True)
+    description     = models.TextField(blank=True)
+    destination_url = models.URLField(null=True, blank=True)
+    file_url        = models.URLField(null=True, blank=True)
+    file_name       = models.CharField(max_length=200, null=True, blank=True)
+    theme           = models.CharField(max_length=20, default='dark', null=True, blank=True)
+    required_offers = models.PositiveSmallIntegerField(default=1)
+    total_views     = models.PositiveIntegerField(default=0)
+    total_unlocks   = models.PositiveIntegerField(default=0)
+    total_earnings  = models.DecimalField(max_digits=12, decimal_places=4, default=Decimal('0'))
+    is_active       = models.BooleanField(default=True)
+
+    class Meta:
+        db_table     = 'content_lock'
+        verbose_name = _('Content Lock')
+
+    def __str__(self):
+        return f'{self.publisher.username} — {self.lock_type}: {self.title}'
+
+
+class SubIDClick(TimestampedModel):
+    """SubID click tracking — DB persistent।"""
+    publisher   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subid_clicks', null=True, blank=True)
+    campaign    = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='subid_clicks', null=True, blank=True)
+    click_id    = models.CharField(max_length=40, unique=True, db_index=True, null=True, blank=True)
+    s1          = models.CharField(max_length=64, blank=True, db_index=True, null=True)
+    s2          = models.CharField(max_length=64, blank=True, db_index=True, null=True)
+    s3          = models.CharField(max_length=64, null=True, blank=True)
+    s4          = models.CharField(max_length=64, null=True, blank=True)
+    s5          = models.CharField(max_length=64, null=True, blank=True)
+    country     = models.CharField(max_length=2, null=True, blank=True)
+    device      = models.CharField(max_length=20, null=True, blank=True)
+    ip_hash     = models.CharField(max_length=64, null=True, blank=True)
+    is_converted= models.BooleanField(default=False, db_index=True)
+    payout      = models.DecimalField(max_digits=8, decimal_places=4, null=True, blank=True)
+    converted_at= models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table     = 'subid_click'
+        verbose_name = _('SubID Click')
+        indexes      = [models.Index(fields=['publisher', 'created_at'])]
+
+    def __str__(self):
+        return f'Click {self.click_id[:8]} — s1:{self.s1}'
+
+
+class PayoutBatch(TimestampedModel):
+    """Bulk payout batch — tracking all payouts।"""
+    class BatchStatus(models.TextChoices):
+        PENDING    = 'pending',    _('Pending')
+        PROCESSING = 'processing', _('Processing')
+        COMPLETED  = 'completed',  _('Completed')
+        FAILED     = 'failed',     _('Failed')
+        CANCELLED  = 'cancelled',  _('Cancelled')
+
+    batch_id       = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    publisher      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='payout_batches', null=True, blank=True)
+    amount         = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    method         = models.CharField(max_length=30,
+        choices=[('paypal','PayPal'),('payoneer','Payoneer'),('wire','Wire'),('ach','ACH'),
+                 ('usdt_trc20','USDT TRC20'),('usdt_erc20','USDT ERC20'),('usdt_bep20','USDT BEP20'),('btc','Bitcoin')])
+    method_details = models.JSONField(default=dict)
+    status         = BatchStatus.choices and models.CharField(max_length=20, default='pending', choices=BatchStatus.choices, null=True, blank=True)
+    fee            = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal('0'))
+    net_amount     = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
+    tx_hash        = models.CharField(max_length=200, null=True, blank=True)
+    processed_at   = models.DateTimeField(null=True, blank=True)
+    processed_by   = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                        on_delete=models.SET_NULL, related_name='processed_payouts')
+    notes          = models.TextField(blank=True)
+
+    class Meta:
+        db_table     = 'payout_batch'
+        verbose_name = _('Payout Batch')
+        ordering     = ['-created_at']
+
+    def __str__(self):
+        return f'Payout #{str(self.batch_id)[:8]} — {self.publisher.username} ${self.amount} [{self.method}]'
+
+
+class IPBlacklistModel(TimestampedModel):
+    """IP blacklist — persistent DB।"""
+    ip_address  = models.GenericIPAddressField(db_index=True)
+    cidr        = models.CharField(max_length=20, null=True, blank=True)
+    reason      = models.TextField(default='')
+    severity    = models.CharField(max_length=20, default='permanent',
+        choices=[('warn','Warn'),('temp_ban','Temp Ban'),('permanent','Permanent')])
+    expires_at  = models.DateTimeField(null=True, blank=True)
+    is_active   = models.BooleanField(default=True, db_index=True)
+    created_by  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    hit_count   = models.PositiveIntegerField(default=0)
+    last_hit    = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table     = 'ip_blacklist'
+        verbose_name = _('IP Blacklist')
+
+    def __str__(self):
+        return f'Blocked: {self.ip_address} [{self.severity}]'
+
+
+class TrackingDomain(TimestampedModel):
+    """Custom tracking domains for publishers।"""
+    publisher   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tracking_domains', null=True, blank=True)
+    domain      = models.CharField(max_length=200, unique=True, null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    ssl_enabled = models.BooleanField(default=False)
+    dns_target  = models.CharField(max_length=200, null=True, blank=True)
+    total_clicks= models.PositiveIntegerField(default=0)
+    is_active   = models.BooleanField(default=True)
+
+    class Meta:
+        db_table     = 'tracking_domain'
+        verbose_name = _('Tracking Domain')
+
+    def __str__(self):
+        return f'{self.domain} — {self.publisher.username}'
+
+
+class SystemConfig(models.Model):
+    """Global system configuration — key-value store।"""
+    key          = models.CharField(max_length=100, unique=True, db_index=True, null=True, blank=True)
+    value        = models.TextField(default='')
+    value_type   = models.CharField(max_length=20, default='string',
+        choices=[('string','String'),('integer','Integer'),('decimal','Decimal'),('boolean','Boolean'),('json','JSON')])
+    description  = models.TextField(blank=True)
+    is_public    = models.BooleanField(default=False)
+    updated_at   = models.DateTimeField(auto_now=True)
+    updated_by   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        db_table     = 'system_config'
+        verbose_name = _('System Config')
+
+    def __str__(self):
+        return f'{self.key} = {self.value[:50]}'
+
+    def get_typed_value(self):
+        if self.value_type == 'integer':  return int(self.value)
+        if self.value_type == 'decimal':  return Decimal(self.value)
+        if self.value_type == 'boolean':  return self.value.lower() in ('true','1','yes')
+        if self.value_type == 'json':
+            import json; return json.loads(self.value)
+        return self.value
