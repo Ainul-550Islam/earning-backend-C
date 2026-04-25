@@ -28,7 +28,7 @@ class AppApprovalRecord(TimeStampedModel):
         db_table = "publisher_tools_app_approval_records"
         verbose_name = _("App Approval Record")
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["app", "decision"])]
+        indexes = [models.Index(fields=["app", "decision"], name='idx_app_decision_1541')]
 
     def __str__(self):
         return f"Review: {self.app.name} — {self.decision}"

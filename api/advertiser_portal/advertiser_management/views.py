@@ -33,11 +33,14 @@ User = get_user_model()
 
 class AdvertiserViewSet(viewsets.ModelViewSet):
     """ViewSet for managing advertiser accounts."""
-    
-    queryset = Advertiser.objects.filter(is_deleted=False)
+
     serializer_class = AdvertiserSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
+
+    def get_queryset(self):
+        from ..database_models.advertiser_model import Advertiser as _Advertiser
+        return _Advertiser.objects.filter(is_deleted=False)
     filterset_fields = ['status', 'is_verified', 'account_type', 'industry']
     search_fields = ['company_name', 'contact_email', 'trade_name']
     ordering_fields = ['created_at', 'company_name', 'status']

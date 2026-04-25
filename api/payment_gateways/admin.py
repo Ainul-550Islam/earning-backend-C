@@ -72,7 +72,7 @@ class GatewayTransactionStatusFilter(admin.SimpleListFilter):
 
 class GatewayTransactionTypeFilter(admin.SimpleListFilter):
     title = 'GatewayTransaction Type'
-    parameter_name = 'GatewayTransaction_type'
+    parameter_name = 'transaction_type'
     
     def lookups(self, request, model_admin):
         return [
@@ -84,7 +84,7 @@ class GatewayTransactionTypeFilter(admin.SimpleListFilter):
     
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(GatewayTransaction_type=self.value())
+            return queryset.filter(transaction_type=self.value())
         return queryset
 
 
@@ -118,7 +118,7 @@ class PaymentGatewayAdmin(admin.ModelAdmin):
         'status_display',
         'fee_display',
         'is_test_mode_display',
-        'GatewayTransaction_fee_percentage_display',
+        'transaction_fee_percentage_display',
         'min_max_amount_display',
         'created_at_display',
         'actions_display'
@@ -141,7 +141,7 @@ class PaymentGatewayAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Settings', {
-            'fields': ('is_test_mode', 'GatewayTransaction_fee_percentage', 
+            'fields': ('is_test_mode', 'transaction_fee_percentage', 
                       'minimum_amount', 'maximum_amount')
         }),
         ('Capabilities', {
@@ -205,12 +205,12 @@ class PaymentGatewayAdmin(admin.ModelAdmin):
         )
     is_test_mode_display.short_description = 'Mode'
     
-    def GatewayTransaction_fee_percentage_display(self, obj):
+    def transaction_fee_percentage_display(self, obj):
         return format_html(
-            '<div class="text-center font-medium">{:.2f}%</div>',
-            obj.GatewayTransaction_fee_percentage
+            '<div class="text-center font-medium">{}%</div>',
+            obj.transaction_fee_percentage
         )
-    GatewayTransaction_fee_percentage_display.short_description = 'Fee %'
+    transaction_fee_percentage_display.short_description = 'Fee %'
     
     def min_max_amount_display(self, obj):
         return format_html(
@@ -262,7 +262,7 @@ class PaymentGatewayAdmin(admin.ModelAdmin):
     
     
     def fee_display(self, obj):
-        return format_html('<div class="text-right font-medium">{:.2f}%</div>', obj.GatewayTransaction_fee_percentage)
+        return format_html('<div class="text-right font-medium">{}%</div>', obj.transaction_fee_percentage)
     fee_display.short_description = 'Fee %'
  
 
@@ -431,7 +431,7 @@ class GatewayTransactionAdmin(admin.ModelAdmin):
     list_display = (
         'reference_id_display',
         'user_display',
-        'GatewayTransaction_type_display',
+        'transaction_type_display',
         'amount_display',
         'gateway_display',
         'status_display',
@@ -468,7 +468,7 @@ class GatewayTransactionAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('GatewayTransaction Information', {
-            'fields': ('reference_id', 'user', 'GatewayTransaction_type', 'gateway')
+            'fields': ('reference_id', 'user', 'transaction_type', 'gateway')
         }),
         ('Amount Details', {
             'fields': ('amount', 'fee', 'net_amount')
@@ -506,7 +506,7 @@ class GatewayTransactionAdmin(admin.ModelAdmin):
         return '-'
     user_display.short_description = 'User'
     
-    def GatewayTransaction_type_display(self, obj):
+    def transaction_type_display(self, obj):
         type_config = {
             'deposit': {'icon': '⬇️', 'color': 'bg-emerald-100 text-emerald-800'},
             'withdrawal': {'icon': '⬆️', 'color': 'bg-rose-100 text-rose-800'},
@@ -514,7 +514,7 @@ class GatewayTransactionAdmin(admin.ModelAdmin):
             'bonus': {'icon': '🎁', 'color': 'bg-purple-100 text-purple-800'},
         }
         
-        config = type_config.get(obj.GatewayTransaction_type, {'icon': '💳', 'color': 'bg-gray-100 text-gray-800'})
+        config = type_config.get(obj.transaction_type, {'icon': '💳', 'color': 'bg-gray-100 text-gray-800'})
         
         return format_html(
             '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {}">'
@@ -523,14 +523,14 @@ class GatewayTransactionAdmin(admin.ModelAdmin):
             '</span>',
             config['color'],
             config['icon'],
-            obj.get_GatewayTransaction_type_display()
+            obj.get_transaction_type_display()
         )
-    GatewayTransaction_type_display.short_description = 'Type'
+    transaction_type_display.short_description = 'Type'
     
     def amount_display(self, obj):
         return format_html(
-            '<div class="text-right font-medium">{:,.2f}</div>',
-            obj.amount
+            '<div class="text-right font-medium">{}</div>',
+            '{:,.2f}'.format(float(obj.amount or 0))
         )
     amount_display.short_description = 'Amount'
     
@@ -691,8 +691,8 @@ class PayoutRequestAdmin(admin.ModelAdmin):
     
     def amount_display(self, obj):
         return format_html(
-            '<div class="text-right font-medium">{:,.2f}</div>',
-            obj.amount
+            '<div class="text-right font-medium">{}</div>',
+            '{:,.2f}'.format(float(obj.amount or 0))
         )
     amount_display.short_description = 'Amount'
     
@@ -925,7 +925,7 @@ class CurrencyAdmin(admin.ModelAdmin):
     
     def exchange_rate_display(self, obj):
         return format_html(
-            '<div class="text-center font-medium">{:.4f}</div>',
+            '<div class="text-center font-medium">{}</div>',
             obj.exchange_rate
         )
     exchange_rate_display.short_description = 'Exchange Rate'
@@ -1075,3 +1075,27 @@ def _force_register_payment_gateways():
         print(f"[OK] payment_gateways registered {registered} models")
     except Exception as e:
         print(f"[WARN] payment_gateways: {e}")
+
+
+# ==========================================
+# Auto-registered missing models
+# ==========================================
+from .models import (
+    DepositCallback, DepositRefund, DepositRequest, DepositVerification,
+    GatewayCredential, GatewayFeeRule, GatewayHealthLog, GatewayLimit,
+    GatewayStatement, GatewayWebhookConfig, PaymentAnalytics,
+    ReconciliationBatch, ReconciliationMismatch, WithdrawalFailure,
+    WithdrawalGatewayCallback, WithdrawalGatewayRequest, WithdrawalReceipt
+)
+
+for _model in [
+    DepositCallback, DepositRefund, DepositRequest, DepositVerification,
+    GatewayCredential, GatewayFeeRule, GatewayHealthLog, GatewayLimit,
+    GatewayStatement, GatewayWebhookConfig, PaymentAnalytics,
+    ReconciliationBatch, ReconciliationMismatch, WithdrawalFailure,
+    WithdrawalGatewayCallback, WithdrawalGatewayRequest, WithdrawalReceipt
+]:
+    try:
+        admin.site.register(_model)
+    except admin.sites.AlreadyRegistered:
+        pass

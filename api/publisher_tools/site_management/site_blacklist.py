@@ -25,7 +25,7 @@ class SiteBlacklistEntry(TimeStampedModel):
         verbose_name = _('Site Blacklist Entry')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['site', 'entry_type', 'is_active']),
+            models.Index(fields=['site', 'entry_type', 'is_active'], name='idx_site_entry_type_is_act_7c8'),
         ]
 
     def __str__(self):

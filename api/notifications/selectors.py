@@ -45,7 +45,7 @@ def notification_list(
     admin_mode: bool = False,
 ):
     """Return a notification queryset filtered by the given parameters."""
-    from notifications.models import Notification
+    from api.notifications.models import Notification
 
     qs = Notification.objects.filter(is_deleted=is_deleted)
 
@@ -90,7 +90,7 @@ def notification_list(
 
 def notification_get(*, pk: int, user=None, allow_staff: bool = True):
     """Fetch a single Notification by pk."""
-    from notifications.models import Notification
+    from api.notifications.models import Notification
     qs = Notification.objects.filter(pk=pk, is_deleted=False)
     if user and not getattr(user, 'is_staff', False):
         qs = qs.filter(user=user)
@@ -99,7 +99,7 @@ def notification_get(*, pk: int, user=None, allow_staff: bool = True):
 
 def notification_unread_count(*, user) -> int:
     """Return unread notification count for a user."""
-    from notifications.models import Notification
+    from api.notifications.models import Notification
     from django.core.cache import cache
     cache_key = f'notif:count:{user.pk}'
     count = cache.get(cache_key)
@@ -113,7 +113,7 @@ def notification_unread_count(*, user) -> int:
 
 def notification_delivery_stats(*, user=None, days: int = 30) -> Dict:
     """Return delivery statistics for a user or the whole system."""
-    from notifications.models import Notification
+    from api.notifications.models import Notification
     cutoff = timezone.now() - timezone.timedelta(days=days)
     qs = Notification.objects.filter(created_at__gte=cutoff)
     if user:
@@ -143,7 +143,7 @@ def template_list(
     order_by: str = 'name',
 ):
     """Return a NotificationTemplate queryset."""
-    from notifications.models import NotificationTemplate
+    from api.notifications.models import NotificationTemplate
     qs = NotificationTemplate.objects.filter(is_active=is_active)
     if is_public is not None:
         qs = qs.filter(is_public=is_public)
@@ -160,7 +160,7 @@ def template_list(
 
 def template_get(*, pk: int = None, name: str = None, notification_type: str = None, channel: str = None):
     """Fetch a single NotificationTemplate."""
-    from notifications.models import NotificationTemplate
+    from api.notifications.models import NotificationTemplate
     qs = NotificationTemplate.objects.filter(is_active=True)
     if pk:
         qs = qs.filter(pk=pk)
@@ -179,7 +179,7 @@ def template_get(*, pk: int = None, name: str = None, notification_type: str = N
 
 def device_list(*, user=None, is_active: bool = True, device_type: str = ''):
     """Return active DeviceToken queryset."""
-    from notifications.models import DeviceToken
+    from api.notifications.models import DeviceToken
     qs = DeviceToken.objects.filter(is_active=is_active)
     if user:
         qs = qs.filter(user=user)
@@ -190,7 +190,7 @@ def device_list(*, user=None, is_active: bool = True, device_type: str = ''):
 
 def device_get_fcm_tokens(*, user_ids: List[int]) -> List[str]:
     """Return list of active FCM tokens for given user IDs."""
-    from notifications.models import DeviceToken
+    from api.notifications.models import DeviceToken
     return list(
         DeviceToken.objects.filter(
             user_id__in=user_ids,
@@ -203,7 +203,7 @@ def device_get_fcm_tokens(*, user_ids: List[int]) -> List[str]:
 
 def device_get_apns_tokens(*, user_ids: List[int]) -> List[str]:
     """Return list of active APNs tokens for given user IDs."""
-    from notifications.models import DeviceToken
+    from api.notifications.models import DeviceToken
     return list(
         DeviceToken.objects.filter(
             user_id__in=user_ids,
@@ -220,7 +220,7 @@ def device_get_apns_tokens(*, user_ids: List[int]) -> List[str]:
 
 def campaign_list(*, status: str = '', search: str = '', order_by: str = '-created_at'):
     """Return NotificationCampaign queryset."""
-    from notifications.models import NotificationCampaign
+    from api.notifications.models import NotificationCampaign
     qs = NotificationCampaign.objects.all()
     if status:
         qs = qs.filter(status=status)
@@ -231,13 +231,13 @@ def campaign_list(*, status: str = '', search: str = '', order_by: str = '-creat
 
 def campaign_get(*, pk: int):
     """Fetch a single NotificationCampaign."""
-    from notifications.models import NotificationCampaign
+    from api.notifications.models import NotificationCampaign
     return NotificationCampaign.objects.filter(pk=pk).first()
 
 
 def campaign_due() -> list:
     """Return campaigns that are scheduled and due to be sent."""
-    from notifications.models import NotificationCampaign
+    from api.notifications.models import NotificationCampaign
     return list(
         NotificationCampaign.objects.filter(
             status='scheduled',
@@ -253,7 +253,7 @@ def campaign_due() -> list:
 def insight_list(*, channel: str = '', date_from=None, date_to=None,
                   order_by: str = '-date'):
     """Return NotificationInsight queryset."""
-    from notifications.models.analytics import NotificationInsight
+    from api.notifications.models.analytics import NotificationInsight
     qs = NotificationInsight.objects.all()
     if channel:
         qs = qs.filter(channel=channel)
@@ -266,7 +266,7 @@ def insight_list(*, channel: str = '', date_from=None, date_to=None,
 
 def insight_totals(*, days: int = 30) -> Dict:
     """Return aggregated insight totals for the last N days."""
-    from notifications.models.analytics import NotificationInsight
+    from api.notifications.models.analytics import NotificationInsight
     cutoff = timezone.now().date() - timezone.timedelta(days=days)
     return NotificationInsight.objects.filter(date__gte=cutoff).aggregate(
         total_sent=Sum('sent'),
@@ -279,7 +279,7 @@ def insight_totals(*, days: int = 30) -> Dict:
 
 def delivery_rate_list(*, channel: str = '', days: int = 30):
     """Return DeliveryRate records for the last N days."""
-    from notifications.models.analytics import DeliveryRate
+    from api.notifications.models.analytics import DeliveryRate
     cutoff = timezone.now().date() - timezone.timedelta(days=days)
     qs = DeliveryRate.objects.filter(date__gte=cutoff)
     if channel:
@@ -293,14 +293,14 @@ def delivery_rate_list(*, channel: str = '', days: int = 30):
 
 def fatigue_get(*, user):
     """Get NotificationFatigue record for a user."""
-    from notifications.models.analytics import NotificationFatigue
+    from api.notifications.models.analytics import NotificationFatigue
     record, _ = NotificationFatigue.objects.get_or_create(user=user)
     return record
 
 
 def opt_out_list(*, user=None, channel: str = '', is_active: bool = True):
     """Return OptOutTracking queryset."""
-    from notifications.models.analytics import OptOutTracking
+    from api.notifications.models.analytics import OptOutTracking
     qs = OptOutTracking.objects.filter(is_active=is_active)
     if user:
         qs = qs.filter(user=user)
@@ -311,7 +311,7 @@ def opt_out_list(*, user=None, channel: str = '', is_active: bool = True):
 
 def opted_out_user_ids(*, channel: str) -> List[int]:
     """Return list of user IDs who opted out of a channel."""
-    from notifications.models.analytics import OptOutTracking
+    from api.notifications.models.analytics import OptOutTracking
     return list(
         OptOutTracking.objects.filter(channel=channel, is_active=True)
         .values_list('user_id', flat=True)
@@ -324,14 +324,14 @@ def opted_out_user_ids(*, channel: str) -> List[int]:
 
 def preference_get(*, user):
     """Get or create NotificationPreference for a user."""
-    from notifications.models import NotificationPreference
+    from api.notifications.models import NotificationPreference
     pref, _ = NotificationPreference.objects.get_or_create(user=user)
     return pref
 
 
 def preference_list():
     """Return all NotificationPreferences."""
-    from notifications.models import NotificationPreference
+    from api.notifications.models import NotificationPreference
     return NotificationPreference.objects.all().select_related('user')
 
 
@@ -342,7 +342,7 @@ def preference_list():
 def in_app_message_list(*, user, include_dismissed: bool = False,
                          include_expired: bool = False):
     """Return active in-app messages for a user."""
-    from notifications.models.channel import InAppMessage
+    from api.notifications.models.channel import InAppMessage
     qs = InAppMessage.objects.filter(user=user)
     if not include_dismissed:
         qs = qs.filter(is_dismissed=False)
@@ -355,7 +355,7 @@ def in_app_message_list(*, user, include_dismissed: bool = False,
 
 def in_app_message_unread_count(*, user) -> int:
     """Count unread, non-dismissed, non-expired in-app messages."""
-    from notifications.models.channel import InAppMessage
+    from api.notifications.models.channel import InAppMessage
     return InAppMessage.objects.filter(
         user=user,
         is_read=False,
@@ -371,7 +371,7 @@ def in_app_message_unread_count(*, user) -> int:
 
 def push_device_list(*, user=None, is_active: bool = True, device_type: str = ''):
     """Return PushDevice queryset."""
-    from notifications.models.channel import PushDevice
+    from api.notifications.models.channel import PushDevice
     qs = PushDevice.objects.filter(is_active=is_active)
     if user:
         qs = qs.filter(user=user)
@@ -386,7 +386,7 @@ def push_device_list(*, user=None, is_active: bool = True, device_type: str = ''
 
 def schedule_list_due():
     """Return notification schedules that are due to be sent."""
-    from notifications.models.schedule import NotificationSchedule
+    from api.notifications.models.schedule import NotificationSchedule
     return NotificationSchedule.objects.filter(
         status='pending',
         send_at__lte=timezone.now(),
@@ -395,7 +395,7 @@ def schedule_list_due():
 
 def schedule_list_overdue(tolerance_minutes: int = 30):
     """Return schedules that are overdue by more than tolerance_minutes."""
-    from notifications.models.schedule import NotificationSchedule
+    from api.notifications.models.schedule import NotificationSchedule
     cutoff = timezone.now() - timezone.timedelta(minutes=tolerance_minutes)
     return NotificationSchedule.objects.filter(
         status='pending',

@@ -145,7 +145,7 @@ class KYCSubmission(models.Model):
         db_table = "kyc_submissions"
         verbose_name = "KYC Submission"
         verbose_name_plural = "KYC Submissions"
-        indexes = [models.Index(fields=["user", "created_at"]), models.Index(fields=["user", "status"])]
+        indexes = [models.Index(fields=["user", "created_at"], name='idx_user_created_at_1023'), models.Index(fields=["user", "status"], name='idx_user_status_1024')]
 
     def __str__(self): return f"KYCSubmission(user={self.user_id}, status={self.status}, progress={self.verification_progress}%)"
 
@@ -255,7 +255,7 @@ class KYCBlacklist(models.Model):
         verbose_name = 'KYC Blacklist Entry'
         verbose_name_plural = 'KYC Blacklist'
         unique_together = [('type', 'value')]
-        indexes = [models.Index(fields=['type', 'value', 'is_active'])]
+        indexes = [models.Index(fields=['type', 'value', 'is_active'], name='idx_type_value_is_active_1025')]
 
     def __str__(self): return f"[{self.type.upper()}] {self.value}"
 
@@ -594,7 +594,7 @@ class KYCIPTracker(models.Model):
         db_table = 'kyc_ip_tracker'
         verbose_name = 'IP Tracker Entry'
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['ip_address', 'created_at'])]
+        indexes = [models.Index(fields=['ip_address', 'created_at'], name='idx_ip_address_created_at_1026')]
 
     def __str__(self): return f"IP[{self.ip_address}] {self.action} - {self.user}"
 
@@ -789,9 +789,9 @@ class KYCAuditTrail(models.Model):
         verbose_name_plural = 'Audit Trail'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['entity_type', 'entity_id']),
-            models.Index(fields=['actor', 'created_at']),
-            models.Index(fields=['tenant', 'created_at']),
+            models.Index(fields=['entity_type', 'entity_id'], name='idx_entity_type_entity_id_1027'),
+            models.Index(fields=['actor', 'created_at'], name='idx_actor_created_at_1028'),
+            models.Index(fields=['tenant', 'created_at'], name='idx_tenant_created_at_1029'),
         ]
 
     def __str__(self): return f"Audit[{self.entity_type}:{self.entity_id}] {self.action} by {self.actor}"

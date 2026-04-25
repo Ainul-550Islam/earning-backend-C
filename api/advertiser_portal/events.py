@@ -673,7 +673,7 @@ event_processor = EventProcessor(event_publisher, event_store)
 
 
 # Convenience functions
-def publish_event(event: Event, async: bool = False) -> bool:
+def publish_event(event: Event, is_async: bool = False) -> bool:
     """
     Publish an event.
     

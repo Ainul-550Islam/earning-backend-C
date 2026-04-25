@@ -90,8 +90,8 @@ class PublisherPerformanceSnapshot(TimeStampedModel):
         unique_together = [['publisher', 'year', 'month']]
         ordering = ['-year', '-month']
         indexes = [
-            models.Index(fields=['publisher', 'year', 'month']),
-            models.Index(fields=['rank_by_revenue']),
+            models.Index(fields=['publisher', 'year', 'month'], name='idx_publisher_year_month_1627'),
+            models.Index(fields=['rank_by_revenue'], name='idx_rank_by_revenue_1628'),
         ]
 
     def __str__(self):

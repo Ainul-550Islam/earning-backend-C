@@ -16,7 +16,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -138,11 +141,11 @@ class Industry(AdvertiserPortalBaseModel, StatusModel, AuditModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_industries'
         indexes = [
-            models.Index(fields=['slug']),
-            models.Index(fields=['code']),
-            models.Index(fields=['is_active', 'sort_order']),
-            models.Index(fields=['parent']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['slug'], name='idx_slug_292'),
+            models.Index(fields=['code'], name='idx_code_293'),
+            models.Index(fields=['is_active', 'sort_order'], name='idx_is_active_sort_order_294'),
+            models.Index(fields=['parent'], name='idx_parent_295'),
+            models.Index(fields=['created_at'], name='idx_created_at_296'),
         ]
         ordering = ['sort_order', 'name']
         verbose_name_plural = "Industries"
@@ -310,10 +313,10 @@ class SubIndustry(AdvertiserPortalBaseModel, StatusModel, AuditModel):
         db_table = 'advertiser_portal_sub_industries'
         unique_together = [['industry', 'slug'], ['industry', 'code']]
         indexes = [
-            models.Index(fields=['industry', 'is_active', 'sort_order']),
-            models.Index(fields=['slug']),
-            models.Index(fields=['code']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['industry', 'is_active', 'sort_order'], name='idx_industry_is_active_sor_cde'),
+            models.Index(fields=['slug'], name='idx_slug_298'),
+            models.Index(fields=['code'], name='idx_code_299'),
+            models.Index(fields=['created_at'], name='idx_created_at_300'),
         ]
         ordering = ['industry', 'sort_order', 'name']
         verbose_name_plural = "Sub-industries"
@@ -462,10 +465,10 @@ class IndustryTrend(AdvertiserPortalBaseModel, AuditModel):
         db_table = 'advertiser_portal_industry_trends'
         unique_together = [['industry', 'sub_industry', 'trend_date']]
         indexes = [
-            models.Index(fields=['industry', 'trend_date']),
-            models.Index(fields=['sub_industry', 'trend_date']),
-            models.Index(fields=['trend_date']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['industry', 'trend_date'], name='idx_industry_trend_date_301'),
+            models.Index(fields=['sub_industry', 'trend_date'], name='idx_sub_industry_trend_dat_173'),
+            models.Index(fields=['trend_date'], name='idx_trend_date_303'),
+            models.Index(fields=['created_at'], name='idx_created_at_304'),
         ]
         ordering = ['-trend_date']
     

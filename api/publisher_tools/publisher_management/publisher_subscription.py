@@ -162,8 +162,8 @@ class SubscriptionPlan(TimeStampedModel):
         verbose_name_plural = _('Subscription Plans')
         ordering = ['sort_order', 'monthly_price']
         indexes = [
-            models.Index(fields=['plan_type']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['plan_type'], name='idx_plan_type_1636'),
+            models.Index(fields=['is_active'], name='idx_is_active_1637'),
         ]
 
     def __str__(self):
@@ -329,9 +329,9 @@ class PublisherSubscription(TimeStampedModel):
         verbose_name_plural = _('Publisher Subscriptions')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher']),
-            models.Index(fields=['status']),
-            models.Index(fields=['current_period_end']),
+            models.Index(fields=['publisher'], name='idx_publisher_1638'),
+            models.Index(fields=['status'], name='idx_status_1639'),
+            models.Index(fields=['current_period_end'], name='idx_current_period_end_1640'),
         ]
 
     def __str__(self):

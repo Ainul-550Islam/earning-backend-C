@@ -270,10 +270,10 @@ class Incident(models.Model):
     class Meta:
         ordering = ['-detected_at']
         indexes = [
-            models.Index(fields=['status', 'detected_at']),
-            models.Index(fields=['severity', 'detected_at']),
-            models.Index(fields=['assigned_to', 'status']),
-            models.Index(fields=['detected_at']),
+            models.Index(fields=['status', 'detected_at'], name='idx_status_detected_at_739'),
+            models.Index(fields=['severity', 'detected_at'], name='idx_severity_detected_at_740'),
+            models.Index(fields=['assigned_to', 'status'], name='idx_assigned_to_status_741'),
+            models.Index(fields=['detected_at'], name='idx_detected_at_742'),
         ]
         db_table_comment = "Incident management for major alert events"
         verbose_name = "Incident"
@@ -380,8 +380,8 @@ class IncidentTimeline(models.Model):
     class Meta:
         ordering = ['timestamp']
         indexes = [
-            models.Index(fields=['incident', 'timestamp']),
-            models.Index(fields=['event_type', 'timestamp']),
+            models.Index(fields=['incident', 'timestamp'], name='idx_incident_timestamp_743'),
+            models.Index(fields=['event_type', 'timestamp'], name='idx_event_type_timestamp_744'),
         ]
         db_table_comment = "Timeline events for incidents"
         verbose_name = "Incident Timeline"
@@ -506,9 +506,9 @@ class IncidentResponder(models.Model):
         ordering = ['role', 'assigned_at']
         unique_together = ['incident', 'user']
         indexes = [
-            models.Index(fields=['incident', 'role']),
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['status', 'assigned_at']),
+            models.Index(fields=['incident', 'role'], name='idx_incident_role_745'),
+            models.Index(fields=['user', 'status'], name='idx_user_status_746'),
+            models.Index(fields=['status', 'assigned_at'], name='idx_status_assigned_at_747'),
         ]
         db_table_comment = "People responding to incidents"
         verbose_name = "Incident Responder"
@@ -649,9 +649,9 @@ class IncidentPostMortem(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['incident']),
-            models.Index(fields=['status', 'created_at']),
-            models.Index(fields=['published_at']),
+            models.Index(fields=['incident'], name='idx_incident_748'),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_749'),
+            models.Index(fields=['published_at'], name='idx_published_at_750'),
         ]
         db_table_comment = "Post-mortem analysis for incidents"
         verbose_name = "Incident Post-Mortem"
@@ -696,7 +696,7 @@ class OnCallSchedule(models.Model):
     start_time = models.TimeField(default='09:00:00')
     end_time = models.TimeField(default='17:00:00')
     days_of_week = models.JSONField(
-        default=lambda: [0, 1, 2, 3, 4],  # Monday to Friday
+        default=list,  # Monday to Friday
         help_text="Days of week (0=Monday)"
     )
     
@@ -725,7 +725,7 @@ class OnCallSchedule(models.Model):
     
     # Notification preferences
     notification_channels = models.JSONField(
-        default=lambda: ['email', 'sms'],
+        default=list,
         help_text="Preferred notification channels"
     )
     
@@ -858,8 +858,8 @@ class OnCallSchedule(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['schedule_type', 'is_active']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['schedule_type', 'is_active'], name='idx_schedule_type_is_activ_172'),
+            models.Index(fields=['is_active'], name='idx_is_active_752'),
         ]
         db_table_comment = "On-call schedule management"
         verbose_name = "On-Call Schedule"

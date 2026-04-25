@@ -150,7 +150,7 @@ class NotificationDispatcher:
         Push: send to all active push devices for the user.
         Chooses FCM (Android/Web) or APNs (iOS) per device.
         """
-        from notifications.models import DeviceToken
+        from api.notifications.models import DeviceToken
 
         results = []
         any_success = False
@@ -273,7 +273,7 @@ class NotificationDispatcher:
 
     def _dispatch_browser(self, notification) -> Dict:
         """Browser push via WebPushProvider."""
-        from notifications.models import DeviceToken
+        from api.notifications.models import DeviceToken
 
         devices = DeviceToken.objects.filter(
             user=notification.user,
@@ -323,7 +323,7 @@ class NotificationDispatcher:
     def _dispatch_telegram(self, notification) -> Dict:
         """Telegram: delegate to existing NotificationService._send_telegram logic."""
         try:
-            from notifications.services import notification_service
+            from api.notifications._services_core import notification_service
             result = notification_service._send_telegram(notification)
             return {
                 'success': result.get('success', False),
@@ -496,7 +496,7 @@ class NotificationDispatcher:
 
     def _create_push_log(self, notification, device, result: Dict):
         try:
-            from notifications.models.channel import PushDeliveryLog
+            from api.notifications.models.channel import PushDeliveryLog
             log = PushDeliveryLog.objects.create(
                 device=device,
                 notification=notification,
@@ -511,7 +511,7 @@ class NotificationDispatcher:
 
     def _create_email_log(self, notification, recipient: str, result: Dict):
         try:
-            from notifications.models.channel import EmailDeliveryLog
+            from api.notifications.models.channel import EmailDeliveryLog
             EmailDeliveryLog.objects.create(
                 notification=notification,
                 recipient=recipient,
@@ -525,7 +525,7 @@ class NotificationDispatcher:
 
     def _create_sms_log(self, notification, phone: str, result: Dict):
         try:
-            from notifications.models.channel import SMSDeliveryLog
+            from api.notifications.models.channel import SMSDeliveryLog
             SMSDeliveryLog.objects.create(
                 notification=notification,
                 phone=phone,
@@ -540,7 +540,7 @@ class NotificationDispatcher:
     def _create_in_app_message(self, notification):
         """Create an InAppMessage record from the notification."""
         try:
-            from notifications.models.channel import InAppMessage
+            from api.notifications.models.channel import InAppMessage
             InAppMessage.objects.create(
                 user=notification.user,
                 notification=notification,
@@ -570,7 +570,7 @@ class NotificationDispatcher:
     def _build_email_html(self, notification) -> str:
         """Build HTML email content. Delegates to existing service if available."""
         try:
-            from notifications.services import notification_service
+            from api.notifications._services_core import notification_service
             return notification_service._build_email_content(notification)
         except Exception:
             return f'<h2>{notification.title}</h2><p>{notification.message}</p>'

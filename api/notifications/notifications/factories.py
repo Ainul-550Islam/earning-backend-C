@@ -9,7 +9,7 @@ from django.utils import timezone
 
 class NotificationFactory(factory.django.DjangoModelFactory):
     class Meta:
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         model = Notification
 
     user = factory.SubFactory('users.factories.UserFactory')
@@ -47,7 +47,7 @@ class UrgentNotificationFactory(NotificationFactory):
 
 class NotificationTemplateFactory(factory.django.DjangoModelFactory):
     class Meta:
-        from notifications.models import NotificationTemplate
+        from api.notifications.models import NotificationTemplate
         model = NotificationTemplate
 
     name = factory.Sequence(lambda n: f'template_{n}')
@@ -62,7 +62,7 @@ class NotificationTemplateFactory(factory.django.DjangoModelFactory):
 
 class DeviceTokenFactory(factory.django.DjangoModelFactory):
     class Meta:
-        from notifications.models import DeviceToken
+        from api.notifications.models import DeviceToken
         model = DeviceToken
 
     user = factory.SubFactory('users.factories.UserFactory')
@@ -74,7 +74,7 @@ class DeviceTokenFactory(factory.django.DjangoModelFactory):
 
 class InAppMessageFactory(factory.django.DjangoModelFactory):
     class Meta:
-        from notifications.models.channel import InAppMessage
+        from api.notifications.models.channel import InAppMessage
         model = InAppMessage
 
     user = factory.SubFactory('users.factories.UserFactory')

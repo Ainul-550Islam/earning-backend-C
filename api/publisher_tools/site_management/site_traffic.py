@@ -27,8 +27,8 @@ class SiteTrafficSnapshot(TimeStampedModel):
         unique_together = [['site', 'snapshot_hour']]
         ordering = ['-snapshot_hour']
         indexes = [
-            models.Index(fields=['site', 'snapshot_hour']),
-            models.Index(fields=['is_anomaly']),
+            models.Index(fields=['site', 'snapshot_hour'], name='idx_site_snapshot_hour_1652'),
+            models.Index(fields=['is_anomaly'], name='idx_is_anomaly_1653'),
         ]
 
     def __str__(self):

@@ -36,8 +36,8 @@ class LocalizedContent(models.Model):
         verbose_name = _("Localized Content")
         verbose_name_plural = _("Localized Contents")
         indexes = [
-            models.Index(fields=['content_type', 'object_id']),
-            models.Index(fields=['language', 'is_approved']),
+            models.Index(fields=['content_type', 'object_id'], name='idx_content_type_object_id_d48'),
+            models.Index(fields=['language', 'is_approved'], name='idx_language_is_approved_1064'),
         ]
 
     def __str__(self):
@@ -79,8 +79,8 @@ class LocalizedImage(models.Model):
         verbose_name = _("Localized Image")
         verbose_name_plural = _("Localized Images")
         indexes = [
-            models.Index(fields=['content_type', 'object_id']),
-            models.Index(fields=['language']),
+            models.Index(fields=['content_type', 'object_id'], name='idx_content_type_object_id_ba2'),
+            models.Index(fields=['language'], name='idx_language_1066'),
         ]
 
     def __str__(self):
@@ -115,7 +115,7 @@ class LocalizedSEO(models.Model):
         unique_together = ['content_type', 'object_id', 'language']
         verbose_name = _("Localized SEO")
         verbose_name_plural = _("Localized SEO")
-        indexes = [models.Index(fields=['content_type', 'object_id'])]
+        indexes = [models.Index(fields=['content_type', 'object_id'], name='idx_content_type_object_id_c6d')]
 
     def __str__(self):
         lang = getattr(self.language, 'code', '?')
@@ -195,8 +195,8 @@ class TranslationRequest(models.Model):
         verbose_name = _("Translation Request")
         verbose_name_plural = _("Translation Requests")
         indexes = [
-            models.Index(fields=['status', 'priority']),
-            models.Index(fields=['due_date']),
+            models.Index(fields=['status', 'priority'], name='idx_status_priority_1068'),
+            models.Index(fields=['due_date'], name='idx_due_date_1069'),
         ]
 
     def __str__(self):

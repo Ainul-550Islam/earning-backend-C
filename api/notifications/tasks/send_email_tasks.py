@@ -20,8 +20,8 @@ logger = get_task_logger(__name__)
 )
 def send_email_batch_task(self, notification_ids: List[int]):
     """Send email for each notification in the batch."""
-    from notifications.models import Notification
-    from notifications.services.NotificationDispatcher import notification_dispatcher
+    from api.notifications.models import Notification
+    from api.notifications.services.NotificationDispatcher import notification_dispatcher
 
     success_count = 0
     failure_count = 0
@@ -64,7 +64,7 @@ def send_bulk_email_task(
     Send a bulk email to multiple recipients via SendGrid personalisations.
     recipients: list of {'email': str, 'name': str, 'substitutions': dict}
     """
-    from notifications.services.providers import sendgrid_provider
+    from api.notifications.services.providers import sendgrid_provider
 
     try:
         result = sendgrid_provider.send_bulk(
@@ -93,7 +93,7 @@ def send_bulk_email_task(
 )
 def process_sendgrid_webhook_task(self, events: List[dict]):
     """Process a list of SendGrid webhook events."""
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     processed = 0
     for event in events:

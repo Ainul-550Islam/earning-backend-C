@@ -21,14 +21,14 @@ try:
 
     class NotificationType(DjangoObjectType):
         class Meta:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             model = Notification
             fields = ('id','title','message','notification_type','channel',
                       'priority','is_read','is_sent','created_at','read_at')
 
     class NotificationTemplateType(DjangoObjectType):
         class Meta:
-            from notifications.models import NotificationTemplate
+            from api.notifications.models import NotificationTemplate
             model = NotificationTemplate
             fields = ('id','name','title_en','title_bn','message_en','message_bn',
                       'notification_type','channel','is_active')
@@ -45,7 +45,7 @@ try:
         templates = graphene.List(NotificationTemplateType)
 
         def resolve_notifications(self, info, is_read=None, channel=None, limit=20):
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             user = info.context.user
             if not user.is_authenticated:
                 return []
@@ -57,21 +57,21 @@ try:
             return qs.order_by('-created_at')[:limit]
 
         def resolve_notification(self, info, id):
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             user = info.context.user
             if not user.is_authenticated:
                 return None
             return Notification.objects.filter(pk=id, user=user, is_deleted=False).first()
 
         def resolve_unread_count(self, info):
-            from notifications.selectors import notification_unread_count
+            from api.notifications.selectors import notification_unread_count
             user = info.context.user
             if not user.is_authenticated:
                 return 0
             return notification_unread_count(user=user)
 
         def resolve_templates(self, info):
-            from notifications.models import NotificationTemplate
+            from api.notifications.models import NotificationTemplate
             return NotificationTemplate.objects.filter(is_active=True, is_public=True)
 
     class MarkNotificationRead(graphene.Mutation):
@@ -82,7 +82,7 @@ try:
         notification = graphene.Field(NotificationType)
 
         def mutate(self, info, notification_id):
-            from notifications.use_cases import MarkNotificationReadUseCase
+            from api.notifications.use_cases import MarkNotificationReadUseCase
             user = info.context.user
             result = MarkNotificationReadUseCase().execute(user=user, notification_id=int(notification_id))
             return MarkNotificationRead(success=result.success)

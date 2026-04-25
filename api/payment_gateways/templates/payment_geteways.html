@@ -1,0 +1,507 @@
+{% extends "admin/base_site.html" %}
+{% load static i18n unfold %}
+
+{% block title %}Payment Gateways Dashboard | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link href="{% static 'unfold/css/unfold.css' %}" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+<style>
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .dashboard-card {
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        transition: transform 0.2s;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .card-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .card-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0.5rem 0;
+    }
+    
+    .card-trend {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    
+    .card-trend.positive {
+        color: #10b981;
+    }
+    
+    .card-trend.negative {
+        color: #ef4444;
+    }
+    
+    .chart-container {
+        height: 300px;
+        position: relative;
+    }
+    
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 0.375rem;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .status-active { background: #d1fae5; color: #065f46; }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-failed { background: #fee2e2; color: #991b1b; }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .filter-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .filter-btn:hover {
+        background: #f9fafb;
+    }
+    
+    .filter-btn.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Revenue Summary Card -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">💰 Revenue Summary</h3>
+            <span class="status-badge status-active">Live</span>
+        </div>
+        <div class="card-value">${{ total_revenue|floatformat:2 }}</div>
+        <div class="card-trend positive">+12.5% from last month</div>
+        <div class="stat-grid">
+            <div class="stat-item">
+                <div class="stat-label">Today</div>
+                <div class="stat-value">${{ today_revenue|floatformat:2 }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">This Week</div>
+                <div class="stat-value">${{ week_revenue|floatformat:2 }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">This Month</div>
+                <div class="stat-value">${{ month_revenue|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Statistics -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">📊 Transactions</h3>
+        </div>
+        <div class="card-value">{{ total_transactions }}</div>
+        <div class="card-trend positive">+8.3% from last week</div>
+        <div class="stat-grid">
+            <div class="stat-item">
+                <div class="stat-label">Success Rate</div>
+                <div class="stat-value">{{ success_rate }}%</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Pending</div>
+                <div class="stat-value">{{ pending_transactions }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Failed</div>
+                <div class="stat-value">{{ failed_transactions }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Gateways -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">🌐 Active Gateways</h3>
+        </div>
+        <div class="card-value">{{ active_gateways }}</div>
+        <div class="card-trend">Total: {{ total_gateways }}</div>
+        <div style="margin-top: 1rem;">
+            {% for gateway in top_gateways %}
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding: 0.5rem; background: #f9fafb; border-radius: 0.375rem;">
+                <span>{{ gateway.name }}</span>
+                <span style="font-weight: 600;">${{ gateway.total_amount|floatformat:2 }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Payout Requests -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">💸 Payout Requests</h3>
+        </div>
+        <div class="card-value">{{ total_payouts }}</div>
+        <div class="card-trend negative">-2.1% from last month</div>
+        <div class="stat-grid">
+            <div class="stat-item">
+                <div class="stat-label">Pending</div>
+                <div class="stat-value">{{ pending_payouts }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Processing</div>
+                <div class="stat-value">{{ processing_payouts }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Completed</div>
+                <div class="stat-value">{{ completed_payouts }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="dashboard-container" style="grid-template-columns: 1fr;">
+    <!-- Revenue Chart -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">📈 Revenue Trends</h3>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="updateChart('revenue', '7d')">7D</button>
+                <button class="filter-btn" onclick="updateChart('revenue', '30d')">30D</button>
+                <button class="filter-btn" onclick="updateChart('revenue', '3m')">3M</button>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Transaction Distribution -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">🎯 Transaction Distribution</h3>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="updateChart('distribution', '7d')">7D</button>
+                <button class="filter-btn" onclick="updateChart('distribution', '30d')">30D</button>
+                <button class="filter-btn" onclick="updateChart('distribution', '3m')">3M</button>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="distributionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Gateway Performance -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">⚡ Gateway Performance</h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="performanceChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions Table -->
+<div class="dashboard-card">
+    <div class="card-header">
+        <h3 class="card-title">🕒 Recent Transactions</h3>
+        <a href="{% url 'admin:payment_getways_transaction_changelist' %}" class="button">View All</a>
+    </div>
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 2px solid #e5e7eb;">
+                <th style="text-align: left; padding: 0.75rem;">ID</th>
+                <th style="text-align: left; padding: 0.75rem;">User</th>
+                <th style="text-align: left; padding: 0.75rem;">Amount</th>
+                <th style="text-align: left; padding: 0.75rem;">Gateway</th>
+                <th style="text-align: left; padding: 0.75rem;">Status</th>
+                <th style="text-align: left; padding: 0.75rem;">Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for transaction in recent_transactions %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 0.75rem;">{{ transaction.transaction_id|truncatechars:12 }}</td>
+                <td style="padding: 0.75rem;">{{ transaction.user.username }}</td>
+                <td style="padding: 0.75rem;">${{ transaction.amount|floatformat:2 }}</td>
+                <td style="padding: 0.75rem;">{{ transaction.gateway.name|default:"-" }}</td>
+                <td style="padding: 0.75rem;">
+                    <span class="status-badge 
+                        {% if transaction.status == 'completed' %}status-active
+                        {% elif transaction.status == 'pending' %}status-pending
+                        {% else %}status-failed{% endif %}">
+                        {{ transaction.get_status_display }}
+                    </span>
+                </td>
+                <td style="padding: 0.75rem;">{{ transaction.created_at|timesince }} ago</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="padding: 1rem; text-align: center; color: #6b7280;">
+                    No recent transactions
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Quick Stats -->
+<div class="dashboard-container">
+    <div class="dashboard-card">
+        <h3 class="card-title">🚀 Quick Stats</h3>
+        <div style="margin-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span>Avg Transaction Value:</span>
+                <strong>${{ avg_transaction_value|floatformat:2 }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span>Peak Hour:</span>
+                <strong>{{ peak_hour }}:00</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span>Top Currency:</span>
+                <strong>{{ top_currency }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span>Fraud Rate:</span>
+                <strong>{{ fraud_rate }}%</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        <h3 class="card-title">🔔 Recent Activity</h3>
+        <div style="margin-top: 1rem; max-height: 200px; overflow-y: auto;">
+            {% for activity in recent_activity %}
+            <div style="padding: 0.5rem; border-left: 3px solid #3b82f6; margin-bottom: 0.5rem; background: #f9fafb;">
+                <div style="font-size: 0.875rem;">{{ activity.message }}</div>
+                <div style="font-size: 0.75rem; color: #6b7280;">{{ activity.timestamp|timesince }} ago</div>
+            </div>
+            {% empty %}
+            <div style="padding: 1rem; text-align: center; color: #6b7280;">
+                No recent activity
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Initialize charts
+let revenueChart, distributionChart, performanceChart;
+
+function initCharts() {
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    revenueChart = new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Revenue',
+                data: [1200, 1900, 3000, 5000, 2000, 3000],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Payout',
+                data: [800, 1200, 2000, 3000, 1500, 2500],
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Distribution Chart
+    const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+    distributionChart = new Chart(distributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Completed', 'Pending', 'Failed', 'Refunded'],
+            datasets: [{
+                data: [65, 15, 10, 10],
+                backgroundColor: [
+                    '#10b981',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#8b5cf6'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+
+    // Performance Chart
+    const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+    performanceChart = new Chart(performanceCtx, {
+        type: 'bar',
+        data: {
+            labels: ['bKash', 'Nagad', 'Rocket', 'Stripe', 'PayPal'],
+            datasets: [{
+                label: 'Success Rate (%)',
+                data: [98, 97, 96, 99, 95],
+                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                borderColor: '#3b82f6',
+                borderWidth: 1
+            }, {
+                label: 'Avg Processing Time (min)',
+                data: [2, 3, 4, 1, 5],
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                borderColor: '#10b981',
+                borderWidth: 1,
+                type: 'line',
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Success Rate (%)'
+                    }
+                },
+                y1: {
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Processing Time (min)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update chart function
+function updateChart(chartType, period) {
+    const buttons = document.querySelectorAll(`.filter-btn`);
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Here you would fetch new data from the server
+    // For now, we'll just simulate with random data
+    if (chartType === 'revenue') {
+        const newData = Array.from({length: 6}, () => Math.floor(Math.random() * 5000));
+        revenueChart.data.datasets[0].data = newData;
+        revenueChart.update();
+    }
+}
+
+// Initialize charts on page load
+document.addEventListener('DOMContentLoaded', initCharts);
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    // Add auto-refresh logic here
+    console.log('Refreshing dashboard data...');
+}, 30000);
+</script>
+{% endblock %}

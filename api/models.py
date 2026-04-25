@@ -250,10 +250,10 @@ class UserDevice(models.Model):
         ordering = ['-last_used']
         unique_together = ['user', 'device_id']
         indexes = [
-            models.Index(fields=['device_id']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['fraud_score']),
-            models.Index(fields=['is_vpn_detected']),
+            models.Index(fields=['device_id'], name='idx_device_id_001'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_002'),
+            models.Index(fields=['fraud_score'], name='idx_fraud_score_003'),
+            models.Index(fields=['is_vpn_detected'], name='idx_is_vpn_detected_004'),
         ]
 
     def __str__(self):
@@ -346,8 +346,8 @@ class DeviceLoginHistory(models.Model):
         verbose_name_plural = _('Device Login History')
         ordering = ['-login_time']
         indexes = [
-            models.Index(fields=['device', 'login_time']),
-            models.Index(fields=['is_successful']),
+            models.Index(fields=['device', 'login_time'], name='idx_device_login_time_005'),
+            models.Index(fields=['is_successful'], name='idx_is_successful_006'),
         ]
 
     def __str__(self):
@@ -410,8 +410,8 @@ class ReferralLevel(models.Model):
         verbose_name_plural = _('Referral Levels')
         ordering = ['level_number']
         indexes = [
-            models.Index(fields=['level_number']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['level_number'], name='idx_level_number_007'),
+            models.Index(fields=['is_active'], name='idx_is_active_008'),
         ]
 
     def __str__(self):
@@ -507,8 +507,8 @@ class UserReferralNetwork(models.Model):
         verbose_name = _('User Referral Network')
         verbose_name_plural = _('User Referral Networks')
         indexes = [
-            models.Index(fields=['total_referrals']),
-            models.Index(fields=['total_commission_earned']),
+            models.Index(fields=['total_referrals'], name='idx_total_referrals_009'),
+            models.Index(fields=['total_commission_earned'], name='idx_total_commission_earne_b69'),
         ]
 
     def __str__(self):
@@ -626,9 +626,9 @@ class ReferralCommission(models.Model):
         verbose_name_plural = _('Referral Commissions')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['referrer', 'level']),
-            models.Index(fields=['is_paid']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['referrer', 'level'], name='idx_referrer_level_011'),
+            models.Index(fields=['is_paid'], name='idx_is_paid_012'),
+            models.Index(fields=['created_at'], name='idx_created_at_013'),
         ]
 
     def __str__(self):
@@ -730,8 +730,8 @@ class UserStreak(models.Model):
         verbose_name = _('User Streak')
         verbose_name_plural = _('User Streaks')
         indexes = [
-            models.Index(fields=['current_streak']),
-            models.Index(fields=['last_login_date']),
+            models.Index(fields=['current_streak'], name='idx_current_streak_014'),
+            models.Index(fields=['last_login_date'], name='idx_last_login_date_015'),
         ]
 
     def __str__(self):
@@ -888,8 +888,8 @@ class StreakReward(models.Model):
         verbose_name_plural = _('Streak Rewards')
         ordering = ['-awarded_at']
         indexes = [
-            models.Index(fields=['user', 'awarded_at']),
-            models.Index(fields=['reward_type']),
+            models.Index(fields=['user', 'awarded_at'], name='idx_user_awarded_at_016'),
+            models.Index(fields=['reward_type'], name='idx_reward_type_017'),
         ]
 
     def __str__(self):
@@ -1003,8 +1003,8 @@ class OfferwallNetwork(models.Model):
         verbose_name_plural = _('Offerwall Networks')
         ordering = ['name']
         indexes = [
-            models.Index(fields=['network_code']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['network_code'], name='idx_network_code_018'),
+            models.Index(fields=['is_active'], name='idx_is_active_019'),
         ]
 
     def __str__(self):
@@ -1203,11 +1203,11 @@ class OfferwallOffer(models.Model):
         verbose_name_plural = _('Offerwall Offers')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['offer_id']),
-            models.Index(fields=['network', 'status']),
-            models.Index(fields=['offer_type']),
-            models.Index(fields=['is_featured']),
-            models.Index(fields=['expiry_date']),
+            models.Index(fields=['offer_id'], name='idx_offer_id_020'),
+            models.Index(fields=['network', 'status'], name='idx_network_status_021'),
+            models.Index(fields=['offer_type'], name='idx_offer_type_022'),
+            models.Index(fields=['is_featured'], name='idx_is_featured_023'),
+            models.Index(fields=['expiry_date'], name='idx_expiry_date_024'),
         ]
 
     def __str__(self):
@@ -1372,11 +1372,11 @@ class OfferwallLog(models.Model):
         verbose_name_plural = _('Offerwall Logs')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['transaction_id']),
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['status', 'created_at']),
-            models.Index(fields=['offer', 'status']),
-            models.Index(fields=['fraud_score']),
+            models.Index(fields=['transaction_id'], name='idx_transaction_id_025'),
+            models.Index(fields=['user', 'status'], name='idx_user_status_026'),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_027'),
+            models.Index(fields=['offer', 'status'], name='idx_offer_status_028'),
+            models.Index(fields=['fraud_score'], name='idx_fraud_score_029'),
         ]
 
     def __str__(self):
@@ -1571,10 +1571,10 @@ class OfferwallLog(models.Model):
 #         verbose_name_plural = _('Notifications')
 #         ordering = ['-created_at']
 #         indexes = [
-#             models.Index(fields=['user', 'is_read']),
-#             models.Index(fields=['notification_type']),
-#             models.Index(fields=['is_sent']),
-#             models.Index(fields=['created_at']),
+#             models.Index(fields=['user', 'is_read'], name='idx_user_is_read_030'),
+#             models.Index(fields=['notification_type'], name='idx_notification_type_031'),
+#             models.Index(fields=['is_sent'], name='idx_is_sent_032'),
+#             models.Index(fields=['created_at'], name='idx_created_at_033'),
 #         ]
 
 #     def __str__(self):
@@ -1674,8 +1674,8 @@ class NotificationTemplate(models.Model):
         verbose_name_plural = _('Notification Templates')
         ordering = ['template_name']
         indexes = [
-            models.Index(fields=['template_type']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['template_type'], name='idx_template_type_034'),
+            models.Index(fields=['is_active'], name='idx_is_active_035'),
         ]
 
     def __str__(self):
@@ -1970,9 +1970,9 @@ class Transaction(models.Model):
         db_table = 'transactions'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['user', '-created_at']),
-            models.Index(fields=['status']),
-            models.Index(fields=['transaction_type']),
+            models.Index(fields=['user', '-created_at'], name='idx_user_created_at_036'),
+            models.Index(fields=['status'], name='idx_status_037'),
+            models.Index(fields=['transaction_type'], name='idx_transaction_type_038'),
         ]
     
     def __str__(self):
@@ -2025,8 +2025,8 @@ class Offer(models.Model):
         db_table = 'offers'
         ordering = ['-featured', '-reward_amount']
         indexes = [
-            models.Index(fields=['status', 'offer_type']),
-            models.Index(fields=['featured']),
+            models.Index(fields=['status', 'offer_type'], name='idx_status_offer_type_039'),
+            models.Index(fields=['featured'], name='idx_featured_040'),
         ]
     
     def __str__(self):
@@ -2070,8 +2070,8 @@ class UserOffer(models.Model):
         unique_together = ['user', 'offer']
         ordering = ['-started_at']
         indexes = [
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['offer', 'status']),
+            models.Index(fields=['user', 'status'], name='idx_user_status_041'),
+            models.Index(fields=['offer', 'status'], name='idx_offer_status_042'),
         ]
     
     def __str__(self):
@@ -2149,7 +2149,7 @@ class DailyStats(models.Model):
         unique_together = ['user', 'date']
         ordering = ['-date']
         indexes = [
-            models.Index(fields=['user', '-date']),
+            models.Index(fields=['user', '-date'], name='idx_user_date_043'),
         ]
     
     def __str__(self):
@@ -2199,8 +2199,8 @@ class Withdrawal(models.Model):
         db_table = 'withdrawals'
         ordering = ['-requested_at']
         indexes = [
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['status']),
+            models.Index(fields=['user', 'status'], name='idx_user_status_044'),
+            models.Index(fields=['status'], name='idx_status_045'),
         ]
     
     def __str__(self):
@@ -2250,7 +2250,7 @@ class Withdrawal(models.Model):
 #         db_table = 'notifications'
 #         ordering = ['-created_at']
 #         indexes = [
-#             models.Index(fields=['user', 'is_read']),
+#             models.Index(fields=['user', 'is_read'], name='idx_user_is_read_046'),
 #         ]
     
 #     def __str__(self):

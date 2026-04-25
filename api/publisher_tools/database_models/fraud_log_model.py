@@ -25,8 +25,8 @@ class FraudLogRecord(TimeStampedModel):
         verbose_name_plural = _("FraudLog Records")
         ordering = ["-record_date", "-created_at"]
         indexes = [
-            models.Index(fields=["publisher", "record_date"]),
-            models.Index(fields=["is_processed"]),
+            models.Index(fields=["publisher", "record_date"], name='idx_publisher_record_date_1559'),
+            models.Index(fields=["is_processed"], name='idx_is_processed_1560'),
         ]
 
     def __str__(self):

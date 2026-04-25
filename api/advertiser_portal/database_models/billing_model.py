@@ -16,7 +16,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -242,10 +245,10 @@ class BillingProfile(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Billing Profile'
         verbose_name_plural = 'Billing Profiles'
         indexes = [
-            models.Index(fields=['advertiser']),
-            models.Index(fields=['status']),
-            models.Index(fields=['is_verified']),
-            models.Index(fields=['billing_country']),
+            models.Index(fields=['advertiser'], name='idx_advertiser_117'),
+            models.Index(fields=['status'], name='idx_status_118'),
+            models.Index(fields=['is_verified'], name='idx_is_verified_119'),
+            models.Index(fields=['billing_country'], name='idx_billing_country_120'),
         ]
     
     def __str__(self) -> str:
@@ -519,10 +522,10 @@ class PaymentMethod(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Payment Method'
         verbose_name_plural = 'Payment Methods'
         indexes = [
-            models.Index(fields=['advertiser', 'is_default']),
-            models.Index(fields=['advertiser', 'is_active']),
-            models.Index(fields=['payment_method_type']),
-            models.Index(fields=['is_verified']),
+            models.Index(fields=['advertiser', 'is_default'], name='idx_advertiser_is_default_121'),
+            models.Index(fields=['advertiser', 'is_active'], name='idx_advertiser_is_active_122'),
+            models.Index(fields=['payment_method_type'], name='idx_payment_method_type_123'),
+            models.Index(fields=['is_verified'], name='idx_is_verified_124'),
         ]
     
     def __str__(self) -> str:
@@ -790,11 +793,11 @@ class Invoice(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Invoice'
         verbose_name_plural = 'Invoices'
         indexes = [
-            models.Index(fields=['advertiser', 'status']),
-            models.Index(fields=['invoice_number']),
-            models.Index(fields=['issue_date']),
-            models.Index(fields=['due_date']),
-            models.Index(fields=['status', 'due_date']),
+            models.Index(fields=['advertiser', 'status'], name='idx_advertiser_status_125'),
+            models.Index(fields=['invoice_number'], name='idx_invoice_number_126'),
+            models.Index(fields=['issue_date'], name='idx_issue_date_127'),
+            models.Index(fields=['due_date'], name='idx_due_date_128'),
+            models.Index(fields=['status', 'due_date'], name='idx_status_due_date_129'),
         ]
     
     def __str__(self) -> str:
@@ -1058,12 +1061,12 @@ class PaymentTransaction(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Payment Transaction'
         verbose_name_plural = 'Payment Transactions'
         indexes = [
-            models.Index(fields=['advertiser', 'status']),
-            models.Index(fields=['transaction_id']),
-            models.Index(fields=['external_transaction_id']),
-            models.Index(fields=['gateway_transaction_id']),
-            models.Index(fields=['initiated_at']),
-            models.Index(fields=['status', 'initiated_at']),
+            models.Index(fields=['advertiser', 'status'], name='idx_advertiser_status_130'),
+            models.Index(fields=['transaction_id'], name='idx_transaction_id_131'),
+            models.Index(fields=['external_transaction_id'], name='idx_external_transaction_i_8c4'),
+            models.Index(fields=['gateway_transaction_id'], name='idx_gateway_transaction_id_133'),
+            models.Index(fields=['initiated_at'], name='idx_initiated_at_134'),
+            models.Index(fields=['status', 'initiated_at'], name='idx_status_initiated_at_135'),
         ]
     
     def __str__(self) -> str:

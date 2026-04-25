@@ -78,7 +78,7 @@ class RedemptionRequest(models.Model):
     class Meta:
         app_label = 'djoyalty'
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['status', 'tenant'])]
+        indexes = [models.Index(fields=['status', 'tenant'], name='idx_status_tenant_989')]
 
     def __str__(self):
         return f'{self.customer} redeem {self.points_used} pts [{self.status}]'
@@ -138,7 +138,7 @@ class Voucher(models.Model):
 
     class Meta:
         app_label = 'djoyalty'
-        indexes = [models.Index(fields=['code']), models.Index(fields=['status'])]
+        indexes = [models.Index(fields=['code'], name='idx_code_990'), models.Index(fields=['status'], name='idx_status_991')]
 
     def __str__(self):
         return f'Voucher {self.code} [{self.status}]'

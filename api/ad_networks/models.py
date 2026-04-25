@@ -1,15 +1,44 @@
+"""
+api/ad_networks/models.py
+Models for ad networks module
+SaaS-ready with tenant support and fraud prevention
+"""
+
 import json
+import logging
+from decimal import Decimal
+from datetime import timedelta, datetime
+from typing import Dict, List, Any, Optional
+
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
-from django.core.validators import MinValueValidator, MaxValueValidator
-from core.models import TimeStampedModel
-from api.users.models import User
-from datetime import timedelta
+from django.core.validators import MinValueValidator, MaxValueValidator, URLValidator
 from django.conf import settings
-import decimal
+from django.contrib.auth import get_user_model
 
+from core.models import TimeStampedModel
+from .abstracts import TenantModel, TimestampedModel, SoftDeleteModel, FraudDetectionModel
+from .choices import (
+    NetworkCategory, CountrySupport, NetworkStatus, OfferStatus, OfferCategoryType,
+    DifficultyLevel, DeviceType, GenderTargeting, AgeGroup, ConversionStatus,
+    RiskLevel, EngagementStatus, RejectionReason, PaymentMethod, WallType,
+    NetworkType
+)
+from .constants import (
+    DEFAULT_COMMISSION_RATE, DEFAULT_RATING, DEFAULT_TRUST_SCORE,
+    DEFAULT_PRIORITY, DEFAULT_CONVERSION_RATE, DEFAULT_MIN_PAYOUT,
+    DEFAULT_MAX_PAYOUT, DEFAULT_REWARD_AMOUNT, DEFAULT_EXPIRY_DAYS,
+    MAX_OFFER_TITLE_LENGTH, MAX_OFFER_DESCRIPTION_LENGTH,
+    MAX_OFFER_INSTRUCTIONS_LENGTH, MAX_OFFER_URL_LENGTH,
+    MAX_EXTERNAL_ID_LENGTH, DEFAULT_ESTIMATED_TIME,
+    MAX_ESTIMATED_TIME, MIN_ESTIMATED_TIME, MAX_EXPIRY_DAYS,
+    MIN_EXPIRY_DAYS, MIN_REWARD_AMOUNT, MAX_REWARD_AMOUNT,
+    MIN_RATING, MAX_RATING, MIN_TRUST_SCORE, MAX_TRUST_SCORE
+)
 
+logger = logging.getLogger(__name__)
+User = get_user_model()
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -32,7 +61,7 @@ def default_devices():
 
 # ====================== Ad Networks & Offerwalls ======================
 
-class AdNetwork(TimeStampedModel):
+class AdNetwork(TenantModel, TimestampedModel):
     """Ad Network providers - 50+ Networks"""
     
     # Network Categories
@@ -182,6 +211,7 @@ class AdNetwork(TimeStampedModel):
     
     # Basic Information
     name = models.CharField(max_length=100, null=True, blank=True)
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     # `network_type` used to be unique & required, but tests create
     # `AdNetwork` instances without providing it. Make it optional and
     # non-unique so simple creations in tests pass without IntegrityError.
@@ -278,7 +308,9 @@ class AdNetwork(TimeStampedModel):
             models.Index(fields=['category', 'is_active']),
             models.Index(fields=['country_support']),
             models.Index(fields=['trust_score']),
+            models.Index(fields=['tenant_id']),
         ]
+        unique_together = [['network_type', 'tenant_id']]
     
     def __str__(self):
         return f"{self.name} ({self.get_category_display()})"
@@ -375,7 +407,7 @@ class OfferCategory(TimeStampedModel):
 
 # ====================== Offers ======================
 
-class Offer(TimeStampedModel):
+class Offer(TenantModel, TimestampedModel, FraudDetectionModel):
     """Individual offers from ad networks"""
     
     STATUS_CHOICES = (
@@ -421,6 +453,7 @@ class Offer(TimeStampedModel):
     )
     
     # Basic Information
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     ad_network = models.ForeignKey(AdNetwork, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     category = models.ForeignKey(OfferCategory, on_delete=models.SET_NULL, null=True, related_name='%(app_label)s_%(class)s_tenant')
     
@@ -549,7 +582,7 @@ class Offer(TimeStampedModel):
 
 # ====================== User Offer Engagements ======================
 
-class UserOfferEngagement(TimeStampedModel):
+class UserOfferEngagement(TenantModel, TimestampedModel, FraudDetectionModel):
     """Track user interactions with offers"""
     
     STATUS_CHOICES = (
@@ -581,6 +614,7 @@ class UserOfferEngagement(TimeStampedModel):
     postback_attempts = models.IntegerField(default=0)
     last_postback_attempt = models.DateTimeField(null=True, blank=True)
     
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ad_networks_userofferengagement_user', null=True, blank=True)
     offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='ad_networks_userofferengagement_offer', null=True, blank=True)
     
@@ -635,6 +669,12 @@ class UserOfferEngagement(TimeStampedModel):
         verbose_name = 'User Offer Engagement'
         verbose_name_plural = 'User Offer Engagements'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['offer', 'status']),
+            models.Index(fields=['tenant_id']),
+            models.Index(fields=['created_at']),
+        ]
         unique_together = ['user', 'offer', 'click_id']
         indexes = [
             models.Index(fields=['click_id']),
@@ -670,7 +710,7 @@ class UserOfferEngagement(TimeStampedModel):
 
 # ====================== Offer Conversions ======================
 
-class OfferConversion(TimeStampedModel):
+class OfferConversion(TenantModel, TimestampedModel, FraudDetectionModel):
     """Track conversions from ad networks with fraud protection"""
     
     CONVERSION_STATUS = (
@@ -683,6 +723,7 @@ class OfferConversion(TimeStampedModel):
         ('paid', 'Paid to User'),
     )
     
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     engagement = models.OneToOneField(UserOfferEngagement, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     
     # Network Data
@@ -733,6 +774,7 @@ class OfferConversion(TimeStampedModel):
             models.Index(fields=['fraud_score']),
             models.Index(fields=['chargeback_processed']),
             models.Index(fields=['created_at']),
+            models.Index(fields=['tenant_id']),
         ]
     
     def __str__(self):
@@ -772,7 +814,7 @@ class OfferConversion(TimeStampedModel):
 
 # ====================== Offer Walls ======================
 
-class OfferWall(TimeStampedModel):
+class OfferWall(TenantModel, TimestampedModel):
     """Offerwall configurations for different placements"""
     
     WALL_TYPES = (
@@ -787,8 +829,9 @@ class OfferWall(TimeStampedModel):
         ('quick', 'Quick Offers'),
     )
     
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     name = models.CharField(max_length=100, null=True, blank=True)
-    slug = models.SlugField(max_length=100, unique=True, null=True, blank=True)
+    slug = models.SlugField(max_length=100, null=True, blank=True)
     wall_type = models.CharField(max_length=20, choices=WALL_TYPES, default='main', null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     
@@ -853,7 +896,9 @@ class OfferWall(TimeStampedModel):
         indexes = [
             models.Index(fields=['wall_type', 'is_active']),
             models.Index(fields=['slug']),
+            models.Index(fields=['tenant_id']),
         ]
+        unique_together = [['slug', 'tenant_id']]
     
     def __str__(self):
         return self.name
@@ -874,9 +919,10 @@ class OfferWall(TimeStampedModel):
 
 # ====================== Webhook Logs ======================
 
-class AdNetworkWebhookLog(TimeStampedModel):
+class AdNetworkWebhookLog(TenantModel, TimestampedModel):
     """Log all incoming webhooks from ad networks"""
     
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     # Tests create webhook logs without specifying an ad_network, so
     # this relationship must be optional.
     ad_network = models.ForeignKey(
@@ -924,6 +970,7 @@ class AdNetworkWebhookLog(TimeStampedModel):
             models.Index(fields=['ad_network', 'processed']),
             models.Index(fields=['created_at']),
             models.Index(fields=['event_type']),
+            models.Index(fields=['tenant_id']),
         ]
     
     def __str__(self):
@@ -932,8 +979,9 @@ class AdNetworkWebhookLog(TimeStampedModel):
 
 # ====================== Additional Models ======================
 
-class NetworkStatistic(TimeStampedModel):
+class NetworkStatistic(TenantModel, TimestampedModel):
     """Daily statistics for ad networks"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     ad_network = models.ForeignKey(AdNetwork, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     date = models.DateField()
     
@@ -943,13 +991,18 @@ class NetworkStatistic(TimeStampedModel):
     commission = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     
     class Meta:
-        unique_together = ['ad_network', 'date']
+        unique_together = ['ad_network', 'date', 'tenant_id']
         verbose_name = 'Network Statistic'
         verbose_name_plural = 'Network Statistics'
+        indexes = [
+            models.Index(fields=['tenant_id']),
+            models.Index(fields=['date']),
+        ]
 
 
-class UserOfferLimit(TimeStampedModel):
+class UserOfferLimit(TenantModel, TimestampedModel):
     """Track user limits for offers"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -969,11 +1022,15 @@ class UserOfferLimit(TimeStampedModel):
     last_completed = models.DateTimeField(null=True, blank=True)
     
     class Meta:
-        unique_together = ['user', 'offer']
+        unique_together = ['user', 'offer', 'tenant_id']
+        indexes = [
+            models.Index(fields=['tenant_id']),
+        ]
 
 
-class OfferSyncLog(TimeStampedModel):
+class OfferSyncLog(TenantModel, TimestampedModel):
     """Log offer synchronization from networks"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     ad_network = models.ForeignKey(AdNetwork, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     
     status = models.CharField(
@@ -995,12 +1052,17 @@ class OfferSyncLog(TimeStampedModel):
         ordering = ['-created_at']
         verbose_name = 'Offer Sync Log'
         verbose_name_plural = 'Offer Sync Logs'
+        indexes = [
+            models.Index(fields=['tenant_id']),
+            models.Index(fields=['ad_network', 'status']),
+        ]
 
 
 # ====================== Future Expansion Models ======================
 
-class SmartOfferRecommendation(TimeStampedModel):
+class SmartOfferRecommendation(TenantModel, TimestampedModel):
     """AI-powered offer recommendations for users"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ad_networks_smartofferrecommendation_user', null=True, blank=True)
     offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='ad_networks_smartofferrecommendation_offer', null=True, blank=True)
     
@@ -1013,12 +1075,17 @@ class SmartOfferRecommendation(TimeStampedModel):
     is_converted = models.BooleanField(default=False)
     
     class Meta:
-        unique_together = ['user', 'offer']
+        unique_together = ['user', 'offer', 'tenant_id']
         ordering = ['-score']
+        indexes = [
+            models.Index(fields=['tenant_id']),
+            models.Index(fields=['score']),
+        ]
 
 
-class OfferPerformanceAnalytics(TimeStampedModel):
+class OfferPerformanceAnalytics(TenantModel, TimestampedModel):
     """Advanced analytics for offers"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
     
     # User Demographics
@@ -1040,21 +1107,15 @@ class OfferPerformanceAnalytics(TimeStampedModel):
     class Meta:
         verbose_name = 'Offer Performance Analytics'
         verbose_name_plural = 'Offer Performance Analytics'
-        
+        indexes = [
+            models.Index(fields=['tenant_id']),
+            models.Index(fields=['offer']),
+        ]
 
 
-class BlacklistedIP(models.Model):
+class BlacklistedIP(TenantModel, TimestampedModel):
     """IP addresses blocked for fraud/bot activities"""
-    tenant = models.ForeignKey(
-        'tenants.Tenant',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='%(app_label)s_%(class)s_tenant',
-        db_index=True,
-    )
-
-    ip_address = models.GenericIPAddressField(unique=True)
+    ip_address = models.GenericIPAddressField()
     reason = models.CharField(
         max_length=50,
         choices=[
@@ -1079,11 +1140,13 @@ class BlacklistedIP(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
     
     class Meta:
+        unique_together = [['ip_address', 'tenant_id']]
         indexes = [
             models.Index(fields=['ip_address', 'is_active']),
             models.Index(fields=['expiry_date', 'is_active']),
             models.Index(fields=['reason', 'is_active']),
             models.Index(fields=['created_at']),
+            models.Index(fields=['tenant_id']),
         ]
         ordering = ['-created_at']
         verbose_name = "Blacklisted IP"
@@ -1321,17 +1384,17 @@ class BlacklistedIP(models.Model):
             'by_reason': list(by_reason),
             'recent_additions_7d': recent_additions,
             'as_of': now.isoformat()
-        }    
+        }
 
 
-class FraudDetectionRule(TimeStampedModel):
-    
+class FraudDetectionRule(TenantModel, TimestampedModel):
     """Rules for fraud detection"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     name = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    
+
     rule_type = models.CharField(
-        max_length=50, 
+        max_length=50,
         choices=[
             ('ip', 'IP Address'),
             ('device', 'Device Fingerprint'),
@@ -1340,10 +1403,10 @@ class FraudDetectionRule(TimeStampedModel):
             ('pattern', 'Pattern Detection'),
         ]
     )
-    
+
     condition = models.JSONField(default=default_dict)
     action = models.CharField(
-        max_length=50, 
+        max_length=50,
         choices=[
             ('block', 'Block'),
             ('flag', 'Flag'),
@@ -1351,10 +1414,10 @@ class FraudDetectionRule(TimeStampedModel):
             ('limit', 'Limit'),
         ]
     )
-    
+
     severity = models.CharField(
-        max_length=20, 
-        default='medium', 
+        max_length=20,
+        default='medium',
         choices=[
             ('low', 'Low'),
             ('medium', 'Medium'),
@@ -1362,28 +1425,21 @@ class FraudDetectionRule(TimeStampedModel):
             ('critical', 'Critical'),
         ]
     )
-    
+
     is_active = models.BooleanField(default=True)
     priority = models.IntegerField(default=0)
-    
+
     class Meta:
         ordering = ['-priority', 'name']
-        
-        
-        
-        # api/ad_networks/models.py - KnownBadIP মডেলে যোগ করুন
+        indexes = [
+            models.Index(fields=['tenant_id']),
+            models.Index(fields=['rule_type', 'is_active']),
+        ]
 
-class KnownBadIP(models.Model):
+
+class KnownBadIP(TenantModel, TimestampedModel):
     """Known bad IP addresses from various sources"""
-    tenant = models.ForeignKey(
-        'tenants.Tenant',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='%(app_label)s_%(class)s_tenant',
-        db_index=True,
-    )
-
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
     ip_address = models.GenericIPAddressField(unique=True)
     threat_type = models.CharField(
         max_length=50,
@@ -1422,22 +1478,626 @@ class KnownBadIP(models.Model):
     first_seen = models.DateTimeField(auto_now_add=True)
     last_seen = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
-    
+
     class Meta:
+        unique_together = [['ip_address', 'tenant_id']]
         indexes = [
             models.Index(fields=['ip_address', 'is_active']),
             models.Index(fields=['threat_type', 'is_active']),
-            models.Index(fields=['expires_at']),  # নতুন ইনডেক্স যোগ করুন
+            models.Index(fields=['expires_at']),
+            models.Index(fields=['tenant_id']),
         ]
         verbose_name = "Known Bad IP"
         verbose_name_plural = "Known Bad IPs"
-    
+
     def __str__(self):
         return f"{self.ip_address} - {self.threat_type}"
-    
+
     def is_expired(self):
         """চেক করে দেখুন আইপি এক্সপায়ার্ড কিনা"""
         if self.expires_at:
             from django.utils import timezone
             return timezone.now() > self.expires_at
         return False
+
+
+# ====================== NEW MODELS ======================
+
+class OfferClick(TenantModel, TimestampedModel, FraudDetectionModel):
+    """Track offer clicks with fraud detection"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_user'
+    )
+    offer = models.ForeignKey(
+        Offer,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_offer'
+    )
+
+    # Click tracking
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.TextField()
+    country = models.CharField(max_length=2, blank=True, null=True)
+    device = models.CharField(max_length=50, blank=True, null=True)
+    browser = models.CharField(max_length=100, blank=True, null=True)
+    os = models.CharField(max_length=100, blank=True, null=True)
+
+    # Click details
+    clicked_at = models.DateTimeField(auto_now_add=True)
+    is_unique = models.BooleanField(default=True)
+    is_fraud = models.BooleanField(default=False)
+    fraud_score = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
+
+    # Referral tracking
+    referrer_url = models.URLField(blank=True, null=True)
+    session_id = models.CharField(max_length=255, blank=True, null=True)
+    click_id = models.CharField(max_length=255, unique=True, blank=True, null=True)
+
+    # Device and location data
+    device_info = models.JSONField(default=default_dict, blank=True)
+    location_data = models.JSONField(default=default_dict, blank=True)
+
+    class Meta:
+        verbose_name = 'Offer Click'
+        verbose_name_plural = 'Offer Clicks'
+        ordering = ['-clicked_at']
+        indexes = [
+            models.Index(fields=['user', 'clicked_at']),
+            models.Index(fields=['offer', 'clicked_at']),
+            models.Index(fields=['ip_address', 'clicked_at']),
+            models.Index(fields=['is_unique', 'is_fraud']),
+            models.Index(fields=['click_id']),
+            models.Index(fields=['tenant_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.offer.title} - {self.clicked_at}"
+
+    def save(self, *args, **kwargs):
+        if not self.click_id:
+            import uuid
+            self.click_id = str(uuid.uuid4())
+        super().save(*args, **kwargs)
+
+
+class OfferReward(TenantModel, TimestampedModel, FraudDetectionModel):
+    """Track offer rewards and payments"""
+    REWARD_STATUS = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('paid', 'Paid'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+    )
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_user'
+    )
+    offer = models.ForeignKey(
+        Offer,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_offer'
+    )
+    engagement = models.OneToOneField(
+        UserOfferEngagement,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_engagement',
+        null=True,
+        blank=True
+    )
+
+    # Reward details
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    currency = models.CharField(max_length=10, default='BDT')
+    commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+
+    # Status and timestamps
+    status = models.CharField(max_length=20, choices=REWARD_STATUS, default='pending')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    # Payment details
+    payment_method = models.CharField(max_length=50, blank=True, null=True)
+    payment_reference = models.CharField(max_length=255, blank=True, null=True)
+    transaction_id = models.CharField(max_length=255, blank=True, null=True)
+
+    # Verification
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_verified_by'
+    )
+    verification_notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Offer Reward'
+        verbose_name_plural = 'Offer Rewards'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['offer', 'status']),
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['payment_reference']),
+            models.Index(fields=['tenant_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.amount} {self.currency} - {self.status}"
+
+    @property
+    def total_amount(self):
+        """Calculate total amount including commission"""
+        return self.amount + (self.commission or 0)
+
+    @property
+    def is_paid(self):
+        """Check if reward is paid"""
+        return self.status == 'paid'
+
+
+class NetworkAPILog(TenantModel, TimestampedModel):
+    """Log all network API calls for debugging and monitoring"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
+    network = models.ForeignKey(
+        AdNetwork,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_network'
+    )
+
+    # API call details
+    endpoint = models.CharField(max_length=500)
+    method = models.CharField(
+        max_length=10,
+        choices=[('GET', 'GET'), ('POST', 'POST'), ('PUT', 'PUT'), ('DELETE', 'DELETE')],
+        default='GET'
+    )
+
+    # Request data
+    request_data = models.JSONField(default=default_dict, blank=True)
+    request_headers = models.JSONField(default=default_dict, blank=True)
+    request_timestamp = models.DateTimeField(auto_now_add=True)
+
+    # Response data
+    response_data = models.JSONField(default=default_dict, blank=True)
+    response_headers = models.JSONField(default=default_dict, blank=True)
+    status_code = models.IntegerField()
+    response_timestamp = models.DateTimeField(null=True, blank=True)
+
+    # Performance metrics
+    latency_ms = models.IntegerField(default=0)
+    timeout = models.BooleanField(default=False)
+    retry_count = models.IntegerField(default=0)
+
+    # Error tracking
+    error_message = models.TextField(blank=True, null=True)
+    error_type = models.CharField(max_length=100, blank=True, null=True)
+    is_success = models.BooleanField(default=True)
+
+    # Context
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_user'
+    )
+    session_id = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Network API Log'
+        verbose_name_plural = 'Network API Logs'
+        ordering = ['-request_timestamp']
+        indexes = [
+            models.Index(fields=['network', 'request_timestamp']),
+            models.Index(fields=['endpoint', 'request_timestamp']),
+            models.Index(fields=['status_code', 'is_success']),
+            models.Index(fields=['user', 'request_timestamp']),
+            models.Index(fields=['tenant_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.network.name} - {self.method} {self.endpoint} - {self.status_code}"
+
+    @property
+    def duration_ms(self):
+        """Calculate request duration in milliseconds"""
+        if self.response_timestamp and self.request_timestamp:
+            delta = self.response_timestamp - self.request_timestamp
+            return int(delta.total_seconds() * 1000)
+        return self.latency_ms
+
+    @property
+    def is_error(self):
+        """Check if request resulted in error"""
+        return not self.is_success or self.status_code >= 400
+
+
+class OfferTag(TenantModel, TimestampedModel):
+    """Tags for categorizing and organizing offers"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    color = models.CharField(
+        max_length=7,
+        default='#3498db',
+        help_text='Hex color code'
+    )
+    description = models.TextField(blank=True, null=True)
+    icon = models.CharField(max_length=50, blank=True, null=True, help_text='FontAwesome icon class')
+
+    # Tag settings
+    is_active = models.BooleanField(default=True)
+    is_featured = models.BooleanField(default=False)
+    order = models.IntegerField(default=0)
+
+    # Statistics
+    usage_count = models.IntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Offer Tag'
+        verbose_name_plural = 'Offer Tags'
+        ordering = ['order', 'name']
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['is_active', 'order']),
+            models.Index(fields=['tenant_id']),
+        ]
+        unique_together = [['name', 'tenant_id'], ['slug', 'tenant_id']]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class OfferTagging(TenantModel, TimestampedModel):
+    """Many-to-many relationship between offers and tags"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
+    offer = models.ForeignKey(
+        Offer,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_offer'
+    )
+    tag = models.ForeignKey(
+        OfferTag,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_tag'
+    )
+
+    # Tagging context
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_added_by'
+    )
+    is_auto_tagged = models.BooleanField(default=False)
+    confidence_score = models.FloatField(
+        default=1.0,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+        help_text='Confidence score for auto-tagging'
+    )
+
+    class Meta:
+        verbose_name = 'Offer Tagging'
+        verbose_name_plural = 'Offer Taggings'
+        unique_together = ['offer', 'tag']
+        indexes = [
+            models.Index(fields=['offer', 'tag']),
+            models.Index(fields=['tag', 'created_at']),
+            models.Index(fields=['is_auto_tagged']),
+            models.Index(fields=['tenant_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.offer.title} - {self.tag.name}"
+
+
+class NetworkHealthCheck(TenantModel, TimestampedModel):
+    """Monitor network health and availability"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
+    network = models.ForeignKey(
+        AdNetwork,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_network'
+    )
+
+    # Health check details
+    checked_at = models.DateTimeField(auto_now_add=True)
+    is_healthy = models.BooleanField(default=True)
+    response_time_ms = models.IntegerField(default=0)
+
+    # Check results
+    status_code = models.IntegerField(null=True, blank=True)
+    error = models.TextField(blank=True, null=True)
+    error_type = models.CharField(max_length=100, blank=True, null=True)
+
+    # Check configuration
+    endpoint_checked = models.URLField(blank=True, null=True)
+    check_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('ping', 'Ping'),
+            ('api_call', 'API Call'),
+            ('webhook', 'Webhook Test'),
+            ('postback', 'Postback Test'),
+        ],
+        default='api_call'
+    )
+
+    # Additional metrics
+    uptime_percentage = models.FloatField(default=0, help_text='Uptime percentage')
+    consecutive_failures = models.IntegerField(default=0)
+    last_success_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Network Health Check'
+        verbose_name_plural = 'Network Health Checks'
+        ordering = ['-checked_at']
+        indexes = [
+            models.Index(fields=['network', 'checked_at']),
+            models.Index(fields=['is_healthy', 'checked_at']),
+            models.Index(fields=['check_type', 'checked_at']),
+            models.Index(fields=['tenant_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.network.name} - {'Healthy' if self.is_healthy else 'Unhealthy'} - {self.checked_at}"
+
+    @property
+    def is_recent(self):
+        """Check if health check is recent (within last 5 minutes)"""
+        from django.utils import timezone
+        five_minutes_ago = timezone.now() - timezone.timedelta(minutes=5)
+        return self.checked_at >= five_minutes_ago
+
+
+class OfferDailyLimit(TenantModel, TimestampedModel):
+    """Track daily limits for offers per user"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_user'
+    )
+    offer = models.ForeignKey(
+        Offer,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_offer'
+    )
+
+    # Limit tracking
+    count_today = models.IntegerField(default=0)
+    last_reset_at = models.DateTimeField(auto_now_add=True)
+    reset_date = models.DateField(auto_now_add=True)
+
+    # Limit configuration
+    daily_limit = models.IntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Offer Daily Limit'
+        verbose_name_plural = 'Offer Daily Limits'
+        unique_together = ['user', 'offer', 'reset_date', 'tenant_id']
+        indexes = [
+            models.Index(fields=['user', 'reset_date']),
+            models.Index(fields=['offer', 'reset_date']),
+            models.Index(fields=['last_reset_at']),
+            models.Index(fields=['tenant_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.offer.title} - {self.count_today}/{self.daily_limit}"
+
+    @property
+    def remaining_today(self):
+        """Calculate remaining attempts for today"""
+        return max(0, self.daily_limit - self.count_today)
+    
+    @property
+    def is_limit_reached(self):
+        """Check if daily limit is reached"""
+        return self.count_today >= self.daily_limit
+    
+    def reset_if_new_day(self):
+        """Reset counter if it's a new day"""
+        from django.utils import timezone
+        today = timezone.now().date()
+        
+        if self.reset_date != today:
+            self.count_today = 0
+            self.reset_date = today
+            self.last_reset_at = timezone.now()
+            self.save(update_fields=['count_today', 'reset_date', 'last_reset_at'])
+            return True
+        return False
+    
+    def increment_count(self):
+        """Increment daily count"""
+        self.reset_if_new_day()
+        if not self.is_limit_reached:
+            self.count_today += 1
+            self.save(update_fields=['count_today'])
+            return True
+        return False
+
+
+# ====================== MISSING MODELS ======================
+
+class OfferAttachment(TenantModel, TimestampedModel):
+    """Attachments for offers (images, documents, etc.)"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_offer')
+    
+    # File information
+    file = models.FileField(upload_to='offer_attachments/')
+    filename = models.CharField(max_length=255)
+    original_filename = models.CharField(max_length=255)
+    file_type = models.CharField(max_length=50)
+    mime_type = models.CharField(max_length=100)
+    file_size = models.IntegerField(help_text='File size in bytes')
+    file_hash = models.CharField(max_length=64, unique=True)
+    
+    # Image specific fields
+    width = models.IntegerField(null=True, blank=True)
+    height = models.IntegerField(null=True, blank=True)
+    thumbnail = models.ImageField(upload_to='offer_attachments/thumbnails/', null=True, blank=True)
+    
+    # Metadata
+    description = models.TextField(blank=True, null=True)
+    is_primary = models.BooleanField(default=False)
+    display_order = models.IntegerField(default=0)
+    
+    class Meta:
+        verbose_name = 'Offer Attachment'
+        verbose_name_plural = 'Offer Attachments'
+        ordering = ['display_order', 'created_at']
+        indexes = [
+            models.Index(fields=['offer', 'file_type']),
+            models.Index(fields=['tenant_id']),
+            models.Index(fields=['file_hash']),
+        ]
+    
+    def __str__(self):
+        return f"{self.offer.title} - {self.filename}"
+
+
+class UserWallet(TenantModel, TimestampedModel):
+    """User wallet for managing rewards and balances"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='ad_networks_wallet'
+    )
+    
+    # Balance fields
+    current_balance = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_earned = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_withdrawn = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    pending_balance = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    
+    # Currency
+    currency = models.CharField(max_length=10, default='BDT')
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_frozen = models.BooleanField(default=False)
+    freeze_reason = models.TextField(blank=True, null=True)
+    frozen_at = models.DateTimeField(null=True, blank=True)
+    
+    # Limits
+    daily_limit = models.DecimalField(max_digits=15, decimal_places=2, default=1000)
+    monthly_limit = models.DecimalField(max_digits=15, decimal_places=2, default=30000)
+    
+    class Meta:
+        verbose_name = 'User Wallet'
+        verbose_name_plural = 'User Wallets'
+        indexes = [
+            models.Index(fields=['user', 'tenant_id']),
+            models.Index(fields=['is_active', 'is_frozen']),
+        ]
+        unique_together = ['user', 'tenant_id']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.current_balance} {self.currency}"
+    
+    @property
+    def available_balance(self):
+        """Calculate available balance"""
+        return self.current_balance - self.pending_balance
+    
+    def can_withdraw(self, amount):
+        """Check if user can withdraw amount"""
+        return (self.available_balance >= amount and 
+                not self.is_frozen and 
+                self.is_active)
+
+
+class NetworkAPILog(TenantModel, TimestampedModel):
+    """Log all network API calls for debugging and monitoring"""
+    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
+    network = models.ForeignKey(
+        AdNetwork,
+        on_delete=models.CASCADE,
+        related_name='%(app_label)s_%(class)s_network'
+    )
+
+    # API call details
+    endpoint = models.CharField(max_length=500)
+    method = models.CharField(
+        max_length=10,
+        choices=[('GET', 'GET'), ('POST', 'POST'), ('PUT', 'PUT'), ('DELETE', 'DELETE')],
+        default='GET'
+    )
+
+    # Request data
+    request_data = models.JSONField(default=default_dict, blank=True)
+    request_headers = models.JSONField(default=default_dict, blank=True)
+    request_timestamp = models.DateTimeField(auto_now_add=True)
+
+    # Response data
+    response_data = models.JSONField(default=default_dict, blank=True)
+    response_headers = models.JSONField(default=default_dict, blank=True)
+    status_code = models.IntegerField()
+    response_timestamp = models.DateTimeField(null=True, blank=True)
+
+    # Performance metrics
+    latency_ms = models.IntegerField(default=0)
+    timeout = models.BooleanField(default=False)
+    retry_count = models.IntegerField(default=0)
+
+    # Error tracking
+    error_message = models.TextField(blank=True, null=True)
+    error_type = models.CharField(max_length=100, blank=True, null=True)
+    is_success = models.BooleanField(default=True)
+
+    # Context
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_user'
+    )
+    session_id = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Network API Log'
+        verbose_name_plural = 'Network API Logs'
+        ordering = ['-request_timestamp']
+        indexes = [
+            models.Index(fields=['network', 'request_timestamp']),
+            models.Index(fields=['endpoint', 'request_timestamp']),
+            models.Index(fields=['status_code', 'is_success']),
+            models.Index(fields=['user', 'request_timestamp']),
+            models.Index(fields=['tenant_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.network.name} - {self.method} {self.endpoint} - {self.status_code}"
+
+    @property
+    def duration_ms(self):
+        """Calculate request duration in milliseconds"""
+        if self.response_timestamp and self.request_timestamp:
+            delta = self.response_timestamp - self.request_timestamp
+            return int(delta.total_seconds() * 1000)
+        return self.latency_ms
+
+    @property
+    def is_error(self):
+        """Check if request resulted in error"""
+        return not self.is_success or self.status_code >= 400

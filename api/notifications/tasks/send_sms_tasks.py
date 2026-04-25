@@ -31,8 +31,8 @@ def _is_bd_number(phone: str) -> bool:
 )
 def send_sms_batch_task(self, notification_ids: List[int]):
     """Dispatch SMS for a batch of notification IDs."""
-    from notifications.models import Notification
-    from notifications.services.NotificationDispatcher import notification_dispatcher
+    from api.notifications.models import Notification
+    from api.notifications.services.NotificationDispatcher import notification_dispatcher
 
     success_count = 0
     failure_count = 0
@@ -69,7 +69,7 @@ def send_bulk_sms_task(self, recipients: List[dict], body: str):
     Recipients: list of {'phone': str, 'notification_id': str}
     Routes BD numbers to ShohoSMS, international to Twilio.
     """
-    from notifications.services.providers import shoho_sms_provider, twilio_provider
+    from api.notifications.services.providers import shoho_sms_provider, twilio_provider
 
     bd_recipients = [r for r in recipients if _is_bd_number(r.get('phone', ''))]
     intl_recipients = [r for r in recipients if not _is_bd_number(r.get('phone', ''))]
@@ -107,6 +107,6 @@ def send_bulk_sms_task(self, recipients: List[dict], body: str):
 )
 def process_twilio_sms_webhook_task(data: dict):
     """Process a Twilio SMS status callback webhook POST data dict."""
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.services.DeliveryTracker import delivery_tracker
     result = delivery_tracker.process_twilio_sms_event(data)
     return result

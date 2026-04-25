@@ -293,10 +293,10 @@ class PublisherKYC(TimeStampedModel):
         verbose_name_plural = _('Publisher KYC Records')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher']),
-            models.Index(fields=['status']),
-            models.Index(fields=['risk_level']),
-            models.Index(fields=['submitted_at']),
+            models.Index(fields=['publisher'], name='idx_publisher_1618'),
+            models.Index(fields=['status'], name='idx_status_1619'),
+            models.Index(fields=['risk_level'], name='idx_risk_level_1620'),
+            models.Index(fields=['submitted_at'], name='idx_submitted_at_1621'),
         ]
 
     def __str__(self):
@@ -488,8 +488,8 @@ class KYCDocument(TimeStampedModel):
         verbose_name_plural = _('KYC Documents')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['kyc', 'document_type']),
-            models.Index(fields=['verification_status']),
+            models.Index(fields=['kyc', 'document_type'], name='idx_kyc_document_type_1622'),
+            models.Index(fields=['verification_status'], name='idx_verification_status_1623'),
         ]
 
     def __str__(self):

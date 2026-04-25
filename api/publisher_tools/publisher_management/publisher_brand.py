@@ -277,8 +277,8 @@ class PublisherRating(TimeStampedModel):
         verbose_name_plural = _('Publisher Ratings')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'rating_type']),
-            models.Index(fields=['overall_rating']),
+            models.Index(fields=['publisher', 'rating_type'], name='idx_publisher_rating_type_1605'),
+            models.Index(fields=['overall_rating'], name='idx_overall_rating_1606'),
         ]
 
     def __str__(self):
@@ -328,8 +328,8 @@ class PublisherBlacklist(TimeStampedModel):
         verbose_name_plural = _('Publisher Blacklist Entries')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'list_type', 'is_active']),
-            models.Index(fields=['value']),
+            models.Index(fields=['publisher', 'list_type', 'is_active'], name='idx_publisher_list_type_is_96c'),
+            models.Index(fields=['value'], name='idx_value_1608'),
         ]
 
     def __str__(self):

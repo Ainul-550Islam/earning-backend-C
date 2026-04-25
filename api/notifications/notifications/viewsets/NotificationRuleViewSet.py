@@ -9,8 +9,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
-from notifications.models import NotificationRule
-from notifications.serializers import (
+from api.notifications.models import NotificationRule
+from api.notifications.serializers import (
     NotificationRuleSerializer,
     CreateRuleSerializer,
     RuleActionSerializer,
@@ -76,7 +76,7 @@ class NotificationRuleViewSet(viewsets.ModelViewSet):
         """Test rule with sample data without actually sending."""
         rule = self.get_object()
         try:
-            from notifications.services import rule_service
+            from api.notifications.services import rule_service
             result = rule_service.test_rule(rule, context=request.data.get('context', {}))
             return Response(result)
         except Exception as exc:

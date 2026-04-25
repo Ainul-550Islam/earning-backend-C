@@ -17,7 +17,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -220,14 +223,14 @@ class Notification(AdvertiserPortalBaseModel):
         verbose_name = 'Notification'
         verbose_name_plural = 'Notifications'
         indexes = [
-            models.Index(fields=['advertiser', 'user', 'status']),
-            models.Index(fields=['user', 'is_read']),
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['notification_type']),
-            models.Index(fields=['priority']),
-            models.Index(fields=['scheduled_at']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['expires_at']),
+            models.Index(fields=['advertiser', 'user', 'status'], name='idx_advertiser_user_status_322'),
+            models.Index(fields=['user', 'is_read'], name='idx_user_is_read_323'),
+            models.Index(fields=['user', 'status'], name='idx_user_status_324'),
+            models.Index(fields=['notification_type'], name='idx_notification_type_325'),
+            models.Index(fields=['priority'], name='idx_priority_326'),
+            models.Index(fields=['scheduled_at'], name='idx_scheduled_at_327'),
+            models.Index(fields=['created_at'], name='idx_created_at_328'),
+            models.Index(fields=['expires_at'], name='idx_expires_at_329'),
         ]
     
     def __str__(self) -> str:
@@ -545,9 +548,9 @@ class NotificationTemplate(AdvertiserPortalBaseModel, AuditModel):
         verbose_name_plural = 'Notification Templates'
         unique_together = ['template_type', 'name']
         indexes = [
-            models.Index(fields=['template_type']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['is_default']),
+            models.Index(fields=['template_type'], name='idx_template_type_330'),
+            models.Index(fields=['is_active'], name='idx_is_active_331'),
+            models.Index(fields=['is_default'], name='idx_is_default_332'),
         ]
     
     def __str__(self) -> str:
@@ -717,8 +720,8 @@ class NotificationPreference(AdvertiserPortalBaseModel, AuditModel):
         verbose_name_plural = 'Notification Preferences'
         unique_together = ['user', 'advertiser']
         indexes = [
-            models.Index(fields=['user']),
-            models.Index(fields=['advertiser']),
+            models.Index(fields=['user'], name='idx_user_333'),
+            models.Index(fields=['advertiser'], name='idx_advertiser_334'),
         ]
     
     def __str__(self) -> str:
@@ -911,9 +914,9 @@ class NotificationLog(AdvertiserPortalBaseModel):
         verbose_name = 'Notification Log'
         verbose_name_plural = 'Notification Logs'
         indexes = [
-            models.Index(fields=['notification', 'event_type']),
-            models.Index(fields=['channel']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['notification', 'event_type'], name='idx_notification_event_typ_6d2'),
+            models.Index(fields=['channel'], name='idx_channel_336'),
+            models.Index(fields=['created_at'], name='idx_created_at_337'),
         ]
     
     def __str__(self) -> str:

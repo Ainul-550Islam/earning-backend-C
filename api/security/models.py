@@ -207,9 +207,9 @@ class DeviceInfo(models.Model):
         verbose_name_plural = "Device Information"
         ordering = ['-last_activity', '-created_at']
         indexes = [
-            models.Index(fields=['device_id_hash', 'user']),
-            models.Index(fields=['risk_score', '-last_activity']),
-            models.Index(fields=['is_rooted', 'is_emulator', 'is_vpn']),
+            models.Index(fields=['device_id_hash', 'user'], name='idx_device_id_hash_user_1672'),
+            models.Index(fields=['risk_score', '-last_activity'], name='idx_risk_score_last_activi_154'),
+            models.Index(fields=['is_rooted', 'is_emulator', 'is_vpn'], name='idx_is_rooted_is_emulator__fbe'),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -750,10 +750,10 @@ class SecurityLog(models.Model):
         db_table = 'security_logs'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['security_type']),
-            models.Index(fields=['severity']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['security_type'], name='idx_security_type_1675'),
+            models.Index(fields=['severity'], name='idx_severity_1676'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_1677'),
+            models.Index(fields=['created_at'], name='idx_created_at_1678'),
         ]
     
     def __str__(self):
@@ -837,12 +837,12 @@ class SecurityLog(models.Model):
 #     class Meta:
 #         ordering = ['-created_at']
 #         indexes = [
-#             models.Index(fields=['user', 'security_type']),
-#             models.Index(fields=['security_type', 'severity']),
-#             models.Index(fields=['created_at']),
-#             models.Index(fields=['ip_address']),
-#             models.Index(fields=['resolved']),
-#             models.Index(fields=['risk_score']),
+#             models.Index(fields=['user', 'security_type'], name='idx_user_security_type_1679'),
+#             models.Index(fields=['security_type', 'severity'], name='idx_security_type_severity_09b'),
+#             models.Index(fields=['created_at'], name='idx_created_at_1681'),
+#             models.Index(fields=['ip_address'], name='idx_ip_address_1682'),
+#             models.Index(fields=['resolved'], name='idx_resolved_1683'),
+#             models.Index(fields=['risk_score'], name='idx_risk_score_1684'),
 #         ]
     
 #     def __str__(self) -> str:
@@ -926,8 +926,8 @@ class RiskScore(models.Model):
     
     class Meta:
         indexes = [
-            models.Index(fields=['user', 'current_score']),
-            models.Index(fields=['current_score']),
+            models.Index(fields=['user', 'current_score'], name='idx_user_current_score_1685'),
+            models.Index(fields=['current_score'], name='idx_current_score_1686'),
         ]
     
     def calculate_score(self) -> int:
@@ -1292,9 +1292,9 @@ class AuditTrail(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['user', 'created_at']),
-            models.Index(fields=['model_name', 'object_id']),
-            models.Index(fields=['action_type', 'created_at']),
+            models.Index(fields=['user', 'created_at'], name='idx_user_created_at_1687'),
+            models.Index(fields=['model_name', 'object_id'], name='idx_model_name_object_id_1688'),
+            models.Index(fields=['action_type', 'created_at'], name='idx_action_type_created_at_5ce'),
         ]
     
     def __str__(self):
@@ -1576,9 +1576,9 @@ class SecurityNotification(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['priority', 'created_at']),
-            models.Index(fields=['sent_at']),
+            models.Index(fields=['user', 'status'], name='idx_user_status_1690'),
+            models.Index(fields=['priority', 'created_at'], name='idx_priority_created_at_1691'),
+            models.Index(fields=['sent_at'], name='idx_sent_at_1692'),
         ]
     
     def __str__(self):
@@ -2002,9 +2002,9 @@ class GeolocationLog(models.Model):
     class Meta:
         ordering = ['-queried_at']
         indexes = [
-            models.Index(fields=['ip_address', 'queried_at']),
-            models.Index(fields=['country_code']),
-            models.Index(fields=['is_vpn', 'is_proxy']),
+            models.Index(fields=['ip_address', 'queried_at'], name='idx_ip_address_queried_at_1693'),
+            models.Index(fields=['country_code'], name='idx_country_code_1694'),
+            models.Index(fields=['is_vpn', 'is_proxy'], name='idx_is_vpn_is_proxy_1695'),
         ]
     
     def __str__(self):
@@ -2381,9 +2381,9 @@ class RateLimitLog(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['user', 'created_at']),
-            models.Index(fields=['ip_address', 'created_at']),
-            models.Index(fields=['limit_exceeded']),
+            models.Index(fields=['user', 'created_at'], name='idx_user_created_at_1696'),
+            models.Index(fields=['ip_address', 'created_at'], name='idx_ip_address_created_at_1697'),
+            models.Index(fields=['limit_exceeded'], name='idx_limit_exceeded_1698'),
         ]
     
     def __str__(self):
@@ -2606,8 +2606,8 @@ class PasswordAttempt(models.Model):
     class Meta:
         ordering = ['-attempted_at']
         indexes = [
-            models.Index(fields=['user', 'attempted_at']),
-            models.Index(fields=['ip_address', 'attempted_at']),
+            models.Index(fields=['user', 'attempted_at'], name='idx_user_attempted_at_1699'),
+            models.Index(fields=['ip_address', 'attempted_at'], name='idx_ip_address_attempted_a_56c'),
         ]
     
     def __str__(self):
@@ -2693,9 +2693,9 @@ class UserSession(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['user', 'is_active']),
-            models.Index(fields=['session_key']),
-            models.Index(fields=['expires_at']),
+            models.Index(fields=['user', 'is_active'], name='idx_user_is_active_1701'),
+            models.Index(fields=['session_key'], name='idx_session_key_1702'),
+            models.Index(fields=['expires_at'], name='idx_expires_at_1703'),
         ]
     
     def __str__(self):
@@ -2797,8 +2797,8 @@ class SessionActivity(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['session', 'activity_type']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['session', 'activity_type'], name='idx_session_activity_type_1704'),
+            models.Index(fields=['created_at'], name='idx_created_at_1705'),
         ]
     
     def __str__(self):
@@ -2929,8 +2929,8 @@ class TwoFactorAttempt(models.Model):
     class Meta:
         ordering = ['-attempted_at']
         indexes = [
-            models.Index(fields=['user', 'successful']),
-            models.Index(fields=['ip_address', 'attempted_at']),
+            models.Index(fields=['user', 'successful'], name='idx_user_successful_1706'),
+            models.Index(fields=['ip_address', 'attempted_at'], name='idx_ip_address_attempted_a_883'),
         ]
     
     def __str__(self):
@@ -3183,9 +3183,9 @@ class UserBan(models.Model):
             )
         ]
         indexes = [
-            models.Index(fields=['user', 'is_active_ban']),
-            models.Index(fields=['banned_until']),
-            models.Index(fields=['banned_at']),
+            models.Index(fields=['user', 'is_active_ban'], name='idx_user_is_active_ban_1708'),
+            models.Index(fields=['banned_until'], name='idx_banned_until_1709'),
+            models.Index(fields=['banned_at'], name='idx_banned_at_1710'),
         ]
     
     # 3. Validation in clean method
@@ -4980,9 +4980,9 @@ class MaintenanceMode(models.Model):
         verbose_name_plural = 'Maintenance Modes'
         
         indexes = [
-            models.Index(fields=['is_active', 'status']),
-            models.Index(fields=['start_time', 'estimated_end_time']),
-            models.Index(fields=['maintenance_type']),
+            models.Index(fields=['is_active', 'status'], name='idx_is_active_status_1711'),
+            models.Index(fields=['start_time', 'estimated_end_time'], name='idx_start_time_estimated_e_46e'),
+            models.Index(fields=['maintenance_type'], name='idx_maintenance_type_1713'),
         ]
         
         ordering = ['-start_time']
@@ -5511,10 +5511,10 @@ class SecurityConfig(models.Model):
         verbose_name_plural = 'Security Configurations'
         
         indexes = [
-            models.Index(fields=['name', 'is_active']),
-            models.Index(fields=['config_type', 'is_active']),
-            models.Index(fields=['effective_from', 'effective_until']),
-            models.Index(fields=['is_default']),
+            models.Index(fields=['name', 'is_active'], name='idx_name_is_active_1714'),
+            models.Index(fields=['config_type', 'is_active'], name='idx_config_type_is_active_1715'),
+            models.Index(fields=['effective_from', 'effective_until'], name='idx_effective_from_effecti_dc3'),
+            models.Index(fields=['is_default'], name='idx_is_default_1717'),
         ]
         
         ordering = ['-effective_from', 'name']
@@ -6117,9 +6117,9 @@ class AppVersion(models.Model):
         verbose_name_plural = 'App Versions'
         
         indexes = [
-            models.Index(fields=['version_code', 'is_active']),
-            models.Index(fields=['release_type', 'release_date']),
-            models.Index(fields=['is_mandatory']),
+            models.Index(fields=['version_code', 'is_active'], name='idx_version_code_is_active_394'),
+            models.Index(fields=['release_type', 'release_date'], name='idx_release_type_release_d_fdd'),
+            models.Index(fields=['is_mandatory'], name='idx_is_mandatory_1720'),
         ]
         
         ordering = ['-version_code', '-release_date']
@@ -6579,13 +6579,13 @@ class IPBlacklist(models.Model):
         verbose_name_plural = 'IP Blacklist'
         
         indexes = [
-            models.Index(fields=['ip_address', 'is_active']),
-            models.Index(fields=['threat_level', 'is_active']),
-            models.Index(fields=['threat_type', 'is_active']),
-            models.Index(fields=['country_code', 'is_active']),
-            models.Index(fields=['first_seen']),
-            models.Index(fields=['last_attempt']),
-            models.Index(fields=['is_permanent', 'blocked_until']),
+            models.Index(fields=['ip_address', 'is_active'], name='idx_ip_address_is_active_1721'),
+            models.Index(fields=['threat_level', 'is_active'], name='idx_threat_level_is_active_437'),
+            models.Index(fields=['threat_type', 'is_active'], name='idx_threat_type_is_active_1723'),
+            models.Index(fields=['country_code', 'is_active'], name='idx_country_code_is_active_4e0'),
+            models.Index(fields=['first_seen'], name='idx_first_seen_1725'),
+            models.Index(fields=['last_attempt'], name='idx_last_attempt_1726'),
+            models.Index(fields=['is_permanent', 'blocked_until'], name='idx_is_permanent_blocked_u_dc4'),
         ]
         
         ordering = ['-threat_level', '-last_attempt']
@@ -7458,11 +7458,11 @@ class WithdrawalProtection(models.Model):
         verbose_name_plural = 'Withdrawal Protections'
         
         indexes = [
-            models.Index(fields=['user', 'is_active']),
-            models.Index(fields=['protection_level', 'is_active']),
-            models.Index(fields=['risk_level']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['updated_at']),
+            models.Index(fields=['user', 'is_active'], name='idx_user_is_active_1728'),
+            models.Index(fields=['protection_level', 'is_active'], name='idx_protection_level_is_ac_f0d'),
+            models.Index(fields=['risk_level'], name='idx_risk_level_1730'),
+            models.Index(fields=['created_at'], name='idx_created_at_1731'),
+            models.Index(fields=['updated_at'], name='idx_updated_at_1732'),
         ]
         
         constraints = [

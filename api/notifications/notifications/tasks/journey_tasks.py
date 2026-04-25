@@ -9,7 +9,7 @@ def execute_journey_step_task(self, user_id: int, journey_id: str, step_id: str,
     """Execute one step of a notification journey for a user."""
     try:
         from django.contrib.auth import get_user_model
-        from notifications.services.JourneyService import journey_service
+        from api.notifications.services.JourneyService import journey_service
         user = get_user_model().objects.get(pk=user_id)
         return journey_service.execute_step(user, journey_id, step_id, context)
     except Exception as exc:
@@ -23,7 +23,7 @@ def execute_journey_step_task(self, user_id: int, journey_id: str, step_id: str,
 def enroll_users_in_journey_task(user_ids: list, journey_id: str, context: dict = None):
     """Enroll multiple users in a journey."""
     from django.contrib.auth import get_user_model
-    from notifications.services.JourneyService import journey_service
+    from api.notifications.services.JourneyService import journey_service
     User = get_user_model()
     enrolled = 0
     for user in User.objects.filter(pk__in=user_ids, is_active=True):

@@ -84,12 +84,12 @@ class SendNotificationUseCase:
         bypass_opt_out: bool = False,
     ) -> UseCaseResult:
         try:
-            from notifications.validator import validate_notification_payload
-            from notifications.services.NotificationService import notification_service
-            from notifications.services.FatigueService import fatigue_service
-            from notifications.services.OptOutService import opt_out_service
-            from notifications.hooks import pipeline, StopPipeline
-            from notifications.events import emit_notification_sent, emit_notification_failed
+            from api.notifications.validator import validate_notification_payload
+            from api.notifications.services.NotificationService import notification_service
+            from api.notifications.services.FatigueService import fatigue_service
+            from api.notifications.services.OptOutService import opt_out_service
+            from api.notifications.hooks import pipeline, StopPipeline
+            from api.notifications.events import emit_notification_sent, emit_notification_failed
 
             # 1. Validate
             result = validate_notification_payload({
@@ -126,7 +126,7 @@ class SendNotificationUseCase:
 
             # 5. Schedule or send immediately
             if scheduled_at:
-                from notifications.models.schedule import NotificationSchedule
+                from api.notifications.models.schedule import NotificationSchedule
                 schedule = NotificationSchedule.objects.create(
                     notification=notification,
                     send_at=scheduled_at,
@@ -168,8 +168,8 @@ class MarkNotificationReadUseCase:
 
     def execute(self, user, notification_id: int = None, mark_all: bool = False) -> UseCaseResult:
         try:
-            from notifications.models import Notification
-            from notifications.events import notification_read as notification_read_signal
+            from api.notifications.models import Notification
+            from api.notifications.events import notification_read as notification_read_signal
 
             if mark_all:
                 count = Notification.objects.filter(
@@ -177,7 +177,7 @@ class MarkNotificationReadUseCase:
                 ).update(is_read=True, read_at=timezone.now(), updated_at=timezone.now())
 
                 # Invalidate cache
-                from notifications.helpers import invalidate_user_notification_cache
+                from api.notifications.helpers import invalidate_user_notification_cache
                 invalidate_user_notification_cache(user.pk)
 
                 return UseCaseResult.ok({'marked_count': count, 'all': True})
@@ -195,7 +195,7 @@ class MarkNotificationReadUseCase:
                 notif.save(update_fields=['is_read', 'read_at', 'updated_at'])
                 notification_read_signal.send(sender=notif.__class__, instance=notif, user=user)
 
-            from notifications.helpers import invalidate_user_notification_cache
+            from api.notifications.helpers import invalidate_user_notification_cache
             invalidate_user_notification_cache(user.pk)
 
             return UseCaseResult.ok({'notification_id': notification_id, 'is_read': True})
@@ -215,8 +215,8 @@ class RegisterPushDeviceUseCase:
                 apns_token: str = '', web_push_subscription: dict = None,
                 device_name: str = '', app_version: str = '') -> UseCaseResult:
         try:
-            from notifications.validator import validate_device_registration
-            from notifications.models import DeviceToken
+            from api.notifications.validator import validate_device_registration
+            from api.notifications.models import DeviceToken
 
             result = validate_device_registration({
                 'device_type': device_type,
@@ -276,10 +276,10 @@ class OptOutChannelUseCase:
     def execute(self, user, channel: str, reason: str = 'user_request',
                 notes: str = '') -> UseCaseResult:
         try:
-            from notifications.services.OptOutService import opt_out_service
+            from api.notifications.services.OptOutService import opt_out_service
             result = opt_out_service.opt_out(user, channel, reason=reason, notes=notes)
             if result.get('success'):
-                from notifications.events import user_opted_out
+                from api.notifications.events import user_opted_out
                 user_opted_out.send(sender=None, user=user, channel=channel, reason=reason)
             return UseCaseResult.ok(result) if result.get('success') else UseCaseResult.fail(result.get('error', ''))
         except Exception as exc:
@@ -297,8 +297,8 @@ class CreateCampaignUseCase:
                 segment_conditions: dict = None, send_at=None,
                 description: str = '', context: dict = None) -> UseCaseResult:
         try:
-            from notifications.validator import validate_campaign_payload
-            from notifications.services.CampaignService import campaign_service
+            from api.notifications.validator import validate_campaign_payload
+            from api.notifications.services.CampaignService import campaign_service
 
             result = validate_campaign_payload({'name': name, 'template_id': template_id, 'send_at': send_at})
             if not result.is_valid:
@@ -334,8 +334,8 @@ class BulkSendNotificationUseCase:
                 priority: str = 'medium', template_id: int = None,
                 context: dict = None) -> UseCaseResult:
         try:
-            from notifications.services.CampaignService import campaign_service
-            from notifications.helpers import chunk_list
+            from api.notifications.services.CampaignService import campaign_service
+            from api.notifications.helpers import chunk_list
 
             if not user_ids:
                 return UseCaseResult.fail('user_ids cannot be empty.', 'EMPTY_USERS')
@@ -346,7 +346,7 @@ class BulkSendNotificationUseCase:
             # For small sends (<= 100), send inline
             if len(user_ids) <= 100:
                 from django.contrib.auth import get_user_model
-                from notifications.services.NotificationService import notification_service
+                from api.notifications.services.NotificationService import notification_service
                 User = get_user_model()
                 sent = 0
                 failed = 0
@@ -366,7 +366,7 @@ class BulkSendNotificationUseCase:
                 return UseCaseResult.ok({'sent': sent, 'failed': failed, 'total': len(user_ids)})
 
             # For large sends, use batch Celery task
-            from notifications.tasks.batch_send_tasks import process_batch_task
+            from api.notifications.tasks.batch_send_tasks import process_batch_task
             task = process_batch_task.delay(user_ids, title, message, notification_type, channel, priority, context or {})
             return UseCaseResult.ok({'task_id': task.id, 'total_users': len(user_ids), 'queued': True})
 
@@ -383,7 +383,7 @@ class EnrollUserInJourneyUseCase:
 
     def execute(self, user, journey_id: str, context: dict = None) -> UseCaseResult:
         try:
-            from notifications.services.JourneyService import journey_service
+            from api.notifications.services.JourneyService import journey_service
             result = journey_service.enroll_user(user, journey_id, context)
             return UseCaseResult.ok(result) if result.get('success') else UseCaseResult.fail(result.get('error', ''), 'ENROLL_FAILED')
         except Exception as exc:
@@ -399,7 +399,7 @@ class UpdatePreferencesUseCase:
 
     def execute(self, user, preferences: dict) -> UseCaseResult:
         try:
-            from notifications.models import NotificationPreference
+            from api.notifications.models import NotificationPreference
             pref, _ = NotificationPreference.objects.get_or_create(user=user)
             allowed_fields = [
                 'in_app_enabled', 'push_enabled', 'email_enabled',
@@ -433,7 +433,7 @@ class DeleteNotificationUseCase:
 
     def execute(self, user, notification_id: int, deleted_by=None) -> UseCaseResult:
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             notif = Notification.objects.filter(pk=notification_id, user=user, is_deleted=False).first()
             if not notif:
                 return UseCaseResult.fail('Notification not found.', 'NOT_FOUND')
@@ -441,7 +441,7 @@ class DeleteNotificationUseCase:
             notif.deleted_at = timezone.now()
             notif.save(update_fields=['is_deleted', 'deleted_at', 'updated_at'])
 
-            from notifications.helpers import invalidate_user_notification_cache
+            from api.notifications.helpers import invalidate_user_notification_cache
             invalidate_user_notification_cache(user.pk)
 
             return UseCaseResult.ok({'notification_id': notification_id, 'deleted': True})

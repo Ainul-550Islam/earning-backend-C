@@ -9,8 +9,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
-from notifications.models import NotificationLog
-from notifications.serializers import NotificationLogSerializer
+from api.notifications.models import NotificationLog
+from api.notifications.serializers import NotificationLogSerializer
 
 
 class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):

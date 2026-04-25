@@ -29,7 +29,7 @@ class AppEvent(models.Model):
         app_label = "marketplace"
         db_table  = "marketplace_app_event"
         indexes   = [
-            models.Index(fields=["tenant","event_type","created_at"]),
+            models.Index(fields=["tenant","event_type","created_at"], name='idx_tenant_event_type_crea_b4c'),
         ]
 
 

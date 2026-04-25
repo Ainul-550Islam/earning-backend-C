@@ -44,7 +44,7 @@ class NotificationFunnelService:
 
     def get_notification_funnel(self, notification_id: int) -> Dict:
         """Get funnel breakdown for a single notification."""
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         try:
             notif = Notification.objects.get(pk=notification_id)
         except Notification.DoesNotExist:
@@ -66,7 +66,7 @@ class NotificationFunnelService:
 
     def get_campaign_funnel(self, campaign_id: int, days: int = 30) -> Dict:
         """Get funnel breakdown for a campaign."""
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         cutoff = timezone.now() - timedelta(days=days)
         qs = Notification.objects.filter(
             campaign_id=str(campaign_id),
@@ -108,8 +108,8 @@ class NotificationFunnelService:
 
     def get_channel_funnel_comparison(self, days: int = 30) -> List[Dict]:
         """Compare funnel performance across all channels."""
-        from notifications.models import Notification
-        from notifications.choices import CHANNEL_CHOICES
+        from api.notifications.models import Notification
+        from api.notifications.choices import CHANNEL_CHOICES
 
         cutoff = timezone.now() - timedelta(days=days)
         results = []
@@ -141,7 +141,7 @@ class NotificationFunnelService:
 
     def get_funnel_by_type(self, notification_type: str, days: int = 30) -> Dict:
         """Get funnel breakdown for a specific notification type."""
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         cutoff = timezone.now() - timedelta(days=days)
         qs = Notification.objects.filter(
             notification_type=notification_type,
@@ -176,7 +176,7 @@ class NotificationFunnelService:
 
     def get_top_converting_types(self, days: int = 30, limit: int = 10) -> List[Dict]:
         """Return notification types with highest click rates."""
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         cutoff = timezone.now() - timedelta(days=days)
         data = (
             Notification.objects.filter(created_at__gte=cutoff, is_sent=True)
@@ -205,7 +205,7 @@ class NotificationFunnelService:
         Analyze how quickly users read notifications.
         Returns percentile breakdowns (p50, p75, p90).
         """
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         from django.db.models import ExpressionWrapper, DurationField
         cutoff = timezone.now() - timedelta(days=days)
         qs = Notification.objects.filter(
@@ -336,7 +336,7 @@ class RFMSegmentationService:
     def _frequency_score(self, user) -> int:
         """Score 1-5 based on task completion frequency."""
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             count_30d = Notification.objects.filter(
                 user=user, notification_type='task_approved',
                 created_at__gte=timezone.now() - timedelta(days=30)

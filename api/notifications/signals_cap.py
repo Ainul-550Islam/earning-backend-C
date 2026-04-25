@@ -50,7 +50,7 @@ def connect_all():
 
         # ── Core notification signals ────────────────────────────────
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             post_save.connect(
                 on_notification_post_save,
                 sender=Notification,
@@ -62,7 +62,7 @@ def connect_all():
 
         # ── InAppMessage signals ─────────────────────────────────────
         try:
-            from notifications.models.channel import InAppMessage
+            from api.notifications.models.channel import InAppMessage
             post_save.connect(
                 on_in_app_message_post_save,
                 sender=InAppMessage,
@@ -74,7 +74,7 @@ def connect_all():
 
         # ── OptOutTracking signals ───────────────────────────────────
         try:
-            from notifications.models.analytics import OptOutTracking
+            from api.notifications.models.analytics import OptOutTracking
             post_save.connect(
                 on_opt_out_post_save,
                 sender=OptOutTracking,
@@ -86,7 +86,7 @@ def connect_all():
 
         # ── NotificationFatigue signals ──────────────────────────────
         try:
-            from notifications.models.analytics import NotificationFatigue
+            from api.notifications.models.analytics import NotificationFatigue
             post_save.connect(
                 on_fatigue_post_save,
                 sender=NotificationFatigue,
@@ -98,7 +98,7 @@ def connect_all():
 
         # ── DeviceToken signals ──────────────────────────────────────
         try:
-            from notifications.models import DeviceToken
+            from api.notifications.models import DeviceToken
             post_save.connect(
                 on_device_token_post_save,
                 sender=DeviceToken,
@@ -132,9 +132,9 @@ def disconnect_all():
     global _CONNECTED
 
     try:
-        from notifications.models import Notification, DeviceToken
-        from notifications.models.channel import InAppMessage
-        from notifications.models.analytics import OptOutTracking, NotificationFatigue
+        from api.notifications.models import Notification, DeviceToken
+        from api.notifications.models.channel import InAppMessage
+        from api.notifications.models.analytics import OptOutTracking, NotificationFatigue
 
         post_save.disconnect(dispatch_uid='notifications.notification.post_save')
         post_save.disconnect(dispatch_uid='notifications.inappmessage.post_save')

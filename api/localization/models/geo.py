@@ -42,9 +42,9 @@ class Region(models.Model):
         verbose_name = _("Region")
         verbose_name_plural = _("Regions")
         indexes = [
-            models.Index(fields=['region_type', 'is_active']),
-            models.Index(fields=['country', 'region_type']),
-            models.Index(fields=['code']),
+            models.Index(fields=['region_type', 'is_active'], name='idx_region_type_is_active_1089'),
+            models.Index(fields=['country', 'region_type'], name='idx_country_region_type_1090'),
+            models.Index(fields=['code'], name='idx_code_1091'),
         ]
 
     def __str__(self):
@@ -97,8 +97,8 @@ class CountryLanguage(models.Model):
         verbose_name = _("Country Language")
         verbose_name_plural = _("Country Languages")
         indexes = [
-            models.Index(fields=['country', 'is_official']),
-            models.Index(fields=['language']),
+            models.Index(fields=['country', 'is_official'], name='idx_country_is_official_1092'),
+            models.Index(fields=['language'], name='idx_language_1093'),
         ]
 
     def __str__(self):
@@ -125,7 +125,7 @@ class CountryCurrency(models.Model):
         unique_together = ['country', 'currency']
         verbose_name = _("Country Currency")
         verbose_name_plural = _("Country Currencies")
-        indexes = [models.Index(fields=['country', 'is_primary'])]
+        indexes = [models.Index(fields=['country', 'is_primary'], name='idx_country_is_primary_1094')]
 
     def __str__(self):
         country_code = getattr(self.country, 'code', '?')
@@ -169,8 +169,8 @@ class GeoIPMapping(models.Model):
         verbose_name = _("GeoIP Mapping")
         verbose_name_plural = _("GeoIP Mappings")
         indexes = [
-            models.Index(fields=['ip_start_int', 'ip_end_int']),
-            models.Index(fields=['country_code']),
+            models.Index(fields=['ip_start_int', 'ip_end_int'], name='idx_ip_start_int_ip_end_in_bec'),
+            models.Index(fields=['country_code'], name='idx_country_code_1096'),
         ]
 
     def __str__(self):

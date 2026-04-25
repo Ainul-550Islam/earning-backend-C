@@ -7,7 +7,7 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 def get_delivery_summary(*, days=30, channel=None):
-    from notifications.models.analytics import NotificationInsight
+    from api.notifications.models.analytics import NotificationInsight
     cutoff = timezone.now().date() - timedelta(days=days)
     qs = NotificationInsight.objects.filter(date__gte=cutoff)
     if channel:
@@ -22,7 +22,7 @@ def get_delivery_summary(*, days=30, channel=None):
             "click_rate":round(clicked/max(opened,1)*100,2)}
 
 def get_channel_comparison(*, days=30):
-    from notifications.models.analytics import NotificationInsight
+    from api.notifications.models.analytics import NotificationInsight
     cutoff = timezone.now().date() - timedelta(days=days)
     data = (NotificationInsight.objects.filter(date__gte=cutoff)
             .values("channel").annotate(sent=Sum("sent"),delivered=Sum("delivered"),opened=Sum("opened"),clicked=Sum("clicked"))
@@ -33,7 +33,7 @@ def get_channel_comparison(*, days=30):
              "open_rate":round((r["opened"] or 0)/max(r["delivered"] or 1,1)*100,2)} for r in data]
 
 def get_daily_trend(*, days=30, channel=None):
-    from notifications.models.analytics import NotificationInsight
+    from api.notifications.models.analytics import NotificationInsight
     cutoff = timezone.now().date() - timedelta(days=days)
     qs = NotificationInsight.objects.filter(date__gte=cutoff)
     if channel:
@@ -41,14 +41,14 @@ def get_daily_trend(*, days=30, channel=None):
     return list(qs.values("date").annotate(sent=Sum("sent"),delivered=Sum("delivered"),opened=Sum("opened")).order_by("date"))
 
 def get_top_notification_types(*, days=30, limit=10):
-    from notifications.models import Notification
+    from api.notifications.models import Notification
     cutoff = timezone.now() - timedelta(days=days)
     return list(Notification.objects.filter(created_at__gte=cutoff)
                 .values("notification_type").annotate(count=Count("id"),read=Count("id",filter=Q(is_read=True)))
                 .order_by("-count")[:limit])
 
 def get_fatigue_analytics():
-    from notifications.models.analytics import NotificationFatigue
+    from api.notifications.models.analytics import NotificationFatigue
     total = NotificationFatigue.objects.count()
     fatigued = NotificationFatigue.objects.filter(is_fatigued=True).count()
     avg_daily = NotificationFatigue.objects.aggregate(avg=Avg("sent_today"))["avg"] or 0
@@ -56,13 +56,13 @@ def get_fatigue_analytics():
             "fatigue_rate":round(fatigued/max(total,1)*100,2),"avg_daily_sends":round(avg_daily,2)}
 
 def get_opt_out_trends(*, days=30):
-    from notifications.models.analytics import OptOutTracking
+    from api.notifications.models.analytics import OptOutTracking
     cutoff = timezone.now() - timedelta(days=days)
     return list(OptOutTracking.objects.filter(opted_out_at__gte=cutoff)
                 .values("channel").annotate(opt_outs=Count("id")).order_by("-opt_outs"))
 
 def get_campaign_analytics(*, campaign_id=None, days=30):
-    from notifications.models import NotificationCampaign
+    from api.notifications.models import NotificationCampaign
     qs = NotificationCampaign.objects.all()
     if campaign_id:
         qs = qs.filter(pk=campaign_id)
@@ -79,7 +79,7 @@ def get_cohort_analysis(*, cohort_days=30, track_days=30):
     Cohort analysis — group users by registration date, track notification engagement.
     Returns engagement rates for each cohort over time.
     """
-    from notifications.models import Notification
+    from api.notifications.models import Notification
     from django.contrib.auth import get_user_model
     from django.db.models import Count, Q
     from datetime import date, timedelta
@@ -125,7 +125,7 @@ def get_retention_analysis(*, days=30, period='weekly'):
     Retention analysis — track if notifications reduce churn.
     Shows % of users who re-engaged after receiving notifications.
     """
-    from notifications.models import Notification
+    from api.notifications.models import Notification
     from django.db.models import Count
     from datetime import timedelta
 
@@ -164,7 +164,7 @@ def get_send_time_heatmap(*, days=30, channel=None):
     Used to visualize optimal send times.
     Returns: {0: {0: rate, 1: rate, ...}, 1: {...}} where outer=weekday, inner=hour
     """
-    from notifications.models import Notification
+    from api.notifications.models import Notification
     from django.db.models import Count, Q
     from datetime import timedelta
 

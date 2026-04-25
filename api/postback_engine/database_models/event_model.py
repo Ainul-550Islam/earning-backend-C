@@ -37,8 +37,8 @@ class ConversionEvent(models.Model):
         verbose_name_plural = "conversion events"
         ordering = ["-occurred_at"]
         indexes = [
-            models.Index(fields=["goal_id", "occurred_at"]),
-            models.Index(fields=["offer_id", "occurred_at"]),
+            models.Index(fields=["goal_id", "occurred_at"], name='idx_goal_id_occurred_at_1407'),
+            models.Index(fields=["offer_id", "occurred_at"], name='idx_offer_id_occurred_at_1408'),
         ]
 
     def __str__(self):

@@ -335,8 +335,8 @@ class AlertCorrelation(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['correlation_type', 'status']),
-            models.Index(fields=['status', 'last_analyzed']),
+            models.Index(fields=['correlation_type', 'status'], name='idx_correlation_type_statu_37e'),
+            models.Index(fields=['status', 'last_analyzed'], name='idx_status_last_analyzed_754'),
         ]
         db_table_comment = "Correlation analysis between alerts"
         verbose_name = "Alert Correlation"
@@ -624,8 +624,8 @@ class AlertPrediction(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['prediction_type', 'is_active']),
-            models.Index(fields=['training_status', 'last_trained']),
+            models.Index(fields=['prediction_type', 'is_active'], name='idx_prediction_type_is_act_a12'),
+            models.Index(fields=['training_status', 'last_trained'], name='idx_training_status_last_t_5ce'),
         ]
         db_table_comment = "Predictive analytics for alerts"
         verbose_name = "Alert Prediction"
@@ -915,8 +915,8 @@ class AnomalyDetectionModel(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['detection_method', 'is_active']),
-            models.Index(fields=['last_trained']),
+            models.Index(fields=['detection_method', 'is_active'], name='idx_detection_method_is_ac_f7c'),
+            models.Index(fields=['last_trained'], name='idx_last_trained_758'),
         ]
         db_table_comment = "Anomaly detection for alert patterns"
         verbose_name = "Anomaly Detection Model"
@@ -1147,8 +1147,8 @@ class AlertNoise(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['noise_type', 'is_active']),
-            models.Index(fields=['action', 'is_active']),
+            models.Index(fields=['noise_type', 'is_active'], name='idx_noise_type_is_active_759'),
+            models.Index(fields=['action', 'is_active'], name='idx_action_is_active_760'),
         ]
         db_table_comment = "Management of alert noise and false positives"
         verbose_name = "Alert Noise"
@@ -1407,8 +1407,8 @@ class RootCauseAnalysis(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['analysis_method', 'status']),
-            models.Index(fields=['completed_at']),
+            models.Index(fields=['analysis_method', 'status'], name='idx_analysis_method_status_761'),
+            models.Index(fields=['completed_at'], name='idx_completed_at_762'),
         ]
         db_table_comment = "Root cause analysis for incidents and alerts"
         verbose_name = "Root Cause Analysis"

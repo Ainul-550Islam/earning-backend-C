@@ -20,7 +20,7 @@ def evaluate_ab_test_task(ab_test_id: int):
     Evaluate an A/B test and declare a winner.
     Called after a campaign has been running for a sufficient period.
     """
-    from notifications.services.ABTestService import ab_test_service
+    from api.notifications.services.ABTestService import ab_test_service
 
     result = ab_test_service.evaluate_winner(ab_test_id)
     logger.info(
@@ -38,7 +38,7 @@ def evaluate_all_pending_ab_tests():
     """
     Periodic task: evaluate all active A/B tests whose campaigns are completed.
     """
-    from notifications.models.campaign import CampaignABTest
+    from api.notifications.models.campaign import CampaignABTest
 
     pending = CampaignABTest.objects.filter(
         is_active=True,

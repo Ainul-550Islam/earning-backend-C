@@ -201,5 +201,5 @@ class WebhookDeliveryLog(models.Model):
         verbose_name = _('Webhook Delivery Log')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['webhook', 'delivered', 'created_at']),
+            models.Index(fields=['webhook', 'delivered', 'created_at'], name='idx_webhook_delivered_crea_2f2'),
         ]

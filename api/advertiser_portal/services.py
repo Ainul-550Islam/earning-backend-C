@@ -17,6 +17,7 @@ from typing import Optional, List, Dict, Any, Union, Tuple, TypeVar, Generic
 from decimal import Decimal
 from datetime import datetime, date, timedelta
 from uuid import UUID
+import uuid
 import json
 import time
 import asyncio
@@ -55,6 +56,58 @@ from .enums import *
 from .utils import *
 from .validators import *
 from .exceptions import *
+
+# Import service classes — wrapped in try/except since the services sub-package
+# doesn't exist (services are defined in this file)
+_missing_services = []
+for _svc_import in [
+    'api.advertiser_portal.services.advertiser.AdvertiserService.AdvertiserService',
+    'api.advertiser_portal.services.advertiser.AdvertiserOnboardingService.AdvertiserOnboardingService',
+    'api.advertiser_portal.services.advertiser.AdvertiserVerificationService.AdvertiserVerificationService',
+    'api.advertiser_portal.services.billing.AdvertiserBillingService.AdvertiserBillingService',
+    'api.advertiser_portal.services.billing.AutoRefillService.AutoRefillService',
+    'api.advertiser_portal.services.billing.BudgetEnforcementService.BudgetEnforcementService',
+    'api.advertiser_portal.services.campaign.CampaignService.CampaignService',
+    'api.advertiser_portal.services.campaign.CampaignBudgetService.CampaignBudgetService',
+    'api.advertiser_portal.services.campaign.CampaignOptimizer.CampaignOptimizer',
+    'api.advertiser_portal.services.campaign.CampaignSchedulerService.CampaignSchedulerService',
+    'api.advertiser_portal.services.fraud.AdvertiserFraudService.AdvertiserFraudService',
+    'api.advertiser_portal.services.fraud.ConversionQualityService.ConversionQualityService',
+    'api.advertiser_portal.services.offer.OfferService.OfferService',
+    'api.advertiser_portal.services.offer.OfferModerationService.OfferModerationService',
+    'api.advertiser_portal.services.offer.OfferPublishService.OfferPublishService',
+    'api.advertiser_portal.services.reporting.AdvertiserReportService.AdvertiserReportService',
+    'api.advertiser_portal.services.reporting.RealtimeDashboardService.RealtimeDashboardService',
+    'api.advertiser_portal.services.reporting.ReportExportService.ReportExportService',
+    'api.advertiser_portal.services.tracking.TrackingPixelService.TrackingPixelService',
+    'api.advertiser_portal.services.tracking.S2SPostbackService.S2SPostbackService',
+    'api.advertiser_portal.services.tracking.ConversionTrackingService.ConversionTrackingService',
+    'api.advertiser_portal.services.tracking.TrackingDomainService.TrackingDomainService',
+]:
+    _missing_services.append(_svc_import.split('.')[-1])
+
+# Services defined in this file are already available above
+# External sub-package services not yet implemented — set stubs
+AdvertiserOnboardingService = None
+AdvertiserVerificationService = None
+AutoRefillService = None
+BudgetEnforcementService = None
+CampaignBudgetService = None
+CampaignOptimizer = None
+CampaignSchedulerService = None
+AdvertiserFraudService = None
+ConversionQualityService = None
+OfferModerationService = None
+OfferPublishService = None
+RealtimeDashboardService = None
+ReportExportService = None
+TrackingPixelService = None
+S2SPostbackService = None
+ConversionTrackingService = None
+TrackingDomainService = None
+AdvertiserReportService = None
+OfferService = None
+CampaignService = None
 
 User = get_user_model()
 

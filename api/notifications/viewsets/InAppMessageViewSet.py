@@ -34,7 +34,7 @@ class InAppMessageViewSet(viewsets.ModelViewSet):
     pagination_class = _Pagination
 
     def get_queryset(self):
-        from notifications.models.channel import InAppMessage
+        from api.notifications.models.channel import InAppMessage
         qs = InAppMessage.objects.filter(
             user=self.request.user,
             is_dismissed=False,
@@ -61,7 +61,7 @@ class InAppMessageViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         from rest_framework import serializers
-        from notifications.models.channel import InAppMessage
+        from api.notifications.models.channel import InAppMessage
 
         class InAppMessageSerializer(serializers.ModelSerializer):
             is_expired = serializers.SerializerMethodField()

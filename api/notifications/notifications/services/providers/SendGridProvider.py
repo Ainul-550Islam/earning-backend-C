@@ -356,7 +356,7 @@ class SendGridProvider:
             return result
 
         try:
-            from notifications.models.channel import EmailDeliveryLog
+            from api.notifications.models.channel import EmailDeliveryLog
 
             log = EmailDeliveryLog.objects.filter(message_id=message_id).first()
             if not log:

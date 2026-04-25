@@ -167,7 +167,7 @@ class FatigueService:
         Returns:
             Dict with: reset_count, errors.
         """
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.models.analytics import NotificationFatigue
 
         reset_count = 0
         errors = 0
@@ -197,7 +197,7 @@ class FatigueService:
         Returns:
             Dict with: reset_count, errors.
         """
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.models.analytics import NotificationFatigue
 
         reset_count = 0
         errors = 0
@@ -227,7 +227,7 @@ class FatigueService:
         Returns:
             Dict with: evaluated_count, fatigued_count, errors.
         """
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.models.analytics import NotificationFatigue
 
         evaluated = 0
         fatigued = 0
@@ -296,7 +296,7 @@ class FatigueService:
 
     def get_fatigued_user_ids(self) -> List[int]:
         """Return a list of user IDs currently marked as fatigued."""
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.models.analytics import NotificationFatigue
         return list(
             NotificationFatigue.objects.filter(is_fatigued=True).values_list('user_id', flat=True)
         )
@@ -309,7 +309,7 @@ class FatigueService:
         if priority in EXEMPT_PRIORITIES:
             return user_ids
 
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.models.analytics import NotificationFatigue
         fatigued_ids = set(
             NotificationFatigue.objects.filter(
                 user_id__in=user_ids, is_fatigued=True
@@ -324,7 +324,7 @@ class FatigueService:
     @staticmethod
     def _get_or_create(user):
         """Get or create the NotificationFatigue record for a user."""
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.models.analytics import NotificationFatigue
         return NotificationFatigue.get_or_create_for_user(user)
 
 

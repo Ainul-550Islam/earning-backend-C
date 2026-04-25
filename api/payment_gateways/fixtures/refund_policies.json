@@ -1,0 +1,114 @@
+[
+  {
+    "model": "payment_gateway_refunds.refundpolicy",
+    "pk": 1,
+    "fields": {
+      "gateway": "bkash",
+      "auto_approve": false,
+      "max_refund_days": 7,
+      "max_refund_amount": "50000.00",
+      "allow_partial_refund": true,
+      "fee_refundable": false,
+      "is_active": true,
+      "notes": "bKash refunds are instant once approved. Max 7 days from payment."
+    }
+  },
+  {
+    "model": "payment_gateway_refunds.refundpolicy",
+    "pk": 2,
+    "fields": {
+      "gateway": "nagad",
+      "auto_approve": false,
+      "max_refund_days": 7,
+      "max_refund_amount": "50000.00",
+      "allow_partial_refund": true,
+      "fee_refundable": false,
+      "is_active": true,
+      "notes": "Nagad refunds may take 1-3 business days."
+    }
+  },
+  {
+    "model": "payment_gateway_refunds.refundpolicy",
+    "pk": 3,
+    "fields": {
+      "gateway": "sslcommerz",
+      "auto_approve": false,
+      "max_refund_days": 30,
+      "max_refund_amount": "500000.00",
+      "allow_partial_refund": true,
+      "fee_refundable": false,
+      "is_active": true,
+      "notes": "SSLCommerz refunds require bank_tran_id. Admin must approve."
+    }
+  },
+  {
+    "model": "payment_gateway_refunds.refundpolicy",
+    "pk": 4,
+    "fields": {
+      "gateway": "amarpay",
+      "auto_approve": false,
+      "max_refund_days": 30,
+      "max_refund_amount": "50000.00",
+      "allow_partial_refund": true,
+      "fee_refundable": false,
+      "is_active": true,
+      "notes": "AmarPay refunds processed within 3-5 business days."
+    }
+  },
+  {
+    "model": "payment_gateway_refunds.refundpolicy",
+    "pk": 5,
+    "fields": {
+      "gateway": "upay",
+      "auto_approve": false,
+      "max_refund_days": 14,
+      "max_refund_amount": "50000.00",
+      "allow_partial_refund": true,
+      "fee_refundable": false,
+      "is_active": true,
+      "notes": "Upay refunds require original transaction_id."
+    }
+  },
+  {
+    "model": "payment_gateway_refunds.refundpolicy",
+    "pk": 6,
+    "fields": {
+      "gateway": "shurjopay",
+      "auto_approve": false,
+      "max_refund_days": 30,
+      "max_refund_amount": "50000.00",
+      "allow_partial_refund": true,
+      "fee_refundable": false,
+      "is_active": true,
+      "notes": "ShurjoPay refunds via sp_order_id. sp_code 1000 = completed."
+    }
+  },
+  {
+    "model": "payment_gateway_refunds.refundpolicy",
+    "pk": 7,
+    "fields": {
+      "gateway": "stripe",
+      "auto_approve": true,
+      "max_refund_days": 90,
+      "max_refund_amount": "9999999.00",
+      "allow_partial_refund": true,
+      "fee_refundable": false,
+      "is_active": true,
+      "notes": "Stripe refunds auto-approved. Cancellation supported while pending."
+    }
+  },
+  {
+    "model": "payment_gateway_refunds.refundpolicy",
+    "pk": 8,
+    "fields": {
+      "gateway": "paypal",
+      "auto_approve": true,
+      "max_refund_days": 60,
+      "max_refund_amount": "9999999.00",
+      "allow_partial_refund": true,
+      "fee_refundable": false,
+      "is_active": true,
+      "notes": "PayPal refunds via capture_id. Auto-approved for registered merchants."
+    }
+  }
+]

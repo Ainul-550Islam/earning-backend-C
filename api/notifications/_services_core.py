@@ -29,7 +29,7 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Content, To, From, Personalization
 import nexmo
 
-from ._models_core import (
+from .models import (
     Notification, NotificationTemplate, NotificationPreference,
     DeviceToken, NotificationCampaign, NotificationRule,
     NotificationFeedback, NotificationLog, NotificationAnalytics

@@ -47,8 +47,8 @@ class PublisherVerification(TimeStampedModel):
         verbose_name_plural = _('Publisher Verifications')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'verification_type', 'status']),
-            models.Index(fields=['token']),
+            models.Index(fields=['publisher', 'verification_type', 'status'], name='idx_publisher_verification_d38'),
+            models.Index(fields=['token'], name='idx_token_1642'),
         ]
 
     def __str__(self):

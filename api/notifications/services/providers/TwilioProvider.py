@@ -336,7 +336,7 @@ class TwilioProvider:
             return result
 
         try:
-            from notifications.models.channel import SMSDeliveryLog
+            from api.notifications.models.channel import SMSDeliveryLog
 
             log = SMSDeliveryLog.objects.filter(provider_sid=message_sid).first()
             if not log:

@@ -137,8 +137,8 @@ class AIModel(TimeStampedModel):
         verbose_name_plural = _('AI Models')
         ordering        = ['-created_at']
         indexes         = [
-            models.Index(fields=['tenant', 'status']),
-            models.Index(fields=['task_type', 'is_active']),
+            models.Index(fields=['tenant', 'status'], name='idx_tenant_status_601'),
+            models.Index(fields=['task_type', 'is_active'], name='idx_task_type_is_active_602'),
         ]
 
     def __str__(self):
@@ -266,7 +266,7 @@ class TrainingJob(TimeStampedModel):
         verbose_name = _('Training Job')
         ordering    = ['-created_at']
         indexes     = [
-            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_603'),
         ]
 
     def __str__(self):
@@ -376,8 +376,8 @@ class FeatureStore(TimeStampedModel):
         db_table    = 'ai_engine_feature_store'
         verbose_name = _('Feature Store')
         indexes     = [
-            models.Index(fields=['entity_id', 'feature_type']),
-            models.Index(fields=['tenant', 'is_active']),
+            models.Index(fields=['entity_id', 'feature_type'], name='idx_entity_id_feature_type_604'),
+            models.Index(fields=['tenant', 'is_active'], name='idx_tenant_is_active_605'),
         ]
         ordering    = ['-created_at']
 
@@ -556,8 +556,8 @@ class PredictionLog(TimeStampedModel):
         verbose_name = _('Prediction Log')
         ordering    = ['-created_at']
         indexes     = [
-            models.Index(fields=['tenant', 'prediction_type', 'created_at']),
-            models.Index(fields=['user', 'prediction_type']),
+            models.Index(fields=['tenant', 'prediction_type', 'created_at'], name='idx_tenant_prediction_type_032'),
+            models.Index(fields=['user', 'prediction_type'], name='idx_user_prediction_type_607'),
         ]
 
     def __str__(self):
@@ -645,8 +645,8 @@ class AnomalyDetectionLog(TimeStampedModel):
         verbose_name = _('Anomaly Detection Log')
         ordering    = ['-created_at']
         indexes     = [
-            models.Index(fields=['tenant', 'anomaly_type', 'severity']),
-            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['tenant', 'anomaly_type', 'severity'], name='idx_tenant_anomaly_type_se_f5b'),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_609'),
         ]
 
     def __str__(self):
@@ -707,7 +707,7 @@ class ChurnRiskProfile(TimeStampedModel):
         unique_together = [('user', 'tenant')]
         ordering    = ['-churn_probability']
         indexes     = [
-            models.Index(fields=['tenant', 'risk_level']),
+            models.Index(fields=['tenant', 'risk_level'], name='idx_tenant_risk_level_610'),
         ]
 
     def __str__(self):
@@ -779,8 +779,8 @@ class RecommendationResult(TimeStampedModel):
         verbose_name = _('Recommendation Result')
         ordering    = ['-created_at']
         indexes     = [
-            models.Index(fields=['user', 'item_type', 'created_at']),
-            models.Index(fields=['tenant', 'engine']),
+            models.Index(fields=['user', 'item_type', 'created_at'], name='idx_user_item_type_created_764'),
+            models.Index(fields=['tenant', 'engine'], name='idx_tenant_engine_612'),
         ]
 
     def __str__(self):
@@ -998,8 +998,8 @@ class TextAnalysisResult(TimeStampedModel):
         verbose_name = _('Text Analysis Result')
         ordering    = ['-created_at']
         indexes     = [
-            models.Index(fields=['tenant', 'analysis_type', 'created_at']),
-            models.Index(fields=['source_type', 'source_id']),
+            models.Index(fields=['tenant', 'analysis_type', 'created_at'], name='idx_tenant_analysis_type_c_9ff'),
+            models.Index(fields=['source_type', 'source_id'], name='idx_source_type_source_id_614'),
         ]
 
     def __str__(self):
@@ -1078,7 +1078,7 @@ class ImageAnalysisResult(TimeStampedModel):
         verbose_name = _('Image Analysis Result')
         ordering    = ['-created_at']
         indexes     = [
-            models.Index(fields=['tenant', 'analysis_type', 'created_at']),
+            models.Index(fields=['tenant', 'analysis_type', 'created_at'], name='idx_tenant_analysis_type_c_4e7'),
         ]
 
     def __str__(self):
@@ -1168,8 +1168,8 @@ class ContentModerationLog(TimeStampedModel):
         verbose_name = _('Content Moderation Log')
         ordering    = ['-created_at']
         indexes     = [
-            models.Index(fields=['tenant', 'violation_type', 'action_taken']),
-            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['tenant', 'violation_type', 'action_taken'], name='idx_tenant_violation_type__c4a'),
+            models.Index(fields=['user', 'created_at'], name='idx_user_created_at_617'),
         ]
 
     def __str__(self):
@@ -1402,7 +1402,7 @@ class InsightModel(TimeStampedModel):
         verbose_name = _('AI Insight')
         ordering    = ['-priority', '-created_at']
         indexes     = [
-            models.Index(fields=['tenant', 'insight_type', 'is_active']),
+            models.Index(fields=['tenant', 'insight_type', 'is_active'], name='idx_tenant_insight_type_is_12e'),
         ]
 
     def __str__(self):
@@ -1466,7 +1466,7 @@ class DataDriftLog(TimeStampedModel):
         verbose_name = _('Data Drift Log')
         ordering    = ['-detected_at']
         indexes     = [
-            models.Index(fields=['ai_model', 'status', 'detected_at']),
+            models.Index(fields=['ai_model', 'status', 'detected_at'], name='idx_ai_model_status_detect_d11'),
         ]
 
     def __str__(self):

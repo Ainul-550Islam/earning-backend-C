@@ -235,11 +235,11 @@ class Publisher(TimeStampedModel):
         verbose_name_plural = _('Publishers')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher_id']),
-            models.Index(fields=['status']),
-            models.Index(fields=['country']),
-            models.Index(fields=['tier']),
-            models.Index(fields=['is_kyc_verified']),
+            models.Index(fields=['publisher_id'], name='idx_publisher_id_1476'),
+            models.Index(fields=['status'], name='idx_status_1477'),
+            models.Index(fields=['country'], name='idx_country_1478'),
+            models.Index(fields=['tier'], name='idx_tier_1479'),
+            models.Index(fields=['is_kyc_verified'], name='idx_is_kyc_verified_1480'),
         ]
 
     def __str__(self):
@@ -467,11 +467,11 @@ class Site(TimeStampedModel):
         verbose_name_plural = _('Sites')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['site_id']),
-            models.Index(fields=['domain']),
-            models.Index(fields=['publisher', 'status']),
-            models.Index(fields=['category']),
-            models.Index(fields=['quality_score']),
+            models.Index(fields=['site_id'], name='idx_site_id_1481'),
+            models.Index(fields=['domain'], name='idx_domain_1482'),
+            models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1483'),
+            models.Index(fields=['category'], name='idx_category_1484'),
+            models.Index(fields=['quality_score'], name='idx_quality_score_1485'),
         ]
 
     def __str__(self):
@@ -679,11 +679,11 @@ class App(TimeStampedModel):
         verbose_name_plural = _('Apps')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['app_id']),
-            models.Index(fields=['package_name']),
-            models.Index(fields=['publisher', 'status']),
-            models.Index(fields=['platform', 'category']),
-            models.Index(fields=['quality_score']),
+            models.Index(fields=['app_id'], name='idx_app_id_1486'),
+            models.Index(fields=['package_name'], name='idx_package_name_1487'),
+            models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1488'),
+            models.Index(fields=['platform', 'category'], name='idx_platform_category_1489'),
+            models.Index(fields=['quality_score'], name='idx_quality_score_1490'),
         ]
 
     def __str__(self):
@@ -805,9 +805,9 @@ class InventoryVerification(TimeStampedModel):
         verbose_name_plural = _('Inventory Verifications')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'status']),
-            models.Index(fields=['verification_token']),
-            models.Index(fields=['method', 'status']),
+            models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1491'),
+            models.Index(fields=['verification_token'], name='idx_verification_token_1492'),
+            models.Index(fields=['method', 'status'], name='idx_method_status_1493'),
         ]
 
     def __str__(self):
@@ -1009,11 +1009,11 @@ class AdUnit(TimeStampedModel):
         verbose_name_plural = _('Ad Units')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['unit_id']),
-            models.Index(fields=['publisher', 'status']),
-            models.Index(fields=['format']),
-            models.Index(fields=['inventory_type']),
-            models.Index(fields=['floor_price']),
+            models.Index(fields=['unit_id'], name='idx_unit_id_1494'),
+            models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1495'),
+            models.Index(fields=['format'], name='idx_format_1496'),
+            models.Index(fields=['inventory_type'], name='idx_inventory_type_1497'),
+            models.Index(fields=['floor_price'], name='idx_floor_price_1498'),
         ]
 
     def __str__(self):
@@ -1164,8 +1164,8 @@ class AdPlacement(TimeStampedModel):
         verbose_name_plural = _('Ad Placements')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['ad_unit', 'is_active']),
-            models.Index(fields=['position']),
+            models.Index(fields=['ad_unit', 'is_active'], name='idx_ad_unit_is_active_1499'),
+            models.Index(fields=['position'], name='idx_position_1500'),
         ]
 
     def __str__(self):
@@ -1309,8 +1309,8 @@ class AdUnitTargeting(TimeStampedModel):
         verbose_name_plural = _('Ad Unit Targeting Rules')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['ad_unit']),
-            models.Index(fields=['device_type']),
+            models.Index(fields=['ad_unit'], name='idx_ad_unit_1501'),
+            models.Index(fields=['device_type'], name='idx_device_type_1502'),
         ]
 
     def __str__(self):
@@ -1398,8 +1398,8 @@ class MediationGroup(TimeStampedModel):
         verbose_name_plural = _('Mediation Groups')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['ad_unit']),
-            models.Index(fields=['mediation_type', 'is_active']),
+            models.Index(fields=['ad_unit'], name='idx_ad_unit_1503'),
+            models.Index(fields=['mediation_type', 'is_active'], name='idx_mediation_type_is_acti_bb6'),
         ]
 
     def __str__(self):
@@ -1530,9 +1530,9 @@ class WaterfallItem(TimeStampedModel):
         ordering = ['mediation_group', 'priority']
         unique_together = [['mediation_group', 'priority']]
         indexes = [
-            models.Index(fields=['mediation_group', 'priority', 'status']),
-            models.Index(fields=['network']),
-            models.Index(fields=['floor_ecpm']),
+            models.Index(fields=['mediation_group', 'priority', 'status'], name='idx_mediation_group_priori_362'),
+            models.Index(fields=['network'], name='idx_network_1506'),
+            models.Index(fields=['floor_ecpm'], name='idx_floor_ecpm_1507'),
         ]
 
     def __str__(self):
@@ -1637,8 +1637,8 @@ class HeaderBiddingConfig(TimeStampedModel):
         ordering = ['-created_at']
         unique_together = [['mediation_group', 'bidder_name']]
         indexes = [
-            models.Index(fields=['mediation_group', 'status']),
-            models.Index(fields=['bidder_name']),
+            models.Index(fields=['mediation_group', 'status'], name='idx_mediation_group_status_fd2'),
+            models.Index(fields=['bidder_name'], name='idx_bidder_name_1509'),
         ]
 
     def __str__(self):
@@ -1858,12 +1858,12 @@ class PublisherEarning(TimeStampedModel):
         verbose_name_plural = _('Publisher Earnings')
         ordering = ['-date', '-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'date']),
-            models.Index(fields=['publisher', 'date', 'granularity']),
-            models.Index(fields=['date', 'country']),
-            models.Index(fields=['ad_unit', 'date']),
-            models.Index(fields=['status']),
-            models.Index(fields=['earning_type']),
+            models.Index(fields=['publisher', 'date'], name='idx_publisher_date_1510'),
+            models.Index(fields=['publisher', 'date', 'granularity'], name='idx_publisher_date_granula_843'),
+            models.Index(fields=['date', 'country'], name='idx_date_country_1512'),
+            models.Index(fields=['ad_unit', 'date'], name='idx_ad_unit_date_1513'),
+            models.Index(fields=['status'], name='idx_status_1514'),
+            models.Index(fields=['earning_type'], name='idx_earning_type_1515'),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -1994,8 +1994,8 @@ class PayoutThreshold(TimeStampedModel):
         verbose_name_plural = _('Payout Thresholds')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'payment_method']),
-            models.Index(fields=['is_primary']),
+            models.Index(fields=['publisher', 'payment_method'], name='idx_publisher_payment_meth_455'),
+            models.Index(fields=['is_primary'], name='idx_is_primary_1517'),
         ]
 
     def __str__(self):
@@ -2167,10 +2167,10 @@ class PublisherInvoice(TimeStampedModel):
         verbose_name_plural = _('Publisher Invoices')
         ordering = ['-period_end', '-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'status']),
-            models.Index(fields=['invoice_number']),
-            models.Index(fields=['period_start', 'period_end']),
-            models.Index(fields=['status', 'due_date']),
+            models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1518'),
+            models.Index(fields=['invoice_number'], name='idx_invoice_number_1519'),
+            models.Index(fields=['period_start', 'period_end'], name='idx_period_start_period_en_9f0'),
+            models.Index(fields=['status', 'due_date'], name='idx_status_due_date_1521'),
         ]
 
     def __str__(self):
@@ -2415,12 +2415,12 @@ class TrafficSafetyLog(TimeStampedModel):
         verbose_name_plural = _('Traffic Safety Logs')
         ordering = ['-detected_at']
         indexes = [
-            models.Index(fields=['publisher', 'detected_at']),
-            models.Index(fields=['traffic_type', 'severity']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['fraud_score']),
-            models.Index(fields=['action_taken']),
-            models.Index(fields=['is_false_positive']),
+            models.Index(fields=['publisher', 'detected_at'], name='idx_publisher_detected_at_1522'),
+            models.Index(fields=['traffic_type', 'severity'], name='idx_traffic_type_severity_1523'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_1524'),
+            models.Index(fields=['fraud_score'], name='idx_fraud_score_1525'),
+            models.Index(fields=['action_taken'], name='idx_action_taken_1526'),
+            models.Index(fields=['is_false_positive'], name='idx_is_false_positive_1527'),
         ]
 
     def __str__(self):
@@ -2612,11 +2612,11 @@ class SiteQualityMetric(TimeStampedModel):
         ordering = ['-date']
         unique_together = [['site', 'date']]
         indexes = [
-            models.Index(fields=['site', 'date']),
-            models.Index(fields=['overall_quality_score']),
-            models.Index(fields=['content_quality']),
-            models.Index(fields=['has_alerts']),
-            models.Index(fields=['viewability_rate']),
+            models.Index(fields=['site', 'date'], name='idx_site_date_1528'),
+            models.Index(fields=['overall_quality_score'], name='idx_overall_quality_score_1529'),
+            models.Index(fields=['content_quality'], name='idx_content_quality_1530'),
+            models.Index(fields=['has_alerts'], name='idx_has_alerts_1531'),
+            models.Index(fields=['viewability_rate'], name='idx_viewability_rate_1532'),
         ]
 
     def __str__(self):

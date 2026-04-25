@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     'api.disaster_recovery.apps.DisasterRecoveryConfig',
     'api.dr_integration',
     'api.ai_engine',
+    'api.offer_routing',
 ]
 
 # ==================== MIDDLEWARE ====================
@@ -115,7 +116,7 @@ MIDDLEWARE = [
     'api.security.middleware.SecurityAuditMiddleware',
     'api.rate_limit.middleware.RateLimitMiddleware',
     'api.rate_limit.middleware.EarningTaskRateLimitMiddleware',
-    'api.payment_gateways.middleware.WebhookIPWhitelistMiddleware',
+    'api.payment_gateways.middleware.WebhookSignatureMiddleware',
     'api.wallet.middleware.SafeIPMiddleware',
     'api.wallet.middleware.CircuitBreakerMiddleware',
     'api.tenants.middleware.TenantMiddleware',

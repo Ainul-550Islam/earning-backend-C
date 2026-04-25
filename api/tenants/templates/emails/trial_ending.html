@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trial Ending Soon - {{ tenant.name }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .trial-box {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-left: 4px solid #17a2b8;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .plan-details {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        .days-remaining {
+            font-size: 36px;
+            font-weight: bold;
+            color: #17a2b8;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #17a2b8;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #138496;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .feature-list li:before {
+            content: "â";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Trial Period Ending Soon</h1>
+        <p>{{ tenant.name }}</p>
+    </div>
+    
+    <div class="content">
+        <div class="trial-box">
+            <h3>Your Trial Period is Ending</h3>
+            <p>Your {{ trial_days }}-day trial period for {{ tenant.name }} will expire soon. Don't lose access to your tenant!</p>
+            <div class="days-remaining">{{ days_remaining }} days left</div>
+        </div>
+        
+        <div class="plan-details">
+            <h3>Choose Your Plan</h3>
+            <p>Select a plan that fits your needs and continue using our services without interruption.</p>
+            
+            {% if available_plans %}
+            {% for plan in available_plans %}
+            <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px;">
+                <h4>{{ plan.name }}</h4>
+                <p class="price">{{ plan.currency }} {{ plan.price_monthly|floatformat:2 }}/month</p>
+                <p>{{ plan.description }}</p>
+                
+                {% if plan.features %}
+                <ul class="feature-list">
+                    {% for feature in plan.features %}
+                    <li>{{ feature.feature_name }}: {{ feature.value }} {{ feature.unit }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/upgrade/?plan_id={{ plan.id }}" class="btn">
+                        Choose {{ plan.name }}
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+        
+        <div class="plan-details">
+            <h3>What Happens if You Don't Upgrade?</h3>
+            <ul>
+                <li>Your tenant will be suspended after the trial ends</li>
+                <li>You'll lose access to all features and data</li>
+                <li>API integrations will stop working</li>
+                <li>Team members will lose access</li>
+            </ul>
+        </div>
+        
+        <div class="plan-details">
+            <h3>Benefits of Upgrading</h3>
+            <ul>
+                <li>Unlimited access to all features</li>
+                <li>Priority customer support</li>
+                <li>Regular updates and new features</li>
+                <li>Data backup and security</li>
+                <li>Custom branding options</li>
+            </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/plans/" class="btn">
+                View All Plans
+            </a>
+            <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/billing/" class="btn btn-secondary">
+                Billing Settings
+            </a>
+        </div>
+        
+        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;">
+            <h4>Need Help Choosing?</h4>
+            <p>Our customer success team is here to help you select the right plan for your needs. Schedule a free consultation with one of our experts.</p>
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/support/consultation/" class="btn btn-secondary">
+                    Schedule Consultation
+                </a>
+            </div>
+        </div>
+        
+        <div style="background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+            <h4>Special Offer</h4>
+            <p>Upgrade before your trial ends and get <strong>20% off your first month</strong> on any plan! Use code: <strong>TRIAL20</strong></p>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <p><strong>Questions?</strong></p>
+            <p>Email: support@example.com</p>
+            <p>Phone: 1-800-TENANTS</p>
+            <p>Hours: Monday-Friday, 9 AM - 6 PM EST</p>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>This email was sent to {{ tenant.admin_email }} on behalf of {{ tenant.name }}</p>
+        <p>If you have any questions, please contact us at support@example.com</p>
+        <p>&copy; 2024 Tenant Management System. All rights reserved.</p>
+    </div>
+</body>
+</html>

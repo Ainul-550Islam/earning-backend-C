@@ -30,7 +30,7 @@ def cleanup_expired_notifications():
     Delete notifications that have passed their expiry time and are marked
     for auto-deletion. Preserves non-auto-delete records.
     """
-    from notifications.models import Notification
+    from api.notifications.models import Notification
 
     try:
         result = Notification.delete_expired()
@@ -50,7 +50,7 @@ def cleanup_old_notifications(days: int = 90):
     Delete notifications older than `days` days (default 90).
     Keeps unread notifications regardless of age.
     """
-    from notifications.services import notification_service
+    from api.notifications._services_core import notification_service
 
     try:
         result = notification_service.cleanup_old_notifications(days=days)
@@ -70,7 +70,7 @@ def cleanup_old_delivery_logs(days: int = 30):
     Delete PushDeliveryLog, EmailDeliveryLog, SMSDeliveryLog records older than
     `days` days (default 30). Keeps failed records an extra 14 days for debugging.
     """
-    from notifications.models.channel import PushDeliveryLog, EmailDeliveryLog, SMSDeliveryLog
+    from api.notifications.models.channel import PushDeliveryLog, EmailDeliveryLog, SMSDeliveryLog
 
     cutoff = timezone.now() - timedelta(days=days)
     failed_cutoff = timezone.now() - timedelta(days=days + 14)
@@ -109,7 +109,7 @@ def cleanup_stale_queue_entries(days: int = 7):
     Delete NotificationQueue entries in terminal states (done/failed/cancelled)
     older than `days` days.
     """
-    from notifications.models.schedule import NotificationQueue
+    from api.notifications.models.schedule import NotificationQueue
 
     cutoff = timezone.now() - timedelta(days=days)
     try:
@@ -141,7 +141,7 @@ def cleanup_old_retry_records(days: int = 14):
     """
     Delete NotificationRetry records in terminal states older than `days` days.
     """
-    from notifications.models.schedule import NotificationRetry
+    from api.notifications.models.schedule import NotificationRetry
 
     cutoff = timezone.now() - timedelta(days=days)
     try:
@@ -166,7 +166,7 @@ def cleanup_read_in_app_messages(days: int = 30):
     older than `days` days. Keeps unread/unexpired messages.
     """
     from django.db.models import Q
-    from notifications.models.channel import InAppMessage
+    from api.notifications.models.channel import InAppMessage
 
     cutoff = timezone.now() - timedelta(days=days)
     try:
@@ -186,7 +186,7 @@ def cleanup_read_in_app_messages(days: int = 30):
 )
 def cleanup_expired_in_app_messages():
     """Delete InAppMessage records past their expires_at datetime."""
-    from notifications.models.channel import InAppMessage
+    from api.notifications.models.channel import InAppMessage
 
     try:
         deleted, _ = InAppMessage.objects.filter(
@@ -208,7 +208,7 @@ def cleanup_old_schedules(days: int = 30):
     Delete completed/cancelled/skipped NotificationSchedule records
     older than `days` days.
     """
-    from notifications.models.schedule import NotificationSchedule
+    from api.notifications.models.schedule import NotificationSchedule
 
     cutoff = timezone.now() - timedelta(days=days)
     try:

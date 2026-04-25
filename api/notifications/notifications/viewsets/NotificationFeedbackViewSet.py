@@ -8,8 +8,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Count, Avg
 
-from notifications.models import NotificationFeedback
-from notifications.serializers import NotificationFeedbackSerializer
+from api.notifications.models import NotificationFeedback
+from api.notifications.serializers import NotificationFeedbackSerializer
 
 
 class NotificationFeedbackViewSet(viewsets.ModelViewSet):

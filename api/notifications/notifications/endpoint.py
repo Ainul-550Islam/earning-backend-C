@@ -12,9 +12,9 @@ class NotificationAPIMetaView(View):
     """API meta-information endpoint — /api/notifications/meta/"""
 
     def get(self, request):
-        from notifications.integration_system.health_check import health_checker
-        from notifications.tasks_cap import list_tasks
-        from notifications.plugins import plugin_registry
+        from api.notifications.integration_system.health_check import health_checker
+        from api.notifications.tasks_cap import list_tasks
+        from api.notifications.plugins import plugin_registry
 
         return JsonResponse({
             'api': 'Notification System API',
@@ -31,7 +31,7 @@ class NotificationAPIMetaView(View):
 def health_endpoint(request):
     """Quick health check endpoint for load balancers — /api/notifications/health/"""
     try:
-        from notifications.integration_system.health_check import health_checker
+        from api.notifications.integration_system.health_check import health_checker
         result = health_checker.check('database')
         status = 200 if result.status.value == 'healthy' else 503
         return JsonResponse({'status': result.status.value, 'timestamp': timezone.now().isoformat()}, status=status)

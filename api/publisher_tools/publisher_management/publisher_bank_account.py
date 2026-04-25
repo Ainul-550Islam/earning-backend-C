@@ -239,10 +239,10 @@ class PublisherBankAccount(TimeStampedModel):
         verbose_name_plural = _('Publisher Bank Accounts')
         ordering = ['-is_primary', '-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'is_primary']),
-            models.Index(fields=['account_type']),
-            models.Index(fields=['verification_status']),
-            models.Index(fields=['currency']),
+            models.Index(fields=['publisher', 'is_primary'], name='idx_publisher_is_primary_1599'),
+            models.Index(fields=['account_type'], name='idx_account_type_1600'),
+            models.Index(fields=['verification_status'], name='idx_verification_status_1601'),
+            models.Index(fields=['currency'], name='idx_currency_1602'),
         ]
 
     def __str__(self):

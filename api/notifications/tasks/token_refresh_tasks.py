@@ -33,8 +33,8 @@ def refresh_stale_fcm_tokens(days_inactive: int = 30):
       - User clears app data
       - Token is refreshed by FCM (new token issued automatically)
     """
-    from notifications.models import DeviceToken
-    from notifications.services.providers.FCMProvider import fcm_provider
+    from api.notifications.models import DeviceToken
+    from api.notifications.services.providers.FCMProvider import fcm_provider
 
     if not fcm_provider.is_available():
         logger.warning('refresh_stale_fcm_tokens: FCMProvider not available, skipping')
@@ -99,7 +99,7 @@ def cleanup_inactive_devices(days_inactive: int = 90):
     Permanently deactivate DeviceToken records that have been inactive for
     `days_inactive` days and have high failure rates.
     """
-    from notifications.models import DeviceToken
+    from api.notifications.models import DeviceToken
 
     cutoff = timezone.now() - timedelta(days=days_inactive)
 
@@ -149,7 +149,7 @@ def deactivate_duplicate_tokens():
     Find users with duplicate active device tokens (same fcm_token or apns_token)
     and keep only the most recently used one.
     """
-    from notifications.models import DeviceToken
+    from api.notifications.models import DeviceToken
     from django.db.models import Count
 
     deactivated = 0
@@ -213,7 +213,7 @@ def deactivate_invalid_push_devices(invalid_tokens: list):
     Deactivate DeviceToken records whose FCM/APNs tokens are in the
     `invalid_tokens` list. Called immediately after a send failure batch.
     """
-    from notifications.models import DeviceToken
+    from api.notifications.models import DeviceToken
 
     if not invalid_tokens:
         return {'success': True, 'deactivated': 0}

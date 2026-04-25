@@ -150,7 +150,7 @@ class WalletTransactionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if self.request.user.is_staff:
             return WalletTransaction.objects.all()
-        return WalletTransaction.objects.filter(wallet__user=self.request.user)
+        return WalletTransaction.objects.select_related('wallet','wallet__user','created_by','approved_by').filter(wallet__user=self.request.user)
     
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def approve(self, request, pk=None):
@@ -898,7 +898,7 @@ class WalletSummaryAPIView(APIView):
                 wd_qs      = Withdrawal.objects.all()
             else:
                 wallets_qs = Wallet.objects.filter(user=user)
-                txn_qs     = WalletTransaction.objects.filter(wallet__user=user)
+                txn_qs     = WalletTransaction.objects.select_related('wallet','wallet__user','created_by','approved_by').filter(wallet__user=user)
                 wd_qs      = Withdrawal.objects.filter(user=user)
 
             # ── Total balance ─────────────────────────────────────────────────

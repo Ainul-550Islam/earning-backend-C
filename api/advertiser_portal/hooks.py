@@ -39,6 +39,7 @@ class HookPriority(Enum):
     NORMAL = 3
     HIGH = 4
     HIGHEST = 5
+    URGENT = 6
 
 
 @dataclass
@@ -791,3 +792,8 @@ class SecurityValidationError(Exception):
 
 # Initialize built-in plugins on module import
 initialize_builtin_plugins()
+
+hook_manager = global_hook_manager
+plugin_manager = global_hook_manager
+task_manager = global_hook_manager
+

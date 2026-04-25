@@ -27,7 +27,7 @@ def sendgrid_webhook(request):
         return HttpResponse('Unauthorized', status=401)
     try:
         events = json.loads(request.body)
-        from notifications.tasks.delivery_tracking_tasks import process_sendgrid_events_task
+        from api.notifications.tasks.delivery_tracking_tasks import process_sendgrid_events_task
         process_sendgrid_events_task.delay(events if isinstance(events, list) else [events])
         return HttpResponse(status=200)
     except Exception as exc:
@@ -53,7 +53,7 @@ def twilio_sms_webhook(request):
         pass
     try:
         data = {k: v[0] if isinstance(v, list) else v for k, v in dict(request.POST).items()}
-        from notifications.tasks.delivery_tracking_tasks import process_twilio_webhook_task
+        from api.notifications.tasks.delivery_tracking_tasks import process_twilio_webhook_task
         process_twilio_webhook_task.delay(data)
         return HttpResponse(status=200)
     except Exception as exc:
@@ -66,7 +66,7 @@ def twilio_sms_webhook(request):
 def one_click_unsubscribe(request, token: str):
     """One-click email unsubscribe (RFC 8058 List-Unsubscribe-Post)."""
     try:
-        from notifications.tasks.unsubscribe_tasks import process_one_click_unsubscribe_task
+        from api.notifications.tasks.unsubscribe_tasks import process_one_click_unsubscribe_task
         process_one_click_unsubscribe_task.delay(token)
         if request.method == 'POST':
             return JsonResponse({'success': True, 'message': 'Unsubscribed successfully.'})
@@ -81,7 +81,7 @@ def one_click_unsubscribe(request, token: str):
 def vapid_public_key(request):
     """Return VAPID public key for browser push subscription setup."""
     try:
-        from notifications.services.providers.WebPushProvider import web_push_provider
+        from api.notifications.services.providers.WebPushProvider import web_push_provider
         return JsonResponse({'vapid_public_key': web_push_provider.get_vapid_public_key()})
     except Exception as exc:
         return JsonResponse({'error': str(exc)}, status=500)

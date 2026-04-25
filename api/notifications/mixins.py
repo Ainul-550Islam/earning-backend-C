@@ -254,7 +254,7 @@ class AuditMixin:
 
     def _audit(self, action: str, instance):
         try:
-            from notifications.integration_system.integ_audit_logs import audit_logger
+            from api.notifications.integration_system.integ_audit_logs import audit_logger
             audit_logger.log(
                 action=action,
                 module='notifications',

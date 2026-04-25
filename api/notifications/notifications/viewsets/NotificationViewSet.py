@@ -19,8 +19,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from notifications.models import Notification, NotificationLog
-from notifications.serializers import (
+from api.notifications.models import Notification, NotificationLog
+from api.notifications.serializers import (
     NotificationSerializer,
     CreateNotificationSerializer,
     UpdateNotificationSerializer,
@@ -37,7 +37,7 @@ class IsOwnerOrAdmin:
 
 
 def _get_owner_permission():
-    from notifications.views import IsOwnerOrAdmin as _P
+    from api.notifications.views import IsOwnerOrAdmin as _P
     return _P
 
 
@@ -46,7 +46,7 @@ class StandardPagination:
 
 
 def _get_pagination():
-    from notifications.views import StandardPagination as _P
+    from api.notifications.views import StandardPagination as _P
     return _P
 
 
@@ -93,16 +93,16 @@ class NotificationViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
 
     def get_permissions(self):
-        from notifications.views import IsOwnerOrAdmin
+        from api.notifications.views import IsOwnerOrAdmin
         return [IsAuthenticated(), IsOwnerOrAdmin()]
 
     def get_pagination_class(self):
-        from notifications.views import StandardPagination
+        from api.notifications.views import StandardPagination
         return StandardPagination
 
     @property
     def pagination_class(self):
-        from notifications.views import StandardPagination
+        from api.notifications.views import StandardPagination
         return StandardPagination
 
     # ------------------------------------------------------------------
@@ -242,7 +242,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='send-bulk')
     def send_bulk(self, request):
         """Bulk send notifications to multiple users."""
-        from notifications.serializers import BulkNotificationSerializer
+        from api.notifications.serializers import BulkNotificationSerializer
         serializer = BulkNotificationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             result = serializer.save()
@@ -299,7 +299,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def feedback(self, request, pk=None):
         """Submit feedback for a notification."""
         notification = self.get_object()
-        from notifications.serializers import NotificationFeedbackSerializer
+        from api.notifications.serializers import NotificationFeedbackSerializer
         serializer = NotificationFeedbackSerializer(
             data=request.data, context={'request': request}
         )

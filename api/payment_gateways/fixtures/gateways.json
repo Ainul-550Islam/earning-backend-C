@@ -1,0 +1,176 @@
+[
+  {
+    "model": "payment_gateways.paymentgateway",
+    "pk": 1,
+    "fields": {
+      "name": "bkash",
+      "display_name": "bKash",
+      "description": "Bangladesh's largest mobile financial service provider",
+      "status": "active",
+      "merchant_id": "",
+      "merchant_key": "",
+      "merchant_secret": "",
+      "api_url": "https://tokenized.sandbox.bka.sh/v1.2.0-beta",
+      "callback_url": "",
+      "is_test_mode": true,
+      "transaction_fee_percentage": "1.50",
+      "minimum_amount": "10.00",
+      "maximum_amount": "50000.00",
+      "supports_deposit": true,
+      "supports_withdrawal": true,
+      "supported_currencies": "BDT",
+      "color_code": "#E2136E",
+      "sort_order": 1,
+      "config_data": {}
+    }
+  },
+  {
+    "model": "payment_gateways.paymentgateway",
+    "pk": 2,
+    "fields": {
+      "name": "nagad",
+      "display_name": "Nagad",
+      "description": "Bangladesh Post Office's digital financial service",
+      "status": "active",
+      "merchant_id": "",
+      "api_url": "https://api.mynagad.com/api/dfs",
+      "callback_url": "",
+      "is_test_mode": true,
+      "transaction_fee_percentage": "1.20",
+      "minimum_amount": "10.00",
+      "maximum_amount": "50000.00",
+      "supports_deposit": true,
+      "supports_withdrawal": true,
+      "supported_currencies": "BDT",
+      "color_code": "#F7941D",
+      "sort_order": 2,
+      "config_data": {}
+    }
+  },
+  {
+    "model": "payment_gateways.paymentgateway",
+    "pk": 3,
+    "fields": {
+      "name": "sslcommerz",
+      "display_name": "SSLCommerz",
+      "description": "Bangladesh's first payment gateway",
+      "status": "active",
+      "api_url": "https://sandbox.sslcommerz.com",
+      "is_test_mode": true,
+      "transaction_fee_percentage": "2.00",
+      "minimum_amount": "10.00",
+      "maximum_amount": "500000.00",
+      "supports_deposit": true,
+      "supports_withdrawal": true,
+      "supported_currencies": "BDT",
+      "color_code": "#0072BC",
+      "sort_order": 3,
+      "config_data": {}
+    }
+  },
+  {
+    "model": "payment_gateways.paymentgateway",
+    "pk": 4,
+    "fields": {
+      "name": "amarpay",
+      "display_name": "AmarPay",
+      "description": "aamarpay payment gateway",
+      "status": "active",
+      "api_url": "https://sandbox.aamarpay.com",
+      "is_test_mode": true,
+      "transaction_fee_percentage": "1.80",
+      "minimum_amount": "10.00",
+      "maximum_amount": "50000.00",
+      "supports_deposit": true,
+      "supports_withdrawal": true,
+      "supported_currencies": "BDT",
+      "color_code": "#00AEEF",
+      "sort_order": 4,
+      "config_data": {}
+    }
+  },
+  {
+    "model": "payment_gateways.paymentgateway",
+    "pk": 5,
+    "fields": {
+      "name": "upay",
+      "display_name": "Upay",
+      "description": "United Commercial Bank digital payment",
+      "status": "active",
+      "api_url": "https://uat.upay.com.bd/api/v1",
+      "is_test_mode": true,
+      "transaction_fee_percentage": "1.30",
+      "minimum_amount": "10.00",
+      "maximum_amount": "50000.00",
+      "supports_deposit": true,
+      "supports_withdrawal": true,
+      "supported_currencies": "BDT",
+      "color_code": "#005BAA",
+      "sort_order": 5,
+      "config_data": {}
+    }
+  },
+  {
+    "model": "payment_gateways.paymentgateway",
+    "pk": 6,
+    "fields": {
+      "name": "shurjopay",
+      "display_name": "ShurjoPay",
+      "description": "ShurjoPay payment gateway",
+      "status": "active",
+      "api_url": "https://sandbox.shurjopayment.com/api",
+      "is_test_mode": true,
+      "transaction_fee_percentage": "1.40",
+      "minimum_amount": "10.00",
+      "maximum_amount": "50000.00",
+      "supports_deposit": true,
+      "supports_withdrawal": true,
+      "supported_currencies": "BDT",
+      "color_code": "#6A0DAD",
+      "sort_order": 6,
+      "config_data": {}
+    }
+  },
+  {
+    "model": "payment_gateways.paymentgateway",
+    "pk": 7,
+    "fields": {
+      "name": "stripe",
+      "display_name": "Stripe",
+      "description": "Global payment processing platform",
+      "status": "active",
+      "api_url": "https://api.stripe.com",
+      "is_test_mode": true,
+      "transaction_fee_percentage": "2.90",
+      "minimum_amount": "10.00",
+      "maximum_amount": "9999999.00",
+      "supports_deposit": true,
+      "supports_withdrawal": true,
+      "supported_currencies": "USD,EUR,GBP,AUD,CAD,SGD",
+      "color_code": "#635BFF",
+      "sort_order": 7,
+      "config_data": {}
+    }
+  },
+  {
+    "model": "payment_gateways.paymentgateway",
+    "pk": 8,
+    "fields": {
+      "name": "paypal",
+      "display_name": "PayPal",
+      "description": "Global online payment system",
+      "status": "active",
+      "api_url": "https://api-m.sandbox.paypal.com",
+      "is_test_mode": true,
+      "transaction_fee_percentage": "3.50",
+      "minimum_amount": "10.00",
+      "maximum_amount": "9999999.00",
+      "supports_deposit": true,
+      "supports_withdrawal": true,
+      "supported_currencies": "USD,EUR,GBP,AUD,CAD",
+      "color_code": "#003087",
+      "sort_order": 8,
+      "config_data": {}
+    }
+  }
+]

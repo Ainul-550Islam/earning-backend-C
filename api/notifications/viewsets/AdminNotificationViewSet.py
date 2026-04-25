@@ -22,11 +22,11 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import serializers
 
-from notifications.models import (
+from api.notifications.models import (
     Notification, NotificationTemplate, NotificationLog
 )
-from notifications.serializers import NotificationSerializer
-from notifications.services import notification_service, template_service
+from api.notifications.serializers import NotificationSerializer
+from api.notifications._services_core import notification_service, template_service
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -141,7 +141,7 @@ class AdminNotificationViewSet(viewsets.ModelViewSet):
         # For large batches — delegate to Celery task
         if total > 500:
             try:
-                from notifications.tasks import send_bulk_notifications_task
+                from api.notifications.tasks import send_bulk_notifications_task
                 send_bulk_notifications_task.delay(
                     user_ids=list(users.values_list('pk', flat=True)),
                     title=data['title'],
@@ -195,7 +195,7 @@ class AdminNotificationViewSet(viewsets.ModelViewSet):
         user_ids = list(User.objects.filter(is_active=True).values_list('pk', flat=True))
 
         try:
-            from notifications.tasks import send_bulk_notifications_task
+            from api.notifications.tasks import send_bulk_notifications_task
             send_bulk_notifications_task.delay(
                 user_ids=user_ids,
                 title=title,

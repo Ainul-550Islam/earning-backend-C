@@ -82,8 +82,8 @@ class FraudRule(TimeStampedModel):
     class Meta:
         ordering = ['-updated_at']
         indexes = [
-            models.Index(fields=['rule_type', 'is_active']),
-            models.Index(fields=['severity']),
+            models.Index(fields=['rule_type', 'is_active'], name='idx_rule_type_is_active_995'),
+            models.Index(fields=['severity'], name='idx_severity_996'),
         ]
     
     def __str__(self):
@@ -142,9 +142,9 @@ class FraudAttempt(TimeStampedModel):
     class Meta:
         ordering = ['-updated_at']
         indexes = [
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['attempt_type', 'created_at']),
-            models.Index(fields=['fraud_score']),
+            models.Index(fields=['user', 'status'], name='idx_user_status_997'),
+            models.Index(fields=['attempt_type', 'created_at'], name='idx_attempt_type_created_a_18d'),
+            models.Index(fields=['fraud_score'], name='idx_fraud_score_999'),
         ]
     
     def __str__(self):
@@ -227,8 +227,8 @@ class UserRiskProfile(TimeStampedModel):
     class Meta:
         ordering = ['-updated_at']
         indexes = [
-            models.Index(fields=['overall_risk_score']),
-            models.Index(fields=['is_flagged', 'is_restricted']),
+            models.Index(fields=['overall_risk_score'], name='idx_overall_risk_score_1000'),
+            models.Index(fields=['is_flagged', 'is_restricted'], name='idx_is_flagged_is_restrict_e85'),
         ]
     
     def __str__(self):
@@ -288,9 +288,9 @@ class DeviceFingerprint(TimeStampedModel):
     class Meta:
         ordering = ['-updated_at']
         indexes = [
-            models.Index(fields=['device_hash']),
-            models.Index(fields=['user', 'last_seen']),
-            models.Index(fields=['ip_address', 'created_at']),
+            models.Index(fields=['device_hash'], name='idx_device_hash_1002'),
+            models.Index(fields=['user', 'last_seen'], name='idx_user_last_seen_1003'),
+            models.Index(fields=['ip_address', 'created_at'], name='idx_ip_address_created_at_1004'),
         ]
     
     def __str__(self):
@@ -328,8 +328,8 @@ class IPReputation(TimeStampedModel):
     class Meta:
         ordering = ['-updated_at']
         indexes = [
-            models.Index(fields=['ip_address', 'is_blacklisted']),
-            models.Index(fields=['country', 'fraud_score']),
+            models.Index(fields=['ip_address', 'is_blacklisted'], name='idx_ip_address_is_blacklis_456'),
+            models.Index(fields=['country', 'fraud_score'], name='idx_country_fraud_score_1006'),
         ]
     
     def __str__(self):
@@ -380,8 +380,8 @@ class FraudAlert(TimeStampedModel):
     class Meta:
         ordering = ['-updated_at']
         indexes = [
-            models.Index(fields=['alert_type', 'is_resolved']),
-            models.Index(fields=['priority', 'created_at']),
+            models.Index(fields=['alert_type', 'is_resolved'], name='idx_alert_type_is_resolved_a40'),
+            models.Index(fields=['priority', 'created_at'], name='idx_priority_created_at_1008'),
         ]
     
     def __str__(self):
@@ -500,10 +500,10 @@ class OfferCompletion(models.Model):
         verbose_name = 'Offer Completion'
         verbose_name_plural = 'Offer Completions'
         indexes = [
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['offer', 'status']),
-            models.Index(fields=['tracked_at']),
-            models.Index(fields=['is_fraud']),
+            models.Index(fields=['user', 'status'], name='idx_user_status_1009'),
+            models.Index(fields=['offer', 'status'], name='idx_offer_status_1010'),
+            models.Index(fields=['tracked_at'], name='idx_tracked_at_1011'),
+            models.Index(fields=['is_fraud'], name='idx_is_fraud_1012'),
         ]
     
     def __str__(self):

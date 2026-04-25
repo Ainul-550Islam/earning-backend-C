@@ -60,8 +60,8 @@ class CampaignService:
             Dict with: success, campaign_id, error.
         """
         try:
-            from notifications.models.campaign import NotificationCampaign, CampaignSegment
-            from notifications.models import NotificationTemplate
+            from api.notifications.models.campaign import NotificationCampaign, CampaignSegment
+            from api.notifications.models import NotificationTemplate
 
             template = NotificationTemplate.objects.get(pk=template_id)
 
@@ -102,7 +102,7 @@ class CampaignService:
     def get_campaign(self, campaign_id: int) -> Optional[object]:
         """Return the campaign instance or None."""
         try:
-            from notifications.models.campaign import NotificationCampaign
+            from api.notifications.models.campaign import NotificationCampaign
             return NotificationCampaign.objects.get(pk=campaign_id)
         except Exception:
             return None
@@ -110,7 +110,7 @@ class CampaignService:
     def update_campaign(self, campaign_id: int, updates: Dict) -> Dict:
         """Update campaign fields (only allowed on draft campaigns)."""
         try:
-            from notifications.models.campaign import NotificationCampaign
+            from api.notifications.models.campaign import NotificationCampaign
 
             campaign = NotificationCampaign.objects.get(pk=campaign_id)
             if campaign.status not in ('draft', 'scheduled'):
@@ -134,7 +134,7 @@ class CampaignService:
     def delete_campaign(self, campaign_id: int) -> Dict:
         """Delete a campaign (only allowed on draft/cancelled campaigns)."""
         try:
-            from notifications.models.campaign import NotificationCampaign
+            from api.notifications.models.campaign import NotificationCampaign
             campaign = NotificationCampaign.objects.get(pk=campaign_id)
             if campaign.status not in ('draft', 'cancelled'):
                 return {
@@ -153,8 +153,8 @@ class CampaignService:
     def start_campaign(self, campaign_id: int) -> Dict:
         """Start a campaign (triggers the send process)."""
         try:
-            from notifications.models.campaign import NotificationCampaign
-            from notifications.services.SegmentService import segment_service
+            from api.notifications.models.campaign import NotificationCampaign
+            from api.notifications.services.SegmentService import segment_service
 
             campaign = NotificationCampaign.objects.get(pk=campaign_id)
             if not campaign.can_start():
@@ -185,7 +185,7 @@ class CampaignService:
     def pause_campaign(self, campaign_id: int) -> Dict:
         """Pause a running campaign."""
         try:
-            from notifications.models.campaign import NotificationCampaign
+            from api.notifications.models.campaign import NotificationCampaign
             campaign = NotificationCampaign.objects.get(pk=campaign_id)
             success = campaign.pause()
             return {
@@ -199,7 +199,7 @@ class CampaignService:
     def cancel_campaign(self, campaign_id: int) -> Dict:
         """Cancel a campaign."""
         try:
-            from notifications.models.campaign import NotificationCampaign
+            from api.notifications.models.campaign import NotificationCampaign
             campaign = NotificationCampaign.objects.get(pk=campaign_id)
             success = campaign.cancel()
             return {
@@ -230,11 +230,11 @@ class CampaignService:
             campaign_status, error.
         """
         try:
-            from notifications.models.campaign import NotificationCampaign
-            from notifications.services.SegmentService import segment_service
-            from notifications.services.FatigueService import fatigue_service
-            from notifications.services.OptOutService import opt_out_service
-            from notifications.services import notification_service
+            from api.notifications.models.campaign import NotificationCampaign
+            from api.notifications.services.SegmentService import segment_service
+            from api.notifications.services.FatigueService import fatigue_service
+            from api.notifications.services.OptOutService import opt_out_service
+            from api.notifications._services_core import notification_service
 
             campaign = NotificationCampaign.objects.get(pk=campaign_id)
 
@@ -284,7 +284,7 @@ class CampaignService:
             )
             if use_smart_timing:
                 try:
-                    from notifications.services.SmartSendTimeService import smart_send_time_service
+                    from api.notifications.services.SmartSendTimeService import smart_send_time_service
                     from django.contrib.auth import get_user_model
                     User = get_user_model()
                     sample_users = User.objects.filter(pk__in=user_ids[:100])
@@ -367,7 +367,7 @@ class CampaignService:
         except Exception as exc:
             logger.error(f'CampaignService.process_campaign #{campaign_id}: {exc}')
             try:
-                from notifications.models.campaign import NotificationCampaign
+                from api.notifications.models.campaign import NotificationCampaign
                 NotificationCampaign.objects.filter(pk=campaign_id).update(
                     status='failed', updated_at=timezone.now()
                 )
@@ -389,7 +389,7 @@ class CampaignService:
     def get_campaign_stats(self, campaign_id: int) -> Dict:
         """Return a stats dict for a campaign."""
         try:
-            from notifications.models.campaign import NotificationCampaign, CampaignResult
+            from api.notifications.models.campaign import NotificationCampaign, CampaignResult
 
             campaign = NotificationCampaign.objects.get(pk=campaign_id)
             result = CampaignResult.objects.filter(campaign=campaign).first()
@@ -422,7 +422,7 @@ class CampaignService:
     ) -> Dict:
         """List campaigns with optional status filter."""
         try:
-            from notifications.models.campaign import NotificationCampaign
+            from api.notifications.models.campaign import NotificationCampaign
 
             qs = NotificationCampaign.objects.all().order_by('-created_at')
             if status:

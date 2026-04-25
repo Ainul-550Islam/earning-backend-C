@@ -683,6 +683,351 @@ class WebhookValidationError(WebhookError):
             self.details['validation_error'] = validation_error
 
 
+# Additional Exceptions for Main Models
+class OfferError(BaseAdvertiserPortalException):
+    """Raised when offer operations fail."""
+    
+    def __init__(self, message: str, offer_id: Optional[str] = None):
+        super().__init__(message, "OFFER_ERROR")
+        if offer_id:
+            self.details['offer_id'] = offer_id
+
+
+class OfferNotFoundError(NotFoundError):
+    """Raised when an offer is not found."""
+    
+    def __init__(self, offer_id: str):
+        super().__init__(f"Offer with ID '{offer_id}' not found")
+        self.details['offer_id'] = offer_id
+
+
+class OfferValidationError(ValidationError):
+    """Raised when offer validation fails."""
+    
+    def __init__(self, message: str, offer_field: Optional[str] = None):
+        super().__init__(message, field=offer_field)
+        self.error_code = "OFFER_VALIDATION_ERROR"
+
+
+class CampaignError(BaseAdvertiserPortalException):
+    """Raised when campaign operations fail."""
+    
+    def __init__(self, message: str, campaign_id: Optional[str] = None):
+        super().__init__(message, "CAMPAIGN_ERROR")
+        if campaign_id:
+            self.details['campaign_id'] = campaign_id
+
+
+class CampaignNotFoundError(NotFoundError):
+    """Raised when a campaign is not found."""
+    
+    def __init__(self, campaign_id: str):
+        super().__init__(f"Campaign with ID '{campaign_id}' not found")
+        self.details['campaign_id'] = campaign_id
+
+
+class CampaignValidationError(ValidationError):
+    """Raised when campaign validation fails."""
+    
+    def __init__(self, message: str, campaign_field: Optional[str] = None):
+        super().__init__(message, field=campaign_field)
+        self.error_code = "CAMPAIGN_VALIDATION_ERROR"
+
+
+class BudgetExceededError(BaseAdvertiserPortalException):
+    """Raised when budget limits are exceeded."""
+    
+    def __init__(self, message: str, budget_type: Optional[str] = None, current_amount: Optional[float] = None):
+        super().__init__(message, "BUDGET_EXCEEDED")
+        if budget_type:
+            self.details['budget_type'] = budget_type
+        if current_amount is not None:
+            self.details['current_amount'] = current_amount
+
+
+class TrackingError(BaseAdvertiserPortalException):
+    """Raised when tracking operations fail."""
+    
+    def __init__(self, message: str, tracking_id: Optional[str] = None):
+        super().__init__(message, "TRACKING_ERROR")
+        if tracking_id:
+            self.details['tracking_id'] = tracking_id
+
+
+class TrackingPixelError(TrackingError):
+    """Raised when tracking pixel operations fail."""
+    
+    def __init__(self, message: str, pixel_id: Optional[str] = None):
+        super().__init__(message, pixel_id)
+        self.error_code = "TRACKING_PIXEL_ERROR"
+
+
+class ConversionError(TrackingError):
+    """Raised when conversion operations fail."""
+    
+    def __init__(self, message: str, conversion_id: Optional[str] = None):
+        super().__init__(message, conversion_id)
+        self.error_code = "CONVERSION_ERROR"
+
+
+class ConversionValidationError(ValidationError):
+    """Raised when conversion validation fails."""
+    
+    def __init__(self, message: str, conversion_field: Optional[str] = None):
+        super().__init__(message, field=conversion_field)
+        self.error_code = "CONVERSION_VALIDATION_ERROR"
+
+
+class BillingError(BaseAdvertiserPortalException):
+    """Raised when billing operations fail."""
+    
+    def __init__(self, message: str, billing_id: Optional[str] = None):
+        super().__init__(message, "BILLING_ERROR")
+        if billing_id:
+            self.details['billing_id'] = billing_id
+
+
+class WalletError(BillingError):
+    """Raised when wallet operations fail."""
+    
+    def __init__(self, message: str, wallet_id: Optional[str] = None):
+        super().__init__(message, wallet_id)
+        self.error_code = "WALLET_ERROR"
+
+
+class InsufficientFundsError(BillingError):
+    """Raised when insufficient funds are available."""
+    
+    def __init__(self, message: str, available_balance: Optional[float] = None, required_amount: Optional[float] = None):
+        super().__init__(message, "INSUFFICIENT_FUNDS")
+        if available_balance is not None:
+            self.details['available_balance'] = available_balance
+        if required_amount is not None:
+            self.details['required_amount'] = required_amount
+
+
+class TransactionError(BillingError):
+    """Raised when transaction operations fail."""
+    
+    def __init__(self, message: str, transaction_id: Optional[str] = None):
+        super().__init__(message, transaction_id)
+        self.error_code = "TRANSACTION_ERROR"
+
+
+class InvoiceError(BillingError):
+    """Raised when invoice operations fail."""
+    
+    def __init__(self, message: str, invoice_id: Optional[str] = None):
+        super().__init__(message, invoice_id)
+        self.error_code = "INVOICE_ERROR"
+
+
+class FraudDetectionError(BaseAdvertiserPortalException):
+    """Raised when fraud detection operations fail."""
+    
+    def __init__(self, message: str, fraud_type: Optional[str] = None):
+        super().__init__(message, "FRAUD_DETECTION_ERROR")
+        if fraud_type:
+            self.details['fraud_type'] = fraud_type
+
+
+class FraudScoreError(FraudDetectionError):
+    """Raised when fraud score calculation fails."""
+    
+    def __init__(self, message: str, score_type: Optional[str] = None):
+        super().__init__(message, "fraud_score")
+        self.error_code = "FRAUD_SCORE_ERROR"
+        if score_type:
+            self.details['score_type'] = score_type
+
+
+class FraudConfigError(FraudDetectionError):
+    """Raised when fraud configuration operations fail."""
+    
+    def __init__(self, message: str, config_name: Optional[str] = None):
+        super().__init__(message, "fraud_config")
+        self.error_code = "FRAUD_CONFIG_ERROR"
+        if config_name:
+            self.details['config_name'] = config_name
+
+
+class NotificationError(BaseAdvertiserPortalException):
+    """Raised when notification operations fail."""
+    
+    def __init__(self, message: str, notification_id: Optional[str] = None):
+        super().__init__(message, "NOTIFICATION_ERROR")
+        if notification_id:
+            self.details['notification_id'] = notification_id
+
+
+class EmailNotificationError(NotificationError):
+    """Raised when email notification fails."""
+    
+    def __init__(self, message: str, recipient: Optional[str] = None):
+        super().__init__(message, "email_notification")
+        self.error_code = "EMAIL_NOTIFICATION_ERROR"
+        if recipient:
+            self.details['recipient'] = recipient
+
+
+class SMSNotificationError(NotificationError):
+    """Raised when SMS notification fails."""
+    
+    def __init__(self, message: str, phone_number: Optional[str] = None):
+        super().__init__(message, "sms_notification")
+        self.error_code = "SMS_NOTIFICATION_ERROR"
+        if phone_number:
+            self.details['phone_number'] = phone_number
+
+
+class PushNotificationError(NotificationError):
+    """Raised when push notification fails."""
+    
+    def __init__(self, message: str, device_id: Optional[str] = None):
+        super().__init__(message, "push_notification")
+        self.error_code = "PUSH_NOTIFICATION_ERROR"
+        if device_id:
+            self.details['device_id'] = device_id
+
+
+class ReportError(BaseAdvertiserPortalException):
+    """Raised when report operations fail."""
+    
+    def __init__(self, message: str, report_id: Optional[str] = None):
+        super().__init__(message, "REPORT_ERROR")
+        if report_id:
+            self.details['report_id'] = report_id
+
+
+class ReportGenerationError(ReportError):
+    """Raised when report generation fails."""
+    
+    def __init__(self, message: str, report_type: Optional[str] = None):
+        super().__init__(message, "report_generation")
+        self.error_code = "REPORT_GENERATION_ERROR"
+        if report_type:
+            self.details['report_type'] = report_type
+
+
+class ReportValidationError(ValidationError):
+    """Raised when report validation fails."""
+    
+    def __init__(self, message: str, report_field: Optional[str] = None):
+        super().__init__(message, field=report_field)
+        self.error_code = "REPORT_VALIDATION_ERROR"
+
+
+class MLError(BaseAdvertiserPortalException):
+    """Raised when ML operations fail."""
+    
+    def __init__(self, message: str, model_id: Optional[str] = None):
+        super().__init__(message, "ML_ERROR")
+        if model_id:
+            self.details['model_id'] = model_id
+
+
+class ModelTrainingError(MLError):
+    """Raised when ML model training fails."""
+    
+    def __init__(self, message: str, model_name: Optional[str] = None):
+        super().__init__(message, "model_training")
+        self.error_code = "MODEL_TRAINING_ERROR"
+        if model_name:
+            self.details['model_name'] = model_name
+
+
+class PredictionError(MLError):
+    """Raised when ML prediction fails."""
+    
+    def __init__(self, message: str, model_id: Optional[str] = None):
+        super().__init__(message, "prediction")
+        self.error_code = "PREDICTION_ERROR"
+        if model_id:
+            self.details['model_id'] = model_id
+
+
+class ModelValidationError(ValidationError):
+    """Raised when ML model validation fails."""
+    
+    def __init__(self, message: str, model_field: Optional[str] = None):
+        super().__init__(message, field=model_field)
+        self.error_code = "MODEL_VALIDATION_ERROR"
+
+
+class CreativeError(BaseAdvertiserPortalException):
+    """Raised when creative operations fail."""
+    
+    def __init__(self, message: str, creative_id: Optional[str] = None):
+        super().__init__(message, "CREATIVE_ERROR")
+        if creative_id:
+            self.details['creative_id'] = creative_id
+
+
+class CreativeValidationError(ValidationError):
+    """Raised when creative validation fails."""
+    
+    def __init__(self, message: str, creative_field: Optional[str] = None):
+        super().__init__(message, field=creative_field)
+        self.error_code = "CREATIVE_VALIDATION_ERROR"
+
+
+class TargetingError(BaseAdvertiserPortalException):
+    """Raised when targeting operations fail."""
+    
+    def __init__(self, message: str, targeting_id: Optional[str] = None):
+        super().__init__(message, "TARGETING_ERROR")
+        if targeting_id:
+            self.details['targeting_id'] = targeting_id
+
+
+class TargetingValidationError(ValidationError):
+    """Raised when targeting validation fails."""
+    
+    def __init__(self, message: str, targeting_field: Optional[str] = None):
+        super().__init__(message, field=targeting_field)
+        self.error_code = "TARGETING_VALIDATION_ERROR"
+
+
+class APIError(BaseAdvertiserPortalException):
+    """Raised when API operations fail."""
+    
+    def __init__(self, message: str, status_code: Optional[int] = None, response_data: Optional[Dict[str, Any]] = None):
+        super().__init__(message, "API_ERROR")
+        if status_code:
+            self.details['status_code'] = status_code
+        if response_data:
+            self.details['response_data'] = response_data
+
+
+class RateLimitError(BaseAdvertiserPortalException):
+    """Raised when rate limit is exceeded."""
+    
+    def __init__(self, message: str, limit: Optional[int] = None, window: Optional[int] = None):
+        super().__init__(message, "RATE_LIMIT_ERROR")
+        if limit:
+            self.details['limit'] = limit
+        if window:
+            self.details['window'] = window
+
+
+class ConfigurationError(BaseAdvertiserPortalException):
+    """Raised when configuration is invalid."""
+    
+    def __init__(self, message: str, config_key: Optional[str] = None):
+        super().__init__(message, "CONFIGURATION_ERROR")
+        if config_key:
+            self.details['config_key'] = config_key
+
+
+class ServiceUnavailableError(BaseAdvertiserPortalException):
+    """Raised when a service is unavailable."""
+    
+    def __init__(self, message: str, service_name: Optional[str] = None):
+        super().__init__(message, "SERVICE_UNAVAILABLE")
+        if service_name:
+            self.details['service_name'] = service_name
+
+
 # Exception handler utilities
 class ExceptionHandler:
     """Utility class for handling exceptions."""

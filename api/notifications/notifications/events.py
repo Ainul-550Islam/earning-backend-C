@@ -15,7 +15,7 @@ Two complementary systems:
    Defined as string constants matching integration_system/integ_constants.py
 
 Usage:
-    from notifications.events import (
+    from api.notifications.events import (
         notification_sent,       # Django Signal
         notification_read,       # Django Signal
         NotifEvents,             # EventBus event name constants
@@ -25,7 +25,7 @@ Usage:
     notification_sent.send(sender=Notification, instance=notif, channel='push')
 
     # Publish to EventBus
-    from notifications.integration_system.event_bus import event_bus
+    from api.notifications.integration_system.event_bus import event_bus
     event_bus.publish(NotifEvents.SENT, data={'notification_id': notif.pk})
 """
 
@@ -155,8 +155,8 @@ class NotifEvents:
     Use these when publishing/subscribing on the EventBus to avoid typos.
 
     Usage:
-        from notifications.events import NotifEvents
-        from notifications.integration_system.event_bus import event_bus
+        from api.notifications.events import NotifEvents
+        from api.notifications.integration_system.event_bus import event_bus
 
         event_bus.publish(NotifEvents.SENT, data={...})
 

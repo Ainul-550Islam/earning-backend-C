@@ -25,7 +25,7 @@ if IMPORT_EXPORT_AVAILABLE:
                                    widget=ForeignKeyWidget(User, 'username'))
 
         class Meta:
-            from notifications.models import NotificationTemplate
+            from api.notifications.models import NotificationTemplate
             model = NotificationTemplate
             fields = ('id', 'name', 'template_type', 'channel', 'category',
                       'title_en', 'title_bn', 'message_en', 'message_bn',
@@ -41,7 +41,7 @@ if IMPORT_EXPORT_AVAILABLE:
                             widget=ForeignKeyWidget(User, 'username'))
 
         class Meta:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             model = Notification
             fields = ('id', 'user', 'title', 'message', 'notification_type',
                       'channel', 'priority', 'is_read', 'is_sent', 'created_at')
@@ -53,7 +53,7 @@ if IMPORT_EXPORT_AVAILABLE:
         """Import/export NotificationCampaign data."""
 
         class Meta:
-            from notifications.models import NotificationCampaign
+            from api.notifications.models import NotificationCampaign
             model = NotificationCampaign
             fields = ('id', 'name', 'status', 'sent_count', 'total_count',
                       'failed_count', 'created_at', 'completed_at')

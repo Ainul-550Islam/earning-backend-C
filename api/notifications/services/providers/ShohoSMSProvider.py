@@ -351,7 +351,7 @@ class ShohoSMSProvider:
             # Opt-out from SMS
             if user:
                 try:
-                    from notifications.services.OptOutService import opt_out_service
+                    from api.notifications.services.OptOutService import opt_out_service
                     opt_out_service.opt_out(user, 'sms', reason='sms_stop_keyword')
                     logger.info(f'ShohoSMS: STOP from {from_phone} — user #{user.pk} opted out')
                 except Exception as exc:
@@ -362,7 +362,7 @@ class ShohoSMSProvider:
             # Re-subscribe
             if user:
                 try:
-                    from notifications.services.OptOutService import opt_out_service
+                    from api.notifications.services.OptOutService import opt_out_service
                     opt_out_service.resubscribe(user, 'sms')
                     logger.info(f'ShohoSMS: START from {from_phone} — user #{user.pk} re-subscribed')
                 except Exception as exc:
@@ -376,7 +376,7 @@ class ShohoSMSProvider:
         else:
             # Route to support ticket via integration system
             try:
-                from notifications.integration_system.event_bus import event_bus
+                from api.notifications.integration_system.event_bus import event_bus
                 event_bus.publish('sms.reply_received', {
                     'from_phone': from_phone,
                     'message': message,

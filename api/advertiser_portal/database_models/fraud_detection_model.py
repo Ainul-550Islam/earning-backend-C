@@ -19,7 +19,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db import models as gis_models
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -235,11 +238,11 @@ class FraudDetectionRule(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Fraud Detection Rule'
         verbose_name_plural = 'Fraud Detection Rules'
         indexes = [
-            models.Index(fields=['rule_type']),
-            models.Index(fields=['target_type']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['severity_level']),
-            models.Index(fields=['priority']),
+            models.Index(fields=['rule_type'], name='idx_rule_type_240'),
+            models.Index(fields=['target_type'], name='idx_target_type_241'),
+            models.Index(fields=['is_active'], name='idx_is_active_242'),
+            models.Index(fields=['severity_level'], name='idx_severity_level_243'),
+            models.Index(fields=['priority'], name='idx_priority_244'),
         ]
     
     def __str__(self) -> str:
@@ -592,11 +595,11 @@ class FraudDetectionAlert(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Fraud Detection Alert'
         verbose_name_plural = 'Fraud Detection Alerts'
         indexes = [
-            models.Index(fields=['rule', 'status']),
-            models.Index(fields=['severity_level']),
-            models.Index(fields=['target_type', 'target_id']),
-            models.Index(fields=['status']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['rule', 'status'], name='idx_rule_status_245'),
+            models.Index(fields=['severity_level'], name='idx_severity_level_246'),
+            models.Index(fields=['target_type', 'target_id'], name='idx_target_type_target_id_247'),
+            models.Index(fields=['status'], name='idx_status_248'),
+            models.Index(fields=['created_at'], name='idx_created_at_249'),
         ]
     
     def __str__(self) -> str:
@@ -815,10 +818,10 @@ class FraudDetectionLog(AdvertiserPortalBaseModel):
         verbose_name = 'Fraud Detection Log'
         verbose_name_plural = 'Fraud Detection Logs'
         indexes = [
-            models.Index(fields=['event_type']),
-            models.Index(fields=['rule']),
-            models.Index(fields=['alert']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['event_type'], name='idx_event_type_250'),
+            models.Index(fields=['rule'], name='idx_rule_251'),
+            models.Index(fields=['alert'], name='idx_alert_252'),
+            models.Index(fields=['created_at'], name='idx_created_at_253'),
         ]
     
     def __str__(self) -> str:
@@ -913,9 +916,9 @@ class FraudDetectionReport(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Fraud Detection Report'
         verbose_name_plural = 'Fraud Detection Reports'
         indexes = [
-            models.Index(fields=['advertiser', 'report_type']),
-            models.Index(fields=['start_date', 'end_date']),
-            models.Index(fields=['status']),
+            models.Index(fields=['advertiser', 'report_type'], name='idx_advertiser_report_type_254'),
+            models.Index(fields=['start_date', 'end_date'], name='idx_start_date_end_date_255'),
+            models.Index(fields=['status'], name='idx_status_256'),
         ]
     
     def __str__(self) -> str:

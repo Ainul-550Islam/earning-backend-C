@@ -152,9 +152,9 @@ class RewardItem(TimeStampedModel):
         verbose_name_plural = _("reward items")
         ordering = ["sort_order", "name"]
         indexes = [
-            models.Index(fields=["status", "item_type"]),
-            models.Index(fields=["status", "current_stock"]),
-            models.Index(fields=["slug"]),
+            models.Index(fields=["status", "item_type"], name='idx_status_item_type_1013'),
+            models.Index(fields=["status", "current_stock"], name='idx_status_current_stock_1014'),
+            models.Index(fields=["slug"], name='idx_slug_1015'),
         ]
 
     def __str__(self) -> str:
@@ -330,7 +330,7 @@ class StockEvent(TimeStampedModel):
         verbose_name_plural = _("stock events")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["item", "event_type", "created_at"]),
+            models.Index(fields=["item", "event_type", "created_at"], name='idx_item_event_type_create_629'),
         ]
 
     def __str__(self) -> str:
@@ -406,9 +406,9 @@ class RedemptionCode(TimeStampedModel):
         verbose_name_plural = _("redemption codes")
         ordering = ["created_at"]
         indexes = [
-            models.Index(fields=["item", "status"]),
-            models.Index(fields=["code"]),
-            models.Index(fields=["batch_id"]),
+            models.Index(fields=["item", "status"], name='idx_item_status_1017'),
+            models.Index(fields=["code"], name='idx_code_1018'),
+            models.Index(fields=["batch_id"], name='idx_batch_id_1019'),
         ]
 
     def __str__(self) -> str:
@@ -544,9 +544,9 @@ class UserInventory(TimeStampedModel):
         verbose_name_plural = _("user inventories")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["user", "status"]),
-            models.Index(fields=["user", "item"]),
-            models.Index(fields=["status", "next_retry_at"]),
+            models.Index(fields=["user", "status"], name='idx_user_status_1020'),
+            models.Index(fields=["user", "item"], name='idx_user_item_1021'),
+            models.Index(fields=["status", "next_retry_at"], name='idx_status_next_retry_at_1022'),
         ]
 
     def __str__(self) -> str:

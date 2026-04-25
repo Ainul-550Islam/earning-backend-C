@@ -135,8 +135,8 @@ class PublisherWebhook(TimeStampedModel):
         verbose_name_plural = _('Publisher Webhooks')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'is_active']),
-            models.Index(fields=['status']),
+            models.Index(fields=['publisher', 'is_active'], name='idx_publisher_is_active_1655'),
+            models.Index(fields=['status'], name='idx_status_1656'),
         ]
 
     def __str__(self):
@@ -249,9 +249,9 @@ class WebhookDeliveryLog(TimeStampedModel):
         verbose_name_plural = _('Webhook Delivery Logs')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['webhook', 'event_type', 'status']),
-            models.Index(fields=['delivery_id']),
-            models.Index(fields=['next_retry_at']),
+            models.Index(fields=['webhook', 'event_type', 'status'], name='idx_webhook_event_type_sta_1c4'),
+            models.Index(fields=['delivery_id'], name='idx_delivery_id_1658'),
+            models.Index(fields=['next_retry_at'], name='idx_next_retry_at_1659'),
         ]
 
     def __str__(self):

@@ -68,8 +68,8 @@ class DRBackupRecord(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['status', 'created_at']),
-            models.Index(fields=['tenant', 'status']),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_993'),
+            models.Index(fields=['tenant', 'status'], name='idx_tenant_status_994'),
         ]
 
     def __str__(self):

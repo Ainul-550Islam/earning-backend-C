@@ -6,7 +6,7 @@ Re-exports all models from _models_core.py (renamed from models.py to avoid
 Python shadowing the models/ package directory) PLUS all new split models.
 
 Usage:
-    from notifications.models import (
+    from api.notifications.models import (
         Notification, NotificationTemplate, NotificationPreference,
         DeviceToken, NotificationCampaign, NotificationLog,
         PushDevice, PushDeliveryLog, EmailDeliveryLog, SMSDeliveryLog, InAppMessage,
@@ -17,14 +17,12 @@ Usage:
 """
 
 # ---------------------------------------------------------------------------
-# Core / legacy models from _models_core.py (formerly models.py)
-# ---------------------------------------------------------------------------
+# Core models from _models_core.py
 from .._models_core import (  # noqa: F401
     Notification,
     NotificationTemplate,
     NotificationPreference,
     DeviceToken,
-    NotificationCampaign,
     NotificationAnalytics,
     NotificationRule,
     NotificationFeedback,
@@ -58,13 +56,13 @@ from .schedule import (  # noqa: F401
 )
 
 # ---------------------------------------------------------------------------
-# New campaign models
+# New campaign models — NotificationCampaign lives HERE (single source of truth)
 # ---------------------------------------------------------------------------
 from .campaign import (  # noqa: F401
     CampaignSegment,
     CampaignABTest,
     CampaignResult,
-    NotificationCampaign as NewNotificationCampaign,
+    NotificationCampaign,
 )
 
 # ---------------------------------------------------------------------------
@@ -80,7 +78,7 @@ from .analytics import (  # noqa: F401
 __all__ = [
     # Core / legacy
     'Notification', 'NotificationTemplate', 'NotificationPreference',
-    'DeviceToken', 'NotificationCampaign', 'NotificationAnalytics',
+    'DeviceToken', 'NotificationAnalytics',
     'NotificationRule', 'NotificationFeedback', 'NotificationLog',
     'Notice', 'NotificationCategory', 'NotificationChannel',
     'NotificationPriority', 'NotificationStatus',
@@ -90,9 +88,8 @@ __all__ = [
     # Schedule
     'NotificationSchedule', 'NotificationBatch',
     'NotificationQueueModel', 'NotificationRetry',
-    # Campaign (new)
-    'CampaignSegment', 'CampaignABTest', 'CampaignResult',
-    'NewNotificationCampaign',
+    # Campaign (single source of truth)
+    'NotificationCampaign', 'CampaignSegment', 'CampaignABTest', 'CampaignResult',
     # Analytics
     'NotificationInsight', 'DeliveryRate', 'OptOutTracking', 'NotificationFatigue',
 ]

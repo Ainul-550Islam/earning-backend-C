@@ -32,8 +32,8 @@ class BlockedIP(TimeStampedModel):
         verbose_name_plural = _("Blocked IPs")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["ip_address", "is_active"]),
-            models.Index(fields=["publisher", "is_active"]),
+            models.Index(fields=["ip_address", "is_active"], name='idx_ip_address_is_active_1589'),
+            models.Index(fields=["publisher", "is_active"], name='idx_publisher_is_active_1590'),
         ]
 
     def __str__(self):

@@ -4,6 +4,6 @@ from ..database_models.analytics_model import (
     AnalyticsAlert, AnalyticsDataPoint, AnalyticsWidget, AnalyticsEvent,
 )
 from ..database_models.campaign_model import Campaign
-from ..models import AdvertiserPortalBaseModel
+from ..models_base import AdvertiserPortalBaseModel
 __all__ = ['AnalyticsReport', 'AnalyticsMetric', 'AnalyticsDashboard', 'AnalyticsAlert',
            'AnalyticsDataPoint', 'AnalyticsWidget', 'AnalyticsEvent', 'Campaign', 'AdvertiserPortalBaseModel']

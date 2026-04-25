@@ -31,10 +31,10 @@ def process_batch_task(self, batch_id: int):
 
     Called by the admin UI or campaign_tasks when a batch is created.
     """
-    from notifications.models.schedule import NotificationBatch
-    from notifications.services.SegmentService import segment_service
-    from notifications.services.OptOutService import opt_out_service
-    from notifications.services.FatigueService import fatigue_service
+    from api.notifications.models.schedule import NotificationBatch
+    from api.notifications.services.SegmentService import segment_service
+    from api.notifications.services.OptOutService import opt_out_service
+    from api.notifications.services.FatigueService import fatigue_service
 
     try:
         batch = NotificationBatch.objects.select_related(
@@ -123,7 +123,7 @@ def process_batch_task(self, batch_id: int):
     except Exception as exc:
         logger.error(f'process_batch_task #{batch_id}: {exc}')
         try:
-            from notifications.models.schedule import NotificationBatch
+            from api.notifications.models.schedule import NotificationBatch
             NotificationBatch.objects.filter(pk=batch_id).update(
                 status='failed', updated_at=timezone.now()
             )
@@ -156,9 +156,9 @@ def send_batch_chunk_task(
     Updates batch progress counters after each chunk completes.
     """
     from django.contrib.auth import get_user_model
-    from notifications.models.schedule import NotificationBatch
-    from notifications.services import notification_service
-    from notifications.services.FatigueService import fatigue_service
+    from api.notifications.models.schedule import NotificationBatch
+    from api.notifications._services_core import notification_service
+    from api.notifications.services.FatigueService import fatigue_service
 
     User = get_user_model()
     sent = 0
@@ -172,7 +172,7 @@ def send_batch_chunk_task(
 
         template_name = None
         if template_id:
-            from notifications.models import NotificationTemplate
+            from api.notifications.models import NotificationTemplate
             try:
                 tpl = NotificationTemplate.objects.get(pk=template_id)
                 template_name = tpl.name
@@ -244,7 +244,7 @@ def finalize_batch_task(batch_id: int):
     Mark a batch as completed after all chunks have been processed.
     Called after the Celery chord of chunk tasks completes.
     """
-    from notifications.models.schedule import NotificationBatch
+    from api.notifications.models.schedule import NotificationBatch
 
     try:
         batch = NotificationBatch.objects.get(pk=batch_id)
@@ -274,7 +274,7 @@ def finalize_batch_task(batch_id: int):
 )
 def cancel_batch_task(batch_id: int):
     """Cancel a batch (marks it cancelled so chunk tasks check and skip)."""
-    from notifications.models.schedule import NotificationBatch
+    from api.notifications.models.schedule import NotificationBatch
 
     try:
         updated = NotificationBatch.objects.filter(

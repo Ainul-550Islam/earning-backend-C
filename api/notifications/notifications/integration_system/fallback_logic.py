@@ -68,12 +68,12 @@ class FallbackService:
         """Try ShohoSMS (BD) → Twilio for SMS."""
         chain = FallbackChain("sms")
         def shoho():
-            from notifications.services.providers.ShohoSMSProvider import shoho_sms_provider
+            from api.notifications.services.providers.ShohoSMSProvider import shoho_sms_provider
             if not shoho_sms_provider.is_available():
                 raise Exception("ShohoSMS not available")
             return shoho_sms_provider.send_sms(phone, message)
         def twilio():
-            from notifications.services.providers.TwilioProvider import twilio_provider
+            from api.notifications.services.providers.TwilioProvider import twilio_provider
             if not twilio_provider.is_available():
                 raise Exception("Twilio not available")
             return twilio_provider.send_sms(phone, message)

@@ -36,8 +36,8 @@ class PublisherBlacklistEntry(TimeStampedModel):
         verbose_name_plural = _('Blacklist Entries')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'list_type', 'is_active']),
-            models.Index(fields=['value']),
+            models.Index(fields=['publisher', 'list_type', 'is_active'], name='idx_publisher_list_type_is_eb3'),
+            models.Index(fields=['value'], name='idx_value_1604'),
         ]
 
     def __str__(self):

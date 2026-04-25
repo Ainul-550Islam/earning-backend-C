@@ -134,7 +134,7 @@ class AdNetwork(TenantScopedModel):
         ordering = ['priority', 'display_name']
         constraints = [
             UniqueConstraint(fields=['tenant', 'network_type'], name='mt_adnetwork_unique_type_per_tenant'),
-            CheckConstraint(check=Q(floor_ecpm__gte=0),         name='mt_adnetwork_floor_non_neg'),
+            CheckConstraint(check=Q(floor_ecpm__gte=0), name='mt_adnetwork_floor_non_neg'),
             CheckConstraint(check=Q(revenue_share__gte=0) & Q(revenue_share__lte=1), name='mt_adnetwork_revshare_range'),
         ]
         indexes = [

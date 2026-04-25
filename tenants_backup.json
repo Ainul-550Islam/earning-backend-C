@@ -1,0 +1,237 @@
+[SETTINGS DEBUG] REDIS_URL=redis://127.0.0.1:6379/0
+
+[SECURE] Registering Security models in BOTH admin sites...
+[SECURE] Registration Complete!
+Successfully registered: Users
+Successfully registered: Groups
+Successfully registered: Backups
+Successfully registered: Backup Schedules
+Successfully registered: Storage Locations
+Successfully registered: Backup Restorations
+Successfully registered: Backup Logs
+Successfully registered: Referrals
+Successfully registered: System Settings
+Successfully registered: System Reports
+Successfully registered: User Profiles
+[OK] Registered: PaymentGateway
+[OK] Registered: PaymentGatewayMethod
+[OK] Registered: GatewayTransaction
+[OK] Registered: PayoutRequest
+[OK] Registered: GatewayConfig
+[OK] Registered: Currency
+[OK] Registered: PaymentGatewayWebhookLog
+[OK][OK][OK] 7 payment_gateways models registered in default admin
+[OK] Registered: OfferCategory
+[OK] Registered: OfferProvider
+[OK] Registered: Offer
+[OK] Registered: OfferClick
+[OK] Registered: OfferConversion
+[OK] Registered: OfferWall
+[OK][OK][OK] 6 offerwall models registered, 0 already existed
+[OK] Registered: AnalyticsEvent
+[OK] Registered: UserAnalytics
+[OK] Registered: RevenueAnalytics
+[OK] Registered: OfferPerformanceAnalytics
+[OK] Registered: FunnelAnalytics
+[OK] Registered: RetentionAnalytics
+[OK] Registered: Dashboard
+[OK] Registered: Report
+[OK] Registered: RealTimeMetric
+[OK] Registered: AlertRule
+[OK] Registered: AlertHistory
+[OK][OK][OK] 11 analytics models registered successfully!
+[OK] Registered: ReferralEarning in default admin
+[OK] Registered: ReferralSettings in default admin
+[OK][OK][OK] All referral models registered in default admin
+[OK] Registered: DailyCheckIn
+[OK] Registered: SpinWheel
+[OK][OK][OK] 2 engagement models registered!
+--- CMS ADMIN LOADED ---
+
+[DOC] Registering CMS models in default admin...
+[OK] Registered: ContentCategory
+[OK] Registered: ContentPage
+[OK] Registered: Banner
+[OK] Registered: FAQCategory
+[OK] Registered: FAQ
+[OK] Registered: BannerImpression
+[OK] Registered: BannerClick
+[OK] Registered: FAQFeedback
+[OK] Registered: ContentViewLog
+[OK] Registered: ContentShare
+[OK] Registered: SiteSettings
+[OK] Registered: ImageGallery
+[OK] Registered: GalleryImage
+[OK] Registered: FileManager
+[OK] Registered: Comment
+[OK] Registered: CommentLike
+[OK] Registered: SiteAnalytics
+[OK] Registered: PermissionAuditLog
+[OK] Registered: ContentPermission
+[OK] Registered: PermissionStats
+[OK] Registered: BannerReward
+[DOC] Registered 21 CMS models in default admin
+[OK] Registered: FAQ
+[OK] Registered: SupportTicket
+[OK] Registered: SupportSettings
+[OK][OK][OK] 3 support models registered!
+[OK] Registered: KYC
+[OK] Registered: KYCVerificationLog
+[OK][OK][OK] 2 KYC models registered successfully!
+[OK] Registered: KYCAdminNote
+[OK] Registered: KYCAnalyticsSnapshot
+[OK] Registered: KYCAuditTrail
+[OK] Registered: KYCBlacklist
+[OK] Registered: KYCBulkActionLog
+[OK] Registered: KYCDeviceFingerprint
+[OK] Registered: KYCDuplicateGroup
+[OK] Registered: KYCExportJob
+[OK] Registered: KYCFaceMatchResult
+[OK] Registered: KYCFeatureFlag
+[OK] Registered: KYCIPTracker
+[OK] Registered: KYCNotificationLog
+[OK] Registered: KYCOCRResult
+[OK] Registered: KYCOTPLog
+[OK] Registered: KYCRejectionTemplate
+[OK] Registered: KYCRiskProfile
+[OK] Registered: KYCTenantConfig
+[OK] Registered: KYCVerificationStep
+[OK] Registered: KYCWebhookDeliveryLog
+[OK] Registered: KYCWebhookEndpoint
+[OK] Registered: MasterTask
+[OK] Registered: UserTaskCompletion
+[OK] Registered: AdminLedger
+[OK][OK][OK] 3 tasks models registered successfully!
+[OK] Registered: RateLimitConfig in default admin
+[OK] Registered: RateLimitLog in default admin
+[OK] Registered: UserRateLimitProfile in default admin
+[OK][OK][OK] 3 rate_limit models registered in default admin
+[OK] Force registered: SubscriptionPlan
+[OK] Force registered: UserSubscription
+[OK] Force registered: MembershipBenefit
+[OK] Force registered: SubscriptionPayment
+[OK] Users app ready - signals imported
+[OK] users registered 19 models
+[OK] Payment gateways signals loaded
+[LOADING] Checking payment_gateways admin registration...
+[OK] All payment_gateways models already registered
+[OK] payment_gateways registered 0 models
+[OK] Ad Networks signals loaded
+[LOADING] Checking ad_networks admin registration...
+[OK] Registered: AdNetworkWebhookLog from apps.py
+[OK] Registered: NetworkStatistic from apps.py
+[OK] Registered: OfferPerformanceAnalytics from apps.py
+[OK] Registered: OfferSyncLog from apps.py
+[OK] Registered: OfferWall from apps.py
+[OK] Registered: SmartOfferRecommendation from apps.py
+[OK] Registered: UserOfferLimit from apps.py
+[OK][OK][OK] 7 ad_networks models registered from apps.py
+[OK] ad_networks registered 0 models
+[OK] Offerwall signals loaded
+[LOADING] Checking offerwall admin registration...
+[OK] All offerwall models already registered
+[OK] offerwall registered 0 models
+[OK] Fraud Detection signals loaded
+[LOADING] Checking fraud detection admin registration...
+[OK] Registered: FraudRule from apps.py
+[OK] Registered: FraudAttempt from apps.py
+[OK] Registered: UserRiskProfile from apps.py
+[OK] Registered: IPReputation from apps.py
+[OK] Registered: FraudPattern (default)
+[OK] Registered: DeviceFingerprint (default)
+[OK] Registered: FraudAlert (default)
+[OK] Registered: OfferCompletion (default)
+[OK][OK][OK] Fraud detection models registered
+[OK] Analytics signals loaded
+[LOADING] Checking analytics admin registration...
+[OK] All analytics models already registered
+[OK] analytics registered 0 models
+[OK] Referral signals loaded
+[LOADING] Checking referral admin registration...
+[OK] All referral models already registered
+[OK] referral registered 0 models
+[OK] engagement registered 2 models
+[OK] Notifications signals loaded
+[LOADING] Checking notifications admin registration...
+[OK] Registered: Notification from apps.py
+[OK] Registered: NotificationTemplate from apps.py
+[OK] Registered: NotificationPreference from apps.py
+[OK] Registered: DeviceToken from apps.py
+[OK] Registered: NotificationCampaign from apps.py
+[OK] Registered: NotificationAnalytics from apps.py
+[OK] Registered: NotificationRule from apps.py
+[OK] Registered: NotificationFeedback from apps.py
+[OK] Registered: NotificationLog from apps.py
+[OK] Registered: Notice from apps.py
+[OK][OK][OK] 10 notifications models registered from apps.py
+[OK] notifications registered 0 models
+[OK] CMS Admin successfully loaded!
+[OK] cms registered 0 models
+[OK] Support signals loaded
+[LOADING] Loading support admin...
+[OK] All support models already registered
+[OK] support registered 0 models
+[OK] Djoyalty signals loaded
+[OK] Djoyalty event handlers registered
+[OK] Wallet app ready - signals imported
+[OK] wallet registered 6 models
+[OK] kyc registered 1 models
+[OK] Tasks signals loaded
+[LOADING] Loading tasks admin...
+[OK] All tasks models already registered
+[OK] tasks registered 0 models
+[OK] Rate limit signals loaded
+[LOADING] Checking rate_limit admin registration...
+[OK] All rate_limit models already registered
+[LOADING] Checking audit_logs admin registration...
+[OK] Registered: AuditLog from apps.py
+[OK] Registered: AuditLogConfig from apps.py
+[OK] Registered: AuditLogArchive from apps.py
+[OK] Registered: AuditAlertRule from apps.py
+[OK] Registered: AuditDashboard from apps.py
+[OK][OK][OK] 5 audit_logs models registered from apps.py
+[OK] audit_logs registered 0 models
+[OK] Backup signals loaded
+[LOADING] Checking backup admin registration...
+[OK] Registered: RetentionPolicy from apps.py
+[OK] Registered: BackupNotificationConfig from apps.py
+[OK] Registered: DeltaBackupTracker from apps.py
+[OK][OK][OK] 3 backup models registered from apps.py
+[OK] backup registered 0 models
+[OK] promotions registered 0 models
+[OK] subscription registered 0 models
+[OK] gamification registered 0 models
+[OK] auto_mod registered 0 models
+[OK] version_control registered 0 models
+[OK] behavior_analytics registered 0 models
+[OK] postback registered 0 models
+[OK] inventory registered 0 models
+[OK] payout_queue registered 0 models
+[OK] Marketplace registered 14 models
+[OK] Postback Engine registered 9 models
+[OK] Monetization Tools registered 49 models
+[OK] Publisher Tools signals loaded
+[OK] Publisher Tools registered: Publisher
+[OK] Publisher Tools registered: Site
+[OK] Publisher Tools registered: App
+[OK] Publisher Tools registered: InventoryVerification
+[OK] Publisher Tools registered: AdUnit
+[OK] Publisher Tools registered: AdPlacement
+[OK] Publisher Tools registered: AdUnitTargeting
+[OK] Publisher Tools registered: MediationGroup
+[OK] Publisher Tools registered: WaterfallItem
+[OK] Publisher Tools registered: HeaderBiddingConfig
+[OK] Publisher Tools registered: PublisherEarning
+[OK] Publisher Tools registered: PayoutThreshold
+[OK] Publisher Tools registered: PublisherInvoice
+[OK] Publisher Tools registered: TrafficSafetyLog
+[OK] Publisher Tools registered: SiteQualityMetric
+[OK] proxy_intelligence registered 13 models
+[OK] AI Engine registered 21 models
+[CACHE MANAGER] REDIS_URL=redis://127.0.0.1:6379/0
+[CACHE MANAGER] ENV KEYS WITH REDIS: ['REDIS_URL']
+[CACHE MANAGER] Final REDIS host=127.0.0.1 port=6379
+[RedisService] ENV host=127.0.0.1 port=6379
+[CACHE MANAGER] Redis connected via URL!
+Redis cache service initialized
+[

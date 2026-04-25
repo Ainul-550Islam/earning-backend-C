@@ -1,3 +1,4 @@
+import time
 # wallet/tasks.py
 from celery import shared_task
 from celery.exceptions import MaxRetriesExceededError
@@ -61,7 +62,7 @@ def task_with_retry(max_retries=3, default_retry_delay=60):
                     
                     # Exponential backoff
                     delay = default_retry_delay * (2 ** (retry_count - 1))
-                    timezone.sleep(min(delay, 300))  # Max 5 minutes
+                    __import__('time').sleep(min(delay, 300))  # Max 5 minutes
             
             return {"status": "max_retries_exceeded"}
         return wrapper
@@ -73,7 +74,6 @@ def task_with_retry(max_retries=3, default_retry_delay=60):
 # ============================================
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
-@task_with_retry(max_retries=3)
 def expire_bonus_balances(self):
     """
     টাস্ক: মেয়াদোত্তীর্ণ বোনাস ব্যালেন্স expire করা
@@ -130,7 +130,6 @@ def expire_bonus_balances(self):
 
 
 @shared_task(bind=True, max_retries=3)
-@task_with_retry(max_retries=3)
 def process_pending_withdrawals(self):
     """
     টাস্ক: পেন্ডিং উইথড্রয়াল প্রসেস করা
@@ -166,7 +165,7 @@ def process_pending_withdrawals(self):
                         
                         # Here you would integrate with actual payment gateway
                         # For example: bKash, Nagad, etc.
-                        timezone.sleep(1)  # Simulate processing time
+                        __import__('time').sleep(1)  # Simulate processing time
                         
                         # Mark as completed (simulate success)
                         withdrawal.status = 'completed'
@@ -208,7 +207,6 @@ def process_pending_withdrawals(self):
 
 
 @shared_task(bind=True, max_retries=3)
-@task_with_retry(max_retries=3)
 def cleanup_old_webhook_logs(self, days_to_keep=30):
     """
     টাস্ক: পুরাতন ওয়েবহুক লগ ডিলিট করা
@@ -255,7 +253,6 @@ def cleanup_old_webhook_logs(self, days_to_keep=30):
 
 
 @shared_task(bind=True, max_retries=3)
-@task_with_retry(max_retries=3)
 def generate_wallet_reports(self, report_date=None):
     """
     টাস্ক: ওয়ালেট রিপোর্ট জেনারেট করা
@@ -354,7 +351,6 @@ def generate_wallet_reports(self, report_date=None):
 
 
 @shared_task(bind=True, max_retries=3)
-@task_with_retry(max_retries=3)
 def sync_payment_gateway_status(self):
     """
     টাস্ক: পেমেন্ট গেটওয়েতে পেন্ডিং ট্রানজেকশন sync করা
@@ -410,7 +406,7 @@ def sync_payment_gateway_status(self):
         """
         # Simulate API call
         import random
-        timezone.sleep(0.5)
+        __import__('time').sleep(0.5)
         
         statuses = ['completed', 'failed', 'pending']
         weights = [0.7, 0.1, 0.2]  # 70% completed, 10% failed, 20% pending
@@ -423,7 +419,6 @@ def sync_payment_gateway_status(self):
 # ============================================
 
 @shared_task(bind=True, max_retries=3)
-@task_with_retry(max_retries=3)
 def user_request_withdrawal(self, user_id, amount, payment_method_id):
     """
     টাস্ক: ইউজারের জন্য উইথড্রয়াল রিকোয়েস্ট তৈরি
@@ -522,7 +517,6 @@ def user_request_withdrawal(self, user_id, amount, payment_method_id):
 
 
 @shared_task(bind=True, max_retries=3)
-@task_with_retry(max_retries=3)
 def user_add_funds(self, user_id, amount, reference_id, source='manual'):
     """
     টাস্ক: ইউজারের ওয়ালেটে ফান্ড যোগ করা
@@ -623,7 +617,7 @@ def send_wallet_notification(self, user_id, notification_type, data):
         # For example: send email, SMS, push notification
         
         # Simulate sending
-        timezone.sleep(0.5)
+        __import__('time').sleep(0.5)
         
         logger.info(f"Sent {notification_type} notification to {user.email}")
         
@@ -640,3 +634,22 @@ def send_wallet_notification(self, user_id, notification_type, data):
             "status": "error",
             "message": "Failed to send notification"
         }
+
+# ── Compatibility bridge to new tasks/ package ───────────────
+try:
+    from .tasks.balance_sync_tasks import sync_balance, reconcile_all_balances
+    from .tasks.withdrawal_processing_tasks import (
+        process_pending_withdrawals, auto_reject_stale_withdrawals,
+        sync_gateway_statuses,
+    )
+    from .tasks.earning_cap_reset_tasks import reset_daily_earning_caps
+    from .tasks.bonus_expiry_tasks import expire_bonus_balances as _expire_bonus_new
+    from .tasks.fraud_check_tasks import run_fraud_checks, run_aml_scan
+    from .tasks.cleanup_tasks import (
+        cleanup_idempotency_keys, cleanup_old_webhook_logs,
+    )
+    from .tasks.insight_tasks import compute_daily_insights
+    from .tasks.liability_report_tasks import compute_daily_liability
+    from .tasks.reconciliation_tasks import run_daily_reconciliation
+except ImportError:
+    pass

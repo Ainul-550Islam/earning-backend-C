@@ -157,8 +157,8 @@ class KYCUsageRecord(models.Model):
         verbose_name = 'Usage Record'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['tenant', 'usage_type', 'created_at']),
-            models.Index(fields=['tenant', 'billed']),
+            models.Index(fields=['tenant', 'usage_type', 'created_at'], name='idx_tenant_usage_type_crea_b11'),
+            models.Index(fields=['tenant', 'billed'], name='idx_tenant_billed_1036'),
         ]
 
     def __str__(self):

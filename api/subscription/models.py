@@ -135,8 +135,8 @@ class SubscriptionPlan(TimeStampedModel):
         verbose_name_plural = _("subscription plans")
         ordering = ["sort_order", "price"]
         indexes = [
-            models.Index(fields=["status", "price"]),
-            models.Index(fields=["slug"]),
+            models.Index(fields=["status", "price"], name='idx_status_price_1733'),
+            models.Index(fields=["slug"], name='idx_slug_1734'),
         ]
 
     def __str__(self):
@@ -301,9 +301,9 @@ class UserSubscription(TimeStampedModel):
         verbose_name_plural = _("user subscriptions")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["user", "status"]),
-            models.Index(fields=["status", "current_period_end"]),
-            models.Index(fields=["external_subscription_id"]),
+            models.Index(fields=["user", "status"], name='idx_user_status_1735'),
+            models.Index(fields=["status", "current_period_end"], name='idx_status_current_period__3fe'),
+            models.Index(fields=["external_subscription_id"], name='idx_external_subscription__efe'),
         ]
 
     def __str__(self):
@@ -491,8 +491,8 @@ class SubscriptionPayment(TimeStampedModel):
         verbose_name_plural = _("subscription payments")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["status", "created_at"]),
-            models.Index(fields=["transaction_id"]),
+            models.Index(fields=["status", "created_at"], name='idx_status_created_at_1738'),
+            models.Index(fields=["transaction_id"], name='idx_transaction_id_1739'),
         ]
 
     def __str__(self):
@@ -624,8 +624,8 @@ class Coupon(TimeStampedModel):
         verbose_name_plural = _("coupons")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["code"]),
-            models.Index(fields=["is_active", "valid_until"]),
+            models.Index(fields=["code"], name='idx_code_1740'),
+            models.Index(fields=["is_active", "valid_until"], name='idx_is_active_valid_until_1741'),
         ]
 
     def __str__(self):
@@ -710,7 +710,7 @@ class CouponUsage(TimeStampedModel):
         verbose_name = _("coupon usage")
         verbose_name_plural = _("coupon usages")
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["coupon", "user"])]
+        indexes = [models.Index(fields=["coupon", "user"], name='idx_coupon_user_1742')]
 
     def __str__(self):
         return f"{self.user} used {self.coupon.code}"

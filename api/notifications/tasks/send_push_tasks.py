@@ -24,9 +24,9 @@ def send_push_batch_task(self, notification_ids: List[int]):
     Send push notifications for a batch of notification IDs.
     Uses FCMProvider multicast for Android/Web and APNsProvider for iOS.
     """
-    from notifications.models import Notification, DeviceToken
-    from notifications.services.providers import fcm_provider, apns_provider
-    from notifications.services import delivery_tracker
+    from api.notifications.models import Notification, DeviceToken
+    from api.notifications.services.providers import fcm_provider, apns_provider
+    from api.notifications.services import delivery_tracker
 
     success_count = 0
     failure_count = 0
@@ -90,8 +90,8 @@ def send_push_multicast_task(self, notification_id: int):
     Send a single notification to all user devices using FCM multicast.
     More efficient for users with many devices.
     """
-    from notifications.models import Notification, DeviceToken
-    from notifications.services.providers import fcm_provider
+    from api.notifications.models import Notification, DeviceToken
+    from api.notifications.services.providers import fcm_provider
 
     try:
         notification = Notification.objects.select_related('user').get(pk=notification_id)

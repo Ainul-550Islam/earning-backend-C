@@ -66,9 +66,9 @@ class RateLimitConfig(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['rate_limit_type', 'is_active']),
-            models.Index(fields=['endpoint']),
-            models.Index(fields=['ip_address']),
+            models.Index(fields=['rate_limit_type', 'is_active'], name='idx_rate_limit_type_is_act_c12'),
+            models.Index(fields=['endpoint'], name='idx_endpoint_1661'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_1662'),
         ]
     
     def __str__(self):
@@ -161,10 +161,10 @@ class RateLimitLog(models.Model):
     class Meta:
         ordering = ['-timestamp']
         indexes = [
-            models.Index(fields=['timestamp']),
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['ip_address', 'timestamp']),
-            models.Index(fields=['endpoint', 'timestamp']),
+            models.Index(fields=['timestamp'], name='idx_timestamp_1663'),
+            models.Index(fields=['user', 'status'], name='idx_user_status_1664'),
+            models.Index(fields=['ip_address', 'timestamp'], name='idx_ip_address_timestamp_1665'),
+            models.Index(fields=['endpoint', 'timestamp'], name='idx_endpoint_timestamp_1666'),
         ]
     
     def __str__(self):

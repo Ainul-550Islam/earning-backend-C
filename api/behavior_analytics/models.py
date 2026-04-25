@@ -166,9 +166,9 @@ class UserPath(TimeStampedUUIDModel):
         verbose_name        = _("User Path")
         verbose_name_plural = _("User Paths")
         indexes = [
-            models.Index(fields=["user", "session_id"]),
-            models.Index(fields=["status", "created_at"]),
-            models.Index(fields=["device_type"]),
+            models.Index(fields=["user", "session_id"], name='idx_user_session_id_873'),
+            models.Index(fields=["status", "created_at"], name='idx_status_created_at_874'),
+            models.Index(fields=["device_type"], name='idx_device_type_875'),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -308,9 +308,9 @@ class ClickMetric(TimeStampedUUIDModel):
         verbose_name        = _("Click Metric")
         verbose_name_plural = _("Click Metrics")
         indexes = [
-            models.Index(fields=["path", "clicked_at"]),
-            models.Index(fields=["category", "clicked_at"]),
-            models.Index(fields=["page_url"]),
+            models.Index(fields=["path", "clicked_at"], name='idx_path_clicked_at_876'),
+            models.Index(fields=["category", "clicked_at"], name='idx_category_clicked_at_877'),
+            models.Index(fields=["page_url"], name='idx_page_url_878'),
         ]
 
     def __str__(self) -> str:
@@ -364,9 +364,9 @@ class StayTime(TimeStampedUUIDModel):
         verbose_name        = _("Stay Time")
         verbose_name_plural = _("Stay Times")
         indexes = [
-            models.Index(fields=["path", "created_at"]),
-            models.Index(fields=["page_url"]),
-            models.Index(fields=["duration_seconds"]),
+            models.Index(fields=["path", "created_at"], name='idx_path_created_at_879'),
+            models.Index(fields=["page_url"], name='idx_page_url_880'),
+            models.Index(fields=["duration_seconds"], name='idx_duration_seconds_881'),
         ]
 
     def __str__(self) -> str:
@@ -446,9 +446,9 @@ class EngagementScore(TimeStampedUUIDModel):
         verbose_name        = _("Engagement Score")
         verbose_name_plural = _("Engagement Scores")
         indexes = [
-            models.Index(fields=["user", "date"]),
-            models.Index(fields=["tier", "date"]),
-            models.Index(fields=["score"]),
+            models.Index(fields=["user", "date"], name='idx_user_date_882'),
+            models.Index(fields=["tier", "date"], name='idx_tier_date_883'),
+            models.Index(fields=["score"], name='idx_score_884'),
         ]
         constraints = [
             models.UniqueConstraint(

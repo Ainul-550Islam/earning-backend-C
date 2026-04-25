@@ -250,7 +250,7 @@ class JourneyService:
             run_at = timezone.now() + cumulative_delay
 
             try:
-                from notifications.tasks.journey_tasks import execute_journey_step_task
+                from api.notifications.tasks.journey_tasks import execute_journey_step_task
                 execute_journey_step_task.apply_async(
                     args=[user.pk, journey_id, step.step_id, context],
                     eta=run_at,
@@ -301,7 +301,7 @@ class JourneyService:
 
         # Send notification
         try:
-            from notifications.services import notification_service
+            from api.notifications._services_core import notification_service
             notification = notification_service.create_notification(
                 user=user,
                 title=title,

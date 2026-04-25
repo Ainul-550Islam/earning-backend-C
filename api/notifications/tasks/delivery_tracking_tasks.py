@@ -23,7 +23,7 @@ def poll_delivery_status():
     that are still not marked as delivered.
     Runs every 30 minutes via Celery Beat.
     """
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     result = delivery_tracker.reconcile_undelivered(hours_back=24)
     logger.info(
@@ -43,7 +43,7 @@ def update_campaign_results_task(campaign_id: int):
     Update CampaignResult counters for a specific campaign.
     Called after each batch of campaign sends completes.
     """
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     result = delivery_tracker.update_campaign_results(campaign_id)
     logger.info(
@@ -62,8 +62,8 @@ def update_all_active_campaign_results():
     Periodic task: refresh CampaignResult for all campaigns active
     in the last 7 days.
     """
-    from notifications.models.campaign import NotificationCampaign
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.models.campaign import NotificationCampaign
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     cutoff = timezone.now() - timedelta(days=7)
     campaigns = NotificationCampaign.objects.filter(
@@ -94,7 +94,7 @@ def process_sendgrid_events_task(events: list):
     Process a batch of SendGrid webhook events.
     events: list of SendGrid event dicts from the webhook POST.
     """
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     processed = 0
     errors = 0
@@ -120,7 +120,7 @@ def process_twilio_webhook_task(data: dict):
     """
     Process a Twilio SMS status callback webhook dict.
     """
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     result = delivery_tracker.process_twilio_sms_event(data)
     return result
@@ -135,7 +135,7 @@ def mark_notification_delivered_task(notification_id: int, provider: str = ''):
     Mark a single notification as delivered.
     Called from provider webhook handlers when delivery confirmation arrives.
     """
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     result = delivery_tracker.mark_delivered(notification_id, provider=provider)
     return result
@@ -147,7 +147,7 @@ def mark_notification_delivered_task(notification_id: int, provider: str = ''):
 )
 def mark_notification_read_task(notification_id: int):
     """Mark a notification as read (called from frontend open events)."""
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     result = delivery_tracker.mark_read(notification_id)
     return result
@@ -159,7 +159,7 @@ def mark_notification_read_task(notification_id: int):
 )
 def mark_notification_clicked_task(notification_id: int):
     """Record a click event on a notification."""
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     result = delivery_tracker.mark_clicked(notification_id)
     return result
@@ -182,7 +182,7 @@ def process_push_delivery_receipt_task(
 
     status: 'delivered' | 'failed' | 'invalid_token'
     """
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     result = delivery_tracker.process_push_delivery_receipt(
         notification_id=notification_id,

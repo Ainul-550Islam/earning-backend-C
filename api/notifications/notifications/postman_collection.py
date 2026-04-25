@@ -2,7 +2,7 @@
 """
 Postman Collection Generator — Auto-generates Postman collection from OpenAPI spec.
 
-Run: python manage.py shell -c "from notifications.postman_collection import generate; generate('/tmp/notifications.postman.json')"
+Run: python manage.py shell -c "from api.notifications.postman_collection import generate; generate('/tmp/notifications.postman.json')"
 """
 import json, logging
 from django.conf import settings

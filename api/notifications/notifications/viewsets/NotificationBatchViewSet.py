@@ -28,7 +28,7 @@ class NotificationBatchViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = _Pagination
 
     def get_queryset(self):
-        from notifications.models.schedule import NotificationBatch
+        from api.notifications.models.schedule import NotificationBatch
         qs = NotificationBatch.objects.all().select_related('template', 'segment', 'created_by')
         batch_status = self.request.query_params.get('status')
         if batch_status:
@@ -37,7 +37,7 @@ class NotificationBatchViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_serializer_class(self):
         from rest_framework import serializers
-        from notifications.models.schedule import NotificationBatch
+        from api.notifications.models.schedule import NotificationBatch
 
         class BatchSerializer(serializers.ModelSerializer):
             progress_pct = serializers.FloatField(read_only=True)
@@ -58,7 +58,7 @@ class NotificationBatchViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """Cancel a queued or processing batch."""
-        from notifications.models.schedule import NotificationBatch
+        from api.notifications.models.schedule import NotificationBatch
         from django.utils import timezone
 
         batch = self.get_object()

@@ -37,8 +37,8 @@ class FraudAlert(TimeStampedModel):
         verbose_name_plural = _("Fraud Alerts")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["publisher", "is_resolved", "severity"]),
-            models.Index(fields=["alert_type"]),
+            models.Index(fields=["publisher", "is_resolved", "severity"], name='idx_publisher_is_resolved__c41'),
+            models.Index(fields=["alert_type"], name='idx_alert_type_1588'),
         ]
 
     def __str__(self):

@@ -34,9 +34,9 @@ def retry_notification_task(self, notification_id: int):
     Retry delivery for a single failed notification.
     Records the attempt in NotificationRetry model.
     """
-    from notifications.models import Notification
-    from notifications.models.schedule import NotificationRetry
-    from notifications.services import notification_service
+    from api.notifications.models import Notification
+    from api.notifications.models.schedule import NotificationRetry
+    from api.notifications._services_core import notification_service
 
     try:
         notification = Notification.objects.get(pk=notification_id, is_deleted=False)
@@ -88,7 +88,7 @@ def process_all_retries():
     Periodic task: find all NotificationRetry records that are due and
     schedule retry_notification_task for each.
     """
-    from notifications.models.schedule import NotificationRetry
+    from api.notifications.models.schedule import NotificationRetry
 
     now = timezone.now()
     due_retries = NotificationRetry.objects.filter(
@@ -122,7 +122,7 @@ def process_all_retries():
 )
 def retry_failed_queue_entries():
     """Retry NotificationQueue entries that are in 'failed' status."""
-    from notifications.models.schedule import NotificationQueue
+    from api.notifications.models.schedule import NotificationQueue
     from datetime import timedelta
 
     # Only retry entries that failed in the last 24h

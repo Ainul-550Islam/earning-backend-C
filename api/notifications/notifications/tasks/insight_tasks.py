@@ -29,7 +29,7 @@ def generate_daily_notification_insights(date_str: str = None):
     Args:
         date_str: ISO date string 'YYYY-MM-DD'. Defaults to yesterday.
     """
-    from notifications.services.NotificationAnalytics import notification_analytics_service
+    from api.notifications.services.NotificationAnalytics import notification_analytics_service
 
     if date_str:
         target_date = date.fromisoformat(date_str)
@@ -56,7 +56,7 @@ def generate_weekly_notification_summary(week_end_str: str = None):
     Args:
         week_end_str: ISO date string for the week end (Sunday). Defaults to last Sunday.
     """
-    from notifications.services.NotificationAnalytics import notification_analytics_service
+    from api.notifications.services.NotificationAnalytics import notification_analytics_service
 
     if week_end_str:
         week_end = date.fromisoformat(week_end_str)
@@ -79,7 +79,7 @@ def refresh_delivery_rates(days_back: int = 7):
     Recompute DeliveryRate records from NotificationInsight data for the
     last N days. Runs daily after generate_daily_notification_insights.
     """
-    from notifications.models.analytics import NotificationInsight, DeliveryRate
+    from api.notifications.models.analytics import NotificationInsight, DeliveryRate
 
     cutoff = (timezone.now() - timedelta(days=days_back)).date()
     insights = NotificationInsight.objects.filter(date__gte=cutoff)
@@ -107,7 +107,7 @@ def backfill_insights(days_back: int = 30):
     Backfill NotificationInsight rows for the last N days.
     Useful after first deployment or after a gap in task execution.
     """
-    from notifications.services.NotificationAnalytics import notification_analytics_service
+    from api.notifications.services.NotificationAnalytics import notification_analytics_service
 
     today = timezone.now().date()
     results = []
@@ -135,7 +135,7 @@ def generate_legacy_daily_analytics(date_str: str = None):
     Also generate the legacy NotificationAnalytics record (from models.py)
     for backward compatibility with existing dashboard queries.
     """
-    from notifications.models import NotificationAnalytics
+    from api.notifications.models import NotificationAnalytics
 
     if date_str:
         target_date = date.fromisoformat(date_str)

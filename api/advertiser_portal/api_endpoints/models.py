@@ -3,6 +3,6 @@ from ..database_models.api_endpoint_model import (
     APIEndpoint, RESTEndpoint, GraphQLEndpoint, WebSocketEndpoint,
     APIDocumentation, APIVersion, APIAuthentication, APIRateLimit,
 )
-from ..models import AdvertiserPortalBaseModel
+from ..models_base import AdvertiserPortalBaseModel
 __all__ = ['APIEndpoint', 'RESTEndpoint', 'GraphQLEndpoint', 'WebSocketEndpoint',
            'APIDocumentation', 'APIVersion', 'APIAuthentication', 'APIRateLimit', 'AdvertiserPortalBaseModel']

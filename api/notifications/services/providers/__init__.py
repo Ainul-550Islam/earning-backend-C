@@ -10,12 +10,12 @@ heavy initialisation (Firebase app, Twilio client, etc.) happens once
 at import time rather than on every notification send.
 
 Usage:
-    from notifications.services.providers.FCMProvider import fcm_provider
-    from notifications.services.providers.APNsProvider import apns_provider
-    from notifications.services.providers.SendGridProvider import sendgrid_provider
-    from notifications.services.providers.TwilioProvider import twilio_provider
-    from notifications.services.providers.ShohoSMSProvider import shoho_sms_provider
-    from notifications.services.providers.WebPushProvider import web_push_provider
+    from api.notifications.services.providers.FCMProvider import fcm_provider
+    from api.notifications.services.providers.APNsProvider import apns_provider
+    from api.notifications.services.providers.SendGridProvider import sendgrid_provider
+    from api.notifications.services.providers.TwilioProvider import twilio_provider
+    from api.notifications.services.providers.ShohoSMSProvider import shoho_sms_provider
+    from api.notifications.services.providers.WebPushProvider import web_push_provider
 """
 
 from .FCMProvider import fcm_provider, FCMProvider

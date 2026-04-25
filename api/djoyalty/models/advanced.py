@@ -41,7 +41,7 @@ class LoyaltyNotification(models.Model):
     class Meta:
         app_label = 'djoyalty'
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['customer', 'is_read'])]
+        indexes = [models.Index(fields=['customer', 'is_read'], name='idx_customer_is_read_966')]
 
     def __str__(self):
         return f'{self.notification_type} → {self.customer} (sent={self.is_sent})'
@@ -152,7 +152,7 @@ class PointsAbuseLog(models.Model):
     class Meta:
         app_label = 'djoyalty'
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['risk_level', 'is_resolved'])]
+        indexes = [models.Index(fields=['risk_level', 'is_resolved'], name='idx_risk_level_is_resolved_967')]
 
     def __str__(self):
         return f'Fraud [{self.risk_level}] {self.customer} — {self.action_taken}'

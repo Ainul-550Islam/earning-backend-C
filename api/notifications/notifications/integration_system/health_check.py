@@ -91,19 +91,19 @@ class HealthCheckService:
             except Exception:
                 return HealthStatus.DEGRADED
         elif service == "fcm":
-            from notifications.services.providers.FCMProvider import fcm_provider
+            from api.notifications.services.providers.FCMProvider import fcm_provider
             return HealthStatus.HEALTHY if fcm_provider.is_available() else HealthStatus.UNKNOWN
         elif service == "sendgrid":
-            from notifications.services.providers.SendGridProvider import sendgrid_provider
+            from api.notifications.services.providers.SendGridProvider import sendgrid_provider
             return HealthStatus.HEALTHY if sendgrid_provider.is_available() else HealthStatus.UNKNOWN
         elif service == "twilio":
-            from notifications.services.providers.TwilioProvider import twilio_provider
+            from api.notifications.services.providers.TwilioProvider import twilio_provider
             return HealthStatus.HEALTHY if twilio_provider.is_available() else HealthStatus.UNKNOWN
         elif service == "shoho_sms":
-            from notifications.services.providers.ShohoSMSProvider import shoho_sms_provider
+            from api.notifications.services.providers.ShohoSMSProvider import shoho_sms_provider
             return HealthStatus.HEALTHY if shoho_sms_provider.is_available() else HealthStatus.UNKNOWN
         elif service == "notifications_app":
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             Notification.objects.first()
             return HealthStatus.HEALTHY
         return HealthStatus.UNKNOWN

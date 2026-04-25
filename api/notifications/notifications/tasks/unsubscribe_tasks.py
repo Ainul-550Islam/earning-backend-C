@@ -40,7 +40,7 @@ def process_unsubscribe_request_task(
         notes:           Free-text reason from the user.
     """
     from django.contrib.auth import get_user_model
-    from notifications.services.OptOutService import opt_out_service
+    from api.notifications.services.OptOutService import opt_out_service
 
     User = get_user_model()
 
@@ -49,7 +49,7 @@ def process_unsubscribe_request_task(
         triggered_by = None
 
         if notification_id:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             try:
                 triggered_by = Notification.objects.get(pk=notification_id)
             except Notification.DoesNotExist:
@@ -99,7 +99,7 @@ def process_bulk_unsubscribe_task(
         channel:  Channel to opt out of.
         reason:   Reason code.
     """
-    from notifications.services.OptOutService import opt_out_service
+    from api.notifications.services.OptOutService import opt_out_service
 
     result = opt_out_service.bulk_opt_out(
         user_ids=user_ids,
@@ -123,8 +123,8 @@ def sync_sendgrid_unsubscribes():
     Pull the global unsubscribe list from SendGrid and create OptOutTracking
     records for matching users. Runs weekly.
     """
-    from notifications.services.providers.SendGridProvider import sendgrid_provider
-    from notifications.services.OptOutService import opt_out_service
+    from api.notifications.services.providers.SendGridProvider import sendgrid_provider
+    from api.notifications.services.OptOutService import opt_out_service
 
     if not sendgrid_provider.is_available():
         return {'skipped': True, 'reason': 'SendGridProvider not available'}
@@ -184,7 +184,7 @@ def process_one_click_unsubscribe_task(token: str):
     import base64
     import json as _json
     from django.contrib.auth import get_user_model
-    from notifications.services.OptOutService import opt_out_service
+    from api.notifications.services.OptOutService import opt_out_service
 
     User = get_user_model()
 
@@ -233,7 +233,7 @@ def cleanup_old_opt_out_records(months: int = 12):
     and the record is older than `months` months.
     Keeps active (is_active=True) records indefinitely for compliance.
     """
-    from notifications.models.analytics import OptOutTracking
+    from api.notifications.models.analytics import OptOutTracking
 
     cutoff = timezone.now() - timedelta(days=months * 30)
     try:

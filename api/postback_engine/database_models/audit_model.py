@@ -42,8 +42,8 @@ class PostbackEngineAuditLog(models.Model):
         verbose_name_plural = "audit logs"
         ordering = ["-performed_at"]
         indexes = [
-            models.Index(fields=["action", "performed_at"]),
-            models.Index(fields=["performed_by_id", "performed_at"]),
+            models.Index(fields=["action", "performed_at"], name='idx_action_performed_at_1405'),
+            models.Index(fields=["performed_by_id", "performed_at"], name='idx_performed_by_id_perfor_90c'),
         ]
 
     def __str__(self):

@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 def _send_notification_async(user, notification_type, title, message, **kwargs):
     """Queue a notification via Celery task. Never raises — logs errors only."""
     try:
-        from notifications.services import notification_service
+        from api.notifications._services_core import notification_service
         notification = notification_service.create_notification(
             user=user,
             title=title,
@@ -308,7 +308,7 @@ def on_new_device_registered(sender, instance, created, **kwargs):
         device_name = getattr(instance, 'device_name', '') or getattr(instance, 'device_model', 'Unknown Device')
 
         # Only send if user already has other devices (not first registration)
-        from notifications.models import DeviceToken
+        from api.notifications.models import DeviceToken
         if DeviceToken.objects.filter(user=user).count() > 1:
             _send_notification_async(
                 user=user,
@@ -365,7 +365,7 @@ def on_opt_out_changed(sender, instance, **kwargs):
     to disable that channel for future sends.
     """
     try:
-        from notifications.models import NotificationPreference
+        from api.notifications.models import NotificationPreference
         pref = NotificationPreference.objects.filter(user=instance.user).first()
         if not pref:
             return
@@ -466,7 +466,7 @@ def on_survey_available(sender, instance, created, **kwargs):
         reward = getattr(instance, 'reward_amount', 0)
         title = getattr(instance, 'title', 'New Survey')
         # Send to all active users via batch task (not inline)
-        from notifications.tasks.send_push_tasks import send_push_batch_task
+        from api.notifications.tasks.send_push_tasks import send_push_batch_task
         from django.contrib.auth import get_user_model
         User = get_user_model()
         user_ids = list(User.objects.filter(is_active=True).values_list('pk', flat=True)[:1000])
@@ -530,7 +530,7 @@ def on_notification_created_broadcast(sender, instance, created, **kwargs):
     if not created:
         return
     try:
-        from notifications.consumers import send_notification_to_user, send_count_update_to_user
+        from api.notifications.consumers import send_notification_to_user, send_count_update_to_user
         send_notification_to_user(instance.user_id, {
             'id': instance.pk,
             'title': instance.title,
@@ -541,7 +541,7 @@ def on_notification_created_broadcast(sender, instance, created, **kwargs):
             'created_at': instance.created_at.isoformat(),
         })
         # Update unread count
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         unread = Notification.objects.filter(
             user_id=instance.user_id, is_read=False, is_deleted=False
         ).count()

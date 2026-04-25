@@ -16,7 +16,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -259,13 +262,13 @@ class Report(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Report'
         verbose_name_plural = 'Reports'
         indexes = [
-            models.Index(fields=['advertiser', 'status']),
-            models.Index(fields=['campaign']),
-            models.Index(fields=['report_type']),
-            models.Index(fields=['is_scheduled']),
-            models.Index(fields=['next_run']),
-            models.Index(fields=['last_run']),
-            models.Index(fields=['is_public']),
+            models.Index(fields=['advertiser', 'status'], name='idx_advertiser_status_338'),
+            models.Index(fields=['campaign'], name='idx_campaign_339'),
+            models.Index(fields=['report_type'], name='idx_report_type_340'),
+            models.Index(fields=['is_scheduled'], name='idx_is_scheduled_341'),
+            models.Index(fields=['next_run'], name='idx_next_run_342'),
+            models.Index(fields=['last_run'], name='idx_last_run_343'),
+            models.Index(fields=['is_public'], name='idx_is_public_344'),
         ]
     
     def __str__(self) -> str:
@@ -700,9 +703,9 @@ class Dashboard(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Dashboard'
         verbose_name_plural = 'Dashboards'
         indexes = [
-            models.Index(fields=['advertiser', 'is_active']),
-            models.Index(fields=['is_public']),
-            models.Index(fields=['is_default']),
+            models.Index(fields=['advertiser', 'is_active'], name='idx_advertiser_is_active_345'),
+            models.Index(fields=['is_public'], name='idx_is_public_346'),
+            models.Index(fields=['is_default'], name='idx_is_default_347'),
         ]
     
     def __str__(self) -> str:
@@ -848,8 +851,8 @@ class Widget(AdvertiserPortalBaseModel, AuditModel):
         verbose_name_plural = 'Widgets'
         unique_together = ['dashboard', 'widget_id']
         indexes = [
-            models.Index(fields=['dashboard', 'widget_type']),
-            models.Index(fields=['is_visible']),
+            models.Index(fields=['dashboard', 'widget_type'], name='idx_dashboard_widget_type_348'),
+            models.Index(fields=['is_visible'], name='idx_is_visible_349'),
         ]
     
     def __str__(self) -> str:
@@ -939,9 +942,9 @@ class ReportTemplate(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Report Template'
         verbose_name_plural = 'Report Templates'
         indexes = [
-            models.Index(fields=['template_type']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['is_public']),
+            models.Index(fields=['template_type'], name='idx_template_type_350'),
+            models.Index(fields=['is_active'], name='idx_is_active_351'),
+            models.Index(fields=['is_public'], name='idx_is_public_352'),
         ]
     
     def __str__(self) -> str:
@@ -1048,9 +1051,9 @@ class ReportSchedule(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Report Schedule'
         verbose_name_plural = 'Report Schedules'
         indexes = [
-            models.Index(fields=['report', 'is_active']),
-            models.Index(fields=['next_run']),
-            models.Index(fields=['frequency']),
+            models.Index(fields=['report', 'is_active'], name='idx_report_is_active_353'),
+            models.Index(fields=['next_run'], name='idx_next_run_354'),
+            models.Index(fields=['frequency'], name='idx_frequency_355'),
         ]
     
     def __str__(self) -> str:

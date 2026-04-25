@@ -18,10 +18,10 @@ This file patches the 12 "not implemented" TODOs in NotificationService by:
 
 Usage:
     # The monolithic singleton still works as before:
-    from notifications.services import notification_service
+    from api.notifications._services_core import notification_service
 
     # This module patches it at import time:
-    from notifications.services.NotificationService import patch_notification_service
+    from api.notifications.services.NotificationService import patch_notification_service
     patch_notification_service()
 """
 
@@ -60,13 +60,13 @@ def _send_sms_fixed(self, notification) -> Dict:
 
     try:
         if is_bd:
-            from notifications.services.providers.ShohoSMSProvider import shoho_sms_provider
+            from api.notifications.services.providers.ShohoSMSProvider import shoho_sms_provider
             if shoho_sms_provider.is_available():
                 result = shoho_sms_provider.send_sms(phone, message_body, notification_id=notif_id)
                 if result.get('success'):
                     return result
 
-        from notifications.services.providers.TwilioProvider import twilio_provider
+        from api.notifications.services.providers.TwilioProvider import twilio_provider
         if twilio_provider.is_available():
             return twilio_provider.send_sms(phone, message_body, notification_id=notif_id)
 
@@ -129,7 +129,7 @@ def _send_whatsapp_fixed(self, notification) -> Dict:
         return {'success': False, 'error': 'User has no phone number for WhatsApp', 'provider': 'twilio_whatsapp'}
 
     try:
-        from notifications.services.providers.TwilioProvider import twilio_provider
+        from api.notifications.services.providers.TwilioProvider import twilio_provider
         if not twilio_provider.is_available():
             return {'success': False, 'error': 'TwilioProvider not available', 'provider': 'twilio_whatsapp'}
 
@@ -153,8 +153,8 @@ def _send_browser_push_fixed(self, notification) -> Dict:
     Replaces the stub that returned 'Browser push not implemented'.
     """
     try:
-        from notifications.models import DeviceToken
-        from notifications.services.providers.WebPushProvider import web_push_provider
+        from api.notifications.models import DeviceToken
+        from api.notifications.services.providers.WebPushProvider import web_push_provider
 
         if not web_push_provider.is_available():
             return {'success': False, 'error': 'WebPushProvider not configured', 'provider': 'web_push'}
@@ -200,7 +200,7 @@ def _send_via_firebase_fixed(self, token: str, message, device_token) -> Dict:
     TODO #5 FIXED: FCM send via FCMProvider (replaces direct firebase_admin call).
     """
     try:
-        from notifications.services.providers.FCMProvider import fcm_provider
+        from api.notifications.services.providers.FCMProvider import fcm_provider
         if not fcm_provider.is_available():
             return {'success': False, 'provider': 'fcm', 'error': 'FCMProvider not available'}
 
@@ -230,7 +230,7 @@ def _send_via_twilio_push_fixed(self, token: str, message: Dict, device_token) -
         if not notify_service_sid:
             return {'success': False, 'provider': 'twilio', 'error': 'TWILIO_NOTIFY_SERVICE_SID not configured'}
 
-        from notifications.services.providers.TwilioProvider import twilio_provider
+        from api.notifications.services.providers.TwilioProvider import twilio_provider
         if not twilio_provider._client:
             return {'success': False, 'provider': 'twilio', 'error': 'Twilio client not available'}
 
@@ -283,7 +283,7 @@ def _check_fatigue_before_send(self, notification) -> bool:
     """
     try:
         priority = getattr(notification, 'priority', 'medium') or 'medium'
-        from notifications.services.FatigueService import fatigue_service
+        from api.notifications.services.FatigueService import fatigue_service
         return fatigue_service.is_fatigued(notification.user, priority=priority)
     except Exception as exc:
         logger.warning(f'_check_fatigue_before_send: {exc}')
@@ -300,7 +300,7 @@ def _check_opt_out_before_send(self, notification) -> bool:
     """
     try:
         channel = getattr(notification, 'channel', 'in_app') or 'in_app'
-        from notifications.services.OptOutService import opt_out_service
+        from api.notifications.services.OptOutService import opt_out_service
         return opt_out_service.is_opted_out(notification.user, channel)
     except Exception as exc:
         logger.warning(f'_check_opt_out_before_send: {exc}')
@@ -315,7 +315,7 @@ def _log_delivery_after_send(self, notification, result: Dict):
     TODO #10 FIXED: Log delivery attempt in channel-specific DeliveryLog model.
     """
     try:
-        from notifications.services.NotificationDispatcher import notification_dispatcher
+        from api.notifications.services.NotificationDispatcher import notification_dispatcher
         channel = getattr(notification, 'channel', 'in_app') or 'in_app'
         success = result.get('success', False)
 
@@ -343,7 +343,7 @@ def enqueue_notification(self, notification, priority: int = 5) -> Dict:
     Celery picks it up via NotificationQueueService.
     """
     try:
-        from notifications.services.NotificationQueue import notification_queue_service
+        from api.notifications.services.NotificationQueue import notification_queue_service
         entry = notification_queue_service.enqueue(notification, priority=priority)
         if entry:
             return {'success': True, 'queue_id': entry.pk, 'priority': priority}
@@ -362,7 +362,7 @@ def _record_fatigue_after_send(self, notification):
     """
     try:
         priority = getattr(notification, 'priority', 'medium') or 'medium'
-        from notifications.services.FatigueService import fatigue_service
+        from api.notifications.services.FatigueService import fatigue_service
         fatigue_service.record_send(notification.user, priority=priority)
     except Exception as exc:
         logger.warning(f'_record_fatigue_after_send: {exc}')
@@ -413,7 +413,7 @@ def patch_notification_service():
     Call once at app startup (e.g. in apps.py ready() or via import).
     """
     try:
-        from notifications.services import notification_service
+        from api.notifications._services_core import notification_service
 
         cls = type(notification_service)
 

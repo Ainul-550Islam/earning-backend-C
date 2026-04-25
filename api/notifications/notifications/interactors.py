@@ -16,7 +16,7 @@ class NotificationInteractor:
     """Orchestrates notification-related use cases for ViewSets."""
 
     def send_notification(self, *, user, data: Dict) -> Dict:
-        from notifications.use_cases import SendNotificationUseCase
+        from api.notifications.use_cases import SendNotificationUseCase
         result = SendNotificationUseCase().execute(
             user=user,
             title=data.get("title", ""),
@@ -32,17 +32,17 @@ class NotificationInteractor:
         return {"success": result.success, "data": result.data, "error": result.error}
 
     def mark_read(self, *, user, notification_id: int = None, mark_all: bool = False) -> Dict:
-        from notifications.use_cases import MarkNotificationReadUseCase
+        from api.notifications.use_cases import MarkNotificationReadUseCase
         result = MarkNotificationReadUseCase().execute(user=user, notification_id=notification_id, mark_all=mark_all)
         return {"success": result.success, "data": result.data, "error": result.error}
 
     def delete_notification(self, *, user, notification_id: int) -> Dict:
-        from notifications.use_cases import DeleteNotificationUseCase
+        from api.notifications.use_cases import DeleteNotificationUseCase
         result = DeleteNotificationUseCase().execute(user=user, notification_id=notification_id)
         return {"success": result.success, "data": result.data, "error": result.error}
 
     def register_device(self, *, user, data: Dict) -> Dict:
-        from notifications.use_cases import RegisterPushDeviceUseCase
+        from api.notifications.use_cases import RegisterPushDeviceUseCase
         result = RegisterPushDeviceUseCase().execute(
             user=user,
             device_type=data.get("device_type", "android"),
@@ -55,12 +55,12 @@ class NotificationInteractor:
         return {"success": result.success, "data": result.data, "error": result.error}
 
     def opt_out(self, *, user, channel: str, reason: str = "user_request", notes: str = "") -> Dict:
-        from notifications.use_cases import OptOutChannelUseCase
+        from api.notifications.use_cases import OptOutChannelUseCase
         result = OptOutChannelUseCase().execute(user=user, channel=channel, reason=reason, notes=notes)
         return {"success": result.success, "data": result.data, "error": result.error}
 
     def bulk_send(self, *, user_ids: list, data: Dict) -> Dict:
-        from notifications.use_cases import BulkSendNotificationUseCase
+        from api.notifications.use_cases import BulkSendNotificationUseCase
         result = BulkSendNotificationUseCase().execute(
             user_ids=user_ids,
             title=data.get("title", ""),
@@ -72,7 +72,7 @@ class NotificationInteractor:
         return {"success": result.success, "data": result.data, "error": result.error}
 
     def create_campaign(self, *, created_by, data: Dict) -> Dict:
-        from notifications.use_cases import CreateCampaignUseCase
+        from api.notifications.use_cases import CreateCampaignUseCase
         result = CreateCampaignUseCase().execute(
             created_by=created_by,
             name=data.get("name", ""),
@@ -84,12 +84,12 @@ class NotificationInteractor:
         return {"success": result.success, "data": result.data, "error": result.error}
 
     def enroll_journey(self, *, user, journey_id: str, context: Dict = None) -> Dict:
-        from notifications.use_cases import EnrollUserInJourneyUseCase
+        from api.notifications.use_cases import EnrollUserInJourneyUseCase
         result = EnrollUserInJourneyUseCase().execute(user=user, journey_id=journey_id, context=context or {})
         return {"success": result.success, "data": result.data, "error": result.error}
 
     def update_preferences(self, *, user, data: Dict) -> Dict:
-        from notifications.use_cases import UpdatePreferencesUseCase
+        from api.notifications.use_cases import UpdatePreferencesUseCase
         result = UpdatePreferencesUseCase().execute(user=user, preferences=data)
         return {"success": result.success, "data": result.data, "error": result.error}
 

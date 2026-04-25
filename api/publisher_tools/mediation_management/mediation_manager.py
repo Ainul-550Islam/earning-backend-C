@@ -133,8 +133,8 @@ class NetworkPerformanceSnapshot(TimeStampedModel):
         unique_together = [['network', 'ad_unit', 'date']]
         ordering = ['-date']
         indexes = [
-            models.Index(fields=['network', 'ad_unit', 'date']),
-            models.Index(fields=['ecpm']),
+            models.Index(fields=['network', 'ad_unit', 'date'], name='idx_network_ad_unit_date_1595'),
+            models.Index(fields=['ecpm'], name='idx_ecpm_1596'),
         ]
 
     def __str__(self):

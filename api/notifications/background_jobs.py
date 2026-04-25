@@ -7,14 +7,14 @@ logger = logging.getLogger(__name__)
 class NotificationJobManager:
     def schedule_send(self, notification_id, channel="in_app", priority="medium", delay_seconds=0):
         try:
-            from notifications.tasks_cap import enqueue_notification_send
+            from api.notifications.tasks_cap import enqueue_notification_send
             return enqueue_notification_send(notification_id, channel, priority)
         except Exception as exc:
             logger.error(f"schedule_send: {exc}"); return None
 
     def schedule_campaign(self, campaign_id, send_at=None):
         try:
-            from notifications.tasks.campaign_tasks import process_campaign_task
+            from api.notifications.tasks.campaign_tasks import process_campaign_task
             kw = {"args":[campaign_id]}
             if send_at: kw["eta"] = send_at
             return process_campaign_task.apply_async(**kw).id
@@ -23,24 +23,24 @@ class NotificationJobManager:
 
     def schedule_batch(self, user_ids, notification_data, delay_seconds=0):
         try:
-            from notifications.tasks.batch_send_tasks import process_batch_task
+            from api.notifications.tasks.batch_send_tasks import process_batch_task
             return process_batch_task.apply_async(args=[user_ids,notification_data],countdown=delay_seconds).id
         except Exception as exc:
             logger.error(f"schedule_batch: {exc}"); return None
 
     def schedule_journey_step(self, user_id, journey_id, step_id, context, delay_seconds=0):
         try:
-            from notifications.tasks.journey_tasks import execute_journey_step_task
+            from api.notifications.tasks.journey_tasks import execute_journey_step_task
             return execute_journey_step_task.apply_async(args=[user_id,journey_id,step_id,context],countdown=delay_seconds).id
         except Exception as exc:
             logger.error(f"schedule_journey_step: {exc}"); return None
 
     def cancel_job(self, task_id):
-        from notifications.tasks_cap import revoke_task
+        from api.notifications.tasks_cap import revoke_task
         return revoke_task(task_id)
 
     def cancel_user_jobs(self, user_id):
-        from notifications.tasks_cap import cancel_user_notification_tasks
+        from api.notifications.tasks_cap import cancel_user_notification_tasks
         return cancel_user_notification_tasks(user_id)
 
     def get_job_status(self, task_id):
@@ -55,7 +55,7 @@ class NotificationJobManager:
 
     def run_cleanup(self):
         try:
-            from notifications.tasks.cleanup_tasks import run_all_cleanup
+            from api.notifications.tasks.cleanup_tasks import run_all_cleanup
             return {"task_id":run_all_cleanup.apply_async().id,"queued":True}
         except Exception as exc:
             return {"error":str(exc),"queued":False}

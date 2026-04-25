@@ -187,8 +187,8 @@ class Product(TenantMixin, TimestampMixin):
         db_table = "marketplace_product"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["status", "is_featured"]),
-            models.Index(fields=["seller", "status"]),
+            models.Index(fields=["status", "is_featured"], name='idx_status_is_featured_1111'),
+            models.Index(fields=["seller", "status"], name='idx_seller_status_1112'),
         ]
 
     def __str__(self):
@@ -646,8 +646,8 @@ class Order(TenantMixin, TimestampMixin):
         db_table = "marketplace_order"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["user", "status"]),
-            models.Index(fields=["order_number"]),
+            models.Index(fields=["user", "status"], name='idx_user_status_1113'),
+            models.Index(fields=["order_number"], name='idx_order_number_1114'),
         ]
 
     def save(self, *args, **kwargs):

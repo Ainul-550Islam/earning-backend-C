@@ -203,7 +203,6 @@ class UserPaymentMethodAdmin(ModelAdmin):
         'account_number_masked',
         'account_name',
         'is_verified',      # ← সরাসরি ফিল্ড (custom method নয়)
-        'is_primary',       # ← সরাসরি ফিল্ড (custom method নয়)
         'verification_badge',
         'primary_badge',
         'created_at_display',
@@ -213,7 +212,6 @@ class UserPaymentMethodAdmin(ModelAdmin):
     list_filter = (
         MethodTypeFilter,
         VerifiedMethodFilter,
-        'is_primary',
         'created_at'
     )
     
@@ -249,7 +247,6 @@ class UserPaymentMethodAdmin(ModelAdmin):
         ('Verification & Settings', {
             'fields': (
                 'is_verified',
-                'is_primary',
                 'verified_at',
             ),
             'classes': ('unfold-card',),
@@ -1264,7 +1261,6 @@ class WithdrawalAdmin(ModelAdmin):
     
     
     # ==================== 3. WITHDRAWAL REQUEST ADMIN (FIXED) ====================
-@admin.register(WithdrawalRequest)
 class WithdrawalRequestAdmin(admin.ModelAdmin):
     """
     💸 Withdrawal Request Admin - Complete & Bulletproof

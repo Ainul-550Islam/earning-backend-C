@@ -30,7 +30,7 @@ class AdUnitTargetingRule(TimeStampedModel):
         verbose_name = _("Targeting Rule")
         ordering = ["-priority", "-created_at"]
         indexes = [
-            models.Index(fields=["ad_unit", "rule_type", "is_active"]),
+            models.Index(fields=["ad_unit", "rule_type", "is_active"], name='idx_ad_unit_rule_type_is_a_447'),
         ]
 
     def __str__(self):

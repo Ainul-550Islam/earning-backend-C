@@ -17,7 +17,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -181,10 +184,10 @@ class Budget(AdvertiserPortalBaseModel, StatusModel, AuditModel, TrackingModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_budgets'
         indexes = [
-            models.Index(fields=['advertiser', 'budget_type']),
-            models.Index(fields=['campaign', 'budget_type']),
-            models.Index(fields=['start_date', 'end_date']),
-            models.Index(fields=['status']),
+            models.Index(fields=['advertiser', 'budget_type'], name='idx_advertiser_budget_type_136'),
+            models.Index(fields=['campaign', 'budget_type'], name='idx_campaign_budget_type_137'),
+            models.Index(fields=['start_date', 'end_date'], name='idx_start_date_end_date_138'),
+            models.Index(fields=['status'], name='idx_status_139'),
         ]
         ordering = ['-created_at']
     
@@ -341,11 +344,11 @@ class BudgetAlert(AdvertiserPortalBaseModel, AuditModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_budget_alerts'
         indexes = [
-            models.Index(fields=['budget', 'alert_type']),
-            models.Index(fields=['notification_sent']),
-            models.Index(fields=['acknowledged']),
-            models.Index(fields=['resolved']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['budget', 'alert_type'], name='idx_budget_alert_type_140'),
+            models.Index(fields=['notification_sent'], name='idx_notification_sent_141'),
+            models.Index(fields=['acknowledged'], name='idx_acknowledged_142'),
+            models.Index(fields=['resolved'], name='idx_resolved_143'),
+            models.Index(fields=['created_at'], name='idx_created_at_144'),
         ]
         ordering = ['-created_at']
     
@@ -422,10 +425,10 @@ class SpendRule(AdvertiserPortalBaseModel, StatusModel, AuditModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_spend_rules'
         indexes = [
-            models.Index(fields=['advertiser', 'is_active']),
-            models.Index(fields=['rule_type']),
-            models.Index(fields=['priority']),
-            models.Index(fields=['last_executed']),
+            models.Index(fields=['advertiser', 'is_active'], name='idx_advertiser_is_active_145'),
+            models.Index(fields=['rule_type'], name='idx_rule_type_146'),
+            models.Index(fields=['priority'], name='idx_priority_147'),
+            models.Index(fields=['last_executed'], name='idx_last_executed_148'),
         ]
         ordering = ['priority', '-created_at']
     

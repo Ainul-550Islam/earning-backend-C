@@ -66,10 +66,10 @@ class PublisherReview(TimeStampedModel):
         verbose_name_plural = _('Publisher Reviews')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'status']),
-            models.Index(fields=['reviewer', 'status']),
-            models.Index(fields=['priority', 'status']),
-            models.Index(fields=['sla_deadline']),
+            models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1632'),
+            models.Index(fields=['reviewer', 'status'], name='idx_reviewer_status_1633'),
+            models.Index(fields=['priority', 'status'], name='idx_priority_status_1634'),
+            models.Index(fields=['sla_deadline'], name='idx_sla_deadline_1635'),
         ]
 
     def __str__(self):

@@ -14,7 +14,7 @@ Pipeline order:
   6. pre_delete     — before soft-delete
 
 Usage (register a hook):
-    from notifications.hooks import pipeline
+    from api.notifications.hooks import pipeline
 
     @pipeline.hook('pre_send')
     def my_hook(notification, context):
@@ -23,7 +23,7 @@ Usage (register a hook):
         return notification, context
 
 Usage (register in apps.py ready()):
-    from notifications.hooks import pipeline
+    from api.notifications.hooks import pipeline
     pipeline.register('post_send', my_custom_hook)
 """
 
@@ -204,7 +204,7 @@ def _check_fatigue_hook(notification, context: dict):
     user = getattr(notification, 'user', None)
     if user:
         try:
-            from notifications.services.FatigueService import fatigue_service
+            from api.notifications.services.FatigueService import fatigue_service
             if fatigue_service.is_fatigued(user, priority=priority):
                 context['blocked_by'] = 'fatigue'
                 context['fatigue_exceeded'] = True
@@ -232,7 +232,7 @@ def _check_opt_out_hook(notification, context: dict):
 
     if user and channel not in ('all',):
         try:
-            from notifications.services.OptOutService import opt_out_service
+            from api.notifications.services.OptOutService import opt_out_service
             if opt_out_service.is_opted_out(user, channel):
                 context['blocked_by'] = 'opt_out'
                 context['opted_out_channel'] = channel
@@ -260,7 +260,7 @@ def _check_dnd_hook(notification, context: dict):
     user = getattr(notification, 'user', None)
     if user:
         try:
-            from notifications.models import NotificationPreference
+            from api.notifications.models import NotificationPreference
             pref = NotificationPreference.objects.filter(user=user).first()
             dnd_enabled = (
                 getattr(pref, 'quiet_hours_enabled', False) or
@@ -289,7 +289,7 @@ def _record_send_metrics_hook(notification, context: dict):
     # Only record for successful sends
     if context.get('send_success', True):
         try:
-            from notifications.services.FatigueService import fatigue_service
+            from api.notifications.services.FatigueService import fatigue_service
             fatigue_service.record_send(user)
         except Exception as exc:
             logger.debug(f'_record_send_metrics_hook fatigue: {exc}')
@@ -301,7 +301,7 @@ def _record_send_metrics_hook(notification, context: dict):
 def _log_failure_hook(notification, context: dict):
     """Log notification failures to audit trail."""
     try:
-        from notifications.integration_system.integ_audit_logs import audit_logger
+        from api.notifications.integration_system.integ_audit_logs import audit_logger
         audit_logger.log(
             action='send_failed',
             module='notifications',

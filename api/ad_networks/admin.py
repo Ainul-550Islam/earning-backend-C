@@ -2,6 +2,7 @@
 
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.db.models import Sum, Count, Avg, Q
 from django.utils import timezone
@@ -15,7 +16,9 @@ from .models import (
     OfferConversion, OfferWall, AdNetworkWebhookLog,
     NetworkStatistic, UserOfferLimit, OfferSyncLog,
     SmartOfferRecommendation, OfferPerformanceAnalytics,
-    BlacklistedIP, FraudDetectionRule, KnownBadIP
+    BlacklistedIP, FraudDetectionRule, KnownBadIP,
+    OfferClick, OfferReward, NetworkAPILog, OfferTag,
+    OfferTagging, NetworkHealthCheck, OfferDailyLimit, OfferAttachment, UserWallet
 )
 
 
@@ -298,8 +301,7 @@ class AdNetworkAdmin(admin.ModelAdmin):
                 'border-radius: 3px; font-size: 10px;">✓ VERIFIED</span>'
             )
         
-        return format_html('<div style="display: flex; flex-wrap: wrap; gap: 3px;">{}</div>', 
-                          ''.join(status_html))
+        return mark_safe('<div style="display: flex; flex-wrap: wrap; gap: 3px;">' + ''.join(status_html) + '</div>')
     status_indicator.short_description = 'Status'
     
     def performance_score(self, obj):
@@ -323,12 +325,12 @@ class AdNetworkAdmin(admin.ModelAdmin):
         return format_html(
             '<div style="text-align: center;">'
             '<div style="font-size: 20px;">{}</div>'
-            '<div style="color: {}; font-weight: bold; font-size: 14px;">{:.2f}%</div>'
+            '<div style="color: {}; font-weight: bold; font-size: 14px;">{}</div>'
             '<div style="color: #6c757d; font-size: 10px;">CR</div>'
             '</div>',
             emoji,
             color,
-            cr
+            f'{float(cr):.2f}%' if cr is not None else '0.00%'
         )
     performance_score.short_description = 'Performance'
     
@@ -336,9 +338,9 @@ class AdNetworkAdmin(admin.ModelAdmin):
         """Display financial summary"""
         return format_html(
             '<div style="text-align: right;">'
-            '<div style="font-weight: bold; color: #28a745; font-size: 14px;">৳{:,.2f}</div>'
+            '<div style="font-weight: bold; color: #28a745; font-size: 14px;">৳{}</div>'
             '<div style="color: #6c757d; font-size: 10px;">{} conversions</div>'
-            '<div style="color: #f39c12; font-size: 11px;">EPC: ৳{:.2f}</div>'
+            '<div style="color: #f39c12; font-size: 11px;">EPC: ৳{}</div>'
             '</div>',
             obj.total_payout,
             obj.total_conversions,
@@ -669,9 +671,12 @@ class AdNetworkAdmin(admin.ModelAdmin):
         )
     export_performance_report.short_description = '[STATS] Export performance report'
     
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
+
     class Media:
         css = {
-            'all': ('admin/css/ad_networks.css',)
+            'all': ('admin/css/ad_networks_admin.css',)
         }
         js = ('admin/js/ad_networks.js',)
         
@@ -830,7 +835,7 @@ class OfferCategoryAdmin(admin.ModelAdmin):
             '<div style="text-align: center;">'
             '<div style="font-size: 18px; font-weight: bold; color: #3498db;">{}</div>'
             '<div style="color: #6c757d; font-size: 10px;">Active Offers</div>'
-            '<div style="font-size: 12px; color: #28a745; margin-top: 3px;">৳{:,.0f} avg</div>'
+            '<div style="font-size: 12px; color: #28a745; margin-top: 3px;">৳{} avg</div>'
             '</div>',
             obj.active_offers_count,
             obj.avg_reward
@@ -863,6 +868,9 @@ class OfferCategoryAdmin(admin.ModelAdmin):
             reverse('admin:ad_networks_offercategory_change', args=[obj.pk])
         )
     quick_edit.short_description = 'Actions'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
     
     def category_overview(self, obj):
         """Category overview"""
@@ -1206,7 +1214,7 @@ class OfferAdmin(admin.ModelAdmin):
         return format_html(
             '<div style="text-align: center;">'
             '<div style="font-size: 24px;">{}</div>'
-            '<div style="color: {}; font-weight: bold; font-size: 13px;">{:.1f}%</div>'
+            '<div style="color: {}; font-weight: bold; font-size: 13px;">{}%</div>'
             '<div style="color: #6c757d; font-size: 9px;">{}</div>'
             '<div style="color: #6c757d; font-size: 9px; margin-top: 2px;">{} / {}</div>'
             '</div>',
@@ -1526,6 +1534,9 @@ class OfferAdmin(admin.ModelAdmin):
     def export_offers(self, request, queryset):
         self.message_user(request, 'Export feature coming soon.', level='info')
     export_offers.short_description = '📥 Export selected offers'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
     
 
 # api/ad_networks/admin.py (continued)
@@ -2141,6 +2152,9 @@ class UserOfferEngagementAdmin(admin.ModelAdmin):
         
         self.message_user(request, f'{count} rewards processed successfully.')
     process_rewards.short_description = '[MONEY] Process rewards'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 
 # ==================== Offer Conversion Admin ====================
@@ -2368,7 +2382,7 @@ class OfferConversionAdmin(admin.ModelAdmin):
         return format_html(
             '<div style="text-align: center;">'
             '<div style="font-size: 20px;">{}</div>'
-            '<div style="color: {}; font-weight: bold; font-size: 14px;">{:.0f}</div>'
+            '<div style="color: {}; font-weight: bold; font-size: 14px;">{}</div>'
             '<div style="color: {}; font-size: 9px; font-weight: 600;">{}</div>'
             '</div>',
             icon,
@@ -2661,6 +2675,9 @@ class OfferConversionAdmin(admin.ModelAdmin):
     def export_conversions(self, request, queryset):
         self.message_user(request, 'Export feature coming soon.', level='info')
     export_conversions.short_description = '📥 Export conversions'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
     
     
     # api/ad_networks/admin.py (continued)
@@ -3170,7 +3187,56 @@ class BlacklistedIPAdmin(admin.ModelAdmin):
         extra_context['blacklist_stats'] = stats
         
         return super().changelist_view(request, extra_context=extra_context)
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
+@admin.register(OfferAttachment)
+class OfferAttachmentAdmin(admin.ModelAdmin):
+    list_display = ['offer', 'filename', 'file_type', 'file_size_display', 'created_at']
+    list_filter = ['file_type', 'created_at']
+    search_fields = ['offer__title', 'filename', 'description']
+    readonly_fields = ['file_size_display', 'created_at', 'updated_at']
+    
+    def file_size_display(self, obj):
+        """Display file size in human readable format"""
+        if obj.file_size:
+            for unit in ['B', 'KB', 'MB', 'GB']:
+                if obj.file_size < 1024.0:
+                    return f"{obj.file_size:.2f} {unit}"
+                obj.file_size /= 1024.0
+            return f"{obj.file_size:.2f} TB"
+        return "0 B"
+    file_size_display.short_description = 'Size'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
+
+@admin.register(UserWallet)
+class UserWalletAdmin(admin.ModelAdmin):
+    list_display = ['user', 'current_balance', 'pending_balance', 'total_earned', 'currency', 'is_active', 'is_frozen']
+    list_filter = ['currency', 'is_active', 'is_frozen', 'created_at']
+    search_fields = ['user__username', 'user__email', 'user__first_name', 'user__last_name']
+    readonly_fields = ['total_earned', 'total_withdrawn', 'created_at', 'updated_at', 'frozen_at']
+    
+    fieldsets = (
+        ('User Information', {
+            'fields': ('user',)
+        }),
+        ('Balance Information', {
+            'fields': ('current_balance', 'pending_balance', 'total_earned', 'total_withdrawn', 'currency')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'is_frozen', 'freeze_reason', 'frozen_at')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 # ==================== Known Bad IP Admin ====================
 
@@ -3698,6 +3764,9 @@ class KnownBadIPAdmin(admin.ModelAdmin):
         
         self.message_user(request, f'{count} expired IPs removed.')
     remove_expired.short_description = '[DELETE] Remove expired IPs'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 
 # ==================== Fraud Detection Rule Admin ====================
@@ -4061,7 +4130,10 @@ class FraudDetectionRuleAdmin(admin.ModelAdmin):
             return format_html('<div style="color:red;">Error: {}</div>', str(e))
 
     # ডেসক্রিপশন সেট করা (এটি ক্লাসের ভেতরেই থাকতে হবে)
-    condition_details.short_description = '[FIX] Condition Details'    
+    condition_details.short_description = '[FIX] Condition Details'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))    
 
 
 
@@ -4070,6 +4142,9 @@ class OfferWallAdmin(admin.ModelAdmin):
     list_display = ['name', 'wall_type', 'is_active', 'is_default']
     list_filter = ['wall_type', 'is_active']
     search_fields = ['name']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 
 @admin.register(AdNetworkWebhookLog)
@@ -4080,6 +4155,9 @@ class AdNetworkWebhookLogAdmin(admin.ModelAdmin):
     
     def has_add_permission(self, request):
         return False  # Webhook logs shouldn't be added manually
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 
 @admin.register(NetworkStatistic)
@@ -4088,6 +4166,9 @@ class NetworkStatisticAdmin(admin.ModelAdmin):
     list_filter = ['ad_network', 'date']
     date_hierarchy = 'date'
     readonly_fields = ['date']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 
 @admin.register(UserOfferLimit)
@@ -4095,6 +4176,9 @@ class UserOfferLimitAdmin(admin.ModelAdmin):
     list_display = ['user', 'offer', 'daily_count', 'total_count', 'last_completed']
     list_filter = ['last_completed']
     search_fields = ['user__username', 'offer__title']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 
 @admin.register(OfferSyncLog)
@@ -4103,6 +4187,9 @@ class OfferSyncLogAdmin(admin.ModelAdmin):
     list_filter = ['status', 'ad_network', 'created_at']
     readonly_fields = ['created_at']
     date_hierarchy = 'created_at'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 
 @admin.register(SmartOfferRecommendation)
@@ -4110,6 +4197,9 @@ class SmartOfferRecommendationAdmin(admin.ModelAdmin):
     list_display = ['user', 'offer', 'score', 'is_displayed', 'is_clicked', 'is_converted']
     list_filter = ['is_displayed', 'is_clicked', 'is_converted']
     search_fields = ['user__username', 'offer__title']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 
 @admin.register(OfferPerformanceAnalytics)
@@ -4117,7 +4207,87 @@ class OfferPerformanceAnalyticsAdmin(admin.ModelAdmin):
     list_display = ['offer', 'completion_rate', 'avg_session_duration', 'created_at']
     list_filter = ['created_at']
     readonly_fields = ['created_at', 'updated_at']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
+
+# ==================== Missing Model Registrations ====================
+
+@admin.register(OfferClick)
+class OfferClickAdmin(admin.ModelAdmin):
+    list_display = ['user', 'offer', 'ip_address', 'clicked_at', 'is_unique', 'is_fraud', 'fraud_score']
+    list_filter = ['is_unique', 'is_fraud', 'clicked_at', 'device', 'browser']
+    search_fields = ['user__username', 'offer__title', 'ip_address', 'click_id']
+    readonly_fields = ['click_id', 'clicked_at', 'created_at']
+    date_hierarchy = 'clicked_at'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
+
+@admin.register(OfferReward)
+class OfferRewardAdmin(admin.ModelAdmin):
+    list_display = ['user', 'offer', 'amount', 'currency', 'status', 'created_at']
+    list_filter = ['status', 'currency', 'created_at']
+    search_fields = ['user__username', 'offer__title', 'payment_reference']
+    readonly_fields = ['created_at', 'updated_at']
+    date_hierarchy = 'created_at'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
+
+@admin.register(NetworkAPILog)
+class NetworkAPILogAdmin(admin.ModelAdmin):
+    list_display = ['network', 'method', 'endpoint', 'status_code', 'is_success', 'request_timestamp']
+    list_filter = ['network', 'method', 'status_code', 'is_success', 'request_timestamp']
+    search_fields = ['network__name', 'endpoint', 'error_message']
+    readonly_fields = ['request_timestamp', 'response_timestamp', 'created_at']
+    date_hierarchy = 'request_timestamp'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
+
+@admin.register(OfferTag)
+class OfferTagAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'color', 'is_active', 'is_featured', 'usage_count']
+    list_filter = ['is_active', 'is_featured', 'created_at']
+    search_fields = ['name', 'slug', 'description']
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ['usage_count', 'created_at', 'updated_at']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
+
+@admin.register(OfferTagging)
+class OfferTaggingAdmin(admin.ModelAdmin):
+    list_display = ['offer', 'tag', 'added_by', 'is_auto_tagged', 'confidence_score', 'created_at']
+    list_filter = ['is_auto_tagged', 'created_at']
+    search_fields = ['offer__title', 'tag__name', 'added_by__username']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
+
+@admin.register(NetworkHealthCheck)
+class NetworkHealthCheckAdmin(admin.ModelAdmin):
+    list_display = ['network', 'is_healthy', 'response_time_ms', 'status_code', 'check_type', 'checked_at']
+    list_filter = ['is_healthy', 'status_code', 'check_type', 'checked_at']
+    search_fields = ['network__name', 'error', 'error_type']
+    readonly_fields = ['checked_at', 'created_at']
+    date_hierarchy = 'checked_at'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
+
+@admin.register(OfferDailyLimit)
+class OfferDailyLimitAdmin(admin.ModelAdmin):
+    list_display = ['user', 'offer', 'count_today', 'daily_limit', 'is_active', 'last_reset_at']
+    list_filter = ['is_active', 'last_reset_at']
+    search_fields = ['user__username', 'offer__title']
+    readonly_fields = ['last_reset_at', 'created_at', 'updated_at']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 #যদি @admin.register() decorator কাজ না করে, তাহলে manually register করুন
 admin.site.register(AdNetwork, AdNetworkAdmin)

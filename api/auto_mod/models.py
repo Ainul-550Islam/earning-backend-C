@@ -178,8 +178,8 @@ class AutoApprovalRule(TimeStampedUUIDModel):
         verbose_name        = _("Auto-Approval Rule")
         verbose_name_plural = _("Auto-Approval Rules")
         indexes = [
-            models.Index(fields=["submission_type", "is_active", "priority"]),
-            models.Index(fields=["action", "is_active"]),
+            models.Index(fields=["submission_type", "is_active", "priority"], name='idx_submission_type_is_act_f29'),
+            models.Index(fields=["action", "is_active"], name='idx_action_is_active_817'),
         ]
 
     def __str__(self) -> str:
@@ -356,10 +356,10 @@ class SuspiciousSubmission(TimeStampedUUIDModel):
         verbose_name        = _("Suspicious Submission")
         verbose_name_plural = _("Suspicious Submissions")
         indexes = [
-            models.Index(fields=["status", "risk_level", "created_at"]),
-            models.Index(fields=["content_type", "content_id"]),
-            models.Index(fields=["submitted_by", "status"]),
-            models.Index(fields=["submission_type", "status"]),
+            models.Index(fields=["status", "risk_level", "created_at"], name='idx_status_risk_level_crea_b03'),
+            models.Index(fields=["content_type", "content_id"], name='idx_content_type_content_i_9a3'),
+            models.Index(fields=["submitted_by", "status"], name='idx_submitted_by_status_820'),
+            models.Index(fields=["submission_type", "status"], name='idx_submission_type_status_821'),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -499,8 +499,8 @@ class ProofScanner(TimeStampedUUIDModel):
         verbose_name        = _("Proof Scanner")
         verbose_name_plural = _("Proof Scanners")
         indexes = [
-            models.Index(fields=["submission", "scan_type"]),
-            models.Index(fields=["is_flagged", "created_at"]),
+            models.Index(fields=["submission", "scan_type"], name='idx_submission_scan_type_822'),
+            models.Index(fields=["is_flagged", "created_at"], name='idx_is_flagged_created_at_823'),
         ]
 
     def __str__(self) -> str:
@@ -599,8 +599,8 @@ class TaskBot(TimeStampedUUIDModel):
         verbose_name        = _("Task Bot")
         verbose_name_plural = _("Task Bots")
         indexes = [
-            models.Index(fields=["status", "submission_type"]),
-            models.Index(fields=["last_heartbeat"]),
+            models.Index(fields=["status", "submission_type"], name='idx_status_submission_type_824'),
+            models.Index(fields=["last_heartbeat"], name='idx_last_heartbeat_825'),
         ]
 
     def __str__(self) -> str:

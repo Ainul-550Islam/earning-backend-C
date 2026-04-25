@@ -28,7 +28,7 @@ class FrequencyCap(TimeStampedModel):
         verbose_name = _("Frequency Cap")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["ad_unit", "is_active"]),
+            models.Index(fields=["ad_unit", "is_active"], name='idx_ad_unit_is_active_1534'),
         ]
 
     def __str__(self):
@@ -50,7 +50,7 @@ class FrequencyLog(TimeStampedModel):
         verbose_name = _("Frequency Log")
         unique_together = [["frequency_cap", "identifier", "window_start"]]
         indexes = [
-            models.Index(fields=["frequency_cap", "identifier"]),
+            models.Index(fields=["frequency_cap", "identifier"], name='idx_frequency_cap_identifi_e64'),
         ]
 
     def __str__(self):

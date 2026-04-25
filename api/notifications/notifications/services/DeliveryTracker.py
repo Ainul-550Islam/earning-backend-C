@@ -44,7 +44,7 @@ class DeliveryTracker:
             Dict with: success, notification_id, error.
         """
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
 
             notification = Notification.objects.get(pk=notification_id)
             notification.mark_as_delivered(save=save)
@@ -62,7 +62,7 @@ class DeliveryTracker:
     def mark_read(self, notification_id: int) -> Dict:
         """Mark a Notification as read."""
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             notification = Notification.objects.get(pk=notification_id)
             notification.mark_as_read()
             return {'success': True, 'notification_id': notification_id, 'error': ''}
@@ -73,7 +73,7 @@ class DeliveryTracker:
     def mark_clicked(self, notification_id: int) -> Dict:
         """Record a click on a notification."""
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             notification = Notification.objects.get(pk=notification_id)
             notification.increment_click_count()
             return {'success': True, 'notification_id': notification_id, 'error': ''}
@@ -139,7 +139,7 @@ class DeliveryTracker:
             error_message:      Error message text.
         """
         try:
-            from notifications.models.channel import PushDeliveryLog
+            from api.notifications.models.channel import PushDeliveryLog
 
             log = PushDeliveryLog.objects.filter(
                 notification_id=notification_id,
@@ -180,7 +180,7 @@ class DeliveryTracker:
             Dict with: reconciled_count, still_undelivered_count, errors.
         """
         from django.db.models import Q
-        from notifications.models import Notification
+        from api.notifications.models import Notification
 
         cutoff = timezone.now() - timedelta(hours=hours_back)
         reconciled = 0
@@ -221,8 +221,8 @@ class DeliveryTracker:
         actual delivery logs.
         """
         try:
-            from notifications.models.campaign import NotificationCampaign, CampaignResult
-            from notifications.models import Notification
+            from api.notifications.models.campaign import NotificationCampaign, CampaignResult
+            from api.notifications.models import Notification
             from django.db.models import Count, Sum
 
             campaign = NotificationCampaign.objects.get(pk=campaign_id)
@@ -276,7 +276,7 @@ class DeliveryTracker:
         channel = getattr(notification, 'channel', '')
 
         if channel == 'email':
-            from notifications.models.channel import EmailDeliveryLog
+            from api.notifications.models.channel import EmailDeliveryLog
             log = EmailDeliveryLog.objects.filter(
                 notification=notification,
                 status__in=('delivered', 'opened', 'clicked'),
@@ -286,7 +286,7 @@ class DeliveryTracker:
                 return True
 
         elif channel == 'sms':
-            from notifications.models.channel import SMSDeliveryLog
+            from api.notifications.models.channel import SMSDeliveryLog
             log = SMSDeliveryLog.objects.filter(
                 notification=notification,
                 status='delivered',
@@ -296,7 +296,7 @@ class DeliveryTracker:
                 return True
 
         elif channel == 'push':
-            from notifications.models.channel import PushDeliveryLog
+            from api.notifications.models.channel import PushDeliveryLog
             log = PushDeliveryLog.objects.filter(
                 notification=notification,
                 status='delivered',
@@ -312,7 +312,7 @@ class DeliveryTracker:
         if not message_id:
             return
         try:
-            from notifications.models.channel import EmailDeliveryLog
+            from api.notifications.models.channel import EmailDeliveryLog
             log = EmailDeliveryLog.objects.filter(message_id=message_id).first()
             if log and log.status in ('delivered', 'opened', 'clicked'):
                 log.notification.mark_as_delivered()
@@ -324,7 +324,7 @@ class DeliveryTracker:
         if not sid:
             return
         try:
-            from notifications.models.channel import SMSDeliveryLog
+            from api.notifications.models.channel import SMSDeliveryLog
             log = SMSDeliveryLog.objects.filter(provider_sid=sid).first()
             if log and log.status == 'delivered':
                 log.notification.mark_as_delivered()
@@ -334,7 +334,7 @@ class DeliveryTracker:
     def _deactivate_push_device(self, device_id: int):
         """Deactivate a push device after an invalid token error."""
         try:
-            from notifications.models.channel import PushDevice
+            from api.notifications.models.channel import PushDevice
             PushDevice.objects.filter(pk=device_id).update(
                 is_active=False,
                 updated_at=timezone.now(),

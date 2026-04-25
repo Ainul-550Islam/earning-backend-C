@@ -13,7 +13,7 @@ class PushDeviceSerializer(serializers.ModelSerializer):
         return obj.get_delivery_rate()
 
     class Meta:
-        from notifications.models.channel import PushDevice
+        from api.notifications.models.channel import PushDevice
         model = PushDevice
         fields = [
             'id', 'user', 'device_type', 'fcm_token', 'apns_token',
@@ -52,7 +52,7 @@ class RegisterPushDeviceSerializer(serializers.Serializer):
 
 class PushDeliveryLogSerializer(serializers.ModelSerializer):
     class Meta:
-        from notifications.models.channel import PushDeliveryLog
+        from api.notifications.models.channel import PushDeliveryLog
         model = PushDeliveryLog
         fields = [
             'id', 'device', 'notification', 'status', 'provider',
@@ -64,7 +64,7 @@ class PushDeliveryLogSerializer(serializers.ModelSerializer):
 
 class EmailDeliveryLogSerializer(serializers.ModelSerializer):
     class Meta:
-        from notifications.models.channel import EmailDeliveryLog
+        from api.notifications.models.channel import EmailDeliveryLog
         model = EmailDeliveryLog
         fields = [
             'id', 'notification', 'recipient', 'provider', 'message_id',
@@ -76,7 +76,7 @@ class EmailDeliveryLogSerializer(serializers.ModelSerializer):
 
 class SMSDeliveryLogSerializer(serializers.ModelSerializer):
     class Meta:
-        from notifications.models.channel import SMSDeliveryLog
+        from api.notifications.models.channel import SMSDeliveryLog
         model = SMSDeliveryLog
         fields = [
             'id', 'notification', 'phone', 'gateway', 'provider_sid',
@@ -93,7 +93,7 @@ class InAppMessageSerializer(serializers.ModelSerializer):
         return obj.is_expired()
 
     class Meta:
-        from notifications.models.channel import InAppMessage
+        from api.notifications.models.channel import InAppMessage
         model = InAppMessage
         fields = [
             'id', 'user', 'notification', 'message_type', 'title', 'body',
@@ -118,7 +118,7 @@ class NotificationScheduleSerializer(serializers.ModelSerializer):
         return obj.is_overdue()
 
     class Meta:
-        from notifications.models.schedule import NotificationSchedule
+        from api.notifications.models.schedule import NotificationSchedule
         model = NotificationSchedule
         fields = [
             'id', 'notification', 'send_at', 'timezone', 'status',
@@ -155,7 +155,7 @@ class NotificationBatchSerializer(serializers.ModelSerializer):
         return obj.success_rate
 
     class Meta:
-        from notifications.models.schedule import NotificationBatch
+        from api.notifications.models.schedule import NotificationBatch
         model = NotificationBatch
         fields = [
             'id', 'name', 'description', 'template', 'segment', 'status',
@@ -186,7 +186,7 @@ class NotificationQueueSerializer(serializers.ModelSerializer):
         return obj.is_ready()
 
     class Meta:
-        from notifications.models.schedule import NotificationQueue
+        from api.notifications.models.schedule import NotificationQueue
         model = NotificationQueue
         fields = [
             'id', 'notification', 'priority', 'scheduled_at', 'status',
@@ -210,7 +210,7 @@ class NotificationRetrySerializer(serializers.ModelSerializer):
         return obj.has_exceeded_max()
 
     class Meta:
-        from notifications.models.schedule import NotificationRetry
+        from api.notifications.models.schedule import NotificationRetry
         model = NotificationRetry
         fields = [
             'id', 'notification', 'attempt_number', 'max_attempts', 'status',
@@ -222,7 +222,7 @@ class NotificationRetrySerializer(serializers.ModelSerializer):
 
 class CampaignSegmentSerializer(serializers.ModelSerializer):
     class Meta:
-        from notifications.models.campaign import CampaignSegment
+        from api.notifications.models.campaign import CampaignSegment
         model = CampaignSegment
         fields = [
             'id', 'campaign', 'name', 'description', 'segment_type',
@@ -240,7 +240,7 @@ class NewNotificationCampaignSerializer(serializers.ModelSerializer):
         return obj.progress_pct
 
     class Meta:
-        from notifications.models.campaign import NotificationCampaign
+        from api.notifications.models.campaign import NotificationCampaign
         model = NotificationCampaign
         fields = [
             'id', 'name', 'description', 'template', 'segment', 'segment_data',
@@ -266,7 +266,7 @@ class CreateNewCampaignSerializer(serializers.Serializer):
 
 class CampaignABTestSerializer(serializers.ModelSerializer):
     class Meta:
-        from notifications.models.campaign import CampaignABTest
+        from api.notifications.models.campaign import CampaignABTest
         model = CampaignABTest
         fields = [
             'id', 'campaign', 'variant_a', 'variant_b', 'split_pct',
@@ -281,7 +281,7 @@ class CampaignABTestSerializer(serializers.ModelSerializer):
 
 class CampaignResultSerializer(serializers.ModelSerializer):
     class Meta:
-        from notifications.models.campaign import CampaignResult
+        from api.notifications.models.campaign import CampaignResult
         model = CampaignResult
         fields = [
             'id', 'campaign', 'sent', 'delivered', 'failed', 'opened',
@@ -307,7 +307,7 @@ class NotificationInsightSerializer(serializers.ModelSerializer):
         return obj.click_rate
 
     class Meta:
-        from notifications.models.analytics import NotificationInsight
+        from api.notifications.models.analytics import NotificationInsight
         model = NotificationInsight
         fields = [
             'id', 'date', 'channel', 'sent', 'delivered', 'failed',
@@ -320,7 +320,7 @@ class NotificationInsightSerializer(serializers.ModelSerializer):
 
 class DeliveryRateSerializer(serializers.ModelSerializer):
     class Meta:
-        from notifications.models.analytics import DeliveryRate
+        from api.notifications.models.analytics import DeliveryRate
         model = DeliveryRate
         fields = [
             'id', 'date', 'channel', 'delivery_pct', 'open_pct',
@@ -331,7 +331,7 @@ class DeliveryRateSerializer(serializers.ModelSerializer):
 
 class OptOutTrackingSerializer(serializers.ModelSerializer):
     class Meta:
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
         model = OptOutTracking
         fields = [
             'id', 'user', 'channel', 'is_active', 'reason', 'notes',
@@ -363,7 +363,7 @@ class NotificationFatigueSerializer(serializers.ModelSerializer):
         return obj.get_effective_weekly_limit()
 
     class Meta:
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.models.analytics import NotificationFatigue
         model = NotificationFatigue
         fields = [
             'id', 'user', 'sent_today', 'sent_this_week', 'sent_this_month',

@@ -30,7 +30,7 @@ class AdNetworkConfig(TimeStampedModel):
         verbose_name = _("Ad Network Config")
         unique_together = [["publisher", "network"]]
         indexes = [
-            models.Index(fields=["publisher", "is_enabled"]),
+            models.Index(fields=["publisher", "is_enabled"], name='idx_publisher_is_enabled_1533'),
         ]
 
     def __str__(self):

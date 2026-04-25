@@ -78,7 +78,7 @@ class TwilioVoiceProvider:
             return {'success': False, 'provider': 'twilio_voice', 'error': 'No phone number'}
 
         # Normalize phone
-        from notifications.helpers import phone_to_international_bd
+        from api.notifications.helpers import phone_to_international_bd
         if phone.startswith('01') and len(phone) == 11:
             phone = phone_to_international_bd(phone)
         elif not phone.startswith('+'):

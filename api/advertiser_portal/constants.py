@@ -604,6 +604,434 @@ class ConfigConstants:
         'storage_backend': 's3',  # or 'local'
     }
 
+# Additional Constants for Main Models
+class OfferConstants:
+    """Offer-related constants."""
+    
+    # Offer types
+    TYPES = {
+        'cpa': 'Cost Per Action',
+        'cpl': 'Cost Per Lead',
+        'cps': 'Cost Per Sale',
+        'cpc': 'Cost Per Click',
+        'cpm': 'Cost Per Mille',
+        'cpv': 'Cost Per View',
+        'cpi': 'Cost Per Install',
+        'revshare': 'Revenue Share'
+    }
+    
+    # Pricing models
+    PRICING_MODELS = {
+        'fixed': 'Fixed Amount',
+        'percentage': 'Percentage',
+        'tiered': 'Tiered',
+        'dynamic': 'Dynamic'
+    }
+    
+    # Offer categories
+    CATEGORIES = {
+        'ecommerce': 'E-commerce',
+        'finance': 'Finance',
+        'gaming': 'Gaming',
+        'dating': 'Dating',
+        'health': 'Health & Wellness',
+        'education': 'Education',
+        'travel': 'Travel',
+        'entertainment': 'Entertainment',
+        'technology': 'Technology',
+        'automotive': 'Automotive',
+        'real_estate': 'Real Estate',
+        'other': 'Other'
+    }
+    
+    # Payout limits
+    PAYOUT_LIMITS = {
+        'min_amount': Decimal('0.01'),
+        'max_amount': Decimal('10000'),
+        'default_amount': Decimal('1.00')
+    }
+
+
+class TrackingConstants:
+    """Tracking-related constants."""
+    
+    # Pixel types
+    PIXEL_TYPES = {
+        'conversion': 'Conversion Pixel',
+        'impression': 'Impression Pixel',
+        'click': 'Click Pixel',
+        'postback': 'Server-to-Server Postback',
+        'view_through': 'View Through Pixel'
+    }
+    
+    # Event types
+    EVENT_TYPES = {
+        'click': 'Click',
+        'impression': 'Impression',
+        'conversion': 'Conversion',
+        'lead': 'Lead',
+        'sale': 'Sale',
+        'install': 'Install',
+        'signup': 'Signup',
+        'download': 'Download',
+        'view': 'View',
+        'custom': 'Custom Event'
+    }
+    
+    # Device types
+    DEVICE_TYPES = {
+        'desktop': 'Desktop',
+        'mobile': 'Mobile',
+        'tablet': 'Tablet',
+        'smart_tv': 'Smart TV',
+        'gaming_console': 'Gaming Console'
+    }
+    
+    # Conversion delays (in seconds)
+    CONVERSION_DELAYS = {
+        'immediate': 0,
+        'short': 300,      # 5 minutes
+        'medium': 3600,    # 1 hour
+        'long': 86400,     # 24 hours
+        'extended': 604800 # 7 days
+    }
+
+
+class BillingConstants:
+    """Billing-related constants."""
+    
+    # Transaction types
+    TRANSACTION_TYPES = {
+        'deposit': 'Deposit',
+        'withdrawal': 'Withdrawal',
+        'spend': 'Campaign Spend',
+        'refund': 'Refund',
+        'bonus': 'Bonus',
+        'penalty': 'Penalty',
+        'adjustment': 'Adjustment',
+        'fee': 'Fee'
+    }
+    
+    # Payment methods
+    PAYMENT_METHODS = {
+        'credit_card': 'Credit Card',
+        'debit_card': 'Debit Card',
+        'bank_transfer': 'Bank Transfer',
+        'paypal': 'PayPal',
+        'stripe': 'Stripe',
+        'wire': 'Wire Transfer',
+        'check': 'Check',
+        'crypto': 'Cryptocurrency'
+    }
+    
+    # Invoice statuses
+    INVOICE_STATUSES = {
+        'draft': 'Draft',
+        'sent': 'Sent',
+        'paid': 'Paid',
+        'overdue': 'Overdue',
+        'cancelled': 'Cancelled',
+        'refunded': 'Refunded'
+    }
+    
+    # Currency codes
+    CURRENCIES = {
+        'USD': 'US Dollar',
+        'EUR': 'Euro',
+        'GBP': 'British Pound',
+        'CAD': 'Canadian Dollar',
+        'AUD': 'Australian Dollar',
+        'JPY': 'Japanese Yen',
+        'CHF': 'Swiss Franc',
+        'CNY': 'Chinese Yuan',
+        'INR': 'Indian Rupee',
+        'BRL': 'Brazilian Real'
+    }
+    
+    # Billing thresholds
+    THRESHOLDS = {
+        'low_balance_warning': Decimal('100.00'),
+        'critical_balance': Decimal('50.00'),
+        'auto_refill_amount': Decimal('500.00'),
+        'minimum_deposit': Decimal('10.00')
+    }
+
+
+class FraudConstants:
+    """Fraud detection constants."""
+    
+    # Fraud types
+    FRAUD_TYPES = {
+        'click_fraud': 'Click Fraud',
+        'conversion_fraud': 'Conversion Fraud',
+        'ip_fraud': 'IP Fraud',
+        'device_fraud': 'Device Fraud',
+        'bot_traffic': 'Bot Traffic',
+        'proxy_traffic': 'Proxy Traffic',
+        'vpn_traffic': 'VPN Traffic',
+        'data_center_traffic': 'Data Center Traffic'
+    }
+    
+    # Risk levels
+    RISK_LEVELS = {
+        'low': 'Low Risk',
+        'medium': 'Medium Risk',
+        'high': 'High Risk',
+        'critical': 'Critical Risk'
+    }
+    
+    # Quality levels
+    QUALITY_LEVELS = {
+        'high': 'High Quality',
+        'medium': 'Medium Quality',
+        'low': 'Low Quality',
+        'invalid': 'Invalid'
+    }
+    
+    # Fraud thresholds
+    THRESHOLDS = {
+        'max_conversions_per_ip': 10,
+        'max_conversions_per_device': 5,
+        'min_conversion_time': 1,  # seconds
+        'max_conversion_time': 3600,  # seconds
+        'suspicious_ip_score': 0.7,
+        'high_risk_score': 0.8,
+        'critical_risk_score': 0.9
+    }
+
+
+class NotificationConstants:
+    """Notification-related constants."""
+    
+    # Notification types
+    TYPES = {
+        'info': 'Information',
+        'warning': 'Warning',
+        'error': 'Error',
+        'success': 'Success',
+        'billing': 'Billing',
+        'campaign': 'Campaign',
+        'offer': 'Offer',
+        'fraud': 'Fraud Alert',
+        'system': 'System'
+    }
+    
+    # Priority levels
+    PRIORITIES = {
+        'low': 'Low',
+        'medium': 'Medium',
+        'high': 'High',
+        'urgent': 'Urgent'
+    }
+    
+    # Channels
+    CHANNELS = {
+        'email': 'Email',
+        'sms': 'SMS',
+        'push': 'Push Notification',
+        'in_app': 'In-App',
+        'webhook': 'Webhook'
+    }
+    
+    # Notification templates
+    TEMPLATES = {
+        'campaign_created': 'campaign_created',
+        'campaign_approved': 'campaign_approved',
+        'campaign_rejected': 'campaign_rejected',
+        'budget_low': 'budget_low',
+        'budget_depleted': 'budget_depleted',
+        'conversion_received': 'conversion_received',
+        'fraud_detected': 'fraud_detected',
+        'payment_processed': 'payment_processed',
+        'invoice_generated': 'invoice_generated'
+    }
+
+
+class ReportConstants:
+    """Reporting-related constants."""
+    
+    # Report types
+    TYPES = {
+        'campaign': 'Campaign Report',
+        'offer': 'Offer Report',
+        'billing': 'Billing Report',
+        'conversion': 'Conversion Report',
+        'fraud': 'Fraud Report',
+        'performance': 'Performance Report',
+        'analytics': 'Analytics Report',
+        'custom': 'Custom Report'
+    }
+    
+    # Report formats
+    FORMATS = {
+        'csv': 'CSV',
+        'xlsx': 'Excel',
+        'pdf': 'PDF',
+        'json': 'JSON',
+        'xml': 'XML'
+    }
+    
+    # Time periods
+    TIME_PERIODS = {
+        'today': 'Today',
+        'yesterday': 'Yesterday',
+        'last_7_days': 'Last 7 Days',
+        'last_30_days': 'Last 30 Days',
+        'this_month': 'This Month',
+        'last_month': 'Last Month',
+        'this_quarter': 'This Quarter',
+        'last_quarter': 'Last Quarter',
+        'this_year': 'This Year',
+        'last_year': 'Last Year',
+        'custom': 'Custom Range'
+    }
+    
+    # Metrics
+    METRICS = {
+        'impressions': 'Impressions',
+        'clicks': 'Clicks',
+        'conversions': 'Conversions',
+        'revenue': 'Revenue',
+        'cost': 'Cost',
+        'ctr': 'Click-Through Rate',
+        'cpc': 'Cost Per Click',
+        'cpa': 'Cost Per Action',
+        'roi': 'Return on Investment',
+        'conversion_rate': 'Conversion Rate'
+    }
+
+
+class MLConstants:
+    """Machine learning constants."""
+    
+    # Model types
+    MODEL_TYPES = {
+        'classification': 'Classification',
+        'regression': 'Regression',
+        'clustering': 'Clustering',
+        'anomaly_detection': 'Anomaly Detection',
+        'recommendation': 'Recommendation',
+        'time_series': 'Time Series'
+    }
+    
+    # Model statuses
+    MODEL_STATUSES = {
+        'training': 'Training',
+        'trained': 'Trained',
+        'active': 'Active',
+        'inactive': 'Inactive',
+        'failed': 'Failed',
+        'deprecated': 'Deprecated'
+    }
+    
+    # Feature types
+    FEATURE_TYPES = {
+        'numeric': 'Numeric',
+        'categorical': 'Categorical',
+        'text': 'Text',
+        'image': 'Image',
+        'time_series': 'Time Series',
+        'geographic': 'Geographic'
+    }
+    
+    # Prediction thresholds
+    THRESHOLDS = {
+        'confidence_min': 0.5,
+        'confidence_high': 0.8,
+        'fraud_risk_low': 0.3,
+        'fraud_risk_medium': 0.6,
+        'fraud_risk_high': 0.8
+    }
+
+
+class CreativeConstants:
+    """Creative-related constants."""
+    
+    # Creative types
+    TYPES = {
+        'banner': 'Banner Ad',
+        'video': 'Video Ad',
+        'native': 'Native Ad',
+        'interstitial': 'Interstitial Ad',
+        'rich_media': 'Rich Media',
+        'text_ad': 'Text Ad',
+        'social_post': 'Social Post',
+        'email': 'Email Creative'
+    }
+    
+    # File formats
+    FILE_FORMATS = {
+        'banner': ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        'video': ['mp4', 'webm', 'mov', 'avi'],
+        'native': ['jpg', 'jpeg', 'png', 'gif'],
+        'rich_media': ['html', 'zip'],
+        'text': ['txt', 'html']
+    }
+    
+    # Size limits
+    SIZE_LIMITS = {
+        'banner_max_size_mb': 2,
+        'video_max_size_mb': 50,
+        'native_max_size_mb': 5,
+        'rich_media_max_size_mb': 10
+    }
+    
+    # Standard dimensions
+    DIMENSIONS = {
+        'banner_300x250': {'width': 300, 'height': 250, 'name': 'Medium Rectangle'},
+        'banner_728x90': {'width': 728, 'height': 90, 'name': 'Leaderboard'},
+        'banner_160x600': {'width': 160, 'height': 600, 'name': 'Wide Skyscraper'},
+        'banner_320x50': {'width': 320, 'height': 50, 'name': 'Mobile Banner'},
+        'video_1920x1080': {'width': 1920, 'height': 1080, 'name': 'HD Video'},
+        'video_1280x720': {'width': 1280, 'height': 720, 'name': '720p Video'},
+        'native_1x1': {'width': 1, 'height': 1, 'name': 'Flexible Native'}
+    }
+
+
+class TargetingConstants:
+    """Targeting-related constants."""
+    
+    # Targeting types
+    TYPES = {
+        'geographic': 'Geographic',
+        'demographic': 'Demographic',
+        'behavioral': 'Behavioral',
+        'contextual': 'Contextual',
+        'device': 'Device',
+        'time': 'Time-based',
+        'custom': 'Custom'
+    }
+    
+    # Geographic targeting
+    GEOGRAPHIC_TYPES = {
+        'country': 'Country',
+        'region': 'Region/State',
+        'city': 'City',
+        'postal_code': 'Postal Code',
+        'coordinates': 'Coordinates',
+        'radius': 'Radius'
+    }
+    
+    # Demographic targeting
+    DEMOGRAPHIC_FIELDS = {
+        'age': 'Age',
+        'gender': 'Gender',
+        'income': 'Income',
+        'education': 'Education',
+        'occupation': 'Occupation',
+        'language': 'Language'
+    }
+    
+    # Device targeting
+    DEVICE_FIELDS = {
+        'device_type': 'Device Type',
+        'os': 'Operating System',
+        'browser': 'Browser',
+        'carrier': 'Carrier',
+        'connection_type': 'Connection Type'
+    }
+
+
 # Validation Constants
 class ValidationConstants:
     """Validation-related constants."""

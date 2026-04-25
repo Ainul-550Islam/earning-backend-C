@@ -14,7 +14,7 @@ from django.utils import timezone
 
 @admin.register_check
 def register_push_device(model_admin_site):
-    from notifications.models.channel import PushDevice
+    from api.notifications.models.channel import PushDevice
 
     @admin.register(PushDevice)
     class PushDeviceAdmin(admin.ModelAdmin):
@@ -47,17 +47,17 @@ def register_push_device(model_admin_site):
 def register_all_new_models():
     """Register all new split models with Django admin."""
     try:
-        from notifications.models.channel import (
+        from api.notifications.models.channel import (
             PushDevice, PushDeliveryLog, EmailDeliveryLog, SMSDeliveryLog, InAppMessage
         )
-        from notifications.models.schedule import (
+        from api.notifications.models.schedule import (
             NotificationSchedule, NotificationBatch, NotificationQueue, NotificationRetry
         )
-        from notifications.models.campaign import (
+        from api.notifications.models.campaign import (
             CampaignSegment, NotificationCampaign as NewNotificationCampaign,
             CampaignABTest, CampaignResult
         )
-        from notifications.models.analytics import (
+        from api.notifications.models.analytics import (
             NotificationInsight, DeliveryRate, OptOutTracking, NotificationFatigue
         )
 
@@ -215,7 +215,7 @@ def register_all_new_models():
                 actions = ['start_campaigns', 'cancel_campaigns']
 
                 def start_campaigns(self, request, queryset):
-                    from notifications.services.CampaignService import campaign_service
+                    from api.notifications.services.CampaignService import campaign_service
                     started = 0
                     for campaign in queryset.filter(status__in=('draft', 'scheduled')):
                         result = campaign_service.start_campaign(campaign.pk)
@@ -225,7 +225,7 @@ def register_all_new_models():
                 start_campaigns.short_description = 'Start selected campaigns'
 
                 def cancel_campaigns(self, request, queryset):
-                    from notifications.services.CampaignService import campaign_service
+                    from api.notifications.services.CampaignService import campaign_service
                     cancelled = 0
                     for campaign in queryset:
                         result = campaign_service.cancel_campaign(campaign.pk)

@@ -62,8 +62,8 @@ class Language(TimeStampedModel):
         verbose_name = _("Language")
         verbose_name_plural = _("Languages")
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['is_default', 'is_active']),
+            models.Index(fields=['is_active'], name='idx_is_active_1037'),
+            models.Index(fields=['is_default', 'is_active'], name='idx_is_default_is_active_1038'),
         ]
     
     def __str__(self):
@@ -136,8 +136,8 @@ class Country(TimeStampedModel):
         verbose_name = _("Country")
         verbose_name_plural = _("Countries")
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['code']),
+            models.Index(fields=['is_active'], name='idx_is_active_1039'),
+            models.Index(fields=['code'], name='idx_code_1040'),
         ]
     
     def __str__(self):
@@ -202,8 +202,8 @@ class Currency(TimeStampedModel):
         verbose_name = _("Currency")
         verbose_name_plural = _("Currencies")
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['is_default', 'is_active']),
+            models.Index(fields=['is_active'], name='idx_is_active_1041'),
+            models.Index(fields=['is_default', 'is_active'], name='idx_is_default_is_active_1042'),
         ]
     
     def __str__(self):
@@ -284,8 +284,8 @@ class Timezone(TimeStampedModel):
         verbose_name = _("Timezone")
         verbose_name_plural = _("Timezones")
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['name']),
+            models.Index(fields=['is_active'], name='idx_is_active_1043'),
+            models.Index(fields=['name'], name='idx_name_1044'),
         ]
     
     def __str__(self):
@@ -361,8 +361,8 @@ class City(TimeStampedModel):
         verbose_name = _("City")
         verbose_name_plural = _("Cities")
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['country', 'is_active']),
+            models.Index(fields=['is_active'], name='idx_is_active_1045'),
+            models.Index(fields=['country', 'is_active'], name='idx_country_is_active_1046'),
         ]
     
     def __str__(self):
@@ -435,7 +435,7 @@ class TranslationKey(TimeStampedModel):
         verbose_name = _("Translation Key")
         verbose_name_plural = _("Translation Keys")
         indexes = [
-            models.Index(fields=['category']),
+            models.Index(fields=['category'], name='idx_category_1047'),
         ]
     
     def __str__(self):
@@ -518,8 +518,8 @@ class Translation(TimeStampedModel):
         verbose_name = _("Translation")
         verbose_name_plural = _("Translations")
         indexes = [
-            models.Index(fields=['language', 'is_approved']),
-            models.Index(fields=['key', 'language', 'is_approved']),
+            models.Index(fields=['language', 'is_approved'], name='idx_language_is_approved_1048'),
+            models.Index(fields=['key', 'language', 'is_approved'], name='idx_key_language_is_approv_3aa'),
         ]
     
     def __str__(self):
@@ -575,7 +575,7 @@ class TranslationCache(TimeStampedModel):
     class Meta:
         unique_together = ['language_code', 'cache_key']
         indexes = [
-            models.Index(fields=['expires_at']),
+            models.Index(fields=['expires_at'], name='idx_expires_at_1050'),
         ]
         verbose_name = _("Translation Cache")
         verbose_name_plural = _("Translation Caches")
@@ -778,9 +778,9 @@ class MissingTranslation(TimeStampedModel):
         verbose_name = _("Missing Translation")
         verbose_name_plural = _("Missing Translations")
         indexes = [
-            models.Index(fields=['key']),
-            models.Index(fields=['language', 'resolved']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['key'], name='idx_key_1051'),
+            models.Index(fields=['language', 'resolved'], name='idx_language_resolved_1052'),
+            models.Index(fields=['created_at'], name='idx_created_at_1053'),
         ]
         unique_together = ['key', 'language', 'created_at']  # Prevent duplicate entries
     

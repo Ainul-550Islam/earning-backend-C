@@ -18,7 +18,10 @@ from django.utils import timezone
 from django.core.validators import EmailValidator, URLValidator
 from django.db.models import Q, Sum, Count, Avg
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -283,12 +286,12 @@ class Advertiser(AdvertiserPortalBaseModel, StatusModel, AuditModel, APIKeyModel
         verbose_name = 'Advertiser'
         verbose_name_plural = 'Advertisers'
         indexes = [
-            models.Index(fields=['company_name']),
-            models.Index(fields=['industry']),
-            models.Index(fields=['status']),
-            models.Index(fields=['is_verified']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['user']),
+            models.Index(fields=['company_name'], name='idx_company_name_060'),
+            models.Index(fields=['industry'], name='idx_industry_061'),
+            models.Index(fields=['status'], name='idx_status_062'),
+            models.Index(fields=['is_verified'], name='idx_is_verified_063'),
+            models.Index(fields=['created_at'], name='idx_created_at_064'),
+            models.Index(fields=['user'], name='idx_user_065'),
         ]
     
     def __str__(self) -> str:
@@ -619,9 +622,9 @@ class AdvertiserVerification(AdvertiserPortalBaseModel):
         verbose_name = 'Advertiser Verification'
         verbose_name_plural = 'Advertiser Verifications'
         indexes = [
-            models.Index(fields=['advertiser', 'verification_type']),
-            models.Index(fields=['status']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['advertiser', 'verification_type'], name='idx_advertiser_verificatio_11f'),
+            models.Index(fields=['status'], name='idx_status_067'),
+            models.Index(fields=['created_at'], name='idx_created_at_068'),
         ]
     
     def __str__(self) -> str:
@@ -675,9 +678,9 @@ class AdvertiserCredit(AdvertiserPortalBaseModel):
         verbose_name = 'Advertiser Credit'
         verbose_name_plural = 'Advertiser Credits'
         indexes = [
-            models.Index(fields=['advertiser', 'created_at']),
-            models.Index(fields=['credit_type']),
-            models.Index(fields=['reference_id']),
+            models.Index(fields=['advertiser', 'created_at'], name='idx_advertiser_created_at_069'),
+            models.Index(fields=['credit_type'], name='idx_credit_type_070'),
+            models.Index(fields=['reference_id'], name='idx_reference_id_071'),
         ]
     
     def __str__(self) -> str:

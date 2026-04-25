@@ -19,7 +19,9 @@ handler500 = wallet_views.handler500
 
 sitemaps = {}
 
+from django.views.generic.base import RedirectView
 urlpatterns = [
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=True)),
     # path('', include('api.smartlink.urls')),
     # path('', include('api.smartlink.postback.urls')),
 
@@ -121,6 +123,7 @@ urlpatterns = [
     path('offer-inventory/',      include('api.offer_inventory.urls')),
     path('disaster-recovery/',    include('api.disaster_recovery.urls')),
     path('dr-integration/',        include('api.dr_integration.urls')),
+    path('offer-routing/',         include('api.offer_routing.urls')),
 
     # ── Sitemaps & Feeds ────────────────────────────────────────────────
     path('sitemap.xml',           sitemap_index, {'sitemaps': sitemaps}, name='sitemap_index'),

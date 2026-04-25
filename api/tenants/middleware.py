@@ -13,13 +13,13 @@ class TenantMiddleware:
 
         if api_key:
             try:
-                tenant = Tenant.objects.get(api_key=api_key, is_active=True)
+                tenant = Tenant.objects.get(api_key=api_key, is_suspended=False)
             except Tenant.DoesNotExist:
                 pass
 
         if not tenant:
             try:
-                tenant = Tenant.objects.get(domain=domain, is_active=True)
+                tenant = Tenant.objects.get(domain=domain, is_suspended=False)
             except Tenant.DoesNotExist:
                 pass
 

@@ -20,7 +20,7 @@ Liquid filters supported:
   | minus: N      → subtract number
 
 Usage:
-    from notifications.liquid_templates import liquid_renderer
+    from api.notifications.liquid_templates import liquid_renderer
 
     rendered = liquid_renderer.render(
         'Hello {{ user.first_name }}! Your balance is {{ balance | money }}.',
@@ -225,7 +225,7 @@ class LiquidRenderer:
     @staticmethod
     def _filter_bd_phone(value) -> str:
         """Format as BD phone: 01712345678"""
-        from notifications.helpers import normalize_bd_phone
+        from api.notifications.helpers import normalize_bd_phone
         return normalize_bd_phone(str(value))
 
     @staticmethod

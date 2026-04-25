@@ -6,7 +6,7 @@ Allows enabling/disabling notification features without code deployments.
 Flags are read from Django settings and can be overridden at runtime via cache.
 
 Usage:
-    from notifications.feature_flags import flags
+    from api.notifications.feature_flags import flags
 
     if flags.is_enabled("SMART_SEND_TIME"):
         optimal_time = smart_send_time_service.get_optimal_send_time(user)

@@ -57,7 +57,7 @@ class NotificationsConfig(AppConfig):
         # ── 9. Initialize Feature Flags ───────────────────────────────────
         self._init_feature_flags()
 
-        print('[OK] Notifications System fully initialized ✅')
+        print('[OK] Notifications System fully initialized ')
 
     # ------------------------------------------------------------------
     # Init helpers

@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 def _send_notification_async(user, notification_type, title, message, **kwargs):
     """Queue a notification via Celery task. Never raises — logs errors only."""
     try:
-        from notifications.services import notification_service
+        from api.notifications._services_core import notification_service
         notification = notification_service.create_notification(
             user=user,
             title=title,
@@ -50,7 +50,7 @@ def _send_notification_async(user, notification_type, title, message, **kwargs):
 # Withdrawal signals
 # ============================================================
 
-@receiver(post_save, sender='withdrawals.Withdrawal')
+@receiver(post_save, sender='payout_queue.PayoutItem')
 def on_withdrawal_status_changed(sender, instance, created, **kwargs):
     """Send notification when withdrawal is created or status changes."""
     try:
@@ -103,7 +103,7 @@ def on_withdrawal_status_changed(sender, instance, created, **kwargs):
 # Task / Offer completion signals
 # ============================================================
 
-@receiver(post_save, sender='tasks.TaskSubmission')
+@receiver(post_save, sender='tasks.UserTaskCompletion')
 def on_task_submission_status_changed(sender, instance, created, **kwargs):
     """Notify user when task/offer is approved or rejected."""
     try:
@@ -149,7 +149,7 @@ def on_task_submission_status_changed(sender, instance, created, **kwargs):
 # KYC signals
 # ============================================================
 
-@receiver(post_save, sender='users.KYCDocument')
+@receiver(post_save, sender='kyc.KYCSubmission')
 def on_kyc_status_changed(sender, instance, created, **kwargs):
     """Notify user on KYC submission and status changes."""
     try:
@@ -192,7 +192,7 @@ def on_kyc_status_changed(sender, instance, created, **kwargs):
 # Referral signals
 # ============================================================
 
-@receiver(post_save, sender='referrals.Referral')
+@receiver(post_save, sender='referral.Referral')
 def on_referral_completed(sender, instance, created, **kwargs):
     """Notify referrer when referral completes and reward is issued."""
     try:
@@ -255,7 +255,7 @@ def on_user_level_up(sender, instance, created, **kwargs):
 # Wallet / Balance signals
 # ============================================================
 
-@receiver(post_save, sender='wallets.Transaction')
+@receiver(post_save, sender='wallet.WalletTransaction')
 def on_wallet_transaction(sender, instance, created, **kwargs):
     """Notify on wallet credit/debit."""
     try:
@@ -308,7 +308,7 @@ def on_new_device_registered(sender, instance, created, **kwargs):
         device_name = getattr(instance, 'device_name', '') or getattr(instance, 'device_model', 'Unknown Device')
 
         # Only send if user already has other devices (not first registration)
-        from notifications.models import DeviceToken
+        from api.notifications.models import DeviceToken
         if DeviceToken.objects.filter(user=user).count() > 1:
             _send_notification_async(
                 user=user,
@@ -365,7 +365,7 @@ def on_opt_out_changed(sender, instance, **kwargs):
     to disable that channel for future sends.
     """
     try:
-        from notifications.models import NotificationPreference
+        from api.notifications.models import NotificationPreference
         pref = NotificationPreference.objects.filter(user=instance.user).first()
         if not pref:
             return
@@ -404,7 +404,7 @@ def on_fatigue_updated(sender, instance, **kwargs):
 # CPAlead / Offerwall / Postback signals
 # ============================================================
 
-@receiver(post_save, sender='offers.OfferCompletion')
+@receiver(post_save, sender='offerwall.OfferConversion')
 def on_offer_completed(sender, instance, created, **kwargs):
     """Notify user when an offerwall task / CPA offer is completed."""
     try:
@@ -428,7 +428,7 @@ def on_offer_completed(sender, instance, created, **kwargs):
         logger.warning(f'on_offer_completed: {exc}')
 
 
-@receiver(post_save, sender='offers.PostbackLog')
+@receiver(post_save, sender='offerwall.OfferConversion')
 def on_postback_failed(sender, instance, created, **kwargs):
     """Alert admin when a postback URL fails (advertiser postback)."""
     try:
@@ -454,7 +454,7 @@ def on_postback_failed(sender, instance, created, **kwargs):
         logger.warning(f'on_postback_failed: {exc}')
 
 
-@receiver(post_save, sender='offers.Survey')
+@receiver(post_save, sender='offerwall.Offer')
 def on_survey_available(sender, instance, created, **kwargs):
     """Notify eligible users when a new survey is available."""
     try:
@@ -466,7 +466,7 @@ def on_survey_available(sender, instance, created, **kwargs):
         reward = getattr(instance, 'reward_amount', 0)
         title = getattr(instance, 'title', 'New Survey')
         # Send to all active users via batch task (not inline)
-        from notifications.tasks.send_push_tasks import send_push_batch_task
+        from api.notifications.tasks.send_push_tasks import send_push_batch_task
         from django.contrib.auth import get_user_model
         User = get_user_model()
         user_ids = list(User.objects.filter(is_active=True).values_list('pk', flat=True)[:1000])
@@ -480,7 +480,7 @@ def on_survey_available(sender, instance, created, **kwargs):
 # Fraud detection signals
 # ============================================================
 
-@receiver(post_save, sender='fraud.FraudAlert')
+@receiver(post_save, sender='fraud_detection.FraudAlert')
 def on_fraud_alert_created(sender, instance, created, **kwargs):
     """Immediately notify admins and optionally the user about fraud detection."""
     try:
@@ -530,7 +530,7 @@ def on_notification_created_broadcast(sender, instance, created, **kwargs):
     if not created:
         return
     try:
-        from notifications.consumers import send_notification_to_user, send_count_update_to_user
+        from api.notifications.consumers import send_notification_to_user, send_count_update_to_user
         send_notification_to_user(instance.user_id, {
             'id': instance.pk,
             'title': instance.title,
@@ -541,7 +541,7 @@ def on_notification_created_broadcast(sender, instance, created, **kwargs):
             'created_at': instance.created_at.isoformat(),
         })
         # Update unread count
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         unread = Notification.objects.filter(
             user_id=instance.user_id, is_read=False, is_deleted=False
         ).count()

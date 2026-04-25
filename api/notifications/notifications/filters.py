@@ -10,7 +10,7 @@ from django_filters import rest_framework as filters
 
 class NotificationFilter(filters.FilterSet):
     """Filter for the main Notification model."""
-    from notifications.models import Notification
+    from api.notifications.models import Notification
 
     is_read = filters.BooleanFilter()
     is_archived = filters.BooleanFilter()
@@ -50,7 +50,7 @@ class NotificationFilter(filters.FilterSet):
 
 class PushDeviceFilter(filters.FilterSet):
     """Filter for PushDevice model."""
-    from notifications.models.channel import PushDevice
+    from api.notifications.models.channel import PushDevice
 
     is_active = filters.BooleanFilter()
     device_type = filters.ChoiceFilter(choices=[
@@ -67,7 +67,7 @@ class PushDeviceFilter(filters.FilterSet):
 
 class InAppMessageFilter(filters.FilterSet):
     """Filter for InAppMessage model."""
-    from notifications.models.channel import InAppMessage
+    from api.notifications.models.channel import InAppMessage
 
     is_read = filters.BooleanFilter()
     is_dismissed = filters.BooleanFilter()
@@ -93,7 +93,7 @@ class InAppMessageFilter(filters.FilterSet):
 
 class NotificationScheduleFilter(filters.FilterSet):
     """Filter for NotificationSchedule model."""
-    from notifications.models.schedule import NotificationSchedule
+    from api.notifications.models.schedule import NotificationSchedule
 
     status = filters.ChoiceFilter(choices=[
         ('pending', 'Pending'), ('processing', 'Processing'), ('sent', 'Sent'),
@@ -109,7 +109,7 @@ class NotificationScheduleFilter(filters.FilterSet):
 
 class NotificationBatchFilter(filters.FilterSet):
     """Filter for NotificationBatch model."""
-    from notifications.models.schedule import NotificationBatch
+    from api.notifications.models.schedule import NotificationBatch
 
     status = filters.CharFilter()
     created_from = filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
@@ -122,7 +122,7 @@ class NotificationBatchFilter(filters.FilterSet):
 
 class CampaignFilter(filters.FilterSet):
     """Filter for NewNotificationCampaign."""
-    from notifications.models.campaign import NotificationCampaign
+    from api.notifications.models.campaign import NotificationCampaign
 
     status = filters.CharFilter()
     send_at_from = filters.DateTimeFilter(field_name='send_at', lookup_expr='gte')
@@ -136,7 +136,7 @@ class CampaignFilter(filters.FilterSet):
 
 class NotificationInsightFilter(filters.FilterSet):
     """Filter for NotificationInsight analytics."""
-    from notifications.models.analytics import NotificationInsight
+    from api.notifications.models.analytics import NotificationInsight
 
     channel = filters.CharFilter()
     date_from = filters.DateFilter(field_name='date', lookup_expr='gte')
@@ -149,7 +149,7 @@ class NotificationInsightFilter(filters.FilterSet):
 
 class OptOutTrackingFilter(filters.FilterSet):
     """Filter for OptOutTracking."""
-    from notifications.models.analytics import OptOutTracking
+    from api.notifications.models.analytics import OptOutTracking
 
     channel = filters.CharFilter()
     is_active = filters.BooleanFilter()
@@ -164,7 +164,7 @@ class OptOutTrackingFilter(filters.FilterSet):
 
 class DeliveryRateFilter(filters.FilterSet):
     """Filter for DeliveryRate."""
-    from notifications.models.analytics import DeliveryRate
+    from api.notifications.models.analytics import DeliveryRate
 
     channel = filters.CharFilter()
     date_from = filters.DateFilter(field_name='date', lookup_expr='gte')

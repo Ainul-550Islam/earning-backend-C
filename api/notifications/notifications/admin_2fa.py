@@ -9,7 +9,7 @@ Protects:
   - Token/key rotation
 
 Usage:
-    from notifications.admin_2fa import require_admin_2fa
+    from api.notifications.admin_2fa import require_admin_2fa
 
     @require_admin_2fa(threshold=10000)
     def bulk_send_view(request):
@@ -60,7 +60,7 @@ def send_2fa_code_to_admin(admin_user) -> bool:
         cache_key = f'admin_2fa:{admin_user.pk}'
         cache.set(cache_key, code, 300)  # Valid for 5 minutes
 
-        from notifications.services.NotificationService import notification_service
+        from api.notifications.services.NotificationService import notification_service
         notification_service.create_notification(
             user=admin_user,
             title='🔐 Admin 2FA Code',

@@ -137,8 +137,8 @@ class Offer(TimeStampedModel):
         app_label   = 'offer_inventory'
         ordering    = ['-created_at']
         indexes     = [
-            models.Index(fields=['status', 'expires_at']),
-            models.Index(fields=['network', 'status']),
+            models.Index(fields=['status', 'expires_at'], name='idx_status_expires_at_1170'),
+            models.Index(fields=['network', 'status'], name='idx_network_status_1171'),
         ]
         verbose_name = _('Offer')
 
@@ -564,7 +564,7 @@ class SubID(TimeStampedModel):
 
     class Meta:
         app_label = 'offer_inventory'
-        indexes   = [models.Index(fields=['s1', 'offer'])]
+        indexes   = [models.Index(fields=['s1', 'offer'], name='idx_s1_offer_1172')]
 
     def __str__(self):
         return f"SubID {self.s1} | {self.offer}"
@@ -864,7 +864,7 @@ class BlacklistedIP(TimeStampedModel):
 
     class Meta:
         app_label = 'offer_inventory'
-        indexes   = [models.Index(fields=['ip_address', 'expires_at'])]
+        indexes   = [models.Index(fields=['ip_address', 'expires_at'], name='idx_ip_address_expires_at_1173')]
 
     def __str__(self):
         return f"Blocked: {self.ip_address} ({self.reason})"
@@ -963,7 +963,7 @@ class DeviceFingerprint(TimeStampedModel):
 
     class Meta:
         app_label = 'offer_inventory'
-        indexes   = [models.Index(fields=['fingerprint'])]
+        indexes   = [models.Index(fields=['fingerprint'], name='idx_fingerprint_1174')]
 
     def __str__(self):
         return f"FP {self.fingerprint[:16]}... | {'⚠' if self.is_flagged else '✓'}"
@@ -1394,7 +1394,7 @@ class WithdrawalRequest(TimeStampedModel):
     class Meta:
         app_label = 'offer_inventory'
         ordering  = ['-created_at']
-        indexes   = [models.Index(fields=['user', 'status', 'created_at'])]
+        indexes   = [models.Index(fields=['user', 'status', 'created_at'], name='idx_user_status_created_at_b05')]
 
     def __str__(self):
         return f"Withdrawal {self.amount} {self.currency} | {self.user} | {self.status}"
@@ -1426,7 +1426,7 @@ class WalletTransaction(TimeStampedModel):
     class Meta:
         app_label = 'offer_inventory'
         ordering  = ['-created_at']
-        indexes   = [models.Index(fields=['user', 'tx_type', 'created_at'])]
+        indexes   = [models.Index(fields=['user', 'tx_type', 'created_at'], name='idx_user_tx_type_created_a_d55')]
 
     def __str__(self):
         return f"{self.tx_type.upper()} {self.amount} {self.currency} | {self.user}"
@@ -1695,7 +1695,7 @@ class UserFeedback(TimeStampedModel):
     class Meta:
         app_label = 'offer_inventory'
         ordering  = ['-created_at']
-        indexes   = [models.Index(fields=['status', 'feedback_type'])]
+        indexes   = [models.Index(fields=['status', 'feedback_type'], name='idx_status_feedback_type_1177')]
 
     def __str__(self):
         return f"Feedback | {self.feedback_type} | {self.user}"
@@ -1796,7 +1796,7 @@ class ErrorLog(TimeStampedModel):
     class Meta:
         app_label = 'offer_inventory'
         ordering  = ['-created_at']
-        indexes   = [models.Index(fields=['level', 'is_resolved'])]
+        indexes   = [models.Index(fields=['level', 'is_resolved'], name='idx_level_is_resolved_1178')]
 
     def __str__(self):
         return f"[{self.level.upper()}] {self.message[:80]}"
@@ -2009,8 +2009,8 @@ class AuditLog(TimeStampedModel):
         app_label = 'offer_inventory'
         ordering  = ['-created_at']
         indexes   = [
-            models.Index(fields=['action', 'model_name']),
-            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['action', 'model_name'], name='idx_action_model_name_1179'),
+            models.Index(fields=['user', 'created_at'], name='idx_user_created_at_1180'),
         ]
 
     def __str__(self):
@@ -2077,7 +2077,7 @@ class PerformanceMetric(TimeStampedModel):
     class Meta:
         app_label = 'offer_inventory'
         ordering  = ['-recorded_at']
-        indexes   = [models.Index(fields=['endpoint', 'recorded_at'])]
+        indexes   = [models.Index(fields=['endpoint', 'recorded_at'], name='idx_endpoint_recorded_at_1181')]
 
     def __str__(self):
         return f"{self.method} {self.endpoint} | avg:{self.avg_ms:.0f}ms"
@@ -2195,8 +2195,8 @@ class BidLog(TimeStampedModel):
     class Meta:
         app_label = 'offer_inventory'
         indexes   = [
-            models.Index(fields=['publisher_id', 'created_at']),
-            models.Index(fields=['is_won', 'created_at']),
+            models.Index(fields=['publisher_id', 'created_at'], name='idx_publisher_id_created_a_351'),
+            models.Index(fields=['is_won', 'created_at'], name='idx_is_won_created_at_1183'),
         ]
 
     def __str__(self):
@@ -2272,7 +2272,7 @@ class Publisher(TimeStampedModel):
 
     class Meta:
         app_label = 'offer_inventory'
-        indexes   = [models.Index(fields=['status', 'api_key'])]
+        indexes   = [models.Index(fields=['status', 'api_key'], name='idx_status_api_key_1184')]
 
     def __str__(self):
         return f"Publisher: {self.company_name} ({self.status})"
@@ -2337,7 +2337,7 @@ class PublisherPayout(TimeStampedModel):
 
     class Meta:
         app_label = 'offer_inventory'
-        indexes   = [models.Index(fields=['publisher', 'status'])]
+        indexes   = [models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1185')]
 
     def __str__(self):
         return f"PublisherPayout: {self.publisher.company_name} {self.amount} {self.currency}"

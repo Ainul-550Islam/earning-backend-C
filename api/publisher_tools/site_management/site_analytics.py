@@ -99,7 +99,7 @@ class SiteTrafficData(TimeStampedModel):
         unique_together = [['site', 'date']]
         ordering = ['-date']
         indexes = [
-            models.Index(fields=['site', 'date']),
+            models.Index(fields=['site', 'date'], name='idx_site_date_1643'),
         ]
 
     def __str__(self):

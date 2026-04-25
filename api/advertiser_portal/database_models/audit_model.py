@@ -17,7 +17,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -208,15 +211,15 @@ class AuditLog(AdvertiserPortalBaseModel):
         verbose_name = 'Audit Log'
         verbose_name_plural = 'Audit Logs'
         indexes = [
-            models.Index(fields=['advertiser', 'action']),
-            models.Index(fields=['user', 'action']),
-            models.Index(fields=['object_type', 'object_id']),
-            models.Index(fields=['action', 'created_at']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['success']),
-            models.Index(fields=['compliance_level']),
-            models.Index(fields=['sensitivity']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['advertiser', 'action'], name='idx_advertiser_action_095'),
+            models.Index(fields=['user', 'action'], name='idx_user_action_096'),
+            models.Index(fields=['object_type', 'object_id'], name='idx_object_type_object_id_097'),
+            models.Index(fields=['action', 'created_at'], name='idx_action_created_at_098'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_099'),
+            models.Index(fields=['success'], name='idx_success_100'),
+            models.Index(fields=['compliance_level'], name='idx_compliance_level_101'),
+            models.Index(fields=['sensitivity'], name='idx_sensitivity_102'),
+            models.Index(fields=['created_at'], name='idx_created_at_103'),
         ]
     
     def __str__(self) -> str:
@@ -598,9 +601,9 @@ class ComplianceReport(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Compliance Report'
         verbose_name_plural = 'Compliance Reports'
         indexes = [
-            models.Index(fields=['advertiser', 'report_type']),
-            models.Index(fields=['start_date', 'end_date']),
-            models.Index(fields=['status']),
+            models.Index(fields=['advertiser', 'report_type'], name='idx_advertiser_report_type_104'),
+            models.Index(fields=['start_date', 'end_date'], name='idx_start_date_end_date_105'),
+            models.Index(fields=['status'], name='idx_status_106'),
         ]
     
     def __str__(self) -> str:
@@ -835,8 +838,8 @@ class RetentionPolicy(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Retention Policy'
         verbose_name_plural = 'Retention Policies'
         indexes = [
-            models.Index(fields=['object_type']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['object_type'], name='idx_object_type_107'),
+            models.Index(fields=['is_active'], name='idx_is_active_108'),
         ]
     
     def __str__(self) -> str:

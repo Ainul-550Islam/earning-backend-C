@@ -98,8 +98,8 @@ class GoogleAnalyticsIntegration(TimeStampedModel):
         verbose_name_plural = _('Google Analytics Integrations')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'status']),
-            models.Index(fields=['property_id']),
+            models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1591'),
+            models.Index(fields=['property_id'], name='idx_property_id_1592'),
         ]
 
     def __str__(self):
@@ -273,7 +273,7 @@ class ThirdPartyIntegration(TimeStampedModel):
         verbose_name_plural = _('Third Party Integrations')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'integration_type', 'status']),
+            models.Index(fields=['publisher', 'integration_type', 'status'], name='idx_publisher_integration__dfc'),
         ]
 
     def __str__(self):
