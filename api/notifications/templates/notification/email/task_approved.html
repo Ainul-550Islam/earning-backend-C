@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Approved</title>
+<style>
+  body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
+  .container{max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+  .header{background:linear-gradient(135deg,#43a047,#1b5e20);color:#fff;padding:30px;text-align:center}
+  .reward-box{background:#fff9c4;border:2px solid #f9a825;border-radius:8px;margin:20px;padding:20px;text-align:center}
+  .reward{font-size:32px;font-weight:bold;color:#e65100}
+  .task-info{padding:0 20px 20px}
+  .detail-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee}
+  .footer{background:#f8f8f8;padding:20px;text-align:center;font-size:12px;color:#999}
+  .btn{display:inline-block;background:#43a047;color:#fff;padding:12px 30px;border-radius:6px;text-decoration:none;font-weight:bold;margin:15px 0}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🎉 Task Approved!</h1>
+    <p>Congratulations, your submission was accepted</p>
+  </div>
+  <div class="reward-box">
+    <div style="font-size:14px;color:#555;margin-bottom:5px">Reward Earned</div>
+    <div class="reward">+৳{{ reward_amount }}</div>
+    <div style="margin-top:8px;font-size:13px;color:#666">Added to your wallet</div>
+  </div>
+  <div class="task-info">
+    <div class="detail-row"><span style="color:#666">Task</span><span style="font-weight:bold">{{ task_title }}</span></div>
+    <div class="detail-row"><span style="color:#666">Category</span><span>{{ task_category|default:"General" }}</span></div>
+    <div class="detail-row"><span style="color:#666">Approved On</span><span>{{ date|date:"d M Y" }}</span></div>
+    <div class="detail-row"><span style="color:#666">Total Earned (All Time)</span><span style="color:#2e7d32;font-weight:bold">৳{{ total_earned|default:"0.00" }}</span></div>
+    <div style="text-align:center;margin-top:20px">
+      <a href="{{ tasks_url|default:'#' }}" class="btn">Find More Tasks</a>
+    </div>
+  </div>
+  <div class="footer">
+    <p>© {{ year }} {{ site_name|default:"Earning Site" }} | <a href="{{ unsubscribe_url }}">Unsubscribe</a></p>
+  </div>
+</div>
+</body>
+</html>

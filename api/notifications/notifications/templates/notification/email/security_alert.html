@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><title>Security Alert</title>
+<style>
+  body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
+  .container{max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden}
+  .header{background:linear-gradient(135deg,#c62828,#b71c1c);color:#fff;padding:30px;text-align:center}
+  .alert-box{background:#ffebee;border-left:4px solid #c62828;margin:20px;padding:20px}
+  .details{padding:0 20px 20px}
+  .detail-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee}
+  .footer{background:#f8f8f8;padding:20px;text-align:center;font-size:12px;color:#999}
+  .btn-danger{display:inline-block;background:#c62828;color:#fff;padding:12px 30px;border-radius:6px;text-decoration:none;font-weight:bold;margin:8px 5px}
+  .btn-safe{display:inline-block;background:#43a047;color:#fff;padding:12px 30px;border-radius:6px;text-decoration:none;font-weight:bold;margin:8px 5px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header"><h1>🔐 Security Alert</h1><p>Unusual activity detected on your account</p></div>
+  <div class="alert-box"><strong>{{ alert_message|default:"New login detected from an unrecognized device." }}</strong></div>
+  <div class="details">
+    <div class="detail-row"><span style="color:#666">Device</span><span>{{ device_name|default:"Unknown Device" }}</span></div>
+    <div class="detail-row"><span style="color:#666">Location</span><span>{{ location|default:"Unknown" }}</span></div>
+    <div class="detail-row"><span style="color:#666">IP Address</span><span>{{ ip_address|default:"Hidden" }}</span></div>
+    <div class="detail-row"><span style="color:#666">Time</span><span>{{ date|date:"d M Y, H:i" }} UTC</span></div>
+    <div style="text-align:center;margin-top:20px">
+      <p style="color:#666;margin-bottom:15px">Was this you?</p>
+      <a href="{{ secure_url|default:'#' }}" class="btn-safe">Yes, It Was Me</a>
+      <a href="{{ change_password_url|default:'#' }}" class="btn-danger">No! Secure My Account</a>
+    </div>
+  </div>
+  <div class="footer"><p>If you did not perform this action, change your password immediately.</p><p>© {{ year }} {{ site_name|default:"Earning Site" }}</p></div>
+</div>
+</body>
+</html>

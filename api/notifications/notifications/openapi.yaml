@@ -1,0 +1,209 @@
+openapi: 3.0.3
+info:
+  title: Notification System API
+  description: |
+    CPAlead-level notification system REST API.
+    Supports 8 channels: in-app, push (FCM/APNs), email, SMS, WhatsApp, Telegram, Browser.
+    Full integration system with 150+ notification types.
+  version: 1.0.0
+  contact:
+    email: api@yoursite.com
+
+servers:
+  - url: https://api.yoursite.com/api/notifications
+    description: Production
+  - url: https://staging.yoursite.com/api/notifications
+    description: Staging
+
+tags:
+  - name: notifications
+    description: Core notification endpoints
+  - name: in-app-messages
+    description: In-app banner/modal/toast messages
+  - name: push-devices
+    description: Device token registration
+  - name: campaigns
+    description: Notification campaigns with A/B testing
+  - name: schedules
+    description: Scheduled notification management
+  - name: opt-outs
+    description: Unsubscribe / opt-out management
+  - name: insights
+    description: Delivery analytics and metrics
+  - name: webhooks
+    description: Provider webhook endpoints (SendGrid, Twilio, etc.)
+  - name: admin
+    description: Admin-only bulk send and management
+  - name: integration
+    description: Integration system health and discovery
+
+paths:
+  /notifications/:
+    get:
+      tags: [notifications]
+      summary: List user notifications
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: is_read
+          in: query
+          schema: {type: boolean}
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [in_app, push, email, sms, telegram, whatsapp, browser, all]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [lowest, low, medium, high, urgent, critical]
+        - name: page
+          in: query
+          schema: {type: integer, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, default: 20, maximum: 100}
+      responses:
+        '200':
+          description: Paginated notification list
+    post:
+      tags: [notifications]
+      summary: Create a notification
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, message, notification_type]
+              properties:
+                title: {type: string, maxLength: 255}
+                message: {type: string, maxLength: 2000}
+                notification_type: {type: string}
+                channel:
+                  type: string
+                  enum: [in_app, push, email, sms, all]
+                  default: in_app
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent, critical]
+                  default: medium
+      responses:
+        '201': {description: Notification created}
+        '400': {description: Validation error}
+
+  /notifications/mark-all-read/:
+    post:
+      tags: [notifications]
+      summary: Mark all notifications as read
+      security:
+        - BearerAuth: []
+      responses:
+        '200': {description: All notifications marked as read}
+
+  /v2/push-devices/register/:
+    post:
+      tags: [push-devices]
+      summary: Register a push notification device
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_type]
+              properties:
+                device_type:
+                  type: string
+                  enum: [android, ios, web, desktop]
+                fcm_token: {type: string}
+                apns_token: {type: string}
+                web_push_subscription: {type: object}
+                device_name: {type: string}
+                app_version: {type: string}
+      responses:
+        '200': {description: Device registered}
+
+  /v2/opt-outs/opt_out/:
+    post:
+      tags: [opt-outs]
+      summary: Opt out of a notification channel
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel]
+              properties:
+                channel:
+                  type: string
+                  enum: [in_app, push, email, sms, telegram, whatsapp, browser, all]
+                reason:
+                  type: string
+                  enum: [too_many, not_relevant, privacy, spam, user_request, other]
+      responses:
+        '200': {description: Opted out successfully}
+
+  /push/vapid-key/:
+    get:
+      tags: [push-devices]
+      summary: Get VAPID public key for browser push subscription
+      responses:
+        '200':
+          description: VAPID public key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vapid_public_key: {type: string}
+
+  /webhooks/sendgrid/:
+    post:
+      tags: [webhooks]
+      summary: SendGrid event webhook endpoint
+      description: Receives delivery, open, click, bounce events from SendGrid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: {type: object}
+      responses:
+        '200': {description: Events received}
+        '401': {description: Signature verification failed}
+
+  /webhooks/twilio/sms/:
+    post:
+      tags: [webhooks]
+      summary: Twilio SMS status callback
+      responses:
+        '200': {description: Status received}
+
+  /unsubscribe/{token}/:
+    get:
+      tags: [opt-outs]
+      summary: One-click unsubscribe (RFC 8058)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: Unsubscribed successfully}
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
