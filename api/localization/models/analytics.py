@@ -36,9 +36,9 @@ class LocalizationInsight(models.Model):
         verbose_name = _("Localization Insight")
         verbose_name_plural = _("Localization Insights")
         indexes = [
-            models.Index(fields=['date']),
-            models.Index(fields=['language', 'date']),
-            models.Index(fields=['country', 'date']),
+            models.Index(fields=['date'], name='idx_date_1054'),
+            models.Index(fields=['language', 'date'], name='idx_language_date_1055'),
+            models.Index(fields=['country', 'date'], name='idx_country_date_1056'),
         ]
 
     def __str__(self):
@@ -92,7 +92,7 @@ class TranslationCoverage(models.Model):
     class Meta:
         verbose_name = _("Translation Coverage")
         verbose_name_plural = _("Translation Coverages")
-        indexes = [models.Index(fields=['coverage_percent'])]
+        indexes = [models.Index(fields=['coverage_percent'], name='idx_coverage_percent_1057')]
 
     def __str__(self):
         lang = getattr(self.language, 'code', '?')
@@ -146,8 +146,8 @@ class LanguageUsageStat(models.Model):
         verbose_name = _("Language Usage Stat")
         verbose_name_plural = _("Language Usage Stats")
         indexes = [
-            models.Index(fields=['date', 'language']),
-            models.Index(fields=['language', 'dau']),
+            models.Index(fields=['date', 'language'], name='idx_date_language_1058'),
+            models.Index(fields=['language', 'dau'], name='idx_language_dau_1059'),
         ]
 
     def __str__(self):
@@ -179,9 +179,9 @@ class GeoInsight(models.Model):
         verbose_name = _("Geo Insight")
         verbose_name_plural = _("Geo Insights")
         indexes = [
-            models.Index(fields=['date']),
-            models.Index(fields=['country', 'date']),
-            models.Index(fields=['country_code']),
+            models.Index(fields=['date'], name='idx_date_1060'),
+            models.Index(fields=['country', 'date'], name='idx_country_date_1061'),
+            models.Index(fields=['country_code'], name='idx_country_code_1062'),
         ]
 
     def __str__(self):

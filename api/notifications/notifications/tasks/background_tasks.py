@@ -15,7 +15,7 @@ def execute_workflow_task(self, workflow_id: str, user_id: int, data: dict):
     """Execute a workflow for a user (called by WorkflowEngine async path)."""
     try:
         from django.contrib.auth import get_user_model
-        from notifications.workflow import workflow_engine
+        from api.notifications.workflow import workflow_engine
         User = get_user_model()
         user = User.objects.get(pk=user_id) if user_id else None
         return workflow_engine._execute_sync(
@@ -37,7 +37,7 @@ def execute_workflow_task(self, workflow_id: str, user_id: int, data: dict):
 def run_data_retention_task(dry_run: bool = False):
     """Enforce data retention policy — delete expired notification data."""
     try:
-        from notifications.compliance import data_retention_service
+        from api.notifications.compliance import data_retention_service
         return data_retention_service.enforce_retention(dry_run=dry_run)
     except Exception as exc:
         logger.error(f'run_data_retention_task: {exc}')
@@ -54,7 +54,7 @@ def trigger_inactive_user_workflows():
         from django.contrib.auth import get_user_model
         from django.utils import timezone
         from datetime import timedelta
-        from notifications.workflow import workflow_engine
+        from api.notifications.workflow import workflow_engine
 
         User = get_user_model()
         cutoff = timezone.now() - timedelta(days=3)
@@ -85,7 +85,7 @@ def compute_rfm_segments_task(limit: int = 5000):
     try:
         from django.contrib.auth import get_user_model
         from django.core.cache import cache
-        from notifications.funnel import rfm_service
+        from api.notifications.funnel import rfm_service
 
         User = get_user_model()
         segment_map = {}
@@ -117,7 +117,7 @@ def compute_rfm_segments_task(limit: int = 5000):
 def run_monitoring_check_task():
     """Run system-wide monitoring checks."""
     try:
-        from notifications.monitoring import run_monitoring_check
+        from api.notifications.monitoring import run_monitoring_check
         return run_monitoring_check()
     except Exception as exc:
         logger.error(f'run_monitoring_check_task: {exc}')

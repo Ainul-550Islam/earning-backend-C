@@ -40,8 +40,8 @@ class PaymentDispute(TimeStampedModel):
         verbose_name_plural = _("Payment Disputes")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["publisher", "status"]),
-            models.Index(fields=["status", "sla_deadline"]),
+            models.Index(fields=["publisher", "status"], name='idx_publisher_status_1597'),
+            models.Index(fields=["status", "sla_deadline"], name='idx_status_sla_deadline_1598'),
         ]
 
     def __str__(self):

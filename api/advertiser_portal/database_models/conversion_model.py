@@ -19,7 +19,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.gis.geos import Point
 
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -460,20 +463,20 @@ class Conversion(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Conversion'
         verbose_name_plural = 'Conversions'
         indexes = [
-            models.Index(fields=['campaign', 'status']),
-            models.Index(fields=['creative']),
-            models.Index(fields=['click']),
-            models.Index(fields=['conversion_type']),
-            models.Index(fields=['date', 'hour']),
-            models.Index(fields=['user_id']),
-            models.Index(fields=['session_id']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['country']),
-            models.Index(fields=['device_type']),
-            models.Index(fields=['os_family']),
-            models.Index(fields=['timestamp']),
-            models.Index(fields=['is_valid']),
-            models.Index(fields=['status']),
+            models.Index(fields=['campaign', 'status'], name='idx_campaign_status_209'),
+            models.Index(fields=['creative'], name='idx_creative_210'),
+            models.Index(fields=['click'], name='idx_click_211'),
+            models.Index(fields=['conversion_type'], name='idx_conversion_type_212'),
+            models.Index(fields=['date', 'hour'], name='idx_date_hour_213'),
+            models.Index(fields=['user_id'], name='idx_user_id_214'),
+            models.Index(fields=['session_id'], name='idx_session_id_215'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_216'),
+            models.Index(fields=['country'], name='idx_country_217'),
+            models.Index(fields=['device_type'], name='idx_device_type_218'),
+            models.Index(fields=['os_family'], name='idx_os_family_219'),
+            models.Index(fields=['timestamp'], name='idx_timestamp_220'),
+            models.Index(fields=['is_valid'], name='idx_is_valid_221'),
+            models.Index(fields=['status'], name='idx_status_222'),
         ]
     
     def __str__(self) -> str:
@@ -826,12 +829,12 @@ class ConversionAggregation(AdvertiserPortalBaseModel):
             'campaign', 'date', 'hour', 'country', 'device_type', 'conversion_type'
         ]
         indexes = [
-            models.Index(fields=['campaign', 'date']),
-            models.Index(fields=['advertiser', 'date']),
-            models.Index(fields=['date']),
-            models.Index(fields=['country']),
-            models.Index(fields=['device_type']),
-            models.Index(fields=['conversion_type']),
+            models.Index(fields=['campaign', 'date'], name='idx_campaign_date_223'),
+            models.Index(fields=['advertiser', 'date'], name='idx_advertiser_date_224'),
+            models.Index(fields=['date'], name='idx_date_225'),
+            models.Index(fields=['country'], name='idx_country_226'),
+            models.Index(fields=['device_type'], name='idx_device_type_227'),
+            models.Index(fields=['conversion_type'], name='idx_conversion_type_228'),
         ]
     
     def __str__(self) -> str:
@@ -913,10 +916,10 @@ class ConversionPath(AdvertiserPortalBaseModel):
         verbose_name = 'Conversion Path'
         verbose_name_plural = 'Conversion Paths'
         indexes = [
-            models.Index(fields=['conversion']),
-            models.Index(fields=['user_id']),
-            models.Index(fields=['session_id']),
-            models.Index(fields=['path_length']),
+            models.Index(fields=['conversion'], name='idx_conversion_229'),
+            models.Index(fields=['user_id'], name='idx_user_id_230'),
+            models.Index(fields=['session_id'], name='idx_session_id_231'),
+            models.Index(fields=['path_length'], name='idx_path_length_232'),
         ]
     
     def __str__(self) -> str:

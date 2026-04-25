@@ -32,7 +32,7 @@ class NotificationScheduleViewSet(viewsets.ModelViewSet):
     pagination_class = _Pagination
 
     def get_queryset(self):
-        from notifications.models.schedule import NotificationSchedule
+        from api.notifications.models.schedule import NotificationSchedule
         qs = NotificationSchedule.objects.all().select_related(
             'notification', 'notification__user', 'created_by'
         )
@@ -58,7 +58,7 @@ class NotificationScheduleViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         from rest_framework import serializers
-        from notifications.models.schedule import NotificationSchedule
+        from api.notifications.models.schedule import NotificationSchedule
 
         class ScheduleSerializer(serializers.ModelSerializer):
             is_due = serializers.SerializerMethodField()
@@ -102,7 +102,7 @@ class NotificationScheduleViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def due_now(self, request):
         """List schedules that are due to be sent now."""
-        from notifications.models.schedule import NotificationSchedule
+        from api.notifications.models.schedule import NotificationSchedule
         now = timezone.now()
         qs = NotificationSchedule.objects.filter(
             status='pending', send_at__lte=now

@@ -159,10 +159,10 @@ class Backup(models.Model):
         verbose_name_plural = _('Database Backups')
         ordering = ['-start_time']
         indexes = [
-            models.Index(fields=['backup_id']),
-            models.Index(fields=['status']),
-            models.Index(fields=['backup_type']),
-            models.Index(fields=['start_time']),
+            models.Index(fields=['backup_id'], name='idx_backup_id_826'),
+            models.Index(fields=['status'], name='idx_status_827'),
+            models.Index(fields=['backup_type'], name='idx_backup_type_828'),
+            models.Index(fields=['start_time'], name='idx_start_time_829'),
         ]
 
     def __str__(self):
@@ -420,25 +420,25 @@ class Backup(models.Model):
         verbose_name_plural = _('Database Backups')
         ordering = ['-start_time']
         indexes = [
-            models.Index(fields=['backup_id']),
-            models.Index(fields=['status']),
-            models.Index(fields=['backup_type']),
-            models.Index(fields=['created_by']),
-            models.Index(fields=['start_time']),
-            models.Index(fields=['database_name']),
-            models.Index(fields=['is_healthy']),
-            models.Index(fields=['retention_policy']),
-            models.Index(fields=['health_score']),
-            models.Index(fields=['storage_type']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['expires_at']),
-            models.Index(fields=['verified']),
-            models.Index(fields=['encryption_enabled']),
-            models.Index(fields=['compression_enabled']),
-            models.Index(fields=['backup_schedule']),
-            models.Index(fields=['retention_policy_ref']),
-            models.Index(fields=['parent_backup']),
-            models.Index(fields=['delta_base']),
+            models.Index(fields=['backup_id'], name='idx_backup_id_830'),
+            models.Index(fields=['status'], name='idx_status_831'),
+            models.Index(fields=['backup_type'], name='idx_backup_type_832'),
+            models.Index(fields=['created_by'], name='idx_created_by_833'),
+            models.Index(fields=['start_time'], name='idx_start_time_834'),
+            models.Index(fields=['database_name'], name='idx_database_name_835'),
+            models.Index(fields=['is_healthy'], name='idx_is_healthy_836'),
+            models.Index(fields=['retention_policy'], name='idx_retention_policy_837'),
+            models.Index(fields=['health_score'], name='idx_health_score_838'),
+            models.Index(fields=['storage_type'], name='idx_storage_type_839'),
+            models.Index(fields=['created_at'], name='idx_created_at_840'),
+            models.Index(fields=['expires_at'], name='idx_expires_at_841'),
+            models.Index(fields=['verified'], name='idx_verified_842'),
+            models.Index(fields=['encryption_enabled'], name='idx_encryption_enabled_843'),
+            models.Index(fields=['compression_enabled'], name='idx_compression_enabled_844'),
+            models.Index(fields=['backup_schedule'], name='idx_backup_schedule_845'),
+            models.Index(fields=['retention_policy_ref'], name='idx_retention_policy_ref_846'),
+            models.Index(fields=['parent_backup'], name='idx_parent_backup_847'),
+            models.Index(fields=['delta_base'], name='idx_delta_base_848'),
         ]
         constraints = [
             models.UniqueConstraint(fields=['name', 'database_name'], name='unique_backup_name_per_database'),
@@ -812,10 +812,10 @@ class BackupStorageLocation(models.Model):
         verbose_name_plural = _('Storage Locations')
         ordering = ['priority', 'name']
         indexes = [
-            models.Index(fields=['storage_type']),
-            models.Index(fields=['status']),
-            models.Index(fields=['is_default']),
-            models.Index(fields=['priority']),
+            models.Index(fields=['storage_type'], name='idx_storage_type_849'),
+            models.Index(fields=['status'], name='idx_status_850'),
+            models.Index(fields=['is_default'], name='idx_is_default_851'),
+            models.Index(fields=['priority'], name='idx_priority_852'),
         ]
     
     def __str__(self):
@@ -1015,10 +1015,10 @@ class BackupSchedule(models.Model):
         verbose_name_plural = _('Backup Schedules')
         ordering = ['name']
         indexes = [
-            models.Index(fields=['frequency']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['next_run']),
-            models.Index(fields=['last_run_status']),
+            models.Index(fields=['frequency'], name='idx_frequency_853'),
+            models.Index(fields=['is_active'], name='idx_is_active_854'),
+            models.Index(fields=['next_run'], name='idx_next_run_855'),
+            models.Index(fields=['last_run_status'], name='idx_last_run_status_856'),
         ]
     
     def __str__(self):
@@ -1566,20 +1566,20 @@ class BackupLog(models.Model):
         verbose_name_plural = _('Backup Logs')
         ordering = ['-timestamp']
         indexes = [
-            models.Index(fields=['timestamp']),
-            models.Index(fields=['level']),
-            models.Index(fields=['category']),
-            models.Index(fields=['action']),
-            models.Index(fields=['source']),
-            models.Index(fields=['backup']),
-            models.Index(fields=['user']),
-            models.Index(fields=['is_processed']),
-            models.Index(fields=['requires_attention']),
-            models.Index(fields=['error_code']),
-            models.Index(fields=['storage_type']),
-            models.Index(fields=['-timestamp', 'level']),
-            models.Index(fields=['-timestamp', 'category']),
-            models.Index(fields=['-timestamp', 'backup']),
+            models.Index(fields=['timestamp'], name='idx_timestamp_857'),
+            models.Index(fields=['level'], name='idx_level_858'),
+            models.Index(fields=['category'], name='idx_category_859'),
+            models.Index(fields=['action'], name='idx_action_860'),
+            models.Index(fields=['source'], name='idx_source_861'),
+            models.Index(fields=['backup'], name='idx_backup_862'),
+            models.Index(fields=['user'], name='idx_user_863'),
+            models.Index(fields=['is_processed'], name='idx_is_processed_864'),
+            models.Index(fields=['requires_attention'], name='idx_requires_attention_865'),
+            models.Index(fields=['error_code'], name='idx_error_code_866'),
+            models.Index(fields=['storage_type'], name='idx_storage_type_867'),
+            models.Index(fields=['-timestamp', 'level'], name='idx_timestamp_level_868'),
+            models.Index(fields=['-timestamp', 'category'], name='idx_timestamp_category_869'),
+            models.Index(fields=['-timestamp', 'backup'], name='idx_timestamp_backup_870'),
         ]
         get_latest_by = 'timestamp'
     
@@ -2088,8 +2088,8 @@ class DeltaBackupTracker(models.Model):
         verbose_name_plural = _('Delta Backup Trackers')
         unique_together = ['parent_backup', 'child_backup']
         indexes = [
-            models.Index(fields=['parent_backup']),
-            models.Index(fields=['child_backup']),
+            models.Index(fields=['parent_backup'], name='idx_parent_backup_871'),
+            models.Index(fields=['child_backup'], name='idx_child_backup_872'),
         ]
     
     def __str__(self):

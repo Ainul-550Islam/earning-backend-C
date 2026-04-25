@@ -61,7 +61,7 @@ plugin_registry = PluginRegistry()
 
 def register_builtin_providers():
     try:
-        from notifications.services.providers.FCMProvider import fcm_provider
+        from api.notifications.services.providers.FCMProvider import fcm_provider
         class FCMPlugin(ProviderPlugin):
             name = 'fcm'; channel = 'push'; supports_bulk = True
             def is_available(self): return fcm_provider.is_available()
@@ -70,7 +70,7 @@ def register_builtin_providers():
     except Exception: pass
 
     try:
-        from notifications.services.providers.SendGridProvider import sendgrid_provider
+        from api.notifications.services.providers.SendGridProvider import sendgrid_provider
         class SendGridPlugin(ProviderPlugin):
             name = 'sendgrid'; channel = 'email'; supports_bulk = True
             def is_available(self): return sendgrid_provider.is_available()
@@ -79,7 +79,7 @@ def register_builtin_providers():
     except Exception: pass
 
     try:
-        from notifications.services.providers.ShohoSMSProvider import shoho_sms_provider
+        from api.notifications.services.providers.ShohoSMSProvider import shoho_sms_provider
         class ShohoPlugin(ProviderPlugin):
             name = 'shoho_sms'; channel = 'sms'
             def is_available(self): return shoho_sms_provider.is_available()
@@ -88,7 +88,7 @@ def register_builtin_providers():
     except Exception: pass
 
     try:
-        from notifications.services.providers.SlackProvider import slack_provider
+        from api.notifications.services.providers.SlackProvider import slack_provider
         class SlackPlugin(ProviderPlugin):
             name = 'slack'; channel = 'slack'
             def is_available(self): return slack_provider.is_available()
@@ -97,7 +97,7 @@ def register_builtin_providers():
     except Exception: pass
 
     try:
-        from notifications.services.providers.DiscordProvider import discord_provider
+        from api.notifications.services.providers.DiscordProvider import discord_provider
         class DiscordPlugin(ProviderPlugin):
             name = 'discord'; channel = 'discord'
             def is_available(self): return discord_provider.is_available()
@@ -111,7 +111,7 @@ def register_builtin_providers():
         )
 
     try:
-        from notifications.services.providers.TwilioVoiceProvider import twilio_voice_provider
+        from api.notifications.services.providers.TwilioVoiceProvider import twilio_voice_provider
         class VoicePlugin(ProviderPlugin):
             name = 'voice'; channel = 'voice'
             def is_available(self): return twilio_voice_provider.is_available()
@@ -120,7 +120,7 @@ def register_builtin_providers():
     except Exception: pass
 
     try:
-        from notifications.services.providers.TeamsProvider import teams_provider
+        from api.notifications.services.providers.TeamsProvider import teams_provider
         class TeamsPlugin(ProviderPlugin):
             name = 'teams'; channel = 'teams'
             def is_available(self): return teams_provider.is_available()
@@ -129,7 +129,7 @@ def register_builtin_providers():
     except Exception: pass
 
     try:
-        from notifications.services.providers.LineProvider import line_provider
+        from api.notifications.services.providers.LineProvider import line_provider
         class LinePlugin(ProviderPlugin):
             name = 'line'; channel = 'line'
             def is_available(self): return line_provider.is_available()

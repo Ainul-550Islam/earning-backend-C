@@ -558,6 +558,350 @@ def disconnect_model_signals():
     pass
 
 
+# Additional Signal Handlers for Main Models
+@receiver(pre_save, sender=Advertiser)
+def advertiser_pre_save(sender, instance, **kwargs):
+    """Handle advertiser pre-save operations."""
+    # Generate API key if not set
+    if not instance.api_key:
+        try:
+            from .services import AdvertiserService
+        except ImportError:
+            AdvertiserService = None
+        if AdvertiserService:
+            advertiser_service = AdvertiserService()
+            instance.api_key = advertiser_service.generate_api_key()
+    
+    # Set verification status based on profile completion
+    if hasattr(instance, 'profile') and instance.profile:
+        completion_percentage = instance.profile.calculate_completion_percentage()
+        if completion_percentage >= 80 and instance.verification_status == 'pending':
+            instance.verification_status = 'ready_for_review'
+
+
+@receiver(post_save, sender=Advertiser)
+def advertiser_post_save(sender, instance, created, **kwargs):
+    """Handle advertiser post-save operations."""
+    if created:
+        # Create related objects
+        from .models.billing import AdvertiserWallet
+        from .models.notification import NotificationTemplate
+        
+        # Create wallet
+        AdvertiserWallet.objects.get_or_create(
+            advertiser=instance,
+            defaults={'balance': 0, 'currency': 'USD'}
+        )
+        
+        # Send welcome notification
+        try:
+            from .services import NotificationService
+        except ImportError:
+            NotificationService = None
+        notification_service = NotificationService()
+        notification_service.send_welcome_notification(instance)
+
+
+@receiver(pre_save, sender=AdCampaign)
+def campaign_pre_save(sender, instance, **kwargs):
+    """Handle campaign pre-save operations."""
+    # Validate budget constraints
+    if instance.daily_budget and instance.total_budget:
+        if instance.daily_budget > instance.total_budget:
+            raise ValueError("Daily budget cannot exceed total budget")
+    
+    # Set default status if not provided
+    if not instance.status:
+        instance.status = 'draft'
+
+
+@receiver(post_save, sender=AdCampaign)
+def campaign_post_save(sender, instance, created, **kwargs):
+    """Handle campaign post-save operations."""
+    if created:
+        # Create initial campaign spend record
+        from .models.billing import CampaignSpend
+        CampaignSpend.objects.get_or_create(
+            campaign=instance,
+            spend_date=timezone.now().date(),
+            defaults={
+                'daily_spend': 0,
+                'total_spend': 0,
+                'impressions': 0,
+                'clicks': 0,
+                'conversions': 0
+            }
+        )
+    
+    # Trigger campaign status change signal
+    campaign_status_changed.send(sender=sender, instance=instance)
+
+
+@receiver(post_save, sender=Conversion)
+def conversion_post_save(sender, instance, created, **kwargs):
+    """Handle conversion post-save operations."""
+    if created:
+        # Update campaign spend
+        from .models.billing import CampaignSpend
+        try:
+            from .services import AdvertiserBillingService
+        except ImportError:
+            AdvertiserBillingService = None
+        
+        billing_service = AdvertiserBillingService()
+        billing_service.update_campaign_spend(instance)
+        
+        # Update conversion quality score
+        try:
+            from .services import ConversionQualityService
+        except ImportError:
+            ConversionQualityService = None
+        quality_service = ConversionQualityService()
+        quality_service.calculate_conversion_quality_score(instance)
+        
+        # Send conversion notification
+        try:
+            from .services import NotificationService
+        except ImportError:
+            NotificationService = None
+        notification_service = NotificationService()
+        notification_service.send_conversion_notification(instance)
+
+
+@receiver(pre_save, sender=TrackingPixel)
+def tracking_pixel_pre_save(sender, instance, **kwargs):
+    """Handle tracking pixel pre-save operations."""
+    # Generate pixel ID if not set
+    if not instance.pixel_id:
+        try:
+            from .services import TrackingPixelService
+        except ImportError:
+            TrackingPixelService = None
+        pixel_service = TrackingPixelService()
+        instance.pixel_id = pixel_service.generate_pixel_id(instance)
+
+
+@receiver(post_save, sender=TrackingPixel)
+def tracking_pixel_post_save(sender, instance, created, **kwargs):
+    """Handle tracking pixel post-save operations."""
+    if created:
+        # Clear tracking cache
+        try:
+            from .services import TrackingPixelService
+        except ImportError:
+            TrackingPixelService = None
+        pixel_service = TrackingPixelService()
+        pixel_service.clear_pixel_cache(instance)
+
+
+@receiver(pre_save, sender=AdvertiserOffer)
+def offer_pre_save(sender, instance, **kwargs):
+    """Handle offer pre-save operations."""
+    # Validate payout amount
+    if instance.payout_amount and instance.payout_amount <= 0:
+        raise ValueError("Payout amount must be greater than 0")
+    
+    # Set default status if not provided
+    if not instance.status:
+        instance.status = 'draft'
+
+
+@receiver(post_save, sender=AdvertiserOffer)
+def offer_post_save(sender, instance, created, **kwargs):
+    """Handle offer post-save operations."""
+    if created:
+        # Create default tracking requirements
+        try:
+            from .services import OfferService
+        except ImportError:
+            OfferService = None
+        offer_service = OfferService()
+        offer_service.create_default_tracking_requirements(instance)
+
+
+@receiver(pre_save, sender=AdvertiserWallet)
+def wallet_pre_save(sender, instance, **kwargs):
+    """Handle wallet pre-save operations."""
+    # Validate balance
+    if instance.balance < 0:
+        raise ValueError("Wallet balance cannot be negative")
+
+
+@receiver(post_save, sender=AdvertiserTransaction)
+def transaction_post_save(sender, instance, created, **kwargs):
+    """Handle transaction post-save operations."""
+    if created:
+        # Update wallet balance
+        try:
+            from .services import AdvertiserBillingService
+        except ImportError:
+            AdvertiserBillingService = None
+        billing_service = AdvertiserBillingService()
+        billing_service.update_wallet_balance(instance)
+        
+        # Check budget thresholds
+        if instance.transaction_type == 'spend':
+            billing_service.check_budget_thresholds(instance.wallet.advertiser)
+            
+            # Trigger budget threshold signal if needed
+            if billing_service.is_budget_threshold_reached(instance.wallet.advertiser):
+                budget_threshold_reached.send(sender=sender, advertiser=instance.wallet.advertiser)
+
+
+@receiver(post_save, sender=AdvertiserInvoice)
+def invoice_post_save(sender, instance, created, **kwargs):
+    """Handle invoice post-save operations."""
+    if created:
+        # Generate invoice number if not set
+        if not instance.invoice_number:
+            try:
+                from .services import AdvertiserBillingService
+            except ImportError:
+                AdvertiserBillingService = None
+            billing_service = AdvertiserBillingService()
+            instance.invoice_number = billing_service.generate_invoice_number(instance)
+            instance.save()
+        
+        # Send invoice notification
+        try:
+            from .services import NotificationService
+        except ImportError:
+            NotificationService = None
+        notification_service = NotificationService()
+        notification_service.send_invoice_notification(instance)
+
+
+@receiver(pre_save, sender=ConversionQualityScore)
+def conversion_quality_score_pre_save(sender, instance, **kwargs):
+    """Handle conversion quality score pre-save operations."""
+    # Validate score ranges
+    if not (0 <= instance.overall_score <= 1):
+        raise ValueError("Overall score must be between 0 and 1")
+    
+    if not (0 <= instance.behavioral_score <= 1):
+        raise ValueError("Behavioral score must be between 0 and 1")
+    
+    if not (0 <= instance.technical_score <= 1):
+        raise ValueError("Technical score must be between 0 and 1")
+
+
+@receiver(post_save, sender=ConversionQualityScore)
+def conversion_quality_score_post_save(sender, instance, created, **kwargs):
+    """Handle conversion quality score post-save operations."""
+    if created and instance.is_flagged:
+        # Trigger fraud activity signal
+        fraud_activity_detected.send(
+            sender=sender,
+            conversion=instance.conversion,
+            score=instance.overall_score,
+            fraud_indicators=instance.fraud_indicators
+        )
+
+
+@receiver(pre_save, sender=AdvertiserNotification)
+def notification_pre_save(sender, instance, **kwargs):
+    """Handle notification pre-save operations."""
+    # Set sent time if not set and notification is being marked as sent
+    if instance.is_read and not instance.read_at:
+        instance.read_at = timezone.now()
+
+
+@receiver(post_save, sender=AdvertiserNotification)
+def notification_post_save(sender, instance, created, **kwargs):
+    """Handle notification post-save operations."""
+    if created:
+        # Send email notification if enabled
+        if instance.advertiser.profile and instance.advertiser.profile.email_notifications:
+            try:
+                from .services import NotificationService
+            except ImportError:
+                NotificationService = None
+            notification_service = NotificationService()
+            notification_service.send_email_notification(instance)
+
+
+@receiver(pre_save, sender=MLModel)
+def ml_model_pre_save(sender, instance, **kwargs):
+    """Handle ML model pre-save operations."""
+    # Validate model file if provided
+    if instance.model_file:
+        try:
+            from .services import MLService
+        except ImportError:
+            MLService = None
+        ml_service = MLService()
+        ml_service.validate_model_file(instance.model_file)
+
+
+@receiver(post_save, sender=MLModel)
+def ml_model_post_save(sender, instance, created, **kwargs):
+    """Handle ML model post-save operations."""
+    if created:
+        # Initialize model training
+        try:
+            from .services import MLService
+        except ImportError:
+            MLService = None
+        ml_service = MLService()
+        ml_service.initialize_model_training(instance)
+
+
+@receiver(user_logged_in)
+def user_logged_in_handler(sender, request, user, **kwargs):
+    """Handle user login events."""
+    try:
+        advertiser = Advertiser.objects.get(user=user)
+        
+        # Update last login
+        advertiser.user.last_login = timezone.now()
+        advertiser.user.save()
+        
+        # Log login activity
+        try:
+            from .services import AuditService
+        except ImportError:
+            AuditService = None
+        audit_service = AuditService()
+        audit_service.log_user_activity(user, 'login', request)
+        
+        # Clear user-specific cache
+        try:
+            from .services import CacheService
+        except ImportError:
+            CacheService = None
+        cache_service = CacheService()
+        cache_service.clear_user_cache(user)
+        
+    except Advertiser.DoesNotExist:
+        pass
+
+
+@receiver(user_logged_out)
+def user_logged_out_handler(sender, request, user, **kwargs):
+    """Handle user logout events."""
+    try:
+        advertiser = Advertiser.objects.get(user=user)
+        
+        # Log logout activity
+        try:
+            from .services import AuditService
+        except ImportError:
+            AuditService = None
+        audit_service = AuditService()
+        audit_service.log_user_activity(user, 'logout', request)
+        
+        # Clear user-specific cache
+        try:
+            from .services import CacheService
+        except ImportError:
+            CacheService = None
+        cache_service = CacheService()
+        cache_service.clear_user_cache(user)
+        
+    except Advertiser.DoesNotExist:
+        pass
+
+
 # Signal monitoring and debugging
 class SignalMonitor:
     """Utility class for monitoring signal performance."""

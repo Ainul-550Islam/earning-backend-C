@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Tenant Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            position: sticky;
+            top: 0;
+            height: calc(100vh - 56px);
+            overflow-y: auto;
+            background-color: #f8f9fa;
+        }
+        .main-content {
+            height: calc(100vh - 56px);
+            overflow-y: auto;
+        }
+        .endpoint-section {
+            margin-bottom: 2rem;
+        }
+        .endpoint-card {
+            border-left: 4px solid #007bff;
+            margin-bottom: 1rem;
+        }
+        .method-badge {
+            font-size: 0.8rem;
+            font-weight: bold;
+            padding: 0.25rem 0.5rem;
+        }
+        .method-get { background-color: #28a745; }
+        .method-post { background-color: #007bff; }
+        .method-put { background-color: #ffc107; color: #000; }
+        .method-delete { background-color: #dc3545; }
+        .method-patch { background-color: #6f42c1; }
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 1rem;
+        }
+        .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .toc {
+            position: sticky;
+            top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-code"></i> API Documentation
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">Home</a>
+                <a class="nav-link" href="/health/">Health</a>
+                <a class="nav-link" href="/admin/">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 sidebar p-3">
+                <h6 class="text-muted mb-3">Navigation</h6>
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="#overview">Overview</a>
+                    <a class="nav-link" href="#authentication">Authentication</a>
+                    <a class="nav-link" href="#tenants">Tenants</a>
+                    <a class="nav-link" href="#plans">Plans</a>
+                    <a class="nav-link" href="#billing">Billing</a>
+                    <a class="nav-link" href="#security">Security</a>
+                    <a class="nav-link" href="#analytics">Analytics</a>
+                    <a class="nav-link" href="#errors">Errors</a>
+                </nav>
+
+                <h6 class="text-muted mb-3 mt-4">Quick Links</h6>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="#rate-limiting">Rate Limiting</a>
+                    <a class="nav-link" href="#pagination">Pagination</a>
+                    <a class="nav-link" href="#webhooks">Webhooks</a>
+                    <a class="nav-link" href="#examples">Examples</a>
+                </nav>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 col-lg-10 main-content p-4">
+                <!-- Overview Section -->
+                <section id="overview" class="endpoint-section">
+                    <h1 class="mb-4">Tenant Management API Documentation</h1>
+                    
+                    <div class="alert alert-info">
+                        <h5 class="alert-heading">Quick Start</h5>
+                        <p class="mb-0">
+                            Base URL: <code>/api/v1/tenants/</code><br>
+                            Authentication: Token-based<br>
+                            Content-Type: <code>application/json</code>
+                        </p>
+                    </div>
+
+                    <h3>Authentication</h3>
+                    <p>All API endpoints require authentication using Django's built-in token authentication. Include the authentication token in the request headers:</p>
+                    <div class="code-block">
+                        <pre><code>Authorization: Token your-api-key-here</code></pre>
+                    </div>
+
+                    <h3>Response Format</h3>
+                    <p>All API responses follow a consistent format:</p>
+                    <div class="code-block">
+                        <pre><code>{
+    "success": true,
+    "data": {},
+    "message": "Operation successful",
+    "errors": []
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- Authentication Section -->
+                <section id="authentication" class="endpoint-section">
+                    <h2>Authentication</h2>
+                    
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Obtain API Token</h5>
+                            <p>Use your admin credentials to obtain an API token:</p>
+                            
+                            <h6>Request</h6>
+                            <div class="code-block">
+                                <pre><code>POST /api/v1/tenants/auth/token/
+Content-Type: application/json
+
+{
+    "username": "your-username",
+    "password": "your-password"
+}</code></pre>
+                            </div>
+                            
+                            <h6>Response</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "success": true,
+    "data": {
+        "token": "your-api-key-here",
+        "expires_at": "2024-01-01T00:00:00Z"
+    }
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tenants Section -->
+                <section id="tenants" class="endpoint-section">
+                    <h2>Tenants</h2>
+                    
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>List Tenants</h5>
+                            <span class="method-badge method-get">GET</span>
+                            <code>/api/v1/tenants/</code>
+                            
+                            <h6>Query Parameters</h6>
+                            <ul>
+                                <li><code>page</code> (int): Page number (default: 1)</li>
+                                <li><code>page_size</code> (int): Items per page (default: 20)</li>
+                                <li><code>status</code> (str): Filter by status</li>
+                                <li><code>search</code> (str): Search query</li>
+                            </ul>
+                            
+                            <h6>Response</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "success": true,
+    "data": {
+        "results": [...],
+        "pagination": {
+            "page": 1,
+            "page_size": 20,
+            "total_items": 100,
+            "total_pages": 5
+        }
+    }
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Create Tenant</h5>
+                            <span class="method-badge method-post">POST</span>
+                            <code>/api/v1/tenants/</code>
+                            
+                            <h6>Request Body</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "name": "Example Company",
+    "slug": "example-company",
+    "admin_email": "admin@example.com",
+    "plan_id": 1
+}</code></pre>
+                            </div>
+                            
+                            <h6>Response</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "success": true,
+    "data": {
+        "id": 1,
+        "name": "Example Company",
+        "slug": "example-company",
+        "admin_email": "admin@example.com",
+        "status": "trial",
+        "created_at": "2023-01-01T00:00:00Z"
+    }
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Get Tenant Details</h5>
+                            <span class="method-badge method-get">GET</span>
+                            <code>/api/v1/tenants/{id}/</code>
+                            
+                            <h6>Response</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "success": true,
+    "data": {
+        "id": 1,
+        "name": "Example Company",
+        "slug": "example-company",
+        "admin_email": "admin@example.com",
+        "status": "active",
+        "tier": "professional",
+        "created_at": "2023-01-01T00:00:00Z"
+    }
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Update Tenant</h5>
+                            <span class="method-badge method-put">PUT</span>
+                            <code>/api/v1/tenants/{id}/</code>
+                            
+                            <h6>Request Body</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "name": "Updated Company Name",
+    "admin_email": "updated@example.com"
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Delete Tenant</h5>
+                            <span class="method-badge method-delete">DELETE</span>
+                            <code>/api/v1/tenants/{id}/</code>
+                            
+                            <h6>Response</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "success": true,
+    "message": "Tenant deleted successfully"
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Plans Section -->
+                <section id="plans" class="endpoint-section">
+                    <h2>Plans</h2>
+                    
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>List Plans</h5>
+                            <span class="method-badge method-get">GET</span>
+                            <code>/api/v1/plans/</code>
+                            
+                            <h6>Response</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "success": true,
+    "data": [
+        {
+            "id": 1,
+            "name": "Basic",
+            "plan_type": "basic",
+            "price_monthly": 29.99,
+            "price_yearly": 299.99,
+            "features": [...]
+        }
+    ]
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Get Plan Details</h5>
+                            <span class="method-badge method-get">GET</span>
+                            <code>/api/v1/plans/{id}/</code>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Create Plan</h5>
+                            <span class="method-badge method-post">POST</span>
+                            <code>/api/v1/plans/</code>
+                            
+                            <h6>Request Body</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "name": "Premium Plan",
+    "plan_type": "premium",
+    "price_monthly": 99.99,
+    "price_yearly": 999.99,
+    "features": [...]
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Billing Section -->
+                <section id="billing" class="endpoint-section">
+                    <h2>Billing</h2>
+                    
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>List Invoices</h5>
+                            <span class="method-badge method-get">GET</span>
+                            <code>/api/v1/invoices/</code>
+                            
+                            <h6>Query Parameters</h6>
+                            <ul>
+                                <li><code>status</code> (str): Filter by status</li>
+                                <li><code>tenant_id</code> (int): Filter by tenant</li>
+                                <li><code>date_from</code> (date): Filter by date range start</li>
+                                <li><code>date_to</code> (date): Filter by date range end</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Create Invoice</h5>
+                            <span class="method-badge method-post">POST</span>
+                            <code>/api/v1/invoices/</code>
+                            
+                            <h6>Request Body</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "tenant_id": 1,
+    "type": "subscription",
+    "subtotal": 99.99,
+    "tax_amount": 8.00,
+    "total_amount": 107.99,
+    "due_date": "2023-02-01"
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Mark Invoice as Paid</h5>
+                            <span class="method-badge method-post">POST</span>
+                            <code>/api/v1/invoices/{id}/pay/</code>
+                            
+                            <h6>Request Body</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "payment_amount": 107.99,
+    "payment_method": "credit_card",
+    "transaction_id": "txn_123456789"
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Security Section -->
+                <section id="security" class="endpoint-section">
+                    <h2>Security</h2>
+                    
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>List API Keys</h5>
+                            <span class="method-badge method-get">GET</span>
+                            <code>/api/v1/api-keys/</code>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Create API Key</h5>
+                            <span class="method-badge method-post">POST</span>
+                            <code>/api/v1/api-keys/</code>
+                            
+                            <h6>Request Body</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "tenant_id": 1,
+    "name": "Production API Key",
+    "permissions": ["read", "write"],
+    "rate_limit_per_minute": 1000
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Rotate API Key</h5>
+                            <span class="method-badge method-post">POST</span>
+                            <code>/api/v1/api-keys/{id}/rotate/</code>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>List Audit Logs</h5>
+                            <span class="method-badge method-get">GET</span>
+                            <code>/api/v1/audit-logs/</code>
+                            
+                            <h6>Query Parameters</h6>
+                            <ul>
+                                <li><code>tenant_id</code> (int): Filter by tenant</li>
+                                <li><code>action</code> (str): Filter by action type</li>
+                                <li><code>severity</code> (str): Filter by severity level</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Analytics Section -->
+                <section id="analytics" class="endpoint-section">
+                    <h2>Analytics</h2>
+                    
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>List Metrics</h5>
+                            <span class="method-badge method-get">GET</span>
+                            <code>/api/v1/metrics/</code>
+                            
+                            <h6>Query Parameters</h6>
+                            <ul>
+                                <li><code>tenant_id</code> (int): Filter by tenant</li>
+                                <li><code>metric_type</code> (str): Filter by metric type</li>
+                                <li><code>date_from</code> (date): Filter by date range start</li>
+                                <li><code>date_to</code> (date): Filter by date range end</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Record Metric</h5>
+                            <span class="method-badge method-post">POST</span>
+                            <code>/api/v1/metrics/</code>
+                            
+                            <h6>Request Body</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "tenant_id": 1,
+    "metric_type": "api_calls",
+    "value": 150,
+    "metadata": {
+        "endpoint": "/api/v1/data",
+        "method": "GET"
+    }
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Get Health Scores</h5>
+                            <span class="method-badge method-get">GET</span>
+                            <code>/api/v1/health-scores/</code>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card card">
+                        <div class="card-body">
+                            <h5>Calculate Health Score</h5>
+                            <span class="method-badge method-post">POST</span>
+                            <code>/api/v1/health-scores/calculate/</code>
+                            
+                            <h6>Request Body</h6>
+                            <div class="code-block">
+                                <pre><code>{
+    "tenant_id": 1,
+    "period": "monthly"
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Errors Section -->
+                <section id="errors" class="endpoint-section">
+                    <h2>Error Handling</h2>
+                    
+                    <p>API errors are returned with appropriate HTTP status codes and detailed error messages:</p>
+                    
+                    <div class="code-block">
+                        <pre><code>{
+    "success": false,
+    "error": "Validation error",
+    "errors": {
+        "field_name": ["Error message"]
+    }
+}</code></pre>
+                    </div>
+                    
+                    <h3>Error Codes</h3>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>400</td>
+                                <td>Bad Request - Validation error</td>
+                            </tr>
+                            <tr>
+                                <td>401</td>
+                                <td>Unauthorized - Authentication required</td>
+                            </tr>
+                            <tr>
+                                <td>403</td>
+                                <td>Forbidden - Insufficient permissions</td>
+                            </tr>
+                            <tr>
+                                <td>404</td>
+                                <td>Not Found - Resource not found</td>
+                            </tr>
+                            <tr>
+                                <td>409</td>
+                                <td>Conflict - Resource already exists</td>
+                            </tr>
+                            <tr>
+                                <td>422</td>
+                                <td>Unprocessable Entity - Business logic error</td>
+                            </tr>
+                            <tr>
+                                <td>429</td>
+                                <td>Too Many Requests - Rate limit exceeded</td>
+                            </tr>
+                            <tr>
+                                <td>500</td>
+                                <td>Internal Server Error - Server error</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Rate Limiting Section -->
+                <section id="rate-limiting" class="endpoint-section">
+                    <h2>Rate Limiting</h2>
+                    
+                    <p>API endpoints are rate-limited based on tenant plan:</p>
+                    
+                    <ul>
+                        <li><strong>Basic Plan</strong>: 100 requests/minute</li>
+                        <li><strong>Professional Plan</strong>: 1000 requests/minute</li>
+                        <li><strong>Enterprise Plan</strong>: 10000 requests/minute</li>
+                    </ul>
+                    
+                    <p>Rate limit headers are included in responses:</p>
+                    <div class="code-block">
+                        <pre><code>X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1640995200</code></pre>
+                    </div>
+                </section>
+
+                <!-- Pagination Section -->
+                <section id="pagination" class="endpoint-section">
+                    <h2>Pagination</h2>
+                    
+                    <p>List endpoints support pagination with the following parameters:</p>
+                    
+                    <ul>
+                        <li><code>page</code>: Page number (default: 1)</li>
+                        <li><code>page_size</code>: Items per page (default: 20, max: 100)</li>
+                    </ul>
+                    
+                    <p>Pagination information is included in the response:</p>
+                    <div class="code-block">
+                        <pre><code>{
+    "pagination": {
+        "page": 1,
+        "page_size": 20,
+        "total_items": 100,
+        "total_pages": 5,
+        "has_next": true,
+        "has_previous": false
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- Webhooks Section -->
+                <section id="webhooks" class="endpoint-section">
+                    <h2>Webhooks</h2>
+                    
+                    <p>The system sends webhook notifications for various events:</p>
+                    
+                    <h3>Webhook Events</h3>
+                    <ul>
+                        <li><code>tenant.created</code>: New tenant created</li>
+                        <li><code>tenant.updated</code>: Tenant updated</li>
+                        <li><code>tenant.suspended</code>: Tenant suspended</li>
+                        <li><code>invoice.created</code>: New invoice created</li>
+                        <li><code>invoice.paid</code>: Invoice paid</li>
+                        <li><code>metric.recorded</code>: Metric recorded</li>
+                        <li><code>health_score.updated</code>: Health score updated</li>
+                    </ul>
+                    
+                    <h3>Webhook Payload Format</h3>
+                    <div class="code-block">
+                        <pre><code>{
+    "event_type": "tenant.created",
+    "tenant_id": 1,
+    "timestamp": "2023-01-01T12:00:00Z",
+    "data": {
+        "tenant": {
+            "id": 1,
+            "name": "Example Company",
+            "email": "admin@example.com"
+        }
+    },
+    "signature": "sha256=hash"
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- Examples Section -->
+                <section id="examples" class="endpoint-section">
+                    <h2>Code Examples</h2>
+                    
+                    <h3>Python SDK</h3>
+                    <div class="code-block">
+                        <pre><code>from tenants_client import TenantsClient
+
+client = TenantsClient(api_key='your-api-key')
+
+# Create tenant
+tenant = client.tenants.create(
+    name="My Company",
+    admin_email="admin@mycompany.com",
+    plan_id=1
+)
+
+# Get tenant
+tenant = client.tenants.get(tenant.id)
+
+# Update tenant
+client.tenants.update(tenant.id, name="Updated Name")
+
+# List tenants
+tenants = client.tenants.list(status='active')</code></pre>
+                    </div>
+                    
+                    <h3>JavaScript SDK</h3>
+                    <div class="code-block">
+                        <pre><code>import { TenantsClient } from '@tenants/client';
+
+const client = new TenantsClient({ apiKey: 'your-api-key' });
+
+// Create tenant
+const tenant = await client.tenants.create({
+    name: 'My Company',
+    adminEmail: 'admin@mycompany.com',
+    planId: 1
+});
+
+// Get tenant
+const tenant = await client.tenants.get(tenant.id);
+
+// List tenants
+const tenants = await client.tenants.list({ status: 'active' });</code></pre>
+                    </div>
+                    
+                    <h3>cURL Examples</h3>
+                    <div class="code-block">
+                        <pre><code># List tenants
+curl -X GET "http://localhost:8000/api/v1/tenants/" \
+  -H "Authorization: Token your-api-key" \
+  -H "Content-Type: application/json"
+
+# Create tenant
+curl -X POST "http://localhost:8000/api/v1/tenants/" \
+  -H "Authorization: Token your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My Company",
+    "admin_email": "admin@mycompany.com",
+    "plan_id": 1
+  }'
+
+# Get tenant details
+curl -X GET "http://localhost:8000/api/v1/tenants/1/" \
+  -H "Authorization: Token your-api-key"</code></pre>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autolo-loader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/toolbar.min.js"></script>
+    <script>
+        // Initialize Prism.js for syntax highlighting
+        Prism.highlightAll();
+        
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(anchor.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // Update active navigation based on scroll position
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (window.pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+            
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

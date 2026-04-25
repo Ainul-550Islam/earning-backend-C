@@ -53,7 +53,7 @@ class Dispute(models.Model):
         app_label  = "marketplace"
         db_table   = "marketplace_dispute"
         ordering   = ["-created_at"]
-        indexes    = [models.Index(fields=["order", "status"])]
+        indexes    = [models.Index(fields=["order", "status"], name='idx_order_status_1116')]
 
     def __str__(self):
         return f"Dispute#{self.pk} | {self.order.order_number} | {self.status}"

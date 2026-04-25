@@ -25,7 +25,7 @@ def process_campaign_task(self, campaign_id: int, batch_size: int = 100):
     Called after a campaign is started (either immediately or by the
     schedule_tasks.py when send_at is reached).
     """
-    from notifications.services.CampaignService import campaign_service
+    from api.notifications.services.CampaignService import campaign_service
 
     try:
         result = campaign_service.process_campaign(campaign_id, batch_size=batch_size)
@@ -52,7 +52,7 @@ def start_scheduled_campaigns():
     Periodic task: find campaigns whose send_at has passed and start them.
     Should be scheduled every minute via Celery Beat.
     """
-    from notifications.models.campaign import NotificationCampaign
+    from api.notifications.models.campaign import NotificationCampaign
 
     now = timezone.now()
     due_campaigns = NotificationCampaign.objects.filter(
@@ -63,7 +63,7 @@ def start_scheduled_campaigns():
     started = 0
     for campaign in due_campaigns:
         try:
-            from notifications.services.CampaignService import campaign_service
+            from api.notifications.services.CampaignService import campaign_service
             result = campaign_service.start_campaign(campaign.pk)
             if result.get('success'):
                 process_campaign_task.delay(campaign.pk)
@@ -84,7 +84,7 @@ def check_campaign_completion():
     """
     Periodic task: check for running campaigns that are complete and mark them.
     """
-    from notifications.models.campaign import NotificationCampaign
+    from api.notifications.models.campaign import NotificationCampaign
 
     running = NotificationCampaign.objects.filter(status='running')
     completed = 0
@@ -107,8 +107,8 @@ def update_all_campaign_results():
     """
     Periodic task: refresh CampaignResult records for all recently active campaigns.
     """
-    from notifications.models.campaign import NotificationCampaign
-    from notifications.services.DeliveryTracker import delivery_tracker
+    from api.notifications.models.campaign import NotificationCampaign
+    from api.notifications.services.DeliveryTracker import delivery_tracker
 
     cutoff = timezone.now() - timedelta(days=7)
     campaigns = NotificationCampaign.objects.filter(

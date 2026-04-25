@@ -20,8 +20,8 @@ def send_scheduled_notifications():
     Periodic task (every minute): find all NotificationSchedule records
     that are due and trigger sends.
     """
-    from notifications.models.schedule import NotificationSchedule
-    from notifications.services import notification_service
+    from api.notifications.models.schedule import NotificationSchedule
+    from api.notifications._services_core import notification_service
 
     now = timezone.now()
     due_schedules = NotificationSchedule.objects.filter(
@@ -69,7 +69,7 @@ def cancel_overdue_schedules(grace_hours: int = 24):
     Mark NotificationSchedule records as 'skipped' if they are more than
     grace_hours past their send_at and still pending.
     """
-    from notifications.models.schedule import NotificationSchedule
+    from api.notifications.models.schedule import NotificationSchedule
     from datetime import timedelta
 
     cutoff = timezone.now() - timedelta(hours=grace_hours)
@@ -96,8 +96,8 @@ def schedule_notification_task(self, notification_id: int, send_at_iso: str):
     Create a NotificationSchedule record for a notification.
     send_at_iso: ISO 8601 datetime string.
     """
-    from notifications.models import Notification
-    from notifications.models.schedule import NotificationSchedule
+    from api.notifications.models import Notification
+    from api.notifications.models.schedule import NotificationSchedule
     from datetime import datetime
 
     try:

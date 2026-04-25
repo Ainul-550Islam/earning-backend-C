@@ -39,7 +39,7 @@ class ReferralProgram(models.Model):
     class Meta:
         app_label = "marketplace"
         db_table  = "marketplace_referral_program"
-        indexes   = [models.Index(fields=["referral_code"])]
+        indexes   = [models.Index(fields=["referral_code"], name='idx_referral_code_1118')]
 
     def __str__(self):
         return f"Referral {self.referral_code} by {self.referrer.username}"

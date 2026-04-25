@@ -17,7 +17,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -172,10 +175,10 @@ class Bid(AdvertiserPortalBaseModel, StatusModel, AuditModel, TrackingModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_bids'
         indexes = [
-            models.Index(fields=['campaign', 'status']),
-            models.Index(fields=['bid_type', 'bid_amount']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['optimized_at']),
+            models.Index(fields=['campaign', 'status'], name='idx_campaign_status_109'),
+            models.Index(fields=['bid_type', 'bid_amount'], name='idx_bid_type_bid_amount_110'),
+            models.Index(fields=['created_at'], name='idx_created_at_111'),
+            models.Index(fields=['optimized_at'], name='idx_optimized_at_112'),
         ]
         ordering = ['-created_at']
     
@@ -467,10 +470,10 @@ class BudgetAllocation(AdvertiserPortalBaseModel, StatusModel, AuditModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_budget_allocations'
         indexes = [
-            models.Index(fields=['advertiser', 'allocation_type']),
-            models.Index(fields=['campaign', 'allocation_period']),
-            models.Index(fields=['bid', 'allocation_period']),
-            models.Index(fields=['start_date', 'end_date']),
+            models.Index(fields=['advertiser', 'allocation_type'], name='idx_advertiser_allocation__205'),
+            models.Index(fields=['campaign', 'allocation_period'], name='idx_campaign_allocation_pe_863'),
+            models.Index(fields=['bid', 'allocation_period'], name='idx_bid_allocation_period_115'),
+            models.Index(fields=['start_date', 'end_date'], name='idx_start_date_end_date_116'),
         ]
         ordering = ['-created_at']
     

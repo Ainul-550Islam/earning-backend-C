@@ -44,8 +44,8 @@ class SiteApprovalRecord(TimeStampedModel):
         verbose_name_plural = _('Site Approval Records')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['site', 'decision']),
-            models.Index(fields=['reviewer']),
+            models.Index(fields=['site', 'decision'], name='idx_site_decision_1644'),
+            models.Index(fields=['reviewer'], name='idx_reviewer_1645'),
         ]
 
     def __str__(self):

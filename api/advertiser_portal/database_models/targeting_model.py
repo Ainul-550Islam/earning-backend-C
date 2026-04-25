@@ -18,7 +18,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.gis.geos import GEOSGeometry
 
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -343,9 +346,9 @@ class Targeting(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Targeting'
         verbose_name_plural = 'Targeting'
         indexes = [
-            models.Index(fields=['campaign']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['campaign'], name='idx_campaign_356'),
+            models.Index(fields=['is_active'], name='idx_is_active_357'),
+            models.Index(fields=['created_at'], name='idx_created_at_358'),
         ]
     
     def __str__(self) -> str:
@@ -768,8 +771,8 @@ class AudienceSegment(AdvertiserPortalBaseModel):
         verbose_name_plural = 'Audience Segments'
         unique_together = ['advertiser', 'name']
         indexes = [
-            models.Index(fields=['advertiser', 'segment_type']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['advertiser', 'segment_type'], name='idx_advertiser_segment_typ_82a'),
+            models.Index(fields=['is_active'], name='idx_is_active_360'),
         ]
     
     def __str__(self) -> str:
@@ -841,8 +844,8 @@ class TargetingRule(AdvertiserPortalBaseModel):
         verbose_name = 'Targeting Rule'
         verbose_name_plural = 'Targeting Rules'
         indexes = [
-            models.Index(fields=['targeting', 'rule_type']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['targeting', 'rule_type'], name='idx_targeting_rule_type_361'),
+            models.Index(fields=['is_active'], name='idx_is_active_362'),
         ]
     
     def __str__(self) -> str:

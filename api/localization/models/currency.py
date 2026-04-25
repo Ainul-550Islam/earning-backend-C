@@ -37,9 +37,9 @@ class ExchangeRate(models.Model):
         verbose_name = _("Exchange Rate")
         verbose_name_plural = _("Exchange Rates")
         indexes = [
-            models.Index(fields=['from_currency', 'to_currency', 'date']),
-            models.Index(fields=['date']),
-            models.Index(fields=['source']),
+            models.Index(fields=['from_currency', 'to_currency', 'date'], name='idx_from_currency_to_curre_e02'),
+            models.Index(fields=['date'], name='idx_date_1084'),
+            models.Index(fields=['source'], name='idx_source_1085'),
         ]
 
     def __str__(self):
@@ -189,9 +189,9 @@ class CurrencyConversionLog(models.Model):
         verbose_name = _("Currency Conversion Log")
         verbose_name_plural = _("Currency Conversion Logs")
         indexes = [
-            models.Index(fields=['from_currency', 'to_currency', 'created_at']),
-            models.Index(fields=['user', 'created_at']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['from_currency', 'to_currency', 'created_at'], name='idx_from_currency_to_curre_0cf'),
+            models.Index(fields=['user', 'created_at'], name='idx_user_created_at_1087'),
+            models.Index(fields=['created_at'], name='idx_created_at_1088'),
         ]
 
     def __str__(self):

@@ -18,7 +18,10 @@ from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.files.storage import default_storage
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -331,11 +334,11 @@ class Creative(AdvertiserPortalBaseModel, StatusModel, AuditModel, TrackingModel
         verbose_name = 'Creative'
         verbose_name_plural = 'Creatives'
         indexes = [
-            models.Index(fields=['campaign', 'status']),
-            models.Index(fields=['creative_type']),
-            models.Index(fields=['is_approved']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['name']),
+            models.Index(fields=['campaign', 'status'], name='idx_campaign_status_233'),
+            models.Index(fields=['creative_type'], name='idx_creative_type_234'),
+            models.Index(fields=['is_approved'], name='idx_is_approved_235'),
+            models.Index(fields=['created_at'], name='idx_created_at_236'),
+            models.Index(fields=['name'], name='idx_name_237'),
         ]
     
     def __str__(self) -> str:
@@ -717,7 +720,7 @@ class CreativeAsset(AdvertiserPortalBaseModel):
         verbose_name = 'Creative Asset'
         verbose_name_plural = 'Creative Assets'
         indexes = [
-            models.Index(fields=['creative', 'asset_type']),
+            models.Index(fields=['creative', 'asset_type'], name='idx_creative_asset_type_238'),
         ]
     
     def __str__(self) -> str:
@@ -765,7 +768,7 @@ class CreativeApprovalLog(AdvertiserPortalBaseModel):
         verbose_name = 'Creative Approval Log'
         verbose_name_plural = 'Creative Approval Logs'
         indexes = [
-            models.Index(fields=['creative', 'created_at']),
+            models.Index(fields=['creative', 'created_at'], name='idx_creative_created_at_239'),
         ]
     
     def __str__(self) -> str:

@@ -40,7 +40,7 @@ class NotificationCampaignViewSet(viewsets.ModelViewSet):
     pagination_class = _Pagination
 
     def get_queryset(self):
-        from notifications.models.campaign import NotificationCampaign
+        from api.notifications.models.campaign import NotificationCampaign
         qs = NotificationCampaign.objects.all().select_related('template', 'segment', 'created_by')
 
         campaign_status = self.request.query_params.get('status')
@@ -51,7 +51,7 @@ class NotificationCampaignViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         from rest_framework import serializers
-        from notifications.models.campaign import NotificationCampaign
+        from api.notifications.models.campaign import NotificationCampaign
 
         class CampaignSerializer(serializers.ModelSerializer):
             progress_pct = serializers.FloatField(read_only=True)
@@ -82,7 +82,7 @@ class NotificationCampaignViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
         """Start a campaign."""
-        from notifications.services.CampaignService import campaign_service
+        from api.notifications.services.CampaignService import campaign_service
         result = campaign_service.start_campaign(int(pk))
         code = status.HTTP_200_OK if result['success'] else status.HTTP_400_BAD_REQUEST
         return Response(result, status=code)
@@ -90,7 +90,7 @@ class NotificationCampaignViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def pause(self, request, pk=None):
         """Pause a running campaign."""
-        from notifications.services.CampaignService import campaign_service
+        from api.notifications.services.CampaignService import campaign_service
         result = campaign_service.pause_campaign(int(pk))
         code = status.HTTP_200_OK if result['success'] else status.HTTP_400_BAD_REQUEST
         return Response(result, status=code)
@@ -98,7 +98,7 @@ class NotificationCampaignViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """Cancel a campaign."""
-        from notifications.services.CampaignService import campaign_service
+        from api.notifications.services.CampaignService import campaign_service
         result = campaign_service.cancel_campaign(int(pk))
         code = status.HTTP_200_OK if result['success'] else status.HTTP_400_BAD_REQUEST
         return Response(result, status=code)
@@ -106,13 +106,13 @@ class NotificationCampaignViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def stats(self, request, pk=None):
         """Get campaign performance stats."""
-        from notifications.services.CampaignService import campaign_service
+        from api.notifications.services.CampaignService import campaign_service
         result = campaign_service.get_campaign_stats(int(pk))
         return Response(result)
 
     @action(detail=True, methods=['post'])
     def process(self, request, pk=None):
         """Manually trigger campaign processing (admin only)."""
-        from notifications.tasks import process_campaign_task
+        from api.notifications.tasks import process_campaign_task
         process_campaign_task.delay(int(pk))
         return Response({'success': True, 'message': 'Campaign processing task queued.'})

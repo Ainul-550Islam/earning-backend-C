@@ -1,0 +1,86 @@
+[
+  {
+    "model": "payment_gateways.currency",
+    "pk": 1,
+    "fields": {
+      "code": "BDT",
+      "name": "Bangladeshi Taka",
+      "symbol": "৳",
+      "exchange_rate": "1.0000",
+      "is_default": true,
+      "is_active": true
+    }
+  },
+  {
+    "model": "payment_gateways.currency",
+    "pk": 2,
+    "fields": {
+      "code": "USD",
+      "name": "US Dollar",
+      "symbol": "$",
+      "exchange_rate": "110.5000",
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "payment_gateways.currency",
+    "pk": 3,
+    "fields": {
+      "code": "EUR",
+      "name": "Euro",
+      "symbol": "€",
+      "exchange_rate": "120.0000",
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "payment_gateways.currency",
+    "pk": 4,
+    "fields": {
+      "code": "GBP",
+      "name": "British Pound",
+      "symbol": "£",
+      "exchange_rate": "140.0000",
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "payment_gateways.currency",
+    "pk": 5,
+    "fields": {
+      "code": "AUD",
+      "name": "Australian Dollar",
+      "symbol": "A$",
+      "exchange_rate": "72.0000",
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "payment_gateways.currency",
+    "pk": 6,
+    "fields": {
+      "code": "CAD",
+      "name": "Canadian Dollar",
+      "symbol": "C$",
+      "exchange_rate": "82.0000",
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "payment_gateways.currency",
+    "pk": 7,
+    "fields": {
+      "code": "SGD",
+      "name": "Singapore Dollar",
+      "symbol": "S$",
+      "exchange_rate": "82.5000",
+      "is_default": false,
+      "is_active": true
+    }
+  }
+]

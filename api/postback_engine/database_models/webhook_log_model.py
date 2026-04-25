@@ -33,8 +33,8 @@ class WebhookLog(models.Model):
         verbose_name_plural = "webhook logs"
         ordering = ["-attempted_at"]
         indexes = [
-            models.Index(fields=["success", "attempted_at"]),
-            models.Index(fields=["event", "attempted_at"]),
+            models.Index(fields=["success", "attempted_at"], name='idx_success_attempted_at_1409'),
+            models.Index(fields=["event", "attempted_at"], name='idx_event_attempted_at_1410'),
         ]
 
     def __str__(self):

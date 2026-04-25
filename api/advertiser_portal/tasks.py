@@ -28,6 +28,22 @@ from .exceptions import *
 from .constants import *
 from .enums import *
 
+# Import all 14 Celery task modules from the tasks directory
+from api.advertiser_portal.tasks.alert_tasks import *
+from api.advertiser_portal.tasks.auto_refill_tasks import *
+from api.advertiser_portal.tasks.budget_check_tasks import *
+from api.advertiser_portal.tasks.campaign_optimizer_tasks import *
+from api.advertiser_portal.tasks.campaign_schedule_tasks import *
+from api.advertiser_portal.tasks.cleanup_tasks import *
+from api.advertiser_portal.tasks.conversion_quality_tasks import *
+from api.advertiser_portal.tasks.creative_expiry_tasks import *
+from api.advertiser_portal.tasks.domain_verify_tasks import *
+from api.advertiser_portal.tasks.fraud_config_tasks import *
+from api.advertiser_portal.tasks.invoice_tasks import *
+from api.advertiser_portal.tasks.offer_moderation_tasks import *
+from api.advertiser_portal.tasks.report_generation_tasks import *
+from api.advertiser_portal.tasks.spend_rollup_tasks import *
+
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

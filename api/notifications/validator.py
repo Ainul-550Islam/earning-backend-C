@@ -78,7 +78,7 @@ def validate_notification_message(message: str) -> Tuple[bool, str]:
 
 def validate_notification_type(notification_type: str) -> Tuple[bool, str]:
     """Validate notification type against allowed choices."""
-    from notifications.choices import NOTIFICATION_TYPE_CHOICES
+    from api.notifications.choices import NOTIFICATION_TYPE_CHOICES
     valid = [c[0] for c in NOTIFICATION_TYPE_CHOICES]
     if notification_type not in valid:
         return False, f'Invalid notification_type: "{notification_type}".'
@@ -87,7 +87,7 @@ def validate_notification_type(notification_type: str) -> Tuple[bool, str]:
 
 def validate_channel(channel: str) -> Tuple[bool, str]:
     """Validate notification channel."""
-    from notifications.choices import CHANNEL_CHOICES
+    from api.notifications.choices import CHANNEL_CHOICES
     valid = [c[0] for c in CHANNEL_CHOICES]
     if channel not in valid:
         return False, f'Invalid channel: "{channel}". Valid: {valid}'
@@ -96,7 +96,7 @@ def validate_channel(channel: str) -> Tuple[bool, str]:
 
 def validate_priority(priority: str) -> Tuple[bool, str]:
     """Validate notification priority."""
-    from notifications.choices import PRIORITY_CHOICES
+    from api.notifications.choices import PRIORITY_CHOICES
     valid = [c[0] for c in PRIORITY_CHOICES]
     if priority not in valid:
         return False, f'Invalid priority: "{priority}". Valid: {valid}'
@@ -267,7 +267,7 @@ def validate_device_registration(data: dict) -> ValidationResult:
     result = ValidationResult()
 
     device_type = data.get('device_type', '')
-    from notifications.choices import DEVICE_TYPE_CHOICES
+    from api.notifications.choices import DEVICE_TYPE_CHOICES
     valid_types = [d[0] for d in DEVICE_TYPE_CHOICES]
     if device_type not in valid_types:
         result.add_error('device_type', f'Invalid device_type. Valid: {valid_types}')

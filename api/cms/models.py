@@ -121,12 +121,12 @@ class ContentCategory(TimeStampedModel):
         verbose_name_plural = _("Content Categories")
         ordering = ['order', 'name']
         indexes = [
-            models.Index(fields=['slug', 'is_active']),
-            models.Index(fields=['parent', 'category_type']),
-            models.Index(fields=['show_in_menu', 'is_active']),
-            models.Index(fields=['show_in_app', 'category_type']),
-            models.Index(fields=['is_active', 'order', 'parent']),
-            models.Index(fields=['category_type', 'show_in_menu']),
+            models.Index(fields=['slug', 'is_active'], name='idx_slug_is_active_885'),
+            models.Index(fields=['parent', 'category_type'], name='idx_parent_category_type_886'),
+            models.Index(fields=['show_in_menu', 'is_active'], name='idx_show_in_menu_is_active_887'),
+            models.Index(fields=['show_in_app', 'category_type'], name='idx_show_in_app_category_t_19d'),
+            models.Index(fields=['is_active', 'order', 'parent'], name='idx_is_active_order_parent_889'),
+            models.Index(fields=['category_type', 'show_in_menu'], name='idx_category_type_show_in__d66'),
         ]
     
     def __str__(self):
@@ -396,15 +396,15 @@ class ContentPage(TimeStampedModel):
         verbose_name_plural = _("Content Pages")
         ordering = ['-published_date', '-created_at']
         indexes = [
-            models.Index(fields=['slug', 'status']),
-            models.Index(fields=['category', 'page_type', 'is_active']),
-            models.Index(fields=['published_date', 'status']),
-            models.Index(fields=['is_featured', 'is_active']),
-            models.Index(fields=['language', 'status']),
-            models.Index(fields=['status', 'published_date', 'category']),
-            models.Index(fields=['is_active', 'is_featured', 'page_type']),
-            models.Index(fields=['author', 'status', 'created_at']),
-            models.Index(fields=['uuid', 'is_active']),
+            models.Index(fields=['slug', 'status'], name='idx_slug_status_891'),
+            models.Index(fields=['category', 'page_type', 'is_active'], name='idx_category_page_type_is__322'),
+            models.Index(fields=['published_date', 'status'], name='idx_published_date_status_893'),
+            models.Index(fields=['is_featured', 'is_active'], name='idx_is_featured_is_active_894'),
+            models.Index(fields=['language', 'status'], name='idx_language_status_895'),
+            models.Index(fields=['status', 'published_date', 'category'], name='idx_status_published_date__6ff'),
+            models.Index(fields=['is_active', 'is_featured', 'page_type'], name='idx_is_active_is_featured__560'),
+            models.Index(fields=['author', 'status', 'created_at'], name='idx_author_status_created__6ac'),
+            models.Index(fields=['uuid', 'is_active'], name='idx_uuid_is_active_899'),
         ]
     
     def __str__(self):
@@ -771,11 +771,11 @@ class Banner(TimeStampedModel):
         verbose_name_plural = _("Banners")
         ordering = ['-priority', '-created_at']
         indexes = [
-            models.Index(fields=['banner_type', 'is_active']),
-            models.Index(fields=['start_date', 'end_date']),
-            models.Index(fields=['position', 'target_device']),
-            models.Index(fields=['uuid', 'is_active']),
-            models.Index(fields=['priority', 'start_date', 'end_date']),
+            models.Index(fields=['banner_type', 'is_active'], name='idx_banner_type_is_active_900'),
+            models.Index(fields=['start_date', 'end_date'], name='idx_start_date_end_date_901'),
+            models.Index(fields=['position', 'target_device'], name='idx_position_target_device_902'),
+            models.Index(fields=['uuid', 'is_active'], name='idx_uuid_is_active_903'),
+            models.Index(fields=['priority', 'start_date', 'end_date'], name='idx_priority_start_date_en_32e'),
         ]
     
     def __str__(self):
@@ -1034,9 +1034,9 @@ class FAQCategory(TimeStampedModel):
         verbose_name_plural = _("FAQ Categories")
         ordering = ['order', 'name']
         indexes = [
-            models.Index(fields=['slug', 'is_active']),
-            models.Index(fields=['faq_type', 'order']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['slug', 'is_active'], name='idx_slug_is_active_905'),
+            models.Index(fields=['faq_type', 'order'], name='idx_faq_type_order_906'),
+            models.Index(fields=['uuid'], name='idx_uuid_907'),
         ]
     
     def __str__(self):
@@ -1163,12 +1163,12 @@ class FAQ(TimeStampedModel):
         verbose_name_plural = _("FAQs")
         ordering = ['-priority', '-is_featured', 'question']
         indexes = [
-            models.Index(fields=['category', 'is_active']),
-            models.Index(fields=['is_featured', 'is_pinned']),
-            models.Index(fields=['tags', 'is_active']),
-            models.Index(fields=['uuid', 'is_active']),
-            models.Index(fields=['priority', 'view_count']),
-            models.Index(fields=['slug', 'is_active']),
+            models.Index(fields=['category', 'is_active'], name='idx_category_is_active_908'),
+            models.Index(fields=['is_featured', 'is_pinned'], name='idx_is_featured_is_pinned_909'),
+            models.Index(fields=['tags', 'is_active'], name='idx_tags_is_active_910'),
+            models.Index(fields=['uuid', 'is_active'], name='idx_uuid_is_active_911'),
+            models.Index(fields=['priority', 'view_count'], name='idx_priority_view_count_912'),
+            models.Index(fields=['slug', 'is_active'], name='idx_slug_is_active_913'),
         ]
     
     def __str__(self):
@@ -1305,11 +1305,11 @@ class BannerImpression(TimeStampedModel):
         verbose_name_plural = _("Banner Impressions")
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['banner', 'created_at']),
-            models.Index(fields=['user', 'impression_type']),
-            models.Index(fields=['created_at', 'banner']),
-            models.Index(fields=['ip_address', 'created_at']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['banner', 'created_at'], name='idx_banner_created_at_914'),
+            models.Index(fields=['user', 'impression_type'], name='idx_user_impression_type_915'),
+            models.Index(fields=['created_at', 'banner'], name='idx_created_at_banner_916'),
+            models.Index(fields=['ip_address', 'created_at'], name='idx_ip_address_created_at_917'),
+            models.Index(fields=['uuid'], name='idx_uuid_918'),
         ]
 
 
@@ -1334,10 +1334,10 @@ class BannerClick(TimeStampedModel):
         verbose_name_plural = _("Banner Clicks")
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['banner', 'created_at']),
-            models.Index(fields=['user', 'click_type']),
-            models.Index(fields=['created_at', 'banner']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['banner', 'created_at'], name='idx_banner_created_at_919'),
+            models.Index(fields=['user', 'click_type'], name='idx_user_click_type_920'),
+            models.Index(fields=['created_at', 'banner'], name='idx_created_at_banner_921'),
+            models.Index(fields=['uuid'], name='idx_uuid_922'),
         ]
 
 
@@ -1356,9 +1356,9 @@ class FAQFeedback(TimeStampedModel):
         verbose_name_plural = _("FAQ Feedbacks")
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['faq', 'is_helpful']),
-            models.Index(fields=['user', 'created_at']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['faq', 'is_helpful'], name='idx_faq_is_helpful_923'),
+            models.Index(fields=['user', 'created_at'], name='idx_user_created_at_924'),
+            models.Index(fields=['uuid'], name='idx_uuid_925'),
         ]
 
 
@@ -1380,10 +1380,10 @@ class ContentViewLog(TimeStampedModel):
         verbose_name_plural = _("Content View Logs")
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['content', 'created_at']),
-            models.Index(fields=['user', 'is_completed']),
-            models.Index(fields=['created_at', 'content']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['content', 'created_at'], name='idx_content_created_at_926'),
+            models.Index(fields=['user', 'is_completed'], name='idx_user_is_completed_927'),
+            models.Index(fields=['created_at', 'content'], name='idx_created_at_content_928'),
+            models.Index(fields=['uuid'], name='idx_uuid_929'),
         ]
 
 
@@ -1410,9 +1410,9 @@ class ContentShare(TimeStampedModel):
         verbose_name_plural = _("Content Shares")
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['content', 'share_platform']),
-            models.Index(fields=['created_at', 'content']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['content', 'share_platform'], name='idx_content_share_platform_930'),
+            models.Index(fields=['created_at', 'content'], name='idx_created_at_content_931'),
+            models.Index(fields=['uuid'], name='idx_uuid_932'),
         ]
 
 
@@ -1444,9 +1444,9 @@ class SiteSettings(TimeStampedModel):
         verbose_name_plural = _("Site Settings")
         ordering = ['category', 'key']
         indexes = [
-            models.Index(fields=['key', 'category']),
-            models.Index(fields=['category', 'is_public']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['key', 'category'], name='idx_key_category_933'),
+            models.Index(fields=['category', 'is_public'], name='idx_category_is_public_934'),
+            models.Index(fields=['uuid'], name='idx_uuid_935'),
         ]
     
     def __str__(self):
@@ -1518,9 +1518,9 @@ class ImageGallery(TimeStampedModel):
         verbose_name_plural = _("Image Galleries")
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['slug', 'is_active']),
-            models.Index(fields=['category', 'is_featured']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['slug', 'is_active'], name='idx_slug_is_active_936'),
+            models.Index(fields=['category', 'is_featured'], name='idx_category_is_featured_937'),
+            models.Index(fields=['uuid'], name='idx_uuid_938'),
         ]
     
     def __str__(self):
@@ -1577,9 +1577,9 @@ class GalleryImage(TimeStampedModel):
         verbose_name_plural = _("Gallery Images")
         ordering = ['order', '-created_at']
         indexes = [
-            models.Index(fields=['gallery', 'order']),
-            models.Index(fields=['is_active', 'gallery']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['gallery', 'order'], name='idx_gallery_order_939'),
+            models.Index(fields=['is_active', 'gallery'], name='idx_is_active_gallery_940'),
+            models.Index(fields=['uuid'], name='idx_uuid_941'),
         ]
     
     def __str__(self):
@@ -1651,10 +1651,10 @@ class FileManager(TimeStampedModel):
         verbose_name_plural = _("Files")
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['file_type', 'is_public']),
-            models.Index(fields=['category', 'is_public']),
-            models.Index(fields=['uuid']),
-            models.Index(fields=['is_active', 'file_type']),
+            models.Index(fields=['file_type', 'is_public'], name='idx_file_type_is_public_942'),
+            models.Index(fields=['category', 'is_public'], name='idx_category_is_public_943'),
+            models.Index(fields=['uuid'], name='idx_uuid_944'),
+            models.Index(fields=['is_active', 'file_type'], name='idx_is_active_file_type_945'),
         ]
     
     def __str__(self):
@@ -1842,12 +1842,12 @@ class Comment(TimeStampedModel):
         verbose_name_plural = _("Comments")
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['content_type', 'object_id', 'is_approved']),
-            models.Index(fields=['user', 'comment_type']),
-            models.Index(fields=['created_at', 'content_type', 'object_id']),
-            models.Index(fields=['uuid']),
-            models.Index(fields=['parent', 'is_active']),
-            models.Index(fields=['is_approved', 'is_flagged']),
+            models.Index(fields=['content_type', 'object_id', 'is_approved'], name='idx_content_type_object_id_d58'),
+            models.Index(fields=['user', 'comment_type'], name='idx_user_comment_type_947'),
+            models.Index(fields=['created_at', 'content_type', 'object_id'], name='idx_created_at_content_typ_a82'),
+            models.Index(fields=['uuid'], name='idx_uuid_949'),
+            models.Index(fields=['parent', 'is_active'], name='idx_parent_is_active_950'),
+            models.Index(fields=['is_approved', 'is_flagged'], name='idx_is_approved_is_flagged_951'),
         ]
     
     def __str__(self):
@@ -1962,8 +1962,8 @@ class CommentLike(TimeStampedModel):
         unique_together = ['comment', 'user']
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['comment', 'user']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['comment', 'user'], name='idx_comment_user_952'),
+            models.Index(fields=['uuid'], name='idx_uuid_953'),
         ]
     
     def __str__(self):
@@ -2013,8 +2013,8 @@ class SiteAnalytics(TimeStampedModel):
         verbose_name_plural = _("Site Analytics")
         ordering = ['-date']
         indexes = [
-            models.Index(fields=['date']),
-            models.Index(fields=['uuid']),
+            models.Index(fields=['date'], name='idx_date_954'),
+            models.Index(fields=['uuid'], name='idx_uuid_955'),
         ]
     
     def __str__(self):
@@ -2438,9 +2438,9 @@ class PermissionAuditLog(models.Model):
         verbose_name_plural = _("Permission Audit Logs")
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['permission_id', 'action']),
-            models.Index(fields=['user_id', '-created_at']),
-            models.Index(fields=['content_id', '-created_at']),
+            models.Index(fields=['permission_id', 'action'], name='idx_permission_id_action_956'),
+            models.Index(fields=['user_id', '-created_at'], name='idx_user_id_created_at_957'),
+            models.Index(fields=['content_id', '-created_at'], name='idx_content_id_created_at_958'),
         ]
     
     @classmethod
@@ -2652,12 +2652,12 @@ class ContentPermission(TenantMixin, InheritanceMixin, models.Model):
         verbose_name_plural = _("Content Permissions")
         unique_together = [['tenant_id', 'content', 'permission_type', 'target_id']]
         indexes = [
-            models.Index(fields=['tenant_id', 'content', 'is_active']),
-            models.Index(fields=['tenant_id', 'permission_type', 'target_id']),
-            models.Index(fields=['tenant_id', 'priority']),
-            models.Index(fields=['tenant_id', 'expires_at']),
-            models.Index(fields=['uuid']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['tenant_id', 'content', 'is_active'], name='idx_tenant_id_content_is_a_d63'),
+            models.Index(fields=['tenant_id', 'permission_type', 'target_id'], name='idx_tenant_id_permission_t_def'),
+            models.Index(fields=['tenant_id', 'priority'], name='idx_tenant_id_priority_961'),
+            models.Index(fields=['tenant_id', 'expires_at'], name='idx_tenant_id_expires_at_962'),
+            models.Index(fields=['uuid'], name='idx_uuid_963'),
+            models.Index(fields=['created_at'], name='idx_created_at_964'),
         ]
         ordering = ['content', '-priority', 'permission_type']
     
@@ -3022,7 +3022,7 @@ class PermissionStats(models.Model):
     class Meta:
         unique_together = ['date', 'content_id']
         indexes = [
-            models.Index(fields=['date', '-check_count']),
+            models.Index(fields=['date', '-check_count'], name='idx_date_check_count_965'),
         ]
     
     @classmethod

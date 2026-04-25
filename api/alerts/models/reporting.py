@@ -680,9 +680,9 @@ class AlertReport(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['report_type', 'status']),
-            models.Index(fields=['generated_at']),
-            models.Index(fields=['next_run']),
+            models.Index(fields=['report_type', 'status'], name='idx_report_type_status_763'),
+            models.Index(fields=['generated_at'], name='idx_generated_at_764'),
+            models.Index(fields=['next_run'], name='idx_next_run_765'),
         ]
         db_table_comment = "Alert reporting and analytics"
         verbose_name = "Alert Report"
@@ -877,7 +877,7 @@ class MTTRMetric(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['last_calculated']),
+            models.Index(fields=['last_calculated'], name='idx_last_calculated_766'),
         ]
         db_table_comment = "Mean Time To Resolution metrics"
         verbose_name = "MTTR Metric"
@@ -1076,7 +1076,7 @@ class MTTDMetric(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['last_calculated']),
+            models.Index(fields=['last_calculated'], name='idx_last_calculated_767'),
         ]
         db_table_comment = "Mean Time To Detection metrics"
         verbose_name = "MTTD Metric"
@@ -1255,9 +1255,9 @@ class SLABreach(models.Model):
     class Meta:
         ordering = ['-breach_time']
         indexes = [
-            models.Index(fields=['sla_type', 'status']),
-            models.Index(fields=['severity', 'breach_time']),
-            models.Index(fields=['alert_log', 'breach_time']),
+            models.Index(fields=['sla_type', 'status'], name='idx_sla_type_status_768'),
+            models.Index(fields=['severity', 'breach_time'], name='idx_severity_breach_time_769'),
+            models.Index(fields=['alert_log', 'breach_time'], name='idx_alert_log_breach_time_770'),
         ]
         db_table_comment = "SLA breach tracking and analysis"
         verbose_name = "SLA Breach"

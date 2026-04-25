@@ -82,7 +82,7 @@ class IsNotFatigued(BasePermission):
             return True
 
         try:
-            from notifications.services.FatigueService import fatigue_service
+            from api.notifications.services.FatigueService import fatigue_service
             return not fatigue_service.is_fatigued(request.user, priority=priority)
         except Exception:
             return True  # Don't block on error

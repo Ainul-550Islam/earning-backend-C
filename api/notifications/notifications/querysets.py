@@ -6,7 +6,7 @@ Provides named, chainable query methods so view/service code never
 writes raw .filter()/.exclude() chains.
 
 Import pattern:
-    from notifications.querysets import NotificationQS, CampaignQS
+    from api.notifications.querysets import NotificationQS, CampaignQS
 """
 
 from django.db import models

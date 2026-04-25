@@ -628,6 +628,281 @@ def validate_all_configs() -> List[str]:
     return all_issues
 
 
+# Additional Configuration Classes for Main Models
+@dataclass
+class OfferConfig:
+    """Offer-related configuration."""
+    max_payout_amount: Decimal = Decimal('10000')
+    min_payout_amount: Decimal = Decimal('0.01')
+    default_payout_amount: Decimal = Decimal('1.00')
+    max_offers_per_advertiser: int = 100
+    offer_approval_required: bool = True
+    auto_approve_threshold: Decimal = Decimal('100')
+    verification_required: bool = True
+    
+    @classmethod
+    def from_settings(cls) -> 'OfferConfig':
+        """Create config from Django settings."""
+        return cls(
+            max_payout_amount=Decimal(getattr(settings, 'OFFER_MAX_PAYOUT', '10000')),
+            min_payout_amount=Decimal(getattr(settings, 'OFFER_MIN_PAYOUT', '0.01')),
+            default_payout_amount=Decimal(getattr(settings, 'OFFER_DEFAULT_PAYOUT', '1.00')),
+            max_offers_per_advertiser=getattr(settings, 'OFFER_MAX_PER_ADVERTISER', 100),
+            offer_approval_required=getattr(settings, 'OFFER_APPROVAL_REQUIRED', True),
+            auto_approve_threshold=Decimal(getattr(settings, 'OFFER_AUTO_APPROVE_THRESHOLD', '100')),
+            verification_required=getattr(settings, 'OFFER_VERIFICATION_REQUIRED', True)
+        )
+
+
+@dataclass
+class TrackingConfig:
+    """Tracking-related configuration."""
+    pixel_id_length: int = 32
+    conversion_window_days: int = 30
+    max_conversions_per_ip: int = 10
+    tracking_domain_required: bool = True
+    ssl_required: bool = True
+    postback_timeout_seconds: int = 30
+    conversion_deduplication_window: int = 300  # 5 minutes
+    
+    @classmethod
+    def from_settings(cls) -> 'TrackingConfig':
+        """Create config from Django settings."""
+        return cls(
+            pixel_id_length=getattr(settings, 'TRACKING_PIXEL_ID_LENGTH', 32),
+            conversion_window_days=getattr(settings, 'TRACKING_CONVERSION_WINDOW_DAYS', 30),
+            max_conversions_per_ip=getattr(settings, 'TRACKING_MAX_CONVERSIONS_PER_IP', 10),
+            tracking_domain_required=getattr(settings, 'TRACKING_DOMAIN_REQUIRED', True),
+            ssl_required=getattr(settings, 'TRACKING_SSL_REQUIRED', True),
+            postback_timeout_seconds=getattr(settings, 'TRACKING_POSTBACK_TIMEOUT', 30),
+            conversion_deduplication_window=getattr(settings, 'TRACKING_DEDUP_WINDOW', 300)
+        )
+
+
+@dataclass
+class FraudConfig:
+    """Fraud detection configuration."""
+    enabled: bool = True
+    risk_score_threshold: float = 0.7
+    auto_block_enabled: bool = False
+    manual_review_threshold: float = 0.5
+    max_daily_conversions_per_ip: int = 50
+    suspicious_user_agents: List[str] = field(default_factory=lambda: ['bot', 'crawler', 'spider'])
+    ip_blacklist_enabled: bool = True
+    device_fingerprinting_enabled: bool = True
+    
+    @classmethod
+    def from_settings(cls) -> 'FraudConfig':
+        """Create config from Django settings."""
+        return cls(
+            enabled=getattr(settings, 'FRAUD_DETECTION_ENABLED', True),
+            risk_score_threshold=getattr(settings, 'FRAUD_RISK_THRESHOLD', 0.7),
+            auto_block_enabled=getattr(settings, 'FRAUD_AUTO_BLOCK_ENABLED', False),
+            manual_review_threshold=getattr(settings, 'FRAUD_MANUAL_REVIEW_THRESHOLD', 0.5),
+            max_daily_conversions_per_ip=getattr(settings, 'FRAUD_MAX_DAILY_CONVERSIONS_PER_IP', 50),
+            suspicious_user_agents=getattr(settings, 'FRAUD_SUSPICIOUS_USER_AGENTS', ['bot', 'crawler', 'spider']),
+            ip_blacklist_enabled=getattr(settings, 'FRAUD_IP_BLACKLIST_ENABLED', True),
+            device_fingerprinting_enabled=getattr(settings, 'FRAUD_DEVICE_FINGERPRINTING_ENABLED', True)
+        )
+
+
+@dataclass
+class NotificationConfig:
+    """Notification configuration."""
+    email_enabled: bool = True
+    sms_enabled: bool = False
+    push_enabled: bool = True
+    webhook_enabled: bool = True
+    max_notifications_per_hour: int = 100
+    batch_notifications: bool = True
+    notification_retention_days: int = 30
+    
+    @classmethod
+    def from_settings(cls) -> 'NotificationConfig':
+        """Create config from Django settings."""
+        return cls(
+            email_enabled=getattr(settings, 'NOTIFICATION_EMAIL_ENABLED', True),
+            sms_enabled=getattr(settings, 'NOTIFICATION_SMS_ENABLED', False),
+            push_enabled=getattr(settings, 'NOTIFICATION_PUSH_ENABLED', True),
+            webhook_enabled=getattr(settings, 'NOTIFICATION_WEBHOOK_ENABLED', True),
+            max_notifications_per_hour=getattr(settings, 'NOTIFICATION_MAX_PER_HOUR', 100),
+            batch_notifications=getattr(settings, 'NOTIFICATION_BATCH_ENABLED', True),
+            notification_retention_days=getattr(settings, 'NOTIFICATION_RETENTION_DAYS', 30)
+        )
+
+
+@dataclass
+class ReportConfig:
+    """Reporting configuration."""
+    max_report_rows: int = 100000
+    report_retention_days: int = 90
+    async_report_generation: bool = True
+    cache_report_results: bool = True
+    cache_timeout_minutes: int = 60
+    export_formats: List[str] = field(default_factory=lambda: ['csv', 'xlsx', 'pdf'])
+    
+    @classmethod
+    def from_settings(cls) -> 'ReportConfig':
+        """Create config from Django settings."""
+        return cls(
+            max_report_rows=getattr(settings, 'REPORT_MAX_ROWS', 100000),
+            report_retention_days=getattr(settings, 'REPORT_RETENTION_DAYS', 90),
+            async_report_generation=getattr(settings, 'REPORT_ASYNC_GENERATION', True),
+            cache_report_results=getattr(settings, 'REPORT_CACHE_RESULTS', True),
+            cache_timeout_minutes=getattr(settings, 'REPORT_CACHE_TIMEOUT', 60),
+            export_formats=getattr(settings, 'REPORT_EXPORT_FORMATS', ['csv', 'xlsx', 'pdf'])
+        )
+
+
+@dataclass
+class MLConfig:
+    """Machine learning configuration."""
+    enabled: bool = True
+    model_training_enabled: bool = True
+    prediction_cache_enabled: bool = True
+    model_update_frequency_hours: int = 24
+    confidence_threshold: float = 0.5
+    feature_retention_days: int = 30
+    
+    @classmethod
+    def from_settings(cls) -> 'MLConfig':
+        """Create config from Django settings."""
+        return cls(
+            enabled=getattr(settings, 'ML_ENABLED', True),
+            model_training_enabled=getattr(settings, 'ML_TRAINING_ENABLED', True),
+            prediction_cache_enabled=getattr(settings, 'ML_PREDICTION_CACHE_ENABLED', True),
+            model_update_frequency_hours=getattr(settings, 'ML_MODEL_UPDATE_FREQUENCY', 24),
+            confidence_threshold=getattr(settings, 'ML_CONFIDENCE_THRESHOLD', 0.5),
+            feature_retention_days=getattr(settings, 'ML_FEATURE_RETENTION_DAYS', 30)
+        )
+
+
+@dataclass
+class CreativeConfig:
+    """Creative management configuration."""
+    max_file_size_mb: int = 50
+    allowed_image_formats: List[str] = field(default_factory=lambda: ['jpg', 'jpeg', 'png', 'gif', 'webp'])
+    allowed_video_formats: List[str] = field(default_factory=lambda: ['mp4', 'webm', 'mov'])
+    auto_approval_enabled: bool = False
+    creative_review_required: bool = True
+    max_creatives_per_campaign: int = 50
+    
+    @classmethod
+    def from_settings(cls) -> 'CreativeConfig':
+        """Create config from Django settings."""
+        return cls(
+            max_file_size_mb=getattr(settings, 'CREATIVE_MAX_FILE_SIZE_MB', 50),
+            allowed_image_formats=getattr(settings, 'CREATIVE_ALLOWED_IMAGE_FORMATS', ['jpg', 'jpeg', 'png', 'gif', 'webp']),
+            allowed_video_formats=getattr(settings, 'CREATIVE_ALLOWED_VIDEO_FORMATS', ['mp4', 'webm', 'mov']),
+            auto_approval_enabled=getattr(settings, 'CREATIVE_AUTO_APPROVAL_ENABLED', False),
+            creative_review_required=getattr(settings, 'CREATIVE_REVIEW_REQUIRED', True),
+            max_creatives_per_campaign=getattr(settings, 'CREATIVE_MAX_PER_CAMPAIGN', 50)
+        )
+
+
+@dataclass
+class TargetingConfig:
+    """Targeting configuration."""
+    max_targeting_rules_per_campaign: int = 100
+    geo_targeting_enabled: bool = True
+    demographic_targeting_enabled: bool = True
+    behavioral_targeting_enabled: bool = True
+    device_targeting_enabled: bool = True
+    time_targeting_enabled: bool = True
+    
+    @classmethod
+    def from_settings(cls) -> 'TargetingConfig':
+        """Create config from Django settings."""
+        return cls(
+            max_targeting_rules_per_campaign=getattr(settings, 'TARGETING_MAX_RULES_PER_CAMPAIGN', 100),
+            geo_targeting_enabled=getattr(settings, 'TARGETING_GEO_ENABLED', True),
+            demographic_targeting_enabled=getattr(settings, 'TARGETING_DEMOGRAPHIC_ENABLED', True),
+            behavioral_targeting_enabled=getattr(settings, 'TARGETING_BEHAVIORAL_ENABLED', True),
+            device_targeting_enabled=getattr(settings, 'TARGETING_DEVICE_ENABLED', True),
+            time_targeting_enabled=getattr(settings, 'TARGETING_TIME_ENABLED', True)
+        )
+
+
+# Extended Configuration Manager
+class ExtendedConfigManager(ConfigManager):
+    """Extended configuration manager with additional configs."""
+    
+    def __init__(self):
+        super().__init__()
+        self._offer_config = None
+        self._tracking_config = None
+        self._fraud_config = None
+        self._notification_config = None
+        self._report_config = None
+        self._ml_config = None
+        self._creative_config = None
+        self._targeting_config = None
+    
+    def get_offer_config(self) -> OfferConfig:
+        """Get offer configuration."""
+        if self._offer_config is None:
+            self._offer_config = OfferConfig.from_settings()
+        return self._offer_config
+    
+    def get_tracking_config(self) -> TrackingConfig:
+        """Get tracking configuration."""
+        if self._tracking_config is None:
+            self._tracking_config = TrackingConfig.from_settings()
+        return self._tracking_config
+    
+    def get_fraud_config(self) -> FraudConfig:
+        """Get fraud detection configuration."""
+        if self._fraud_config is None:
+            self._fraud_config = FraudConfig.from_settings()
+        return self._fraud_config
+    
+    def get_notification_config(self) -> NotificationConfig:
+        """Get notification configuration."""
+        if self._notification_config is None:
+            self._notification_config = NotificationConfig.from_settings()
+        return self._notification_config
+    
+    def get_report_config(self) -> ReportConfig:
+        """Get reporting configuration."""
+        if self._report_config is None:
+            self._report_config = ReportConfig.from_settings()
+        return self._report_config
+    
+    def get_ml_config(self) -> MLConfig:
+        """Get machine learning configuration."""
+        if self._ml_config is None:
+            self._ml_config = MLConfig.from_settings()
+        return self._ml_config
+    
+    def get_creative_config(self) -> CreativeConfig:
+        """Get creative configuration."""
+        if self._creative_config is None:
+            self._creative_config = CreativeConfig.from_settings()
+        return self._creative_config
+    
+    def get_targeting_config(self) -> TargetingConfig:
+        """Get targeting configuration."""
+        if self._targeting_config is None:
+            self._targeting_config = TargetingConfig.from_settings()
+        return self._targeting_config
+    
+    def reload_all_configs(self) -> None:
+        """Reload all configurations."""
+        super().reload_all_configs()
+        self._offer_config = None
+        self._tracking_config = None
+        self._fraud_config = None
+        self._notification_config = None
+        self._report_config = None
+        self._ml_config = None
+        self._creative_config = None
+        self._targeting_config = None
+
+
+# Use extended config manager
+config_manager = ExtendedConfigManager()
+
+
 def setup_logging() -> None:
     """Setup logging based on configuration."""
     log_config = config_manager.get_logging_config()

@@ -18,7 +18,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.gis.geos import Point
 
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -347,19 +350,19 @@ class Click(AdvertiserPortalBaseModel):
         verbose_name = 'Click'
         verbose_name_plural = 'Clicks'
         indexes = [
-            models.Index(fields=['campaign', 'date']),
-            models.Index(fields=['creative', 'date']),
-            models.Index(fields=['date', 'hour']),
-            models.Index(fields=['country']),
-            models.Index(fields=['device_type']),
-            models.Index(fields=['os_family']),
-            models.Index(fields=['user_id']),
-            models.Index(fields=['session_id']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['timestamp']),
-            models.Index(fields=['conversion_id']),
-            models.Index(fields=['is_suspicious']),
-            models.Index(fields=['is_invalid']),
+            models.Index(fields=['campaign', 'date'], name='idx_campaign_date_157'),
+            models.Index(fields=['creative', 'date'], name='idx_creative_date_158'),
+            models.Index(fields=['date', 'hour'], name='idx_date_hour_159'),
+            models.Index(fields=['country'], name='idx_country_160'),
+            models.Index(fields=['device_type'], name='idx_device_type_161'),
+            models.Index(fields=['os_family'], name='idx_os_family_162'),
+            models.Index(fields=['user_id'], name='idx_user_id_163'),
+            models.Index(fields=['session_id'], name='idx_session_id_164'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_165'),
+            models.Index(fields=['timestamp'], name='idx_timestamp_166'),
+            models.Index(fields=['conversion_id'], name='idx_conversion_id_167'),
+            models.Index(fields=['is_suspicious'], name='idx_is_suspicious_168'),
+            models.Index(fields=['is_invalid'], name='idx_is_invalid_169'),
         ]
     
     def __str__(self) -> str:
@@ -724,12 +727,12 @@ class ClickAggregation(AdvertiserPortalBaseModel):
             'campaign', 'date', 'hour', 'country', 'device_type', 'os_family'
         ]
         indexes = [
-            models.Index(fields=['campaign', 'date']),
-            models.Index(fields=['advertiser', 'date']),
-            models.Index(fields=['date']),
-            models.Index(fields=['country']),
-            models.Index(fields=['device_type']),
-            models.Index(fields=['os_family']),
+            models.Index(fields=['campaign', 'date'], name='idx_campaign_date_170'),
+            models.Index(fields=['advertiser', 'date'], name='idx_advertiser_date_171'),
+            models.Index(fields=['date'], name='idx_date_172'),
+            models.Index(fields=['country'], name='idx_country_173'),
+            models.Index(fields=['device_type'], name='idx_device_type_174'),
+            models.Index(fields=['os_family'], name='idx_os_family_175'),
         ]
     
     def __str__(self) -> str:
@@ -828,8 +831,8 @@ class ClickPixel(AdvertiserPortalBaseModel):
         verbose_name = 'Click Pixel'
         verbose_name_plural = 'Click Pixels'
         indexes = [
-            models.Index(fields=['click', 'pixel_type']),
-            models.Index(fields=['fired_at']),
+            models.Index(fields=['click', 'pixel_type'], name='idx_click_pixel_type_176'),
+            models.Index(fields=['fired_at'], name='idx_fired_at_177'),
         ]
     
     def __str__(self) -> str:

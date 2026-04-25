@@ -17,7 +17,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -152,11 +155,11 @@ class ComplianceCheck(AdvertiserPortalBaseModel, AuditModel, TrackingModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_compliance_checks'
         indexes = [
-            models.Index(fields=['advertiser', 'check_type']),
-            models.Index(fields=['campaign', 'status']),
-            models.Index(fields=['status', 'priority']),
-            models.Index(fields=['review_date']),
-            models.Index(fields=['expires_at']),
+            models.Index(fields=['advertiser', 'check_type'], name='idx_advertiser_check_type_178'),
+            models.Index(fields=['campaign', 'status'], name='idx_campaign_status_179'),
+            models.Index(fields=['status', 'priority'], name='idx_status_priority_180'),
+            models.Index(fields=['review_date'], name='idx_review_date_181'),
+            models.Index(fields=['expires_at'], name='idx_expires_at_182'),
         ]
         ordering = ['-created_at']
     
@@ -313,10 +316,10 @@ class ComplianceDocument(AdvertiserPortalBaseModel, AuditModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_compliance_documents'
         indexes = [
-            models.Index(fields=['compliance_check', 'document_type']),
-            models.Index(fields=['status', 'verification_status']),
-            models.Index(fields=['upload_date']),
-            models.Index(fields=['expires_at']),
+            models.Index(fields=['compliance_check', 'document_type'], name='idx_compliance_check_docum_dc9'),
+            models.Index(fields=['status', 'verification_status'], name='idx_status_verification_st_3b7'),
+            models.Index(fields=['upload_date'], name='idx_upload_date_185'),
+            models.Index(fields=['expires_at'], name='idx_expires_at_186'),
         ]
         ordering = ['-upload_date']
     
@@ -465,11 +468,11 @@ class ComplianceViolation(AdvertiserPortalBaseModel, AuditModel, TrackingModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_compliance_violations'
         indexes = [
-            models.Index(fields=['advertiser', 'violation_type']),
-            models.Index(fields=['campaign', 'severity']),
-            models.Index(fields=['status', 'severity']),
-            models.Index(fields=['detected_at']),
-            models.Index(fields=['resolution_date']),
+            models.Index(fields=['advertiser', 'violation_type'], name='idx_advertiser_violation_t_233'),
+            models.Index(fields=['campaign', 'severity'], name='idx_campaign_severity_188'),
+            models.Index(fields=['status', 'severity'], name='idx_status_severity_189'),
+            models.Index(fields=['detected_at'], name='idx_detected_at_190'),
+            models.Index(fields=['resolution_date'], name='idx_resolution_date_191'),
         ]
         ordering = ['-detected_at']
     
@@ -600,10 +603,10 @@ class ComplianceAudit(AdvertiserPortalBaseModel, AuditModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_compliance_audits'
         indexes = [
-            models.Index(fields=['advertiser', 'audit_type']),
-            models.Index(fields=['audit_date']),
-            models.Index(fields=['audit_score']),
-            models.Index(fields=['next_audit_date']),
+            models.Index(fields=['advertiser', 'audit_type'], name='idx_advertiser_audit_type_192'),
+            models.Index(fields=['audit_date'], name='idx_audit_date_193'),
+            models.Index(fields=['audit_score'], name='idx_audit_score_194'),
+            models.Index(fields=['next_audit_date'], name='idx_next_audit_date_195'),
         ]
         ordering = ['-audit_date']
     

@@ -31,7 +31,7 @@ class CampaignABTestViewSet(viewsets.ModelViewSet):
     pagination_class = _Pagination
 
     def get_queryset(self):
-        from notifications.models.campaign import CampaignABTest
+        from api.notifications.models.campaign import CampaignABTest
         qs = CampaignABTest.objects.all().select_related(
             'campaign', 'variant_a', 'variant_b'
         )
@@ -45,7 +45,7 @@ class CampaignABTestViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         from rest_framework import serializers
-        from notifications.models.campaign import CampaignABTest
+        from api.notifications.models.campaign import CampaignABTest
 
         class ABTestSerializer(serializers.ModelSerializer):
             class Meta:
@@ -65,7 +65,7 @@ class CampaignABTestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def evaluate(self, request, pk=None):
         """Manually trigger winner evaluation for this A/B test."""
-        from notifications.services.ABTestService import ab_test_service
+        from api.notifications.services.ABTestService import ab_test_service
         ab_test = self.get_object()
         result = ab_test_service.evaluate_winner(ab_test.pk)
         return Response(result)
@@ -73,7 +73,7 @@ class CampaignABTestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def test_status(self, request, pk=None):
         """Get full A/B test status including live stats."""
-        from notifications.services.ABTestService import ab_test_service
+        from api.notifications.services.ABTestService import ab_test_service
         ab_test = self.get_object()
         result = ab_test_service.get_ab_test_status(ab_test.pk)
         return Response(result)

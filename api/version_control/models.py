@@ -182,9 +182,9 @@ class AppUpdatePolicy(TimeStampedUUIDModel):
         verbose_name        = _("App Update Policy")
         verbose_name_plural = _("App Update Policies")
         indexes = [
-            models.Index(fields=["platform", "status"]),
-            models.Index(fields=["update_type", "status"]),
-            models.Index(fields=["target_version"]),
+            models.Index(fields=["platform", "status"], name='idx_platform_status_1881'),
+            models.Index(fields=["update_type", "status"], name='idx_update_type_status_1882'),
+            models.Index(fields=["target_version"], name='idx_target_version_1883'),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -293,8 +293,8 @@ class MaintenanceSchedule(TimeStampedUUIDModel):
         verbose_name        = _("Maintenance Schedule")
         verbose_name_plural = _("Maintenance Schedules")
         indexes = [
-            models.Index(fields=["status", "scheduled_start"]),
-            models.Index(fields=["scheduled_start", "scheduled_end"]),
+            models.Index(fields=["status", "scheduled_start"], name='idx_status_scheduled_start_b46'),
+            models.Index(fields=["scheduled_start", "scheduled_end"], name='idx_scheduled_start_schedu_5c3'),
         ]
 
     def __str__(self) -> str:
@@ -377,7 +377,7 @@ class PlatformRedirect(TimeStampedUUIDModel):
         verbose_name        = _("Platform Redirect")
         verbose_name_plural = _("Platform Redirects")
         indexes = [
-            models.Index(fields=["platform", "is_active"]),
+            models.Index(fields=["platform", "is_active"], name='idx_platform_is_active_1886'),
         ]
 
     def __str__(self) -> str:

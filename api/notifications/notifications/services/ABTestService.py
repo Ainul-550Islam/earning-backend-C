@@ -48,8 +48,8 @@ class ABTestService:
             Dict with: success, ab_test_id, error.
         """
         try:
-            from notifications.models.campaign import NotificationCampaign, CampaignABTest
-            from notifications.models import NotificationTemplate
+            from api.notifications.models.campaign import NotificationCampaign, CampaignABTest
+            from api.notifications.models import NotificationTemplate
 
             campaign = NotificationCampaign.objects.get(pk=campaign_id)
             template_a = NotificationTemplate.objects.get(pk=variant_a_template_id)
@@ -116,7 +116,7 @@ class ABTestService:
         A/B test. Returns the campaign's default template if no A/B test exists.
         """
         try:
-            from notifications.models.campaign import NotificationCampaign, CampaignABTest
+            from api.notifications.models.campaign import NotificationCampaign, CampaignABTest
 
             campaign = NotificationCampaign.objects.get(pk=campaign_id)
 
@@ -147,7 +147,7 @@ class ABTestService:
             variant_a_metric, variant_b_metric, ab_test_id, error.
         """
         try:
-            from notifications.models.campaign import CampaignABTest
+            from api.notifications.models.campaign import CampaignABTest
 
             ab_test = CampaignABTest.objects.select_related('campaign').get(
                 campaign_id=campaign_id, is_active=True
@@ -214,7 +214,7 @@ class ABTestService:
             Dict with: success, winner, ab_test_id, error.
         """
         try:
-            from notifications.models.campaign import CampaignABTest
+            from api.notifications.models.campaign import CampaignABTest
 
             ab_test = CampaignABTest.objects.get(campaign_id=campaign_id, is_active=True)
 
@@ -256,7 +256,7 @@ class ABTestService:
         Update the stats snapshot for a variant (called by ab_test_tasks.py).
         """
         try:
-            from notifications.models.campaign import CampaignABTest
+            from api.notifications.models.campaign import CampaignABTest
             ab_test = CampaignABTest.objects.get(campaign_id=campaign_id, is_active=True)
             ab_test.update_stats(variant, stats)
             return {'success': True, 'ab_test_id': ab_test.pk, 'error': ''}
@@ -266,7 +266,7 @@ class ABTestService:
     def get_ab_test_summary(self, campaign_id: int) -> Dict:
         """Return full A/B test status dict for a campaign."""
         try:
-            from notifications.models.campaign import CampaignABTest
+            from api.notifications.models.campaign import CampaignABTest
             ab_test = CampaignABTest.objects.get(campaign_id=campaign_id)
             return {
                 'ab_test_id': ab_test.pk,
@@ -296,7 +296,7 @@ class ABTestService:
         Winner determined by click rate.
         """
         try:
-            from notifications.models.campaign import CampaignABTest
+            from api.notifications.models.campaign import CampaignABTest
             ab_test = CampaignABTest.objects.create(
                 campaign=campaign,
                 test_type='image',

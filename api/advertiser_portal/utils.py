@@ -1039,6 +1039,655 @@ class DateUtils:
         else:
             return today, today
     
+    # Additional Utility Classes for Main Models
+class OfferUtils:
+    """Utility functions for offer operations."""
+    
+    @staticmethod
+    def calculate_payout_metrics(offer, conversions: List[Dict]) -> Dict[str, Any]:
+        """
+        Calculate payout metrics for an offer.
+        
+        Args:
+            offer: Offer instance
+            conversions: List of conversion data
+            
+        Returns:
+            Dictionary with payout metrics
+        """
+        total_conversions = len(conversions)
+        total_payout = sum(conv.get('payout', 0) for conv in conversions)
+        avg_payout = total_payout / total_conversions if total_conversions > 0 else 0
+        
+        return {
+            'total_conversions': total_conversions,
+            'total_payout': total_payout,
+            'average_payout': avg_payout,
+            'conversion_rate': total_conversions / 1000 if conversions else 0,  # Assuming 1000 impressions
+            'revenue_per_conversion': avg_payout
+        }
+    
+    @staticmethod
+    def validate_offer_compliance(offer) -> Dict[str, Any]:
+        """
+        Validate offer compliance.
+        
+        Args:
+            offer: Offer instance
+            
+        Returns:
+            Dictionary with compliance validation results
+        """
+        issues = []
+        warnings = []
+        
+        # Check payout amount
+        if offer.payout_amount <= 0:
+            issues.append("Payout amount must be greater than 0")
+        
+        # Check landing page
+        if not offer.landing_page:
+            issues.append("Landing page URL is required")
+        
+        # Check country targeting
+        if not offer.country_targeting:
+            warnings.append("No country targeting specified")
+        
+        return {
+            'is_compliant': len(issues) == 0,
+            'issues': issues,
+            'warnings': warnings,
+            'compliance_score': max(0, 100 - len(issues) * 20 - len(warnings) * 10)
+        }
+
+
+class CampaignUtils:
+    """Utility functions for campaign operations."""
+    
+    @staticmethod
+    def calculate_campaign_metrics(campaign) -> Dict[str, Any]:
+        """
+        Calculate comprehensive campaign metrics.
+        
+        Args:
+            campaign: Campaign instance
+            
+        Returns:
+            Dictionary with campaign metrics
+        """
+        from ..models.billing import CampaignSpend
+        
+        try:
+            spend_data = CampaignSpend.objects.filter(campaign=campaign).aggregate(
+                total_spend=Sum('total_spend'),
+                total_impressions=Sum('impressions'),
+                total_clicks=Sum('clicks'),
+                total_conversions=Sum('conversions')
+            )
+            
+            total_spend = spend_data['total_spend'] or 0
+            total_impressions = spend_data['total_impressions'] or 0
+            total_clicks = spend_data['total_clicks'] or 0
+            total_conversions = spend_data['total_conversions'] or 0
+            
+            # Calculate derived metrics
+            ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
+            cpc = (total_spend / total_clicks) if total_clicks > 0 else 0
+            cpa = (total_spend / total_conversions) if total_conversions > 0 else 0
+            conversion_rate = (total_conversions / total_clicks * 100) if total_clicks > 0 else 0
+            
+            return {
+                'total_spend': total_spend,
+                'total_impressions': total_impressions,
+                'total_clicks': total_clicks,
+                'total_conversions': total_conversions,
+                'ctr': ctr,
+                'cpc': cpc,
+                'cpa': cpa,
+                'conversion_rate': conversion_rate,
+                'budget_utilization': (total_spend / campaign.total_budget * 100) if campaign.total_budget else 0,
+                'daily_budget_utilization': (total_spend / campaign.daily_budget) if campaign.daily_budget else 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating campaign metrics: {e}")
+            return {}
+    
+    @staticmethod
+    def check_campaign_health(campaign) -> Dict[str, Any]:
+        """
+        Check campaign health status.
+        
+        Args:
+            campaign: Campaign instance
+            
+        Returns:
+            Dictionary with health status
+        """
+        health_score = 100
+        issues = []
+        
+        # Check budget utilization
+        metrics = CampaignUtils.calculate_campaign_metrics(campaign)
+        budget_utilization = metrics.get('budget_utilization', 0)
+        
+        if budget_utilization > 90:
+            health_score -= 20
+            issues.append("Budget nearly exhausted")
+        elif budget_utilization < 10:
+            health_score -= 10
+            issues.append("Low budget utilization")
+        
+        # Check performance
+        ctr = metrics.get('ctr', 0)
+        if ctr < 0.5:
+            health_score -= 15
+            issues.append("Low click-through rate")
+        
+        conversion_rate = metrics.get('conversion_rate', 0)
+        if conversion_rate < 1:
+            health_score -= 15
+            issues.append("Low conversion rate")
+        
+        # Check status
+        if campaign.status == 'paused':
+            health_score -= 10
+            issues.append("Campaign is paused")
+        
+        return {
+            'health_score': max(0, health_score),
+            'status': 'healthy' if health_score >= 80 else 'warning' if health_score >= 60 else 'critical',
+            'issues': issues,
+            'metrics': metrics
+        }
+
+
+class TrackingUtils:
+    """Utility functions for tracking operations."""
+    
+    @staticmethod
+    def generate_tracking_id(prefix: str = "trk") -> str:
+        """
+        Generate a unique tracking ID.
+        
+        Args:
+            prefix: Prefix for the tracking ID
+            
+        Returns:
+            Unique tracking ID
+        """
+        timestamp = int(timezone.now().timestamp())
+        random_part = secrets.token_urlsafe(8)
+        return f"{prefix}_{timestamp}_{random_part}"
+    
+    @staticmethod
+    def parse_user_agent(user_agent: str) -> Dict[str, Any]:
+        """
+        Parse user agent string.
+        
+        Args:
+            user_agent: User agent string
+            
+        Returns:
+            Dictionary with parsed user agent data
+        """
+        # Simple user agent parsing
+        device_type = 'desktop'
+        os = 'unknown'
+        browser = 'unknown'
+        
+        user_agent_lower = user_agent.lower()
+        
+        # Detect device type
+        if 'mobile' in user_agent_lower or 'android' in user_agent_lower:
+            device_type = 'mobile'
+        elif 'tablet' in user_agent_lower or 'ipad' in user_agent_lower:
+            device_type = 'tablet'
+        
+        # Detect OS
+        if 'windows' in user_agent_lower:
+            os = 'windows'
+        elif 'mac' in user_agent_lower:
+            os = 'macos'
+        elif 'linux' in user_agent_lower:
+            os = 'linux'
+        elif 'android' in user_agent_lower:
+            os = 'android'
+        elif 'ios' in user_agent_lower or 'iphone' in user_agent_lower or 'ipad' in user_agent_lower:
+            os = 'ios'
+        
+        # Detect browser
+        if 'chrome' in user_agent_lower:
+            browser = 'chrome'
+        elif 'firefox' in user_agent_lower:
+            browser = 'firefox'
+        elif 'safari' in user_agent_lower:
+            browser = 'safari'
+        elif 'edge' in user_agent_lower:
+            browser = 'edge'
+        
+        return {
+            'device_type': device_type,
+            'os': os,
+            'browser': browser,
+            'is_mobile': device_type == 'mobile',
+            'is_tablet': device_type == 'tablet',
+            'is_desktop': device_type == 'desktop'
+        }
+    
+    @staticmethod
+    def get_geo_location(ip_address: str) -> Dict[str, Any]:
+        """
+        Get geographic location from IP address.
+        
+        Args:
+            ip_address: IP address
+            
+        Returns:
+            Dictionary with geographic data
+        """
+        try:
+            from django.contrib.gis.geoip2 import GeoIP2
+            geoip = GeoIP2()
+            
+            geo_data = geoip.city(ip_address)
+            
+            return {
+                'country': geo_data.get('country_name', 'Unknown'),
+                'country_code': geo_data.get('country_code', 'Unknown'),
+                'region': geo_data.get('region', 'Unknown'),
+                'city': geo_data.get('city', 'Unknown'),
+                'latitude': geo_data.get('latitude'),
+                'longitude': geo_data.get('longitude'),
+                'postal_code': geo_data.get('postal_code'),
+                'time_zone': geo_data.get('time_zone')
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting geo location for IP {ip_address}: {e}")
+            return {
+                'country': 'Unknown',
+                'country_code': 'Unknown',
+                'region': 'Unknown',
+                'city': 'Unknown',
+                'latitude': None,
+                'longitude': None,
+                'postal_code': None,
+                'time_zone': None
+            }
+
+
+class BillingUtils:
+    """Utility functions for billing operations."""
+    
+    @staticmethod
+    def calculate_billing_metrics(advertiser) -> Dict[str, Any]:
+        """
+        Calculate billing metrics for an advertiser.
+        
+        Args:
+            advertiser: Advertiser instance
+            
+        Returns:
+            Dictionary with billing metrics
+        """
+        from ..models.billing import AdvertiserTransaction, CampaignSpend
+        
+        try:
+            # Get wallet balance
+            wallet = getattr(advertiser, 'wallet', None)
+            balance = wallet.balance if wallet else 0
+            
+            # Calculate total spend
+            spend_data = CampaignSpend.objects.filter(campaign__advertiser=advertiser).aggregate(
+                total_spend=Sum('total_spend')
+            )
+            total_spend = spend_data['total_spend'] or 0
+            
+            # Calculate transaction metrics
+            transaction_data = AdvertiserTransaction.objects.filter(wallet=wallet).aggregate(
+                total_deposits=Sum('amount', filter=Q(transaction_type='deposit')),
+                total_withdrawals=Sum('amount', filter=Q(transaction_type='withdrawal')),
+                transaction_count=Count('id')
+            )
+            
+            total_deposits = transaction_data['total_deposits'] or 0
+            total_withdrawals = transaction_data['total_withdrawals'] or 0
+            transaction_count = transaction_data['transaction_count'] or 0
+            
+            return {
+                'current_balance': balance,
+                'total_spend': total_spend,
+                'total_deposits': total_deposits,
+                'total_withdrawals': total_withdrawals,
+                'net_deposits': total_deposits - total_withdrawals,
+                'transaction_count': transaction_count,
+                'spend_to_deposit_ratio': (total_spend / total_deposits) if total_deposits > 0 else 0,
+                'budget_health': 'good' if balance > 100 else 'warning' if balance > 50 else 'critical'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating billing metrics: {e}")
+            return {}
+    
+    @staticmethod
+    def generate_invoice_number() -> str:
+        """
+        Generate a unique invoice number.
+        
+        Returns:
+            Unique invoice number
+        """
+        timestamp = timezone.now().strftime("%Y%m%d")
+        random_part = secrets.token_uppercase(6)
+        return f"INV-{timestamp}-{random_part}"
+
+
+class FraudUtils:
+    """Utility functions for fraud detection."""
+    
+    @staticmethod
+    def calculate_fraud_risk_score(conversion_data: Dict[str, Any]) -> float:
+        """
+        Calculate fraud risk score for a conversion.
+        
+        Args:
+            conversion_data: Conversion data
+            
+        Returns:
+            Fraud risk score (0-1)
+        """
+        risk_score = 0.0
+        
+        # Check IP-based risk factors
+        ip_address = conversion_data.get('ip_address')
+        if ip_address:
+            # Check for suspicious IP patterns
+            if ip_address.startswith('127.') or ip_address.startswith('192.168.'):
+                risk_score += 0.3  # Private IP
+        
+        # Check time-based risk factors
+        conversion_time = conversion_data.get('created_at')
+        if conversion_time:
+            hour = conversion_time.hour
+            if hour < 6 or hour > 22:  # Unusual hours
+                risk_score += 0.2
+        
+        # Check user agent risk factors
+        user_agent = conversion_data.get('user_agent', '')
+        if 'bot' in user_agent.lower() or 'crawler' in user_agent.lower():
+            risk_score += 0.5
+        
+        # Check conversion speed
+        click_time = conversion_data.get('click_time')
+        if click_time and conversion_time:
+            time_diff = (conversion_time - click_time).total_seconds()
+            if time_diff < 1:  # Too fast
+                risk_score += 0.3
+        
+        return min(risk_score, 1.0)
+    
+    @staticmethod
+    def detect_suspicious_patterns(conversions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Detect suspicious patterns in conversions.
+        
+        Args:
+            conversions: List of conversion data
+            
+        Returns:
+            List of suspicious patterns
+        """
+        patterns = []
+        
+        # Check for multiple conversions from same IP
+        ip_counts = {}
+        for conv in conversions:
+            ip = conv.get('ip_address')
+            if ip:
+                ip_counts[ip] = ip_counts.get(ip, 0) + 1
+        
+        for ip, count in ip_counts.items():
+            if count > 5:  # Threshold for suspicious activity
+                patterns.append({
+                    'type': 'multiple_conversions_same_ip',
+                    'ip_address': ip,
+                    'count': count,
+                    'severity': 'high' if count > 10 else 'medium'
+                })
+        
+        # Check for rapid conversions
+        for conv in conversions:
+            click_time = conv.get('click_time')
+            conv_time = conv.get('created_at')
+            if click_time and conv_time:
+                time_diff = (conv_time - click_time).total_seconds()
+                if time_diff < 1:
+                    patterns.append({
+                        'type': 'rapid_conversion',
+                        'conversion_id': conv.get('id'),
+                        'time_diff': time_diff,
+                        'severity': 'medium'
+                    })
+        
+        return patterns
+
+
+class NotificationUtils:
+    """Utility functions for notifications."""
+    
+    @staticmethod
+    def send_email_notification(recipient: str, subject: str, message: str, template_data: Optional[Dict] = None) -> bool:
+        """
+        Send email notification.
+        
+        Args:
+            recipient: Email recipient
+            subject: Email subject
+            message: Email message
+            template_data: Template data for personalization
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            from django.core.mail import send_mail
+            
+            # Personalize message if template data provided
+            if template_data:
+                message = message.format(**template_data)
+            
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[recipient],
+                fail_silently=False
+            )
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error sending email notification: {e}")
+            return False
+    
+    @staticmethod
+    def generate_notification_message(template_type: str, data: Dict[str, Any]) -> str:
+        """
+        Generate notification message from template.
+        
+        Args:
+            template_type: Type of notification template
+            data: Data for template
+            
+        Returns:
+            Generated message
+        """
+        templates = {
+            'campaign_created': "Campaign '{campaign_name}' has been created successfully.",
+            'campaign_approved': "Your campaign '{campaign_name}' has been approved and is now active.",
+            'campaign_rejected': "Your campaign '{campaign_name}' has been rejected. Reason: {reason}",
+            'budget_low': "Your wallet balance is low. Current balance: ${balance:.2f}",
+            'budget_depleted': "Your wallet balance has been depleted. Please add funds to continue.",
+            'conversion_received': "New conversion received for offer '{offer_name}'. Revenue: ${revenue:.2f}",
+            'fraud_detected': "Suspicious activity detected for conversion {conversion_id}. Action required."
+        }
+        
+        template = templates.get(template_type, "Notification: {message}")
+        
+        try:
+            return template.format(**data)
+        except KeyError as e:
+            logger.error(f"Missing template data key: {e}")
+            return template.format(message=str(data))
+
+
+class ReportUtils:
+    """Utility functions for reporting."""
+    
+    @staticmethod
+    def generate_csv_report(data: List[Dict[str, Any]], filename: str) -> str:
+        """
+        Generate CSV report from data.
+        
+        Args:
+            data: Report data
+            filename: Report filename
+            
+        Returns:
+            Path to generated CSV file
+        """
+        import csv
+        import os
+        
+        if not data:
+            raise ValueError("No data provided for report generation")
+        
+        # Create reports directory if it doesn't exist
+        reports_dir = os.path.join(settings.MEDIA_ROOT, 'reports')
+        os.makedirs(reports_dir, exist_ok=True)
+        
+        # Generate file path
+        timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+        file_path = os.path.join(reports_dir, f"{filename}_{timestamp}.csv")
+        
+        # Write CSV
+        with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+            fieldnames = data[0].keys()
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            
+            writer.writeheader()
+            writer.writerows(data)
+        
+        return file_path
+    
+    @staticmethod
+    def aggregate_report_data(data: List[Dict[str, Any]], group_by: str, metrics: List[str]) -> Dict[str, Any]:
+        """
+        Aggregate report data by specified field.
+        
+        Args:
+            data: Report data
+            group_by: Field to group by
+            metrics: List of metrics to aggregate
+            
+        Returns:
+            Aggregated data
+        """
+        from collections import defaultdict
+        
+        aggregated = defaultdict(lambda: {metric: [] for metric in metrics})
+        
+        for item in data:
+            key = item.get(group_by, 'unknown')
+            for metric in metrics:
+                value = item.get(metric, 0)
+                if isinstance(value, (int, float)):
+                    aggregated[key][metric].append(value)
+        
+        # Calculate aggregates
+        result = {}
+        for key, values in aggregated.items():
+            result[key] = {}
+            for metric, metric_values in values.items():
+                if metric_values:
+                    result[key][f'{metric}_sum'] = sum(metric_values)
+                    result[key][f'{metric}_avg'] = sum(metric_values) / len(metric_values)
+                    result[key][f'{metric}_count'] = len(metric_values)
+                    result[key][f'{metric}_min'] = min(metric_values)
+                    result[key][f'{metric}_max'] = max(metric_values)
+                else:
+                    result[key][f'{metric}_sum'] = 0
+                    result[key][f'{metric}_avg'] = 0
+                    result[key][f'{metric}_count'] = 0
+                    result[key][f'{metric}_min'] = 0
+                    result[key][f'{metric}_max'] = 0
+        
+        return result
+
+
+class MLUtils:
+    """Utility functions for ML operations."""
+    
+    @staticmethod
+    def prepare_features(data: Dict[str, Any]) -> List[float]:
+        """
+        Prepare features for ML model.
+        
+        Args:
+            data: Input data
+            
+        Returns:
+            List of feature values
+        """
+        features = []
+        
+        # Numeric features
+        numeric_features = [
+            'revenue', 'payout', 'click_count', 'conversion_count',
+            'session_duration', 'page_views', 'bounce_rate'
+        ]
+        
+        for feature in numeric_features:
+            value = data.get(feature, 0)
+            features.append(float(value) if isinstance(value, (int, float)) else 0.0)
+        
+        # Categorical features (one-hot encoded)
+        categorical_features = [
+            'device_type', 'os', 'browser', 'country', 'region'
+        ]
+        
+        for feature in categorical_features:
+            value = data.get(feature, 'unknown')
+            # Simple one-hot encoding (in production, use proper encoding)
+            features.append(hash(value) % 1000 / 1000.0)
+        
+        return features
+    
+    @staticmethod
+    def normalize_features(features: List[float]) -> List[float]:
+        """
+        Normalize features to 0-1 range.
+        
+        Args:
+            features: List of feature values
+            
+        Returns:
+            Normalized features
+        """
+        if not features:
+            return features
+        
+        # Simple min-max normalization
+        min_val = min(features)
+        max_val = max(features)
+        
+        if max_val == min_val:
+            return [0.0] * len(features)
+        
+        return [(x - min_val) / (max_val - min_val) for x in features]
+
+
     @staticmethod
     def format_duration(seconds: int) -> str:
         """

@@ -13,7 +13,7 @@ import time
 from typing import List, Dict, Optional, Any
 import traceback
 
-from ._models_core import (
+from .models import (
     Notification, NotificationCampaign, NotificationRule,
     NotificationAnalytics, NotificationLog, NotificationTemplate,
     DeviceToken

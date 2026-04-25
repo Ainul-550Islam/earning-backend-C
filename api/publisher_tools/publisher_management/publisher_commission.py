@@ -120,8 +120,8 @@ class CommissionTier(TimeStampedModel):
         verbose_name_plural = _('Commission Tiers')
         ordering = ['tier_level']
         indexes = [
-            models.Index(fields=['tier_level']),
-            models.Index(fields=['min_monthly_revenue']),
+            models.Index(fields=['tier_level'], name='idx_tier_level_1609'),
+            models.Index(fields=['min_monthly_revenue'], name='idx_min_monthly_revenue_1610'),
         ]
 
     def __str__(self):
@@ -239,10 +239,10 @@ class PublisherCommission(TimeStampedModel):
         verbose_name_plural = _('Publisher Commissions')
         ordering = ['-period_date', '-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'period_date']),
-            models.Index(fields=['commission_type', 'status']),
-            models.Index(fields=['status']),
-            models.Index(fields=['period_date']),
+            models.Index(fields=['publisher', 'period_date'], name='idx_publisher_period_date_1611'),
+            models.Index(fields=['commission_type', 'status'], name='idx_commission_type_status_519'),
+            models.Index(fields=['status'], name='idx_status_1613'),
+            models.Index(fields=['period_date'], name='idx_period_date_1614'),
         ]
 
     def __str__(self):
@@ -407,9 +407,9 @@ class PublisherReferral(TimeStampedModel):
         unique_together = [['referrer', 'referred']]
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['referrer', 'is_active']),
-            models.Index(fields=['referred']),
-            models.Index(fields=['referral_code']),
+            models.Index(fields=['referrer', 'is_active'], name='idx_referrer_is_active_1615'),
+            models.Index(fields=['referred'], name='idx_referred_1616'),
+            models.Index(fields=['referral_code'], name='idx_referral_code_1617'),
         ]
 
     def __str__(self):

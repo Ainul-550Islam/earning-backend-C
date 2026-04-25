@@ -215,7 +215,7 @@ class AdNetworkConfig(TenantModel):
         verbose_name_plural = _("ad network configs")
         ordering = ["name"]
         indexes = [
-            models.Index(fields=["network_key", "status"]),
+            models.Index(fields=["network_key", "status"], name='idx_network_key_status_1368'),
         ]
 
     def __str__(self):
@@ -336,7 +336,7 @@ class OfferPostback(TenantModel):
         verbose_name_plural = _("offer postback configs")
         unique_together = [("network", "offer_id")]
         indexes = [
-            models.Index(fields=["network", "offer_id", "is_active"]),
+            models.Index(fields=["network", "offer_id", "is_active"], name='idx_network_offer_id_is_ac_265'),
         ]
 
     def __str__(self):
@@ -439,13 +439,13 @@ class ClickLog(ImmutableRecord):
         verbose_name_plural = _("click logs")
         ordering = ["-clicked_at"]
         indexes = [
-            models.Index(fields=["user", "offer_id", "clicked_at"]),
-            models.Index(fields=["network", "clicked_at"]),
-            models.Index(fields=["ip_address", "clicked_at"]),
-            models.Index(fields=["device_fingerprint", "clicked_at"]),
-            models.Index(fields=["country", "clicked_at"]),
-            models.Index(fields=["status", "clicked_at"]),
-            models.Index(fields=["converted", "expires_at"]),
+            models.Index(fields=["user", "offer_id", "clicked_at"], name='idx_user_offer_id_clicked__b46'),
+            models.Index(fields=["network", "clicked_at"], name='idx_network_clicked_at_1371'),
+            models.Index(fields=["ip_address", "clicked_at"], name='idx_ip_address_clicked_at_1372'),
+            models.Index(fields=["device_fingerprint", "clicked_at"], name='idx_device_fingerprint_cli_bd2'),
+            models.Index(fields=["country", "clicked_at"], name='idx_country_clicked_at_1374'),
+            models.Index(fields=["status", "clicked_at"], name='idx_status_clicked_at_1375'),
+            models.Index(fields=["converted", "expires_at"], name='idx_converted_expires_at_1376'),
         ]
 
     def __str__(self):
@@ -563,12 +563,12 @@ class PostbackRawLog(ImmutableRecord):
         verbose_name_plural = _("postback raw logs")
         ordering = ["-received_at"]
         indexes = [
-            models.Index(fields=["network", "status", "received_at"]),
-            models.Index(fields=["lead_id", "network"]),
-            models.Index(fields=["click_id", "network"]),
-            models.Index(fields=["status", "next_retry_at"]),
-            models.Index(fields=["source_ip", "received_at"]),
-            models.Index(fields=["transaction_id"]),
+            models.Index(fields=["network", "status", "received_at"], name='idx_network_status_receive_18b'),
+            models.Index(fields=["lead_id", "network"], name='idx_lead_id_network_1378'),
+            models.Index(fields=["click_id", "network"], name='idx_click_id_network_1379'),
+            models.Index(fields=["status", "next_retry_at"], name='idx_status_next_retry_at_1380'),
+            models.Index(fields=["source_ip", "received_at"], name='idx_source_ip_received_at_1381'),
+            models.Index(fields=["transaction_id"], name='idx_transaction_id_1382'),
         ]
 
     def __str__(self):
@@ -720,11 +720,11 @@ class Conversion(ImmutableRecord):
         verbose_name_plural = _("conversions")
         ordering = ["-converted_at"]
         indexes = [
-            models.Index(fields=["user", "status", "converted_at"]),
-            models.Index(fields=["network", "status", "converted_at"]),
-            models.Index(fields=["offer_id", "status"]),
-            models.Index(fields=["country", "converted_at"]),
-            models.Index(fields=["wallet_credited", "converted_at"]),
+            models.Index(fields=["user", "status", "converted_at"], name='idx_user_status_converted__8ca'),
+            models.Index(fields=["network", "status", "converted_at"], name='idx_network_status_convert_21d'),
+            models.Index(fields=["offer_id", "status"], name='idx_offer_id_status_1385'),
+            models.Index(fields=["country", "converted_at"], name='idx_country_converted_at_1386'),
+            models.Index(fields=["wallet_credited", "converted_at"], name='idx_wallet_credited_conver_927'),
         ]
 
     def __str__(self):
@@ -809,9 +809,9 @@ class Impression(ImmutableRecord):
         verbose_name_plural = _("impressions")
         ordering = ["-impressed_at"]
         indexes = [
-            models.Index(fields=["network", "impressed_at"]),
-            models.Index(fields=["user", "offer_id"]),
-            models.Index(fields=["ip_address", "impressed_at"]),
+            models.Index(fields=["network", "impressed_at"], name='idx_network_impressed_at_1388'),
+            models.Index(fields=["user", "offer_id"], name='idx_user_offer_id_1389'),
+            models.Index(fields=["ip_address", "impressed_at"], name='idx_ip_address_impressed_a_d3f'),
         ]
 
     def __str__(self):
@@ -889,10 +889,10 @@ class FraudAttemptLog(ImmutableRecord):
         verbose_name_plural = _("fraud attempt logs")
         ordering = ["-detected_at"]
         indexes = [
-            models.Index(fields=["fraud_type", "detected_at"]),
-            models.Index(fields=["source_ip", "detected_at"]),
-            models.Index(fields=["user", "detected_at"]),
-            models.Index(fields=["fraud_score", "is_auto_blocked"]),
+            models.Index(fields=["fraud_type", "detected_at"], name='idx_fraud_type_detected_at_81e'),
+            models.Index(fields=["source_ip", "detected_at"], name='idx_source_ip_detected_at_1392'),
+            models.Index(fields=["user", "detected_at"], name='idx_user_detected_at_1393'),
+            models.Index(fields=["fraud_score", "is_auto_blocked"], name='idx_fraud_score_is_auto_bl_d87'),
         ]
 
     def __str__(self):
@@ -948,8 +948,8 @@ class IPBlacklist(TenantModel):
         verbose_name_plural = _("IP blacklist")
         unique_together = [("blacklist_type", "value", "tenant")]
         indexes = [
-            models.Index(fields=["blacklist_type", "is_active"]),
-            models.Index(fields=["value", "blacklist_type"]),
+            models.Index(fields=["blacklist_type", "is_active"], name='idx_blacklist_type_is_acti_621'),
+            models.Index(fields=["value", "blacklist_type"], name='idx_value_blacklist_type_1396'),
         ]
 
     def __str__(self):
@@ -1006,8 +1006,8 @@ class ConversionDeduplication(models.Model):
         verbose_name_plural = _("conversion deduplications")
         unique_together = [("network", "lead_id")]
         indexes = [
-            models.Index(fields=["network", "lead_id"]),
-            models.Index(fields=["transaction_id"]),
+            models.Index(fields=["network", "lead_id"], name='idx_network_lead_id_1397'),
+            models.Index(fields=["transaction_id"], name='idx_transaction_id_1398'),
         ]
 
     def __str__(self):
@@ -1063,8 +1063,8 @@ class PostbackQueue(TenantModel):
         verbose_name_plural = _("postback queue")
         ordering = ["priority", "enqueued_at"]
         indexes = [
-            models.Index(fields=["status", "priority", "process_after"]),
-            models.Index(fields=["status", "enqueued_at"]),
+            models.Index(fields=["status", "priority", "process_after"], name='idx_status_priority_proces_46c'),
+            models.Index(fields=["status", "enqueued_at"], name='idx_status_enqueued_at_1400'),
         ]
 
     def __str__(self):
@@ -1105,8 +1105,8 @@ class RetryLog(TenantModel):
         verbose_name_plural = _("retry logs")
         ordering = ["-attempted_at"]
         indexes = [
-            models.Index(fields=["retry_type", "object_id"]),
-            models.Index(fields=["succeeded", "attempted_at"]),
+            models.Index(fields=["retry_type", "object_id"], name='idx_retry_type_object_id_1401'),
+            models.Index(fields=["succeeded", "attempted_at"], name='idx_succeeded_attempted_at_bb4'),
         ]
 
     def __str__(self):
@@ -1171,7 +1171,7 @@ class NetworkPerformance(TenantModel):
         unique_together = [("network", "date")]
         ordering = ["-date"]
         indexes = [
-            models.Index(fields=["date", "network"]),
+            models.Index(fields=["date", "network"], name='idx_date_network_1403'),
         ]
 
     def __str__(self):
@@ -1233,7 +1233,7 @@ class HourlyStat(TenantModel):
         unique_together = [("network", "date", "hour")]
         ordering = ["-date", "-hour"]
         indexes = [
-            models.Index(fields=["date", "hour", "network"]),
+            models.Index(fields=["date", "hour", "network"], name='idx_date_hour_network_1404'),
         ]
 
     def __str__(self):

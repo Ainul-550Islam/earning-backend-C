@@ -55,9 +55,9 @@ class PublisherRatingRecord(TimeStampedModel):
         verbose_name_plural = _('Publisher Rating Records')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'rating_source']),
-            models.Index(fields=['overall_rating']),
-            models.Index(fields=['is_public', 'is_approved']),
+            models.Index(fields=['publisher', 'rating_source'], name='idx_publisher_rating_sourc_8e3'),
+            models.Index(fields=['overall_rating'], name='idx_overall_rating_1630'),
+            models.Index(fields=['is_public', 'is_approved'], name='idx_is_public_is_approved_1631'),
         ]
 
     def __str__(self):

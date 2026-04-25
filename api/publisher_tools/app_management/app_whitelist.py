@@ -25,7 +25,7 @@ class AppWhitelistEntry(TimeStampedModel):
         db_table = "publisher_tools_app_whitelist_entries"
         verbose_name = _("App Whitelist Entry")
         ordering = ["-priority", "-created_at"]
-        indexes = [models.Index(fields=["app", "entry_type", "is_active"])]
+        indexes = [models.Index(fields=["app", "entry_type", "is_active"], name='idx_app_entry_type_is_acti_90e')]
 
     def __str__(self):
         return f"{self.app.name} — Allow {self.entry_type}: {self.value[:50]}"

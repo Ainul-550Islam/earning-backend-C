@@ -30,7 +30,7 @@ class NotificationInsightViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = _Pagination
 
     def get_queryset(self):
-        from notifications.models.analytics import NotificationInsight
+        from api.notifications.models.analytics import NotificationInsight
         qs = NotificationInsight.objects.all()
 
         channel = self.request.query_params.get('channel')
@@ -48,7 +48,7 @@ class NotificationInsightViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_serializer_class(self):
         from rest_framework import serializers
-        from notifications.models.analytics import NotificationInsight
+        from api.notifications.models.analytics import NotificationInsight
 
         class InsightSerializer(serializers.ModelSerializer):
             delivery_rate = serializers.FloatField(read_only=True)
@@ -88,7 +88,7 @@ class NotificationInsightViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['post'], permission_classes=[IsAdminUser])
     def generate(self, request):
         """Trigger daily insight generation for a specific date."""
-        from notifications.tasks import generate_daily_analytics
+        from api.notifications.tasks import generate_daily_analytics
         date_str = request.data.get('date')
         generate_daily_analytics.delay(date_str)
         return Response({'success': True, 'message': 'Analytics generation task queued.'})

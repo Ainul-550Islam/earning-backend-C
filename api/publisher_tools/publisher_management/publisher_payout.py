@@ -54,9 +54,9 @@ class PayoutRequest(TimeStampedModel):
         verbose_name_plural = _('Payout Requests')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'status']),
-            models.Index(fields=['request_id']),
-            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1624'),
+            models.Index(fields=['request_id'], name='idx_request_id_1625'),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_1626'),
         ]
 
     def __str__(self):

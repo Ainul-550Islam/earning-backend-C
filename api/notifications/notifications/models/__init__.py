@@ -6,7 +6,7 @@ Re-exports all models from _models_core.py (renamed from models.py to avoid
 Python shadowing the models/ package directory) PLUS all new split models.
 
 Usage:
-    from notifications.models import (
+    from api.notifications.models import (
         Notification, NotificationTemplate, NotificationPreference,
         DeviceToken, NotificationCampaign, NotificationLog,
         PushDevice, PushDeliveryLog, EmailDeliveryLog, SMSDeliveryLog, InAppMessage,

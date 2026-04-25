@@ -2,7 +2,8 @@
 Base Models for Advertiser Portal
 
 This module contains base model classes and mixins that are used
-across the advertiser portal application.
+across the advertiser portal application, plus imports all 42 models
+from the MODELS directory.
 """
 
 from django.db import models
@@ -11,6 +12,38 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from typing import Optional, Dict, Any, List
 import uuid
+
+# Import all models from MODELS directory
+from api.advertiser_portal.models.advertiser import (
+    Advertiser, AdvertiserProfile, AdvertiserVerification, AdvertiserAgreement
+)
+from api.advertiser_portal.models.campaign import (
+    AdCampaign, CampaignCreative, CampaignTargeting, CampaignBid, CampaignSchedule
+)
+from api.advertiser_portal.models.offer import (
+    AdvertiserOffer, OfferRequirement, OfferCreative, OfferBlacklist
+)
+from api.advertiser_portal.models.tracking import (
+    TrackingPixel, S2SPostback, Conversion, ConversionEvent, TrackingDomain
+)
+from api.advertiser_portal.models.billing import (
+    AdvertiserWallet, AdvertiserTransaction, AdvertiserDeposit, 
+    AdvertiserInvoice, CampaignSpend, BillingAlert
+)
+from api.advertiser_portal.models.reporting import (
+    AdvertiserReport, CampaignReport, PublisherBreakdown, 
+    GeoBreakdown, CreativePerformance
+)
+from api.advertiser_portal.models.fraud_protection import (
+    ConversionQualityScore, AdvertiserFraudConfig, InvalidClickLog, 
+    ClickFraudSignal, OfferQualityScore, RoutingBlacklist
+)
+from api.advertiser_portal.models.notification import (
+    AdvertiserNotification, AdvertiserAlert, NotificationTemplate
+)
+from api.advertiser_portal.models.ml import (
+    UserJourneyStep, NetworkPerformanceCache, MLModel, MLPrediction
+)
 
 
 class TimeStampedModel(models.Model):

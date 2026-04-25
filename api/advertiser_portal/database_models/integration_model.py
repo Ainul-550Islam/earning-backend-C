@@ -16,7 +16,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -300,12 +303,12 @@ class Integration(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Integration'
         verbose_name_plural = 'Integrations'
         indexes = [
-            models.Index(fields=['advertiser', 'status']),
-            models.Index(fields=['integration_type']),
-            models.Index(fields=['provider']),
-            models.Index(fields=['connection_status']),
-            models.Index(fields=['health_status']),
-            models.Index(fields=['last_sync']),
+            models.Index(fields=['advertiser', 'status'], name='idx_advertiser_status_305'),
+            models.Index(fields=['integration_type'], name='idx_integration_type_306'),
+            models.Index(fields=['provider'], name='idx_provider_307'),
+            models.Index(fields=['connection_status'], name='idx_connection_status_308'),
+            models.Index(fields=['health_status'], name='idx_health_status_309'),
+            models.Index(fields=['last_sync'], name='idx_last_sync_310'),
         ]
     
     def __str__(self) -> str:
@@ -622,10 +625,10 @@ class IntegrationLog(AdvertiserPortalBaseModel):
         verbose_name = 'Integration Log'
         verbose_name_plural = 'Integration Logs'
         indexes = [
-            models.Index(fields=['integration', 'event_type']),
-            models.Index(fields=['integration', 'level']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['status_code']),
+            models.Index(fields=['integration', 'event_type'], name='idx_integration_event_type_311'),
+            models.Index(fields=['integration', 'level'], name='idx_integration_level_312'),
+            models.Index(fields=['created_at'], name='idx_created_at_313'),
+            models.Index(fields=['status_code'], name='idx_status_code_314'),
         ]
     
     def __str__(self) -> str:
@@ -724,8 +727,8 @@ class IntegrationWebhook(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Integration Webhook'
         verbose_name_plural = 'Integration Webhooks'
         indexes = [
-            models.Index(fields=['integration', 'active']),
-            models.Index(fields=['last_triggered']),
+            models.Index(fields=['integration', 'active'], name='idx_integration_active_315'),
+            models.Index(fields=['last_triggered'], name='idx_last_triggered_316'),
         ]
     
     def __str__(self) -> str:
@@ -822,8 +825,8 @@ class IntegrationMapping(AdvertiserPortalBaseModel, AuditModel):
         verbose_name_plural = 'Integration Mappings'
         unique_together = ['integration', 'source_entity', 'target_entity']
         indexes = [
-            models.Index(fields=['integration', 'source_entity']),
-            models.Index(fields=['integration', 'target_entity']),
+            models.Index(fields=['integration', 'source_entity'], name='idx_integration_source_ent_d9e'),
+            models.Index(fields=['integration', 'target_entity'], name='idx_integration_target_ent_319'),
         ]
     
     def __str__(self) -> str:
@@ -898,9 +901,9 @@ class IntegrationCredential(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Integration Credential'
         verbose_name_plural = 'Integration Credentials'
         indexes = [
-            models.Index(fields=['integration', 'credential_type']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['expires_at']),
+            models.Index(fields=['integration', 'credential_type'], name='idx_integration_credential_ced'),
+            models.Index(fields=['is_active'], name='idx_is_active_320'),
+            models.Index(fields=['expires_at'], name='idx_expires_at_321'),
         ]
     
     def __str__(self) -> str:

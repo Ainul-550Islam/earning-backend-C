@@ -64,11 +64,11 @@ class AnalyticsEvent(models.Model):
     
     class Meta:
         indexes = [
-            models.Index(fields=['event_type', 'event_time']),
-            models.Index(fields=['user', 'event_time']),
-            models.Index(fields=['country', 'event_time']),
-            models.Index(fields=['device_type', 'event_time']),
-            models.Index(fields=['session_id']),
+            models.Index(fields=['event_type', 'event_time'], name='idx_event_type_event_time_785'),
+            models.Index(fields=['user', 'event_time'], name='idx_user_event_time_786'),
+            models.Index(fields=['country', 'event_time'], name='idx_country_event_time_787'),
+            models.Index(fields=['device_type', 'event_time'], name='idx_device_type_event_time_788'),
+            models.Index(fields=['session_id'], name='idx_session_id_789'),
         ]
         ordering = ['-event_time']
     
@@ -160,9 +160,9 @@ class UserAnalytics(models.Model):
     class Meta:
         unique_together = ['user', 'period', 'period_start']
         indexes = [
-            models.Index(fields=['user', 'period', 'period_start']),
-            models.Index(fields=['period', 'period_start']),
-            models.Index(fields=['earnings_total']),
+            models.Index(fields=['user', 'period', 'period_start'], name='idx_user_period_period_sta_416'),
+            models.Index(fields=['period', 'period_start'], name='idx_period_period_start_791'),
+            models.Index(fields=['earnings_total'], name='idx_earnings_total_792'),
         ]
         ordering = ['-period_start']
     
@@ -268,9 +268,9 @@ class RevenueAnalytics(models.Model):
     class Meta:
         unique_together = ['period', 'period_start']
         indexes = [
-            models.Index(fields=['period', 'period_start']),
-            models.Index(fields=['revenue_total']),
-            models.Index(fields=['profit_margin']),
+            models.Index(fields=['period', 'period_start'], name='idx_period_period_start_793'),
+            models.Index(fields=['revenue_total'], name='idx_revenue_total_794'),
+            models.Index(fields=['profit_margin'], name='idx_profit_margin_795'),
         ]
         ordering = ['-period_start']
     
@@ -354,9 +354,9 @@ class OfferPerformanceAnalytics(models.Model):
     
     class Meta:
         indexes = [
-            models.Index(fields=['offer', 'period', 'period_start']),
-            models.Index(fields=['completion_rate']),
-            models.Index(fields=['roi']),
+            models.Index(fields=['offer', 'period', 'period_start'], name='idx_offer_period_period_st_a27'),
+            models.Index(fields=['completion_rate'], name='idx_completion_rate_797'),
+            models.Index(fields=['roi'], name='idx_roi_798'),
         ]
         ordering = ['-period_start']
     
@@ -430,8 +430,8 @@ class FunnelAnalytics(models.Model):
     class Meta:
         unique_together = ['funnel_type', 'period', 'period_start']
         indexes = [
-            models.Index(fields=['funnel_type', 'period', 'period_start']),
-            models.Index(fields=['conversion_rate']),
+            models.Index(fields=['funnel_type', 'period', 'period_start'], name='idx_funnel_type_period_per_c06'),
+            models.Index(fields=['conversion_rate'], name='idx_conversion_rate_800'),
         ]
         ordering = ['-period_start']
     
@@ -490,8 +490,8 @@ class RetentionAnalytics(models.Model):
     class Meta:
         unique_together = ['cohort_type', 'cohort_date']
         indexes = [
-            models.Index(fields=['cohort_type', 'cohort_date']),
-            models.Index(fields=['retention_day_7']),
+            models.Index(fields=['cohort_type', 'cohort_date'], name='idx_cohort_type_cohort_dat_9c1'),
+            models.Index(fields=['retention_day_7'], name='idx_retention_day_7_802'),
         ]
         ordering = ['-cohort_date']
     
@@ -621,8 +621,8 @@ class Report(models.Model):
     class Meta:
         ordering = ['-generated_at']
         indexes = [
-            models.Index(fields=['report_type', 'generated_at']),
-            models.Index(fields=['generated_by', 'generated_at']),
+            models.Index(fields=['report_type', 'generated_at'], name='idx_report_type_generated__deb'),
+            models.Index(fields=['generated_by', 'generated_at'], name='idx_generated_by_generated_1b0'),
         ]
     
     def __str__(self):
@@ -677,8 +677,8 @@ class RealTimeMetric(models.Model):
     
     class Meta:
         indexes = [
-            models.Index(fields=['metric_type', 'metric_time']),
-            models.Index(fields=['metric_time']),
+            models.Index(fields=['metric_type', 'metric_time'], name='idx_metric_type_metric_tim_672'),
+            models.Index(fields=['metric_time'], name='idx_metric_time_806'),
         ]
         ordering = ['-metric_time']
     
@@ -800,8 +800,8 @@ class AlertHistory(models.Model):
     class Meta:
         ordering = ['-triggered_at']
         indexes = [
-            models.Index(fields=['rule', 'triggered_at']),
-            models.Index(fields=['is_resolved', 'triggered_at']),
+            models.Index(fields=['rule', 'triggered_at'], name='idx_rule_triggered_at_807'),
+            models.Index(fields=['is_resolved', 'triggered_at'], name='idx_is_resolved_triggered__ebb'),
         ]
     
     def __str__(self):

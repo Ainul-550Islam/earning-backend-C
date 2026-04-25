@@ -24,7 +24,7 @@ class TranslationCache(models.Model):
 
     class Meta:
         unique_together = ['language_code', 'cache_key']
-        indexes = [models.Index(fields=['expires_at'])]
+        indexes = [models.Index(fields=['expires_at'], name='idx_expires_at_1098')]
         verbose_name = _("Translation Cache")
         verbose_name_plural = _("Translation Caches")
 
@@ -101,9 +101,9 @@ class MissingTranslation(models.Model):
         verbose_name = _("Missing Translation")
         verbose_name_plural = _("Missing Translations")
         indexes = [
-            models.Index(fields=['key']),
-            models.Index(fields=['language', 'resolved']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['key'], name='idx_key_1099'),
+            models.Index(fields=['language', 'resolved'], name='idx_language_resolved_1100'),
+            models.Index(fields=['created_at'], name='idx_created_at_1101'),
         ]
 
     def __str__(self):
@@ -180,9 +180,9 @@ class TranslationMemory(models.Model):
         verbose_name = _("Translation Memory")
         verbose_name_plural = _("Translation Memories")
         indexes = [
-            models.Index(fields=['source_hash', 'source_language', 'target_language']),
-            models.Index(fields=['domain']),
-            models.Index(fields=['is_approved']),
+            models.Index(fields=['source_hash', 'source_language', 'target_language'], name='idx_source_hash_source_lan_f2f'),
+            models.Index(fields=['domain'], name='idx_domain_1103'),
+            models.Index(fields=['is_approved'], name='idx_is_approved_1104'),
         ]
 
     def __str__(self):
@@ -254,10 +254,10 @@ class TranslationGlossary(models.Model):
         verbose_name = _("Translation Glossary")
         verbose_name_plural = _("Translation Glossaries")
         indexes = [
-            models.Index(fields=['source_term', 'source_language']),
-            models.Index(fields=['domain']),
-            models.Index(fields=['is_do_not_translate']),
-            models.Index(fields=['is_brand_term']),
+            models.Index(fields=['source_term', 'source_language'], name='idx_source_term_source_lan_015'),
+            models.Index(fields=['domain'], name='idx_domain_1106'),
+            models.Index(fields=['is_do_not_translate'], name='idx_is_do_not_translate_1107'),
+            models.Index(fields=['is_brand_term'], name='idx_is_brand_term_1108'),
         ]
 
     def __str__(self):
@@ -313,8 +313,8 @@ class TranslationVersion(models.Model):
         verbose_name = _("Translation Version")
         verbose_name_plural = _("Translation Versions")
         indexes = [
-            models.Index(fields=['translation', 'version_number']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['translation', 'version_number'], name='idx_translation_version_nu_5d9'),
+            models.Index(fields=['created_at'], name='idx_created_at_1110'),
         ]
 
     def __str__(self):

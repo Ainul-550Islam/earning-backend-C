@@ -68,8 +68,8 @@ class Language(TimeStampedModel):
         verbose_name = _("Language")
         verbose_name_plural = _("Languages")
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['is_default', 'is_active']),
+            models.Index(fields=['is_active'], name='idx_is_active_1070'),
+            models.Index(fields=['is_default', 'is_active'], name='idx_is_default_is_active_1071'),
         ]
     
     def __str__(self):
@@ -142,8 +142,8 @@ class Country(TimeStampedModel):
         verbose_name = _("Country")
         verbose_name_plural = _("Countries")
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['code']),
+            models.Index(fields=['is_active'], name='idx_is_active_1072'),
+            models.Index(fields=['code'], name='idx_code_1073'),
         ]
     
     def __str__(self):
@@ -208,8 +208,8 @@ class Currency(TimeStampedModel):
         verbose_name = _("Currency")
         verbose_name_plural = _("Currencies")
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['is_default', 'is_active']),
+            models.Index(fields=['is_active'], name='idx_is_active_1074'),
+            models.Index(fields=['is_default', 'is_active'], name='idx_is_default_is_active_1075'),
         ]
     
     def __str__(self):
@@ -290,8 +290,8 @@ class Timezone(TimeStampedModel):
         verbose_name = _("Timezone")
         verbose_name_plural = _("Timezones")
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['name']),
+            models.Index(fields=['is_active'], name='idx_is_active_1076'),
+            models.Index(fields=['name'], name='idx_name_1077'),
         ]
     
     def __str__(self):
@@ -367,8 +367,8 @@ class City(TimeStampedModel):
         verbose_name = _("City")
         verbose_name_plural = _("Cities")
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['country', 'is_active']),
+            models.Index(fields=['is_active'], name='idx_is_active_1078'),
+            models.Index(fields=['country', 'is_active'], name='idx_country_is_active_1079'),
         ]
     
     def __str__(self):
@@ -441,7 +441,7 @@ class TranslationKey(TimeStampedModel):
         verbose_name = _("Translation Key")
         verbose_name_plural = _("Translation Keys")
         indexes = [
-            models.Index(fields=['category']),
+            models.Index(fields=['category'], name='idx_category_1080'),
         ]
     
     def __str__(self):
@@ -524,8 +524,8 @@ class Translation(TimeStampedModel):
         verbose_name = _("Translation")
         verbose_name_plural = _("Translations")
         indexes = [
-            models.Index(fields=['language', 'is_approved']),
-            models.Index(fields=['key', 'language', 'is_approved']),
+            models.Index(fields=['language', 'is_approved'], name='idx_language_is_approved_1081'),
+            models.Index(fields=['key', 'language', 'is_approved'], name='idx_key_language_is_approv_9d4'),
         ]
     
     def __str__(self):

@@ -42,7 +42,7 @@ def admin_client(api_client, admin_user):
 
 @pytest.fixture
 def notification(db, user):
-    from notifications.models import Notification
+    from api.notifications.models import Notification
     return Notification.objects.create(
         user=user,
         title='Test Notification',
@@ -55,7 +55,7 @@ def notification(db, user):
 
 @pytest.fixture
 def push_device(db, user):
-    from notifications.models.channel import PushDevice
+    from api.notifications.models.channel import PushDevice
     return PushDevice.objects.create(
         user=user,
         device_type='android',
@@ -66,7 +66,7 @@ def push_device(db, user):
 
 @pytest.fixture
 def in_app_message(db, user, notification):
-    from notifications.models.channel import InAppMessage
+    from api.notifications.models.channel import InAppMessage
     return InAppMessage.objects.create(
         user=user,
         notification=notification,
@@ -78,7 +78,7 @@ def in_app_message(db, user, notification):
 
 @pytest.fixture
 def campaign_segment(db, user):
-    from notifications.models.campaign import CampaignSegment
+    from api.notifications.models.campaign import CampaignSegment
     return CampaignSegment.objects.create(
         name='All Users',
         segment_type='all',
@@ -89,7 +89,7 @@ def campaign_segment(db, user):
 
 @pytest.fixture
 def notification_template(db, user):
-    from notifications.models import NotificationTemplate
+    from api.notifications.models import NotificationTemplate
     return NotificationTemplate.objects.create(
         name='test_template',
         title_en='Test Title',
@@ -103,12 +103,12 @@ def notification_template(db, user):
 
 @pytest.fixture
 def opt_out_record(db, user):
-    from notifications.models.analytics import OptOutTracking
+    from api.notifications.models.analytics import OptOutTracking
     return OptOutTracking.opt_out(user, 'email', reason='too_many')
 
 
 @pytest.fixture
 def fatigue_record(db, user):
-    from notifications.models.analytics import NotificationFatigue
+    from api.notifications.models.analytics import NotificationFatigue
     record, _ = NotificationFatigue.objects.get_or_create(user=user)
     return record

@@ -36,7 +36,7 @@ class EarnRule(models.Model):
     class Meta:
         app_label = 'djoyalty'
         ordering = ['-priority', 'name']
-        indexes = [models.Index(fields=['is_active', 'trigger'])]
+        indexes = [models.Index(fields=['is_active', 'trigger'], name='idx_is_active_trigger_977')]
 
     def __str__(self):
         return f'{self.name} [{self.rule_type}/{self.trigger}]'

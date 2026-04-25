@@ -76,8 +76,8 @@ class PEPSanctionsScreening(models.Model):
         verbose_name = 'AML/PEP Screening'
         ordering = ['-screened_at']
         indexes = [
-            models.Index(fields=['kyc', 'status']),
-            models.Index(fields=['is_pep', 'is_sanctioned']),
+            models.Index(fields=['kyc', 'status'], name='idx_kyc_status_1030'),
+            models.Index(fields=['is_pep', 'is_sanctioned'], name='idx_is_pep_is_sanctioned_1031'),
         ]
 
     def __str__(self):
@@ -141,8 +141,8 @@ class SanctionsList(models.Model):
         db_table = 'kyc_sanctions_list'
         verbose_name = 'Sanctions List Entry'
         indexes = [
-            models.Index(fields=['source', 'is_active']),
-            models.Index(fields=['entry_name', 'is_active']),
+            models.Index(fields=['source', 'is_active'], name='idx_source_is_active_1032'),
+            models.Index(fields=['entry_name', 'is_active'], name='idx_entry_name_is_active_1033'),
         ]
 
     def __str__(self):
@@ -183,7 +183,7 @@ class PEPDatabase(models.Model):
     class Meta:
         db_table = 'kyc_pep_database'
         verbose_name = 'PEP Entry'
-        indexes = [models.Index(fields=['full_name', 'country', 'is_current'])]
+        indexes = [models.Index(fields=['full_name', 'country', 'is_current'], name='idx_full_name_country_is_c_b78')]
 
     def __str__(self):
         return f"PEP[{self.category}] {self.full_name} ({self.country})"

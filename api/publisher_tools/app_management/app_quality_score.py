@@ -35,8 +35,8 @@ class AppQualityScore(TimeStampedModel):
         unique_together = [["app", "month"]]
         ordering = ["-month"]
         indexes = [
-            models.Index(fields=["app", "month"]),
-            models.Index(fields=["overall_score"]),
+            models.Index(fields=["app", "month"], name='idx_app_month_1539'),
+            models.Index(fields=["overall_score"], name='idx_overall_score_1540'),
         ]
 
     def __str__(self):

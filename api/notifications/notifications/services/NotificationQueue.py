@@ -41,7 +41,7 @@ class NotificationQueueService:
         Returns:
             Dict with: success, queue_entry_id, error.
         """
-        from notifications.models.schedule import NotificationQueue
+        from api.notifications.models.schedule import NotificationQueue
 
         if not (1 <= priority <= 10):
             priority = max(1, min(10, priority))
@@ -83,7 +83,7 @@ class NotificationQueueService:
         Returns:
             Dict with: success, enqueued_count, skipped_count, error.
         """
-        from notifications.models.schedule import NotificationQueue
+        from api.notifications.models.schedule import NotificationQueue
 
         existing_ids = set(
             NotificationQueue.objects.filter(
@@ -134,7 +134,7 @@ class NotificationQueueService:
         Returns a list of NotificationQueue instances with status='processing'.
         Uses SELECT FOR UPDATE SKIP LOCKED for safe concurrent workers.
         """
-        from notifications.models.schedule import NotificationQueue
+        from api.notifications.models.schedule import NotificationQueue
 
         try:
             with transaction.atomic():
@@ -172,7 +172,7 @@ class NotificationQueueService:
 
     def mark_done(self, queue_entry_id: int) -> bool:
         """Mark a queue entry as done after successful processing."""
-        from notifications.models.schedule import NotificationQueue
+        from api.notifications.models.schedule import NotificationQueue
         try:
             NotificationQueue.objects.filter(pk=queue_entry_id).update(
                 status='done', updated_at=timezone.now()
@@ -184,7 +184,7 @@ class NotificationQueueService:
 
     def mark_failed(self, queue_entry_id: int) -> bool:
         """Mark a queue entry as failed."""
-        from notifications.models.schedule import NotificationQueue
+        from api.notifications.models.schedule import NotificationQueue
         try:
             NotificationQueue.objects.filter(pk=queue_entry_id).update(
                 status='failed', updated_at=timezone.now()
@@ -196,7 +196,7 @@ class NotificationQueueService:
 
     def requeue(self, queue_entry_id: int, delay_seconds: int = 60) -> bool:
         """Return a failed entry to waiting status with a delay."""
-        from notifications.models.schedule import NotificationQueue
+        from api.notifications.models.schedule import NotificationQueue
         from datetime import timedelta
         try:
             entry = NotificationQueue.objects.get(pk=queue_entry_id)
@@ -216,7 +216,7 @@ class NotificationQueueService:
 
     def get_queue_stats(self) -> Dict:
         """Return current queue depth and status breakdown."""
-        from notifications.models.schedule import NotificationQueue
+        from api.notifications.models.schedule import NotificationQueue
         from django.db.models import Count
 
         rows = (
@@ -232,7 +232,7 @@ class NotificationQueueService:
         Return queue entries stuck in 'processing' status longer than timeout.
         Used by recover_stuck_tasks in Celery.
         """
-        from notifications.models.schedule import NotificationQueue
+        from api.notifications.models.schedule import NotificationQueue
         from datetime import timedelta
 
         cutoff = timezone.now() - timedelta(minutes=processing_timeout_minutes)
@@ -245,7 +245,7 @@ class NotificationQueueService:
 
     def cancel_pending(self, notification_id: int) -> bool:
         """Cancel a waiting queue entry for a notification."""
-        from notifications.models.schedule import NotificationQueue
+        from api.notifications.models.schedule import NotificationQueue
         try:
             NotificationQueue.objects.filter(
                 notification_id=notification_id,

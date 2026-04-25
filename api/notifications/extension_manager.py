@@ -6,7 +6,7 @@ This is the SINGLE entry point for all extensions.
 Instead of manually editing multiple files, use this manager.
 
 Usage:
-    from notifications.extension_manager import extension_manager
+    from api.notifications.extension_manager import extension_manager
 
     # Register a new notification type
     extension_manager.register_notification_type(
@@ -128,7 +128,7 @@ class NotificationExtensionManager:
 
         # Register in the type registry
         try:
-            from notifications.registry import notification_type_registry
+            from api.notifications.registry import notification_type_registry
             notification_type_registry.register(
                 type_name, default_channel, default_priority,
                 send_push=send_push, send_email=send_email, send_sms=send_sms,
@@ -197,7 +197,7 @@ class NotificationExtensionManager:
 
         # Register in plugin system
         try:
-            from notifications.plugins import plugin_registry, ProviderPlugin
+            from api.notifications.plugins import plugin_registry, ProviderPlugin
 
             class DynamicPlugin(ProviderPlugin):
                 _provider = provider_instance
@@ -217,7 +217,7 @@ class NotificationExtensionManager:
 
         # Register dispatch route
         try:
-            from notifications.services.NotificationDispatcher import notification_dispatcher
+            from api.notifications.services.NotificationDispatcher import notification_dispatcher
             channel_name = channel
 
             def dynamic_dispatch(notification, _ch=channel_name, _prov=provider_instance):
@@ -257,7 +257,7 @@ class NotificationExtensionManager:
             True if registered.
         """
         try:
-            from notifications.services.JourneyService import journey_service
+            from api.notifications.services.JourneyService import journey_service
             journey_service.register_journey(journey)
             self._registered_journeys.append(journey.journey_id)
             logger.info(f'ExtensionManager: journey "{journey.journey_id}" registered')
@@ -270,7 +270,7 @@ class NotificationExtensionManager:
                                        steps: list, description: str = '') -> bool:
         """Convenience method to create and register a journey from config."""
         try:
-            from notifications.services.JourneyService import Journey
+            from api.notifications.services.JourneyService import Journey
             journey = Journey(journey_id=journey_id, name=name,
                               description=description, steps=steps)
             return self.register_journey(journey)
@@ -293,7 +293,7 @@ class NotificationExtensionManager:
             True if registered.
         """
         try:
-            from notifications.workflow import workflow_engine
+            from api.notifications.workflow import workflow_engine
             workflow_engine.register(workflow)
             self._registered_workflows.append(workflow.workflow_id)
             logger.info(f'ExtensionManager: workflow "{workflow.workflow_id}" registered')
@@ -307,7 +307,7 @@ class NotificationExtensionManager:
                                    cooldown_hours: int = 24, max_executions: int = 1) -> bool:
         """Register a workflow from a handler function."""
         try:
-            from notifications.workflow import workflow_engine, Workflow
+            from api.notifications.workflow import workflow_engine, Workflow
             wf = Workflow(
                 workflow_id=workflow_id, name=name, handler=handler,
                 trigger_events=trigger_events or [],
@@ -339,7 +339,7 @@ class NotificationExtensionManager:
             True if registered.
         """
         try:
-            from notifications.hooks import pipeline
+            from api.notifications.hooks import pipeline
             pipeline.register(stage, hook_fn, priority)
             self._registered_hooks.append({'stage': stage, 'fn': hook_fn.__name__, 'priority': priority})
             logger.info(f'ExtensionManager: hook "{hook_fn.__name__}" registered at stage "{stage}"')
@@ -488,7 +488,7 @@ class NotificationExtensionManager:
             True if set successfully.
         """
         try:
-            from notifications.feature_flags import flags
+            from api.notifications.feature_flags import flags
             if enabled:
                 flags.enable(flag_name, ttl)
             else:
@@ -501,7 +501,7 @@ class NotificationExtensionManager:
     def is_feature_enabled(self, flag_name: str, default: bool = True) -> bool:
         """Check if a feature flag is enabled."""
         try:
-            from notifications.feature_flags import flags
+            from api.notifications.feature_flags import flags
             return flags.is_enabled(flag_name, default)
         except Exception:
             return default
@@ -541,7 +541,7 @@ class NotificationExtensionManager:
 
         # Validate hooks
         try:
-            from notifications.hooks import pipeline
+            from api.notifications.hooks import pipeline
             for stage, hooks in pipeline.list_hooks().items():
                 results['valid'].append(f'hooks:{stage}:{len(hooks)}_registered')
         except Exception as exc:

@@ -269,10 +269,7 @@ class CreatedDateFilter(admin.SimpleListFilter):
 #         'delivery_attempts',
 #         'last_delivery_attempt',
 #         'engagement_score',
-#         'open_rate',
-#         'click_through_rate',
-#         'conversion_rate',
-#         'cost',
+# # # #         'cost',
 #     )
     
 #     fieldsets = (
@@ -284,8 +281,7 @@ class CreatedDateFilter(admin.SimpleListFilter):
 #                 'message',
 #                 'notification_type',
 #                 'priority',
-#                 'channel',
-#                 'status',
+#         #                 'status',
 #             )
 #         }),
 #         ('Status Information', {
@@ -334,10 +330,7 @@ class CreatedDateFilter(admin.SimpleListFilter):
 #                 'view_count',
 #                 'impression_count',
 #                 'engagement_score',
-#                 'open_rate',
-#                 'click_through_rate',
-#                 'conversion_rate',
-#             )
+#         #         #         #             )
 #         }),
 #         ('Delivery Information', {
 #             'fields': (
@@ -766,9 +759,6 @@ class NotificationAdmin(admin.ModelAdmin):
         'delivery_attempts',
         'last_delivery_attempt',
         'engagement_score',
-        'open_rate',
-        'click_through_rate',
-        'conversion_rate',
         'cost',
     )
     
@@ -781,8 +771,7 @@ class NotificationAdmin(admin.ModelAdmin):
                 'message',
                 'notification_type',
                 'priority',
-                'channel',
-                'status',
+                        'status',
             )
         }),
         # ... other fieldsets remain same
@@ -1391,7 +1380,6 @@ class DeviceTokenAdmin(admin.ModelAdmin):
         'push_enabled_display',
         'push_sent',
         'push_delivered',
-        'delivery_rate',
         'last_active_formatted',
     )
     
@@ -1566,8 +1554,6 @@ class NotificationCampaignAdmin(admin.ModelAdmin):
         'campaign_type_display',
         'channel_display',
         'status_display',
-        'target_count',
-        'total_sent',
         'delivery_rate_display',
         'open_rate_display',
         'total_cost_display',
@@ -1576,8 +1562,6 @@ class NotificationCampaignAdmin(admin.ModelAdmin):
     )
     
     list_filter = (
-        'campaign_type',
-        'channel',
         'status',
     )
     
@@ -1590,16 +1574,6 @@ class NotificationCampaignAdmin(admin.ModelAdmin):
     
     readonly_fields = (
         'id',
-        'total_sent',
-        'total_delivered',
-        'total_failed',
-        'total_read',
-        'total_clicked',
-        'delivery_rate',
-        'open_rate',
-        'click_through_rate',
-        'conversion_rate',
-        'total_cost',
         'created_at',
         'updated_at',
         'started_at',
@@ -1611,8 +1585,7 @@ class NotificationCampaignAdmin(admin.ModelAdmin):
             'fields': (
                 'name',
                 'description',
-                'campaign_type',
-                'status',
+                        'status',
             )
         }),
         ('Content', {
@@ -1623,38 +1596,26 @@ class NotificationCampaignAdmin(admin.ModelAdmin):
         }),
         ('Delivery Settings', {
             'fields': (
-                'channel',
-                'priority',
+                        'priority',
                 'scheduled_for',
             )
         }),
         ('Target Audience', {
             'fields': (
                 'target_segment',
-                'target_count',
-            )
+                    )
         }),
         ('Progress', {
             'fields': (
-                'total_sent',
-                'total_delivered',
-                'total_failed',
-                'total_read',
-                'total_clicked',
-            )
+                                                    )
         }),
         ('Performance Metrics', {
             'fields': (
-                'delivery_rate',
-                'open_rate',
-                'click_through_rate',
-                'conversion_rate',
-            )
+                                            )
         }),
         ('Cost Information', {
             'fields': (
-                'total_cost',
-                'cost_currency',
+                        'cost_currency',
             )
         }),
         ('A/B Testing', {
@@ -1853,21 +1814,12 @@ class NotificationAnalyticsAdmin(admin.ModelAdmin):
     readonly_fields = (
         'date',
         'total_notifications',
-        'total_sent',
-        'total_delivered',
-        'total_read',
-        'total_clicked',
-        'total_failed',
-        'delivery_rate',
-        'open_rate',
-        'click_through_rate',
         'by_type',
         'by_channel',
         'by_priority',
         'active_users',
         'engaged_users',
         'average_notifications_per_user',
-        'total_cost',
         'average_cost_per_notification',
         'created_at',
         'updated_at',
@@ -1880,19 +1832,11 @@ class NotificationAnalyticsAdmin(admin.ModelAdmin):
         ('Counts', {
             'fields': (
                 'total_notifications',
-                'total_sent',
-                'total_delivered',
-                'total_read',
-                'total_clicked',
-                'total_failed',
-            )
+                                                    )
         }),
         ('Rates', {
             'fields': (
-                'delivery_rate',
-                'open_rate',
-                'click_through_rate',
-            )
+                                    )
         }),
         ('Breakdown by Type', {
             'fields': ('by_type',)
@@ -1912,8 +1856,7 @@ class NotificationAnalyticsAdmin(admin.ModelAdmin):
         }),
         ('Cost Analysis', {
             'fields': (
-                'total_cost',
-                'average_cost_per_notification',
+                        'average_cost_per_notification',
             )
         }),
         ('Timestamps', {

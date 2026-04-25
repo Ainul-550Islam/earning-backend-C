@@ -151,7 +151,7 @@ def check_fatigue(priority: str = 'medium', bypass_priorities: tuple = ('critica
                 notif_priority = kwargs.get('priority', priority)
                 if notif_priority not in bypass_priorities:
                     try:
-                        from notifications.services.FatigueService import fatigue_service
+                        from api.notifications.services.FatigueService import fatigue_service
                         if fatigue_service.is_fatigued(user, priority=notif_priority):
                             logger.info(
                                 f'check_fatigue: user #{user.pk} is fatigued — '
@@ -191,7 +191,7 @@ def check_opt_out(channel: str = 'in_app'):
 
             if user and hasattr(user, 'pk'):
                 try:
-                    from notifications.services.OptOutService import opt_out_service
+                    from api.notifications.services.OptOutService import opt_out_service
                     if opt_out_service.is_opted_out(user, notif_channel):
                         logger.info(
                             f'check_opt_out: user #{user.pk} opted out of '
@@ -240,7 +240,7 @@ def track_performance(operation: str = '', service: str = 'notifications'):
             finally:
                 elapsed_ms = (time.monotonic() - start) * 1000
                 try:
-                    from notifications.integration_system.performance_monitor import performance_monitor
+                    from api.notifications.integration_system.performance_monitor import performance_monitor
                     performance_monitor.record(op_name, elapsed_ms, success, service)
                 except Exception:
                     pass
@@ -283,7 +283,7 @@ def audit_action(action: str, module: str = 'notifications'):
                 raise exc
             finally:
                 try:
-                    from notifications.integration_system.integ_audit_logs import audit_logger
+                    from api.notifications.integration_system.integ_audit_logs import audit_logger
                     audit_logger.log(
                         action=action,
                         module=module,
@@ -389,7 +389,7 @@ def owns_notification(func: Callable) -> Callable:
     @functools.wraps(func)
     def wrapper(self, request, pk=None, *args, **kwargs):
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             notif = Notification.objects.get(pk=pk)
             if notif.user != request.user and not request.user.is_staff:
                 return JsonResponse(

@@ -155,8 +155,8 @@ class WebhookEndpoint(TimeStampedModel):
         verbose_name_plural = _("Webhook Endpoints")
         ordering            = ["-created_at"]
         indexes = [
-            models.Index(fields=["owner", "status"]),
-            models.Index(fields=["tenant", "status"]),
+            models.Index(fields=["owner", "status"], name='idx_owner_status_1891'),
+            models.Index(fields=["tenant", "status"], name='idx_tenant_status_1892'),
         ]
 
     def __str__(self):
@@ -224,7 +224,7 @@ class WebhookSubscription(TimeStampedModel):
         unique_together     = ("endpoint", "event_type")
         ordering            = ["event_type"]
         indexes = [
-            models.Index(fields=["event_type", "is_active"]),
+            models.Index(fields=["event_type", "is_active"], name='idx_event_type_is_active_1893'),
         ]
 
     def __str__(self):
@@ -343,10 +343,10 @@ class WebhookDeliveryLog(TimeStampedModel):
         verbose_name_plural = _("Webhook Delivery Logs")
         ordering            = ["-created_at"]
         indexes = [
-            models.Index(fields=["endpoint", "status"]),
-            models.Index(fields=["event_type", "status"]),
-            models.Index(fields=["status", "next_retry_at"]),
-            models.Index(fields=["delivery_id"]),
+            models.Index(fields=["endpoint", "status"], name='idx_endpoint_status_1894'),
+            models.Index(fields=["event_type", "status"], name='idx_event_type_status_1895'),
+            models.Index(fields=["status", "next_retry_at"], name='idx_status_next_retry_at_1896'),
+            models.Index(fields=["delivery_id"], name='idx_delivery_id_1897'),
         ]
 
     def __str__(self):

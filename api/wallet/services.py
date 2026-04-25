@@ -273,7 +273,7 @@ class WalletService:
     def get_wallet_summary(user) -> dict:
         """User এর complete wallet summary"""
         try:
-            wallet = Wallet.objects.get(user=user)
+            wallet = Wallet.objects.select_for_update().get(user=user)
         except Wallet.DoesNotExist:
             return {}
 
@@ -606,23 +606,13 @@ class CryptoPayoutService:
 #         wallet.save()
 
 
-# Signal (existing এর সাথে merge করো)
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-
-
-@receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def create_user_wallet(sender, instance, created, **kwargs):
-    """User create হলে automatically wallet তৈরি করো"""
-    if created:
-        Wallet.objects.get_or_create(user=instance)
-        logger.info(f"Wallet auto-created for user: {instance.id}")
+# Signal moved to signals.py
 
 
 
 
 # # wallet/services.py
-# from django.db import GatewayTransaction
+# from django.db import transaction
 # from decimal import Decimal
 # from .models import Wallet, GatewayTransaction
 # from django.utils import timezone
@@ -837,3 +827,25 @@ def create_user_wallet(sender, instance, created, **kwargs):
 #         return True, ""
 #     except ImportError:
 #         return True, ""
+
+# ── Compatibility bridge to new services/ package ────────────
+# Your original WalletService above is preserved.
+# New services below provide additional world-class features.
+try:
+    from .services.core.WalletService import WalletService as WalletServiceV2
+    from .services.core.TransactionService import TransactionService
+    from .services.core.BalanceService import BalanceService
+    from .services.core.IdempotencyService import IdempotencyService
+    from .services.withdrawal.WithdrawalService import WithdrawalService
+    from .services.withdrawal.WithdrawalFeeService import WithdrawalFeeService
+    from .services.withdrawal.WithdrawalLimitService import WithdrawalLimitService
+    from .services.withdrawal.WithdrawalBatchService import WithdrawalBatchService
+    from .services.earning.EarningService import EarningService
+    from .services.earning.EarningCapService import EarningCapService
+    from .services.WalletAnalyticsService import WalletAnalyticsService
+    from .services.ledger.LedgerService import LedgerService
+    from .services.ledger.ReconciliationService import ReconciliationService
+    from .services.ledger.LedgerSnapshotService import LedgerSnapshotService
+except ImportError as _e:
+    import logging
+    logging.getLogger("wallet.services").debug(f"New services import: {_e}")

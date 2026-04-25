@@ -30,7 +30,7 @@ class AdSource(TimeStampedModel):
         verbose_name = _("Ad Source")
         ordering = ["priority"]
         indexes = [
-            models.Index(fields=["mediation_group", "priority", "is_active"]),
+            models.Index(fields=["mediation_group", "priority", "is_active"], name='idx_mediation_group_priori_a8f'),
         ]
 
     def __str__(self):

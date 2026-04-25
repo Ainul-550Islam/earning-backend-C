@@ -1,47 +1,44 @@
 # api/payment_gateways/middleware.py
+# Webhook signature verification middleware
 
-from django.http import HttpResponseForbidden
-from django.conf import settings
-import ipaddress
+import logging
+logger = logging.getLogger(__name__)
 
-class WebhookIPWhitelistMiddleware:
+WEBHOOK_PATHS = ['/api/payment/webhooks/']
+
+
+class WebhookSignatureMiddleware:
+    """
+    Verifies webhook signatures on incoming gateway callbacks.
+    Must be placed after SessionMiddleware in MIDDLEWARE.
+    """
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.path.startswith('/api/payments/webhooks/'):
-            # Extract gateway from path
-            path_parts = request.path.split('/')
-            gateway = path_parts[-2] if len(path_parts) > 1 else None
-            
-            if gateway in ['bkash', 'stripe', 'nagad']:
-                allowed_ips = getattr(settings, 'WEBHOOK_ALLOWED_IPS', {}).get(gateway, [])
-                
-                if allowed_ips:
-                    client_ip = self.get_client_ip(request)
-                    if not self.is_ip_allowed(client_ip, allowed_ips):
-                        return HttpResponseForbidden('IP not allowed')
-        
+        if any(request.path.startswith(p) for p in WEBHOOK_PATHS):
+            gateway = self._detect_gateway(request.path)
+            if gateway:
+                body = request.body
+                headers = {k: v for k, v in request.headers.items()}
+                try:
+                    from api.payment_gateways.services.WebhookVerifierService import WebhookVerifierService
+                    verifier = WebhookVerifierService()
+                    is_valid = verifier.verify(gateway, body, headers)
+                    request.webhook_gateway       = gateway
+                    request.webhook_signature_ok  = is_valid
+                    if not is_valid:
+                        logger.warning(f'Invalid webhook signature from {gateway} IP={request.META.get("REMOTE_ADDR")}')
+                except Exception as e:
+                    logger.error(f'Webhook verification error: {e}')
+                    request.webhook_signature_ok = False
+
         return self.get_response(request)
-    
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
-    
-    def is_ip_allowed(self, client_ip, allowed_ranges):
-        try:
-            client_ip_obj = ipaddress.ip_address(client_ip)
-            for ip_range in allowed_ranges:
-                if '/' in ip_range:
-                    if client_ip_obj in ipaddress.ip_network(ip_range):
-                        return True
-                else:
-                    if str(client_ip_obj) == ip_range:
-                        return True
-            return False
-        except ValueError:
-            return False
+
+    def _detect_gateway(self, path: str) -> str:
+        from api.payment_gateways.choices import ALL_GATEWAYS
+        for gw in ALL_GATEWAYS:
+            if f'/{gw}/' in path:
+                return gw
+        return ''

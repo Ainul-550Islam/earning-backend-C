@@ -24,7 +24,7 @@ class AppBlacklistEntry(TimeStampedModel):
         db_table = "publisher_tools_app_blacklist_entries"
         verbose_name = _("App Blacklist Entry")
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["app", "entry_type", "is_active"])]
+        indexes = [models.Index(fields=["app", "entry_type", "is_active"], name='idx_app_entry_type_is_acti_3f5')]
 
     def __str__(self):
         return f"{self.app.name} — Block {self.entry_type}: {self.value[:50]}"

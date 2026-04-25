@@ -12,7 +12,7 @@ from ..database_models.advertiser_model import (
 )
 from ..database_models.user_model import AdvertiserUser
 from ..database_models.billing_model import BillingProfile as AdvertiserBillingProfile
-from ..models import AdvertiserPortalBaseModel
+from ..models_base import AdvertiserPortalBaseModel
 
 __all__ = [
     'Advertiser',

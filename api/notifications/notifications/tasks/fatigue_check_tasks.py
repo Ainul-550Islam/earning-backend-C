@@ -26,7 +26,7 @@ def reset_daily_fatigue_counters():
     Reset daily notification send counters for all users.
     Run every day at 00:01 UTC via Celery Beat.
     """
-    from notifications.services.FatigueService import fatigue_service
+    from api.notifications.services.FatigueService import fatigue_service
 
     result = fatigue_service.reset_daily_counters()
     logger.info(
@@ -45,7 +45,7 @@ def reset_weekly_fatigue_counters():
     Reset weekly notification send counters for all users.
     Run every Monday at 00:05 UTC via Celery Beat.
     """
-    from notifications.services.FatigueService import fatigue_service
+    from api.notifications.services.FatigueService import fatigue_service
 
     result = fatigue_service.reset_weekly_counters()
     logger.info(
@@ -64,7 +64,7 @@ def recalculate_fatigue_flags():
     Re-evaluate the is_fatigued flag for all users based on current counters.
     Run every 6 hours via Celery Beat, and also after system-wide limit changes.
     """
-    from notifications.services.FatigueService import fatigue_service
+    from api.notifications.services.FatigueService import fatigue_service
 
     result = fatigue_service.recalculate_all()
     logger.info(
@@ -83,7 +83,7 @@ def reset_monthly_fatigue_counters():
     Reset monthly send counters for all users.
     Run on the 1st of each month at 00:10 UTC via Celery Beat.
     """
-    from notifications.models.analytics import NotificationFatigue
+    from api.notifications.models.analytics import NotificationFatigue
 
     reset_count = 0
     errors = 0
@@ -111,7 +111,7 @@ def clear_user_fatigue_task(self, user_id: int):
     Called by admin actions.
     """
     from django.contrib.auth import get_user_model
-    from notifications.services.FatigueService import fatigue_service
+    from api.notifications.services.FatigueService import fatigue_service
 
     User = get_user_model()
     try:
@@ -137,7 +137,7 @@ def create_missing_fatigue_records():
     Run once after deployment, then weekly as a safety net.
     """
     from django.contrib.auth import get_user_model
-    from notifications.models.analytics import NotificationFatigue
+    from api.notifications.models.analytics import NotificationFatigue
 
     User = get_user_model()
 

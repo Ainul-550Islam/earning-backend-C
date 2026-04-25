@@ -36,8 +36,8 @@ def notification_context(request):
         if cached:
             return cached
 
-        from notifications.models import Notification, DeviceToken, NotificationPreference
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models import Notification, DeviceToken, NotificationPreference
+        from api.notifications.models.analytics import OptOutTracking
 
         unread = Notification.objects.filter(
             user=request.user, is_read=False, is_deleted=False

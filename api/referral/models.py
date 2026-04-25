@@ -116,7 +116,7 @@ class Referral(models.Model):
         unique_together = ['referrer', 'referred_user']
         app_label = 'referral'
         indexes = [
-            models.Index(fields=['referrer', 'created_at']),
+            models.Index(fields=['referrer', 'created_at'], name='idx_referrer_created_at_1667'),
         ]
 
     def __str__(self):
@@ -160,8 +160,8 @@ class ReferralChain(models.Model):
         unique_together = ['beneficiary', 'earner', 'level']
         app_label = 'referral'
         indexes = [
-            models.Index(fields=['earner']),
-            models.Index(fields=['beneficiary']),
+            models.Index(fields=['earner'], name='idx_earner_1668'),
+            models.Index(fields=['beneficiary'], name='idx_beneficiary_1669'),
         ]
 
     def __str__(self):
@@ -222,8 +222,8 @@ class ReferralEarning(models.Model):
         ordering = ['-created_at']
         app_label = 'referral'
         indexes = [
-            models.Index(fields=['referrer', '-created_at']),
-            models.Index(fields=['level']),
+            models.Index(fields=['referrer', '-created_at'], name='idx_referrer_created_at_1670'),
+            models.Index(fields=['level'], name='idx_level_1671'),
         ]
 
     def __str__(self):

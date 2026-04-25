@@ -78,9 +78,9 @@ class IPIntelligence(TimeStampedModel):
         verbose_name_plural = 'IP Intelligences'
         ordering = ['-last_checked']
         indexes = [
-            models.Index(fields=['ip_address', 'tenant']),
-            models.Index(fields=['risk_score']),
-            models.Index(fields=['is_vpn', 'is_proxy', 'is_tor']),
+            models.Index(fields=['ip_address', 'tenant'], name='idx_ip_address_tenant_1458'),
+            models.Index(fields=['risk_score'], name='idx_risk_score_1459'),
+            models.Index(fields=['is_vpn', 'is_proxy', 'is_tor'], name='idx_is_vpn_is_proxy_is_tor_fb7'),
         ]
 
     def __str__(self):
@@ -126,7 +126,7 @@ class VPNDetectionLog(TimeStampedModel):
     class Meta:
         verbose_name = 'VPN Detection Log'
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['ip_address', 'created_at'])]
+        indexes = [models.Index(fields=['ip_address', 'created_at'], name='idx_ip_address_created_at_1461')]
 
     def __str__(self):
         return f"VPN: {self.ip_address} | {self.vpn_provider} | conf:{self.confidence_score:.2f}"
@@ -253,8 +253,8 @@ class FraudAttempt(TimeStampedModel):
         verbose_name = 'Fraud Attempt'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['ip_address', 'fraud_type']),
-            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['ip_address', 'fraud_type'], name='idx_ip_address_fraud_type_1462'),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_1463'),
         ]
 
     def __str__(self):
@@ -341,8 +341,8 @@ class DeviceFingerprint(TimeStampedModel):
         verbose_name = 'Device Fingerprint'
         ordering = ['-last_seen']
         indexes = [
-            models.Index(fields=['fingerprint_hash', 'tenant']),
-            models.Index(fields=['user', 'last_seen']),
+            models.Index(fields=['fingerprint_hash', 'tenant'], name='idx_fingerprint_hash_tenan_491'),
+            models.Index(fields=['user', 'last_seen'], name='idx_user_last_seen_1465'),
         ]
 
     def __str__(self):
@@ -409,7 +409,7 @@ class VelocityMetric(TimeStampedModel):
         verbose_name = 'Velocity Metric'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['ip_address', 'action_type', 'window_start']),
+            models.Index(fields=['ip_address', 'action_type', 'window_start'], name='idx_ip_address_action_type_b1d'),
         ]
 
     def __str__(self):
@@ -445,8 +445,8 @@ class IPBlacklist(TimeStampedModel):
         verbose_name = 'IP Blacklist'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['ip_address', 'is_active']),
-            models.Index(fields=['tenant', 'is_active']),
+            models.Index(fields=['ip_address', 'is_active'], name='idx_ip_address_is_active_1467'),
+            models.Index(fields=['tenant', 'is_active'], name='idx_tenant_is_active_1468'),
         ]
 
     def __str__(self):
@@ -583,7 +583,7 @@ class UserRiskProfile(TimeStampedModel):
         verbose_name = 'User Risk Profile'
         ordering = ['-overall_risk_score']
         indexes = [
-            models.Index(fields=['overall_risk_score', 'is_high_risk']),
+            models.Index(fields=['overall_risk_score', 'is_high_risk'], name='idx_overall_risk_score_is__140'),
         ]
 
     def __str__(self):
@@ -611,7 +611,7 @@ class RiskScoreHistory(TimeStampedModel):
     class Meta:
         verbose_name = 'Risk Score History'
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['user', 'created_at'])]
+        indexes = [models.Index(fields=['user', 'created_at'], name='idx_user_created_at_1470')]
 
     def save(self, *args, **kwargs):
         self.score_delta = self.new_score - self.previous_score
@@ -699,7 +699,7 @@ class AnomalyDetectionLog(TimeStampedModel):
     class Meta:
         verbose_name = 'Anomaly Detection Log'
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['anomaly_type', 'anomaly_score'])]
+        indexes = [models.Index(fields=['anomaly_type', 'anomaly_score'], name='idx_anomaly_type_anomaly_s_992')]
 
     def __str__(self):
         return f"Anomaly: {self.anomaly_type} | score:{self.anomaly_score:.2f}"
@@ -863,8 +863,8 @@ class APIRequestLog(TimeStampedModel):
         verbose_name = 'API Request Log'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['ip_address', 'created_at']),
-            models.Index(fields=['endpoint', 'status_code']),
+            models.Index(fields=['ip_address', 'created_at'], name='idx_ip_address_created_at_1472'),
+            models.Index(fields=['endpoint', 'status_code'], name='idx_endpoint_status_code_1473'),
         ]
 
     def __str__(self):
@@ -933,8 +933,8 @@ class SystemAuditTrail(TimeStampedModel):
         verbose_name = 'System Audit Trail'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['user', 'action', 'created_at']),
-            models.Index(fields=['model_name', 'object_id']),
+            models.Index(fields=['user', 'action', 'created_at'], name='idx_user_action_created_at_492'),
+            models.Index(fields=['model_name', 'object_id'], name='idx_model_name_object_id_1475'),
         ]
 
     def __str__(self):

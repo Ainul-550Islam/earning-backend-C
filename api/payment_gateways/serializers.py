@@ -24,7 +24,7 @@ class PaymentGatewaySerializer(serializers.ModelSerializer):
         model = PaymentGateway
         fields = [
             'id', 'name', 'display_name', 'description', 'status',
-            'transaction_fee_percentage',   # ✅ Fixed (was GatewayTransaction_fee_percentage)
+            'transaction_fee_percentage',   # transaction_fee_percentage (correct field name)
             'minimum_amount', 'maximum_amount',
             'supports_deposit', 'supports_withdrawal', 'supported_currencies',
             'logo', 'color_code', 'sort_order', 'is_test_mode',
@@ -86,7 +86,7 @@ class PaymentGatewayMethodSerializer(serializers.ModelSerializer):
 
 class GatewayTransactionSerializer(serializers.ModelSerializer):
     """GatewayTransaction model — all fields correct"""
-    # ✅ Fixed: was GatewayTransaction_type / GatewayTransaction_type_display
+    # ✅ Fixed: was transaction_type / transaction_type_display
     transaction_type_display = serializers.CharField(
         source='get_transaction_type_display', read_only=True
     )
@@ -236,7 +236,7 @@ class PaymentGatewayWebhookLogSerializer(serializers.ModelSerializer):
 
 class CreatePaymentSerializer(serializers.Serializer):
     """Initiate payment"""
-    gateway  = serializers.ChoiceField(choices=['bkash', 'nagad', 'stripe', 'paypal'])
+    gateway  = serializers.ChoiceField(choices=['bkash','nagad','sslcommerz','amarpay','upay','shurjopay','stripe','paypal','payoneer','wire','ach','crypto'])
     amount   = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('10'))
     currency = serializers.CharField(default='BDT', max_length=3)
 
@@ -248,5 +248,5 @@ class CreatePaymentSerializer(serializers.Serializer):
 
 class VerifyPaymentSerializer(serializers.Serializer):
     """Verify payment"""
-    gateway    = serializers.ChoiceField(choices=['bkash', 'nagad', 'stripe', 'paypal'])
+    gateway    = serializers.ChoiceField(choices=['bkash','nagad','sslcommerz','amarpay','upay','shurjopay','stripe','paypal','payoneer','wire','ach','crypto'])
     payment_id = serializers.CharField(max_length=255)

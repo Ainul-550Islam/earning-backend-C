@@ -34,7 +34,7 @@ class PushDeviceViewSet(viewsets.ModelViewSet):
     pagination_class = _Pagination
 
     def get_queryset(self):
-        from notifications.models.channel import PushDevice
+        from api.notifications.models.channel import PushDevice
         qs = PushDevice.objects.filter(user=self.request.user)
 
         # Active filter
@@ -50,7 +50,7 @@ class PushDeviceViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         from rest_framework import serializers
-        from notifications.models.channel import PushDevice
+        from api.notifications.models.channel import PushDevice
 
         class PushDeviceSerializer(serializers.ModelSerializer):
             class Meta:
@@ -72,7 +72,7 @@ class PushDeviceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Register device for current user. Update if same token exists."""
-        from notifications.models.channel import PushDevice
+        from api.notifications.models.channel import PushDevice
         from django.conf import settings as dj_settings
 
         data = serializer.validated_data

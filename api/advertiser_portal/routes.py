@@ -26,6 +26,26 @@ from .permissions import *
 from .services import *
 from .utils import *
 
+# Import all 18 viewsets from the viewsets directory
+from api.advertiser_portal.viewsets.AdvertiserViewSet import AdvertiserViewSet
+from api.advertiser_portal.viewsets.AdminAdvertiserViewSet import AdminAdvertiserViewSet
+from api.advertiser_portal.viewsets.AdvertiserProfileViewSet import AdvertiserProfileViewSet
+from api.advertiser_portal.viewsets.AdvertiserVerificationViewSet import AdvertiserVerificationViewSet
+from api.advertiser_portal.viewsets.AdvertiserOfferViewSet import AdvertiserOfferViewSet
+from api.advertiser_portal.viewsets.AdvertiserWalletViewSet import AdvertiserWalletViewSet
+from api.advertiser_portal.viewsets.AdvertiserInvoiceViewSet import AdvertiserInvoiceViewSet
+from api.advertiser_portal.viewsets.AdvertiserNotificationViewSet import AdvertiserNotificationViewSet
+from api.advertiser_portal.viewsets.AdCampaignViewSet import AdCampaignViewSet
+from api.advertiser_portal.viewsets.CampaignBidViewSet import CampaignBidViewSet
+from api.advertiser_portal.viewsets.CampaignCreativeViewSet import CampaignCreativeViewSet
+from api.advertiser_portal.viewsets.CampaignTargetingViewSet import CampaignTargetingViewSet
+from api.advertiser_portal.viewsets.CampaignReportViewSet import CampaignReportViewSet
+from api.advertiser_portal.viewsets.OfferRequirementViewSet import OfferRequirementViewSet
+from api.advertiser_portal.viewsets.TrackingPixelViewSet import TrackingPixelViewSet
+from api.advertiser_portal.viewsets.S2SPostbackViewSet import S2SPostbackViewSet
+from api.advertiser_portal.viewsets.ConversionQualityViewSet import ConversionQualityViewSet
+from api.advertiser_portal.viewsets.PublisherBreakdownViewSet import PublisherBreakdownViewSet
+
 
 class StandardResultsSetPagination(PageNumberPagination):
     """Standard pagination class."""

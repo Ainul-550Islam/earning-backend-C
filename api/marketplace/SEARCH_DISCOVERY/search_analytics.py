@@ -22,7 +22,7 @@ class SearchLog(models.Model):
     class Meta:
         app_label = "marketplace"
         db_table  = "marketplace_search_log"
-        indexes   = [models.Index(fields=["tenant","created_at"])]
+        indexes   = [models.Index(fields=["tenant","created_at"], name='idx_tenant_created_at_1119')]
 
 
 def log_search(tenant, query: str, results_count: int, took_ms: int = 0,

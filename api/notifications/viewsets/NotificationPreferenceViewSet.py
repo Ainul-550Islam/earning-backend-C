@@ -8,8 +8,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from notifications.models import NotificationPreference
-from notifications.serializers import (
+from api.notifications.models import NotificationPreference
+from api.notifications.serializers import (
     NotificationPreferenceSerializer,
     UpdatePreferenceSerializer,
     ExportPreferencesSerializer,
@@ -81,7 +81,7 @@ class NotificationPreferenceViewSet(viewsets.ModelViewSet):
     def channels(self, request):
         """Get per-channel enabled/disabled status for current user."""
         pref, _ = NotificationPreference.objects.get_or_create(user=request.user)
-        from notifications.services.OptOutService import opt_out_service
+        from api.notifications.services.OptOutService import opt_out_service
         opted_out = opt_out_service.get_opted_out_channels(request.user)
         channels = ['in_app', 'push', 'email', 'sms', 'telegram', 'whatsapp', 'browser']
         result = {}

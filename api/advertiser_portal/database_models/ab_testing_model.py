@@ -16,7 +16,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -274,11 +277,11 @@ class ABTest(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'A/B Test'
         verbose_name_plural = 'A/B Tests'
         indexes = [
-            models.Index(fields=['advertiser', 'status']),
-            models.Index(fields=['campaign', 'status']),
-            models.Index(fields=['test_type']),
-            models.Index(fields=['start_date']),
-            models.Index(fields=['status']),
+            models.Index(fields=['advertiser', 'status'], name='idx_advertiser_status_047'),
+            models.Index(fields=['campaign', 'status'], name='idx_campaign_status_048'),
+            models.Index(fields=['test_type'], name='idx_test_type_049'),
+            models.Index(fields=['start_date'], name='idx_start_date_050'),
+            models.Index(fields=['status'], name='idx_status_051'),
         ]
     
     def __str__(self) -> str:
@@ -703,8 +706,8 @@ class ABTestVariant(AdvertiserPortalBaseModel, AuditModel):
         verbose_name_plural = 'A/B Test Variants'
         unique_together = ['test', 'variant_id']
         indexes = [
-            models.Index(fields=['test', 'is_control']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['test', 'is_control'], name='idx_test_is_control_052'),
+            models.Index(fields=['is_active'], name='idx_is_active_053'),
         ]
     
     def __str__(self) -> str:
@@ -850,10 +853,10 @@ class ABTestResult(AdvertiserPortalBaseModel):
         verbose_name_plural = 'A/B Test Results'
         unique_together = ['test', 'variant', 'metric_name', 'result_date']
         indexes = [
-            models.Index(fields=['test', 'result_date']),
-            models.Index(fields=['variant', 'metric_name']),
-            models.Index(fields=['metric_name']),
-            models.Index(fields=['is_significant']),
+            models.Index(fields=['test', 'result_date'], name='idx_test_result_date_054'),
+            models.Index(fields=['variant', 'metric_name'], name='idx_variant_metric_name_055'),
+            models.Index(fields=['metric_name'], name='idx_metric_name_056'),
+            models.Index(fields=['is_significant'], name='idx_is_significant_057'),
         ]
     
     def __str__(self) -> str:
@@ -921,8 +924,8 @@ class ABTestInsight(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'A/B Test Insight'
         verbose_name_plural = 'A/B Test Insights'
         indexes = [
-            models.Index(fields=['test', 'insight_type']),
-            models.Index(fields=['actionable']),
+            models.Index(fields=['test', 'insight_type'], name='idx_test_insight_type_058'),
+            models.Index(fields=['actionable'], name='idx_actionable_059'),
         ]
     
     def __str__(self) -> str:

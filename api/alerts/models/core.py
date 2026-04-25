@@ -383,9 +383,9 @@ class AlertRule(models.Model):
     class Meta:
         ordering = ['-severity', 'name']
         indexes = [
-            models.Index(fields=['is_active', 'alert_type']),
-            models.Index(fields=['severity', 'last_triggered']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['is_active', 'alert_type'], name='idx_is_active_alert_type_703'),
+            models.Index(fields=['severity', 'last_triggered'], name='idx_severity_last_triggere_51f'),
+            models.Index(fields=['created_at'], name='idx_created_at_705'),
             GinIndex(fields=['name'], name='rule_name_gin_idx'),  # For PostgreSQL
         ]
         db_table_comment = "Stores alert rules configuration and thresholds"
@@ -525,9 +525,9 @@ class AlertLog(models.Model):
     class Meta:
         ordering = ['-triggered_at']
         indexes = [
-            models.Index(fields=['triggered_at']),
-            models.Index(fields=['is_resolved', 'triggered_at']),
-            models.Index(fields=['rule', 'triggered_at']),
+            models.Index(fields=['triggered_at'], name='idx_triggered_at_706'),
+            models.Index(fields=['is_resolved', 'triggered_at'], name='idx_is_resolved_triggered__2b2'),
+            models.Index(fields=['rule', 'triggered_at'], name='idx_rule_triggered_at_708'),
             BrinIndex(fields=['triggered_at'], name='triggered_at_brin_idx'),  # For PostgreSQL time series
             GinIndex(fields=['details'], name='details_gin_idx'),  # For JSON queries
         ]
@@ -640,10 +640,10 @@ class Notification(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['status', 'created_at']),
-            models.Index(fields=['notification_type', 'created_at']),
-            models.Index(fields=['alert_log', 'created_at']),
-            models.Index(fields=['recipient', 'created_at']),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_709'),
+            models.Index(fields=['notification_type', 'created_at'], name='idx_notification_type_crea_6b0'),
+            models.Index(fields=['alert_log', 'created_at'], name='idx_alert_log_created_at_711'),
+            models.Index(fields=['recipient', 'created_at'], name='idx_recipient_created_at_712'),
         ]
         db_table_comment = "Tracks all notification attempts and their status"
         verbose_name = "Notification"
@@ -799,9 +799,9 @@ class AlertSchedule(models.Model):
     class Meta:
         ordering = ['priority', 'name']
         indexes = [
-            models.Index(fields=['rule', 'is_active']),
-            models.Index(fields=['is_active', 'timezone']),
-            models.Index(fields=['is_active', 'days_of_week']),
+            models.Index(fields=['rule', 'is_active'], name='idx_rule_is_active_713'),
+            models.Index(fields=['is_active', 'timezone'], name='idx_is_active_timezone_714'),
+            models.Index(fields=['is_active', 'days_of_week'], name='idx_is_active_days_of_week_715'),
         ]
         db_table_comment = "Defines when alert rules should be active based on schedule"
         verbose_name = "Alert Schedule"
@@ -959,7 +959,7 @@ class AlertEscalation(models.Model):
         ordering = ['rule', 'level']
         unique_together = ['rule', 'level']
         indexes = [
-            models.Index(fields=['is_active', 'level']),
+            models.Index(fields=['is_active', 'level'], name='idx_is_active_level_716'),
         ]
         db_table_comment = "Defines escalation rules for unresolved alerts"
         verbose_name = "Alert Escalation"
@@ -1099,9 +1099,9 @@ class AlertTemplate(models.Model):
     class Meta:
         ordering = ['alert_type', 'severity', 'name']
         indexes = [
-            models.Index(fields=['alert_type', 'severity']),
-            models.Index(fields=['is_default', 'language']),
-            models.Index(fields=['alert_type', 'is_default']),
+            models.Index(fields=['alert_type', 'severity'], name='idx_alert_type_severity_717'),
+            models.Index(fields=['is_default', 'language'], name='idx_is_default_language_718'),
+            models.Index(fields=['alert_type', 'is_default'], name='idx_alert_type_is_default_719'),
         ]
         db_table_comment = "Templates for alert messages across different channels"
         verbose_name = "Alert Template"
@@ -1303,10 +1303,10 @@ class AlertAnalytics(models.Model):
     class Meta:
         ordering = ['-date']
         indexes = [
-            models.Index(fields=['date']),
-            models.Index(fields=['resolution_rate']),
-            models.Index(fields=['total_notification_cost']),
-            models.Index(fields=['total_alerts', 'date']),
+            models.Index(fields=['date'], name='idx_date_720'),
+            models.Index(fields=['resolution_rate'], name='idx_resolution_rate_721'),
+            models.Index(fields=['total_notification_cost'], name='idx_total_notification_cos_779'),
+            models.Index(fields=['total_alerts', 'date'], name='idx_total_alerts_date_723'),
         ]
         db_table_comment = "Daily aggregated analytics for alert system performance"
         verbose_name = "Alert Analytics"
@@ -1546,9 +1546,9 @@ class AlertGroup(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['is_active']),
-            models.Index(fields=['group_notification_enabled']),
-            models.Index(fields=['cached_alert_count']),
+            models.Index(fields=['is_active'], name='idx_is_active_724'),
+            models.Index(fields=['group_notification_enabled'], name='idx_group_notification_ena_34e'),
+            models.Index(fields=['cached_alert_count'], name='idx_cached_alert_count_726'),
         ]
         db_table_comment = "Groups related alert rules for coordinated notifications"
         verbose_name = "Alert Group"
@@ -1728,9 +1728,9 @@ class AlertSuppression(models.Model):
     class Meta:
         ordering = ['-start_time']
         indexes = [
-            models.Index(fields=['is_active', 'start_time', 'end_time']),
-            models.Index(fields=['suppression_type']),
-            models.Index(fields=['rule', 'is_active']),
+            models.Index(fields=['is_active', 'start_time', 'end_time'], name='idx_is_active_start_time_e_f97'),
+            models.Index(fields=['suppression_type'], name='idx_suppression_type_728'),
+            models.Index(fields=['rule', 'is_active'], name='idx_rule_is_active_729'),
         ]
         db_table_comment = "Temporarily suppresses alerts based on various criteria"
         verbose_name = "Alert Suppression"
@@ -1953,10 +1953,10 @@ class SystemHealthCheck(models.Model):
     class Meta:
         ordering = ['priority', 'check_name']
         indexes = [
-            models.Index(fields=['check_type', 'status']),
-            models.Index(fields=['is_active', 'next_check']),
-            models.Index(fields=['status', 'last_checked']),
-            models.Index(fields=['priority', 'is_active']),
+            models.Index(fields=['check_type', 'status'], name='idx_check_type_status_730'),
+            models.Index(fields=['is_active', 'next_check'], name='idx_is_active_next_check_731'),
+            models.Index(fields=['status', 'last_checked'], name='idx_status_last_checked_732'),
+            models.Index(fields=['priority', 'is_active'], name='idx_priority_is_active_733'),
         ]
         db_table_comment = "Monitors system health through periodic checks"
         verbose_name = "System Health Check"
@@ -2121,9 +2121,9 @@ class AlertRuleHistory(models.Model):
     class Meta:
         ordering = ['-changed_at']
         indexes = [
-            models.Index(fields=['rule', 'changed_at']),
-            models.Index(fields=['changed_by', 'changed_at']),
-            models.Index(fields=['action', 'changed_at']),
+            models.Index(fields=['rule', 'changed_at'], name='idx_rule_changed_at_734'),
+            models.Index(fields=['changed_by', 'changed_at'], name='idx_changed_by_changed_at_735'),
+            models.Index(fields=['action', 'changed_at'], name='idx_action_changed_at_736'),
             GinIndex(fields=['changed_fields'], name='changed_fields_gin_idx'),
         ]
         db_table_comment = "Audit trail for all changes to alert rules"
@@ -2448,8 +2448,8 @@ class SystemMetrics(models.Model):
     class Meta:
         ordering = ['-timestamp']
         indexes = [
-            models.Index(fields=['-timestamp']),
-            models.Index(fields=['data_source', 'timestamp']),
+            models.Index(fields=['-timestamp'], name='idx_timestamp_737'),
+            models.Index(fields=['data_source', 'timestamp'], name='idx_data_source_timestamp_738'),
         ]
         verbose_name = "System Metrics"
         verbose_name_plural = "System Metrics"

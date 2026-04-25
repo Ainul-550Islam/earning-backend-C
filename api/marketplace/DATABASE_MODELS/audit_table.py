@@ -26,7 +26,7 @@ class MarketplaceAuditLog(models.Model):
         app_label = "marketplace"
         db_table  = "marketplace_audit_log"
         ordering  = ["-created_at"]
-        indexes   = [models.Index(fields=["entity_type","entity_id"])]
+        indexes   = [models.Index(fields=["entity_type","entity_id"], name='idx_entity_type_entity_id_1115')]
 
     def __str__(self):
         return f"[{self.entity_type}] {self.action} by {self.actor} @ {self.created_at:%Y-%m-%d %H:%M}"

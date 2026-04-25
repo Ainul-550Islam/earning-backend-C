@@ -90,8 +90,8 @@ class OfferProvider(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['provider_type', 'status']),
-            models.Index(fields=['status']),
+            models.Index(fields=['provider_type', 'status'], name='idx_provider_type_status_1153'),
+            models.Index(fields=['status'], name='idx_status_1154'),
         ]
         verbose_name = 'Offer Provider'
         verbose_name_plural = 'Offer Providers'
@@ -315,13 +315,13 @@ class Offer(models.Model):
     class Meta:
         ordering = ['-is_featured', '-quality_score', '-reward_amount']
         indexes = [
-            models.Index(fields=['provider', 'external_offer_id']),
-            models.Index(fields=['status', 'platform']),
-            models.Index(fields=['category', 'status']),
-            models.Index(fields=['offer_type', 'status']),
-            models.Index(fields=['-reward_amount', 'status']),
-            models.Index(fields=['is_featured', 'status']),
-            models.Index(fields=['end_date']),
+            models.Index(fields=['provider', 'external_offer_id'], name='idx_provider_external_offe_507'),
+            models.Index(fields=['status', 'platform'], name='idx_status_platform_1156'),
+            models.Index(fields=['category', 'status'], name='idx_category_status_1157'),
+            models.Index(fields=['offer_type', 'status'], name='idx_offer_type_status_1158'),
+            models.Index(fields=['-reward_amount', 'status'], name='idx_reward_amount_status_1159'),
+            models.Index(fields=['is_featured', 'status'], name='idx_is_featured_status_1160'),
+            models.Index(fields=['end_date'], name='idx_end_date_1161'),
         ]
         unique_together = ['provider', 'external_offer_id']
         verbose_name = 'Offer'
@@ -482,10 +482,10 @@ class OfferClick(models.Model):
     class Meta:
         ordering = ['-clicked_at']
         indexes = [
-            models.Index(fields=['offer', 'user']),
-            models.Index(fields=['click_id']),
-            models.Index(fields=['user', '-clicked_at']),
-            models.Index(fields=['is_converted']),
+            models.Index(fields=['offer', 'user'], name='idx_offer_user_1162'),
+            models.Index(fields=['click_id'], name='idx_click_id_1163'),
+            models.Index(fields=['user', '-clicked_at'], name='idx_user_clicked_at_1164'),
+            models.Index(fields=['is_converted'], name='idx_is_converted_1165'),
         ]
         verbose_name = 'Offer Click'
         verbose_name_plural = 'Offer Clicks'
@@ -573,10 +573,10 @@ class OfferConversion(models.Model):
     class Meta:
         ordering = ['-converted_at']
         indexes = [
-            models.Index(fields=['offer', 'user']),
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['status', '-converted_at']),
-            models.Index(fields=['external_WalletTransaction_id']),
+            models.Index(fields=['offer', 'user'], name='idx_offer_user_1166'),
+            models.Index(fields=['user', 'status'], name='idx_user_status_1167'),
+            models.Index(fields=['status', '-converted_at'], name='idx_status_converted_at_1168'),
+            models.Index(fields=['external_WalletTransaction_id'], name='idx_external_WalletTransac_243'),
         ]
         verbose_name = 'Offer Conversion'
         verbose_name_plural = 'Offer Conversions'

@@ -331,7 +331,7 @@ class NotificationIntegrationAdapter(BaseAdapter):
         """
         try:
             from django.contrib.auth import get_user_model
-            from notifications.services import notification_service
+            from api.notifications._services_core import notification_service
 
             User = get_user_model()
             user = User.objects.get(pk=payload['user_id'])
@@ -361,7 +361,7 @@ class NotificationIntegrationAdapter(BaseAdapter):
 
     def health_check(self) -> HealthStatus:
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             Notification.objects.first()
             return HealthStatus.HEALTHY
         except Exception:

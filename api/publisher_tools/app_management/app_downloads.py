@@ -26,7 +26,7 @@ class AppDownloadSnapshot(TimeStampedModel):
         unique_together = [["app", "date", "platform"]]
         ordering = ["-date"]
         indexes = [
-            models.Index(fields=["app", "date"]),
+            models.Index(fields=["app", "date"], name='idx_app_date_1538'),
         ]
 
     def __str__(self):

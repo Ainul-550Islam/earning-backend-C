@@ -180,7 +180,7 @@ class NetworkPostbackConfig(TimeStampedModel):
         verbose_name_plural = _("network postback configs")
         ordering = ["name"]
         indexes = [
-            models.Index(fields=["network_key", "status"]),
+            models.Index(fields=["network_key", "status"], name='idx_network_key_status_1362'),
         ]
 
     def __str__(self) -> str:
@@ -316,10 +316,10 @@ class PostbackLog(TimeStampedModel):
         verbose_name_plural = _("postback logs")
         ordering = ["-received_at"]
         indexes = [
-            models.Index(fields=["network", "status", "received_at"]),
-            models.Index(fields=["lead_id", "network"]),
-            models.Index(fields=["status", "next_retry_at"]),
-            models.Index(fields=["source_ip", "received_at"]),
+            models.Index(fields=["network", "status", "received_at"], name='idx_network_status_receive_127'),
+            models.Index(fields=["lead_id", "network"], name='idx_lead_id_network_1364'),
+            models.Index(fields=["status", "next_retry_at"], name='idx_status_next_retry_at_1365'),
+            models.Index(fields=["source_ip", "received_at"], name='idx_source_ip_received_at_1366'),
         ]
 
     def __str__(self) -> str:
@@ -413,7 +413,7 @@ class DuplicateLeadCheck(models.Model):
         verbose_name_plural = _("duplicate lead checks")
         unique_together = [("network", "lead_id")]
         indexes = [
-            models.Index(fields=["network", "lead_id"]),
+            models.Index(fields=["network", "lead_id"], name='idx_network_lead_id_1367'),
         ]
 
     def __str__(self) -> str:

@@ -62,7 +62,7 @@ class UserTier(models.Model):
 
     class Meta:
         app_label = 'djoyalty'
-        indexes = [models.Index(fields=['customer', 'is_current'])]
+        indexes = [models.Index(fields=['customer', 'is_current'], name='idx_customer_is_current_992')]
 
     def __str__(self):
         return f'{self.customer} → {self.tier} (current={self.is_current})'

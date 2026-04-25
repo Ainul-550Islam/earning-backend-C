@@ -29,7 +29,7 @@ def _safe_notify(user, notification_type: str, title: str,
     Used by all receivers to avoid breaking the originating signal.
     """
     try:
-        from notifications.services.NotificationService import notification_service
+        from api.notifications.services.NotificationService import notification_service
         notif = notification_service.create_notification(
             user=user,
             title=title,
@@ -71,7 +71,7 @@ def on_user_post_save(sender, instance, created, **kwargs):
 
         # Enroll in onboarding journey
         try:
-            from notifications.services.JourneyService import journey_service
+            from api.notifications.services.JourneyService import journey_service
             journey_service.enroll_user(
                 user=instance,
                 journey_id='onboarding',
@@ -118,7 +118,7 @@ def on_notification_post_save(sender, instance, created, **kwargs):
     if not created:
         return
     try:
-        from notifications.consumers import send_notification_to_user, send_count_update_to_user
+        from api.notifications.consumers import send_notification_to_user, send_count_update_to_user
         # Broadcast new notification to WebSocket
         send_notification_to_user(instance.user_id, {
             'id': instance.pk,
@@ -130,7 +130,7 @@ def on_notification_post_save(sender, instance, created, **kwargs):
             'created_at': instance.created_at.isoformat() if instance.created_at else None,
         })
         # Update badge count
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         unread = Notification.objects.filter(
             user_id=instance.user_id,
             is_read=False,
@@ -152,8 +152,8 @@ def on_notification_read(sender, instance, **kwargs):
         cache_key = f'notif:count:{instance.user_id}'
         cache.delete(cache_key)
 
-        from notifications.consumers import send_count_update_to_user
-        from notifications.models import Notification
+        from api.notifications.consumers import send_count_update_to_user
+        from api.notifications.models import Notification
         unread = Notification.objects.filter(
             user_id=instance.user_id, is_read=False, is_deleted=False
         ).count()
@@ -206,7 +206,7 @@ def on_opt_out_post_save(sender, instance, **kwargs):
     When user opts out of a channel — update their NotificationPreference.
     """
     try:
-        from notifications.models import NotificationPreference
+        from api.notifications.models import NotificationPreference
         pref, _ = NotificationPreference.objects.get_or_create(user=instance.user)
 
         channel = instance.channel
@@ -276,7 +276,7 @@ def on_device_token_post_save(sender, instance, created, **kwargs):
         return
     try:
         user = instance.user
-        from notifications.models import DeviceToken
+        from api.notifications.models import DeviceToken
         existing_count = DeviceToken.objects.filter(user=user, is_active=True).count()
 
         if existing_count > 1:
@@ -343,7 +343,7 @@ def on_integration_event(sender, event_type: str, data: dict,
     Routes events from the EventBus to notification creation.
     """
     try:
-        from notifications.integration_system.event_bus import event_bus
+        from api.notifications.integration_system.event_bus import event_bus
         event_bus.publish(
             event_type=event_type,
             data=data,
@@ -360,7 +360,7 @@ def on_integration_error(sender, integration: str, error: str,
     Log integration errors to the audit trail.
     """
     try:
-        from notifications.integration_system.integ_audit_logs import audit_logger
+        from api.notifications.integration_system.integ_audit_logs import audit_logger
         audit_logger.log(
             action='error',
             module=integration,

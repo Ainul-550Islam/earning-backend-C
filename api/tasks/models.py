@@ -118,11 +118,11 @@ class MasterTask(models.Model):
     
     class Meta:
         indexes = [
-            models.Index(fields=['system_type', 'is_active']),
-            models.Index(fields=['category', 'is_active']),
-            models.Index(fields=['available_from', 'available_until']),
-            models.Index(fields=['-created_at']),
-            models.Index(fields=['task_id']),
+            models.Index(fields=['system_type', 'is_active'], name='idx_system_type_is_active_1743'),
+            models.Index(fields=['category', 'is_active'], name='idx_category_is_active_1744'),
+            models.Index(fields=['available_from', 'available_until'], name='idx_available_from_availab_47f'),
+            models.Index(fields=['-created_at'], name='idx_created_at_1746'),
+            models.Index(fields=['task_id'], name='idx_task_id_1747'),
         ]
         ordering = ['sort_order', '-created_at']
         unique_together = ['task_id']  # Prevent duplicates
@@ -1045,9 +1045,9 @@ class UserTaskCompletion(models.Model):
     class Meta:
         unique_together = ['user', 'task', 'started_at']
         indexes = [
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['completed_at']),
-            models.Index(fields=['user', '-started_at']),
+            models.Index(fields=['user', 'status'], name='idx_user_status_1748'),
+            models.Index(fields=['completed_at'], name='idx_completed_at_1749'),
+            models.Index(fields=['user', '-started_at'], name='idx_user_started_at_1750'),
         ]
         ordering = ['-started_at']
     
@@ -1324,11 +1324,11 @@ class AdminLedger(models.Model):
     
     class Meta:
         indexes = [
-            models.Index(fields=['source', '-created_at']),
-            models.Index(fields=['source_type', '-created_at']),
-            models.Index(fields=['-created_at']),
-            models.Index(fields=['task', 'user']),
-            models.Index(fields=['created_at']),  # For date range queries
+            models.Index(fields=['source', '-created_at'], name='idx_source_created_at_1751'),
+            models.Index(fields=['source_type', '-created_at'], name='idx_source_type_created_at_683'),
+            models.Index(fields=['-created_at'], name='idx_created_at_1753'),
+            models.Index(fields=['task', 'user'], name='idx_task_user_1754'),
+            models.Index(fields=['created_at'], name='idx_created_at_1755'),  # For date range queries
         ]
         ordering = ['-created_at']
         verbose_name = 'Admin Ledger'

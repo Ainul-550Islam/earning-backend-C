@@ -271,9 +271,9 @@ class ThresholdConfig(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['alert_rule', 'is_active']),
-            models.Index(fields=['threshold_type', 'is_active']),
-            models.Index(fields=['last_calculated']),
+            models.Index(fields=['alert_rule', 'is_active'], name='idx_alert_rule_is_active_771'),
+            models.Index(fields=['threshold_type', 'is_active'], name='idx_threshold_type_is_acti_ccc'),
+            models.Index(fields=['last_calculated'], name='idx_last_calculated_773'),
         ]
         db_table_comment = "Advanced threshold configurations for alert rules"
         verbose_name = "Threshold Configuration"
@@ -378,10 +378,10 @@ class ThresholdBreach(models.Model):
     class Meta:
         ordering = ['-detected_at']
         indexes = [
-            models.Index(fields=['threshold_config', 'detected_at']),
-            models.Index(fields=['severity', 'detected_at']),
-            models.Index(fields=['resolved_at']),
-            models.Index(fields=['acknowledged_at']),
+            models.Index(fields=['threshold_config', 'detected_at'], name='idx_threshold_config_detec_ea1'),
+            models.Index(fields=['severity', 'detected_at'], name='idx_severity_detected_at_775'),
+            models.Index(fields=['resolved_at'], name='idx_resolved_at_776'),
+            models.Index(fields=['acknowledged_at'], name='idx_acknowledged_at_777'),
         ]
         db_table_comment = "Records of threshold breaches for analysis"
         verbose_name = "Threshold Breach"
@@ -598,9 +598,9 @@ class AdaptiveThreshold(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['threshold_config']),
-            models.Index(fields=['last_adaptation']),
-            models.Index(fields=['adaptation_method']),
+            models.Index(fields=['threshold_config'], name='idx_threshold_config_778'),
+            models.Index(fields=['last_adaptation'], name='idx_last_adaptation_779'),
+            models.Index(fields=['adaptation_method'], name='idx_adaptation_method_780'),
         ]
         db_table_comment = "Self-adjusting thresholds based on historical patterns"
         verbose_name = "Adaptive Threshold"
@@ -667,8 +667,8 @@ class ThresholdHistory(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['adaptive_threshold', 'created_at']),
-            models.Index(fields=['change_type', 'created_at']),
+            models.Index(fields=['adaptive_threshold', 'created_at'], name='idx_adaptive_threshold_cre_3f8'),
+            models.Index(fields=['change_type', 'created_at'], name='idx_change_type_created_at_782'),
         ]
         db_table_comment = "History of threshold changes and adaptations"
         verbose_name = "Threshold History"
@@ -784,8 +784,8 @@ class ThresholdProfile(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['profile_type', 'is_active']),
-            models.Index(fields=['is_default']),
+            models.Index(fields=['profile_type', 'is_active'], name='idx_profile_type_is_active_783'),
+            models.Index(fields=['is_default'], name='idx_is_default_784'),
         ]
         db_table_comment = "Pre-configured threshold profiles for different use cases"
         verbose_name = "Threshold Profile"

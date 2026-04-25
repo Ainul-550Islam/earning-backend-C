@@ -167,13 +167,13 @@ class AuditLog(models.Model):
     class Meta:
         db_table = 'audit_logs'
         indexes = [
-            models.Index(fields=['action', 'timestamp']),
-            models.Index(fields=['user_id', 'timestamp']),
-            models.Index(fields=['resource_type', 'resource_id']),
-            models.Index(fields=['correlation_id']),
-            models.Index(fields=['user_ip', 'timestamp']),
-            models.Index(fields=['level', 'timestamp']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['action', 'timestamp'], name='idx_action_timestamp_809'),
+            models.Index(fields=['user_id', 'timestamp'], name='idx_user_id_timestamp_810'),
+            models.Index(fields=['resource_type', 'resource_id'], name='idx_resource_type_resource_fd0'),
+            models.Index(fields=['correlation_id'], name='idx_correlation_id_812'),
+            models.Index(fields=['user_ip', 'timestamp'], name='idx_user_ip_timestamp_813'),
+            models.Index(fields=['level', 'timestamp'], name='idx_level_timestamp_814'),
+            models.Index(fields=['created_at'], name='idx_created_at_815'),
         ]
         ordering = ['-timestamp']
     

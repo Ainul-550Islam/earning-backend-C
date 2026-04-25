@@ -16,7 +16,7 @@ vs Journey: Journeys are sequential multi-step sequences.
             Workflows are event-triggered single or multi-action rules.
 
 Usage:
-    from notifications.workflow import workflow_engine
+    from api.notifications.workflow import workflow_engine
 
     # Register a workflow
     @workflow_engine.workflow('user_inactive_3d')
@@ -223,7 +223,7 @@ class WorkflowEngine:
     def _execute_async(self, wf: Workflow, user, data: dict) -> dict:
         """Queue workflow execution via Celery."""
         try:
-            from notifications.tasks.background_tasks import execute_workflow_task
+            from api.notifications.tasks.background_tasks import execute_workflow_task
             task = execute_workflow_task.delay(
                 wf.workflow_id,
                 getattr(user, 'pk', None),
@@ -243,7 +243,7 @@ class WorkflowEngine:
 
         if action_type == 'send_notification':
             try:
-                from notifications.services.NotificationService import notification_service
+                from api.notifications.services.NotificationService import notification_service
                 user = action['user']
                 notif = notification_service.create_notification(
                     user=user,
@@ -256,7 +256,7 @@ class WorkflowEngine:
                 if notif:
                     delay = action.get('delay_seconds', 0)
                     if delay > 0:
-                        from notifications.tasks_cap import enqueue_notification_send
+                        from api.notifications.tasks_cap import enqueue_notification_send
                         enqueue_notification_send(notif.pk, action.get('channel', 'in_app'), action.get('priority', 'medium'))
                     else:
                         notification_service.send_notification(notif)
@@ -267,7 +267,7 @@ class WorkflowEngine:
 
         elif action_type == 'enroll_journey':
             try:
-                from notifications.services.JourneyService import journey_service
+                from api.notifications.services.JourneyService import journey_service
                 result = journey_service.enroll_user(action['user'], action['journey_id'], action.get('context', {}))
                 return result.get('success', False)
             except Exception as exc:
@@ -277,7 +277,7 @@ class WorkflowEngine:
         elif action_type == 'notify_admin':
             try:
                 from django.contrib.auth import get_user_model
-                from notifications.services.NotificationService import notification_service
+                from api.notifications.services.NotificationService import notification_service
                 User = get_user_model()
                 for admin in User.objects.filter(is_staff=True, is_active=True)[:3]:
                     notification_service.create_notification(
@@ -324,7 +324,7 @@ class WorkflowEngine:
             cooldown_hours=72,
         )
         def inactive_3d(user, data: dict):
-            from notifications.helpers import _user_logged_in_recently
+            from api.notifications.helpers import _user_logged_in_recently
             if _user_logged_in_recently(user, days=3):
                 return WorkflowActions.skip()
             return WorkflowActions.send_push(
@@ -382,7 +382,7 @@ class WorkflowEngine:
             cooldown_hours=24 * 365,  # Once per year
         )
         def first_withdrawal(user, data: dict):
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             prev_withdrawals = Notification.objects.filter(
                 user=user, notification_type='withdrawal_success'
             ).count()

@@ -99,7 +99,7 @@ class NotificationMonitor:
 
     def _get_service_health(self):
         try:
-            from notifications.integration_system.health_check import health_checker
+            from api.notifications.integration_system.health_check import health_checker
             return health_checker.get_summary()
         except Exception:
             return {}
@@ -122,7 +122,7 @@ class NotificationMonitor:
     def _notify_admin(self, alert):
         try:
             from django.contrib.auth import get_user_model
-            from notifications.services.NotificationService import notification_service
+            from api.notifications.services.NotificationService import notification_service
             User = get_user_model()
             for admin in User.objects.filter(is_staff=True, is_active=True)[:3]:
                 notification_service.create_notification(

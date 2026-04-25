@@ -2,7 +2,7 @@
 Messaging URLs — Complete: general messaging + CPA platform messaging.
 """
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 
 from .views import (
     MessageAttachmentUploadView, UploadConfirmView, MediaStatusView,
@@ -25,7 +25,7 @@ from .viewsets_cpa import (
     MessageTemplateViewSet, AffiliateThreadViewSet,
 )
 
-router = DefaultRouter()
+router = SimpleRouter()
 
 # ── General Messaging ─────────────────────────────────────────────────────────
 router.register(r"chats",         InternalChatViewSet,       basename="internalchat")

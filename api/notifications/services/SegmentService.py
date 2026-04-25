@@ -244,7 +244,7 @@ class SegmentService:
         if conditions.get('kyc_status'):
             # Delegate to KYC module via integration handler
             try:
-                from notifications.integration_system.integ_handler import handler
+                from api.notifications.integration_system.integ_handler import handler
                 result = handler.trigger('kyc', {
                     'action': 'get_user_ids_by_status',
                     'status': conditions['kyc_status'],
@@ -257,7 +257,7 @@ class SegmentService:
         if conditions.get('balance_gte'):
             # Delegate to wallet module
             try:
-                from notifications.integration_system.integ_handler import handler
+                from api.notifications.integration_system.integ_handler import handler
                 result = handler.trigger('wallet', {
                     'action': 'get_user_ids_by_min_balance',
                     'min_balance': conditions['balance_gte'],

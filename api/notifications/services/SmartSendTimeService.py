@@ -124,7 +124,7 @@ class SmartSendTimeService:
             - open_count: int
             - confidence: float (0.0-1.0)
         """
-        from notifications.models import Notification
+        from api.notifications.models import Notification
 
         cutoff = timezone.now() - timedelta(days=self.ANALYSIS_DAYS)
         opens = Notification.objects.filter(
@@ -196,7 +196,7 @@ class SmartSendTimeService:
         """Get the user's timezone string. Falls back to 'Asia/Dhaka'."""
         # Try DeviceToken timezone
         try:
-            from notifications.models import DeviceToken
+            from api.notifications.models import DeviceToken
             device = DeviceToken.objects.filter(
                 user=user, is_active=True
             ).exclude(timezone='').first()
@@ -233,7 +233,7 @@ class SmartSendTimeService:
     def _respect_dnd(self, user, send_dt: datetime, user_tz: str) -> datetime:
         """Shift send_dt forward if it falls inside user's DND window."""
         try:
-            from notifications.models import NotificationPreference
+            from api.notifications.models import NotificationPreference
             pref = NotificationPreference.objects.filter(user=user).first()
             if not pref:
                 return send_dt

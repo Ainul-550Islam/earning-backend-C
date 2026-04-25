@@ -10,8 +10,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 
-from notifications.models import NotificationTemplate
-from notifications.serializers import (
+from api.notifications.models import NotificationTemplate
+from api.notifications.serializers import (
     NotificationTemplateSerializer,
     CreateTemplateSerializer,
     UpdateTemplateSerializer,
@@ -43,16 +43,16 @@ class NotificationTemplateViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
     def get_permissions(self):
-        from notifications.views import IsTemplateOwnerOrAdmin
+        from api.notifications.views import IsTemplateOwnerOrAdmin
         return [IsAuthenticated(), IsTemplateOwnerOrAdmin()]
 
     def get_pagination_class(self):
-        from notifications.views import StandardPagination
+        from api.notifications.views import StandardPagination
         return StandardPagination
 
     @property
     def pagination_class(self):
-        from notifications.views import StandardPagination
+        from api.notifications.views import StandardPagination
         return StandardPagination
 
     def get_queryset(self):

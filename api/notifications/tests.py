@@ -22,7 +22,7 @@ class PushDeviceModelTest(TestCase):
         self.user = User.objects.create_user(username='testuser', password='pass')
 
     def test_create_push_device(self):
-        from notifications.models.channel import PushDevice
+        from api.notifications.models.channel import PushDevice
         device = PushDevice.objects.create(
             user=self.user,
             device_type='android',
@@ -34,13 +34,13 @@ class PushDeviceModelTest(TestCase):
         self.assertEqual(device.get_push_token(), 'test_token_123')
 
     def test_device_deactivate(self):
-        from notifications.models.channel import PushDevice
+        from api.notifications.models.channel import PushDevice
         device = PushDevice.objects.create(user=self.user, device_type='android')
         device.deactivate()
         self.assertFalse(device.is_active)
 
     def test_delivery_rate(self):
-        from notifications.models.channel import PushDevice
+        from api.notifications.models.channel import PushDevice
         device = PushDevice.objects.create(
             user=self.user, device_type='android',
             push_sent=10, push_delivered=8
@@ -53,7 +53,7 @@ class InAppMessageModelTest(TestCase):
         self.user = User.objects.create_user(username='testuser2', password='pass')
 
     def test_create_in_app_message(self):
-        from notifications.models.channel import InAppMessage
+        from api.notifications.models.channel import InAppMessage
         msg = InAppMessage.objects.create(
             user=self.user,
             message_type='toast',
@@ -65,14 +65,14 @@ class InAppMessageModelTest(TestCase):
         self.assertFalse(msg.is_expired())
 
     def test_mark_read(self):
-        from notifications.models.channel import InAppMessage
+        from api.notifications.models.channel import InAppMessage
         msg = InAppMessage.objects.create(user=self.user, message_type='toast', title='T', body='B')
         msg.mark_read()
         self.assertTrue(msg.is_read)
         self.assertIsNotNone(msg.read_at)
 
     def test_expired_message(self):
-        from notifications.models.channel import InAppMessage
+        from api.notifications.models.channel import InAppMessage
         from datetime import timedelta
         msg = InAppMessage.objects.create(
             user=self.user, message_type='toast', title='T', body='B',
@@ -86,20 +86,20 @@ class NotificationFatigueModelTest(TestCase):
         self.user = User.objects.create_user(username='testuser3', password='pass')
 
     def test_create_fatigue_record(self):
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.models.analytics import NotificationFatigue
         record = NotificationFatigue.objects.create(user=self.user)
         self.assertFalse(record.is_fatigued)
         self.assertEqual(record.sent_today, 0)
 
     def test_fatigue_triggers_on_daily_limit(self):
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.models.analytics import NotificationFatigue
         record = NotificationFatigue.objects.create(user=self.user, daily_limit=5)
         record.sent_today = 5
         is_fatigued = record.evaluate_fatigue(save=False)
         self.assertTrue(is_fatigued)
 
     def test_increment_counters(self):
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.models.analytics import NotificationFatigue
         record = NotificationFatigue.objects.create(user=self.user)
         record.increment(save=False)
         self.assertEqual(record.sent_today, 1)
@@ -111,19 +111,19 @@ class OptOutTrackingModelTest(TestCase):
         self.user = User.objects.create_user(username='testuser4', password='pass')
 
     def test_opt_out(self):
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
         record = OptOutTracking.opt_out(self.user, 'email', reason='too_many')
         self.assertTrue(record.is_active)
         self.assertEqual(record.channel, 'email')
 
     def test_is_opted_out(self):
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
         OptOutTracking.opt_out(self.user, 'sms')
         self.assertTrue(OptOutTracking.is_opted_out(self.user, 'sms'))
         self.assertFalse(OptOutTracking.is_opted_out(self.user, 'email'))
 
     def test_resubscribe(self):
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
         record = OptOutTracking.opt_out(self.user, 'push')
         record.resubscribe()
         self.assertFalse(record.is_active)
@@ -138,12 +138,12 @@ class FatigueServiceTest(TestCase):
         self.user = User.objects.create_user(username='fatigue_user', password='pass')
 
     def test_not_fatigued_initially(self):
-        from notifications.services.FatigueService import fatigue_service
+        from api.notifications.services.FatigueService import fatigue_service
         self.assertFalse(fatigue_service.is_fatigued(self.user))
 
     def test_exempt_priorities_bypass_fatigue(self):
-        from notifications.services.FatigueService import fatigue_service
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.services.FatigueService import fatigue_service
+        from api.notifications.models.analytics import NotificationFatigue
         # Make user fatigued
         record, _ = NotificationFatigue.objects.get_or_create(user=self.user)
         record.sent_today = 100
@@ -154,13 +154,13 @@ class FatigueServiceTest(TestCase):
         self.assertFalse(fatigue_service.is_fatigued(self.user, priority='urgent'))
 
     def test_can_send_within_limits(self):
-        from notifications.services.FatigueService import fatigue_service
+        from api.notifications.services.FatigueService import fatigue_service
         result = fatigue_service.can_send(self.user)
         self.assertTrue(result['allowed'])
 
     def test_record_send_increments_counters(self):
-        from notifications.services.FatigueService import fatigue_service
-        from notifications.models.analytics import NotificationFatigue
+        from api.notifications.services.FatigueService import fatigue_service
+        from api.notifications.models.analytics import NotificationFatigue
         fatigue_service.record_send(self.user)
         record = NotificationFatigue.objects.get(user=self.user)
         self.assertEqual(record.sent_today, 1)
@@ -171,20 +171,20 @@ class OptOutServiceTest(TestCase):
         self.user = User.objects.create_user(username='optout_user', password='pass')
 
     def test_opt_out_channel(self):
-        from notifications.services.OptOutService import opt_out_service
+        from api.notifications.services.OptOutService import opt_out_service
         result = opt_out_service.opt_out(self.user, 'email')
         self.assertTrue(result['success'])
         self.assertTrue(opt_out_service.is_opted_out(self.user, 'email'))
 
     def test_resubscribe(self):
-        from notifications.services.OptOutService import opt_out_service
+        from api.notifications.services.OptOutService import opt_out_service
         opt_out_service.opt_out(self.user, 'sms')
         result = opt_out_service.resubscribe(self.user, 'sms')
         self.assertTrue(result['success'])
         self.assertFalse(opt_out_service.is_opted_out(self.user, 'sms'))
 
     def test_filter_opted_out_users(self):
-        from notifications.services.OptOutService import opt_out_service
+        from api.notifications.services.OptOutService import opt_out_service
         user2 = User.objects.create_user(username='optout_user2', password='pass')
         opt_out_service.opt_out(self.user, 'email')
         filtered = opt_out_service.filter_opted_out_users([self.user.pk, user2.pk], 'email')
@@ -200,13 +200,13 @@ class SegmentServiceTest(TestCase):
         ]
 
     def test_segment_all_users(self):
-        from notifications.services.SegmentService import segment_service
+        from api.notifications.services.SegmentService import segment_service
         user_ids = segment_service.evaluate_conditions({'type': 'all'})
         for user in self.users:
             self.assertIn(user.pk, user_ids)
 
     def test_segment_with_explicit_ids(self):
-        from notifications.services.SegmentService import segment_service
+        from api.notifications.services.SegmentService import segment_service
         ids = [self.users[0].pk, self.users[1].pk]
         result = segment_service.evaluate_conditions({'user_ids': ids})
         self.assertEqual(set(result), set(ids))
@@ -268,7 +268,7 @@ class FCMProviderTest(TestCase):
     @patch('firebase_admin.messaging.send')
     def test_send_success(self, mock_send):
         mock_send.return_value = 'msg_id_123'
-        from notifications.services.providers.FCMProvider import FCMProvider
+        from api.notifications.services.providers.FCMProvider import FCMProvider
         provider = FCMProvider()
         # Only test if available
         if provider.is_available():
@@ -283,13 +283,13 @@ class FCMProviderTest(TestCase):
 
 class TwilioProviderTest(TestCase):
     def test_normalise_bd_phone(self):
-        from notifications.services.providers.TwilioProvider import TwilioProvider
+        from api.notifications.services.providers.TwilioProvider import TwilioProvider
         provider = TwilioProvider()
         self.assertEqual(provider._normalise_phone('01712345678'), '+01712345678')
         self.assertEqual(provider._normalise_phone('+8801712345678'), '+8801712345678')
 
     def test_bd_number_detection(self):
-        from notifications.services.NotificationDispatcher import NotificationDispatcher
+        from api.notifications.services.NotificationDispatcher import NotificationDispatcher
         dispatcher = NotificationDispatcher()
         self.assertTrue(dispatcher._is_bd_number('01712345678'))
         self.assertTrue(dispatcher._is_bd_number('+8801712345678'))
@@ -298,7 +298,7 @@ class TwilioProviderTest(TestCase):
 
 class ShohoSMSProviderTest(TestCase):
     def test_normalise_bd_phone(self):
-        from notifications.services.providers.ShohoSMSProvider import ShohoSMSProvider
+        from api.notifications.services.providers.ShohoSMSProvider import ShohoSMSProvider
         provider = ShohoSMSProvider()
         self.assertEqual(provider._normalise_bd_phone('+8801712345678'), '01712345678')
         self.assertEqual(provider._normalise_bd_phone('8801712345678'), '01712345678')

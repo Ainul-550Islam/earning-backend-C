@@ -16,7 +16,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -310,11 +313,11 @@ class Campaign(AdvertiserPortalBaseModel, StatusModel, AuditModel, BudgetModel, 
         verbose_name = 'Campaign'
         verbose_name_plural = 'Campaigns'
         indexes = [
-            models.Index(fields=['advertiser', 'status']),
-            models.Index(fields=['objective']),
-            models.Index(fields=['start_date', 'end_date']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['name']),
+            models.Index(fields=['advertiser', 'status'], name='idx_advertiser_status_149'),
+            models.Index(fields=['objective'], name='idx_objective_150'),
+            models.Index(fields=['start_date', 'end_date'], name='idx_start_date_end_date_151'),
+            models.Index(fields=['created_at'], name='idx_created_at_152'),
+            models.Index(fields=['name'], name='idx_name_153'),
         ]
     
     def __str__(self) -> str:
@@ -700,8 +703,8 @@ class CampaignSpend(AdvertiserPortalBaseModel):
         verbose_name_plural = 'Campaign Spend'
         unique_together = ['campaign', 'date']
         indexes = [
-            models.Index(fields=['campaign', 'date']),
-            models.Index(fields=['date']),
+            models.Index(fields=['campaign', 'date'], name='idx_campaign_date_154'),
+            models.Index(fields=['date'], name='idx_date_155'),
         ]
     
     def __str__(self) -> str:
@@ -743,7 +746,7 @@ class CampaignGroup(AdvertiserPortalBaseModel):
         verbose_name_plural = 'Campaign Groups'
         unique_together = ['advertiser', 'name']
         indexes = [
-            models.Index(fields=['advertiser', 'name']),
+            models.Index(fields=['advertiser', 'name'], name='idx_advertiser_name_156'),
         ]
     
     def __str__(self) -> str:

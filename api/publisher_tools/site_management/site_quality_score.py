@@ -63,9 +63,9 @@ class SiteQualityScore(TimeStampedModel):
         unique_together = [['site', 'date']]
         ordering = ['-date']
         indexes = [
-            models.Index(fields=['site', 'date']),
-            models.Index(fields=['overall_score']),
-            models.Index(fields=['has_alerts']),
+            models.Index(fields=['site', 'date'], name='idx_site_date_1649'),
+            models.Index(fields=['overall_score'], name='idx_overall_score_1650'),
+            models.Index(fields=['has_alerts'], name='idx_has_alerts_1651'),
         ]
 
     def __str__(self):

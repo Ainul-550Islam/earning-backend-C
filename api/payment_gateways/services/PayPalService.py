@@ -6,6 +6,7 @@ import json
 from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
+from django.db import transaction as db_txn
 from .PaymentProcessor import PaymentProcessor
 from ..models import GatewayTransaction, PayoutRequest
 
@@ -63,9 +64,9 @@ class PayPalService(PaymentProcessor):
         self.validate_amount(amount)
         
         # Create GatewayTransaction
-        GatewayTransaction = self.create_GatewayTransaction(
+        txn = self.create_GatewayTransaction(
             user=user,
-            GatewayTransaction_type='deposit',
+            transaction_type='deposit',
             amount=amount,
             payment_method=payment_method,
             metadata=kwargs.get('metadata', {})
@@ -80,13 +81,13 @@ class PayPalService(PaymentProcessor):
             headers = {
                 'Authorization': f'Bearer {token}',
                 'Content-Type': 'application/json',
-                'PayPal-Request-Id': GatewayTransaction.reference_id
+                'PayPal-Request-Id': txn.reference_id
             }
             
             order_data = {
                 'intent': 'CAPTURE',
                 'purchase_units': [{
-                    'reference_id': GatewayTransaction.reference_id,
+                    'reference_id': txn.reference_id,
                     'amount': {
                         'currency_code': 'USD',
                         'value': str(amount)
@@ -115,9 +116,9 @@ class PayPalService(PaymentProcessor):
             order_data = response.json()
             
             # Update GatewayTransaction
-            GatewayTransaction.gateway_reference = order_data.get('id')
-            GatewayTransaction.metadata['paypal_order'] = order_data
-            GatewayTransaction.save()
+            txn.gateway_reference = order_data.get('id')
+            txn.metadata['paypal_order'] = order_data
+            txn.save()
             
             # Find approval URL
             approval_url = None
@@ -127,16 +128,16 @@ class PayPalService(PaymentProcessor):
                     break
             
             return {
-                'GatewayTransaction': GatewayTransaction,
+                'transaction': txn,
                 'order_id': order_data.get('id'),
                 'approval_url': approval_url,
                 'status': order_data.get('status')
             }
             
         except Exception as e:
-            GatewayTransaction.status = 'failed'
-            GatewayTransaction.metadata['error'] = str(e)
-            GatewayTransaction.save()
+            txn.status = 'failed'
+            txn.metadata['error'] = str(e)
+            txn.save()
             raise Exception(f"PayPal deposit failed: {str(e)}")
     
     def capture_payment(self, order_id):
@@ -158,22 +159,22 @@ class PayPalService(PaymentProcessor):
             
             # Find and update GatewayTransaction
             try:
-                GatewayTransaction = GatewayTransaction.objects.get(gateway_reference=order_id)
+                txn = GatewayTransaction.objects.get(gateway_reference=order_id)
                 
                 if capture_data.get('status') == 'COMPLETED':
-                    GatewayTransaction.status = 'completed'
-                    GatewayTransaction.completed_at = timezone.now()
-                    GatewayTransaction.metadata['paypal_capture'] = capture_data
+                    txn.status = 'completed'
+                    txn.completed_at = timezone.now()
+                    txn.metadata['paypal_capture'] = capture_data
                     
                     # Update user balance
-                    user = GatewayTransaction.user
-                    user.balance += GatewayTransaction.net_amount
+                    user = txn.user
+                    user.balance += txn.net_amount
                     user.save()
                 else:
-                    GatewayTransaction.status = 'failed'
-                    GatewayTransaction.metadata['paypal_capture'] = capture_data
+                    txn.status = 'failed'
+                    txn.metadata['paypal_capture'] = capture_data
                 
-                GatewayTransaction.save()
+                txn.save()
                 return GatewayTransaction
                 
             except GatewayTransaction.DoesNotExist:
@@ -186,7 +187,7 @@ class PayPalService(PaymentProcessor):
         """Process PayPal withdrawal (Payout)"""
         self.validate_amount(amount)
         
-        with db_GatewayTransaction.atomic():
+        with db_txn.atomic():
             # Create payout request
             payout = PayoutRequest.objects.create(
                 user=user,
@@ -201,9 +202,9 @@ class PayPalService(PaymentProcessor):
             )
             
             # Create GatewayTransaction record
-            GatewayTransaction = self.create_GatewayTransaction(
+            txn = self.create_GatewayTransaction(
                 user=user,
-                GatewayTransaction_type='withdrawal',
+                transaction_type='withdrawal',
                 amount=amount,
                 payment_method=payment_method,
                 metadata={
@@ -225,7 +226,7 @@ class PayPalService(PaymentProcessor):
                 
                 payout_data = {
                     'sender_batch_header': {
-                        'sender_batch_id': GatewayTransaction.reference_id,
+                        'sender_batch_id': txn.reference_id,
                         'email_subject': 'You have a payment',
                         'email_message': f'You have received a payment of ${amount}'
                     },
@@ -237,7 +238,7 @@ class PayPalService(PaymentProcessor):
                         },
                         'receiver': payment_method.account_number,
                         'note': f'Withdrawal for {user.username}',
-                        'sender_item_id': str(GatewayTransaction.id)
+                        'sender_item_id': str(txn.id)
                     }]
                 }
                 
@@ -246,11 +247,11 @@ class PayPalService(PaymentProcessor):
                 payout_response = response.json()
                 
                 # Update GatewayTransaction and payout
-                GatewayTransaction.gateway_reference = payout_response.get('batch_header', {}).get('payout_batch_id')
-                GatewayTransaction.metadata['paypal_payout'] = payout_response
-                GatewayTransaction.save()
+                txn.gateway_reference = payout_response.get('batch_header', {}).get('payout_batch_id')
+                txn.metadata['paypal_payout'] = payout_response
+                txn.save()
                 
-                payout.gateway_reference = GatewayTransaction.gateway_reference
+                payout.gateway_reference = txn.gateway_reference
                 payout.status = 'processing'
                 payout.save()
                 
@@ -259,16 +260,16 @@ class PayPalService(PaymentProcessor):
                 user.save()
                 
                 return {
-                    'GatewayTransaction': GatewayTransaction,
+                    'transaction': txn,
                     'payout': payout,
-                    'batch_id': GatewayTransaction.gateway_reference,
+                    'batch_id': txn.gateway_reference,
                     'message': 'Payout submitted successfully'
                 }
                 
             except Exception as e:
-                GatewayTransaction.status = 'failed'
-                GatewayTransaction.metadata['error'] = str(e)
-                GatewayTransaction.save()
+                txn.status = 'failed'
+                txn.metadata['error'] = str(e)
+                txn.save()
                 
                 payout.status = 'failed'
                 payout.save()
@@ -293,9 +294,9 @@ class PayPalService(PaymentProcessor):
             
             # Find and update GatewayTransaction
             try:
-                GatewayTransaction = GatewayTransaction.objects.get(gateway_reference=order_id)
-                GatewayTransaction.metadata['paypal_verification'] = order_data
-                GatewayTransaction.save()
+                txn = GatewayTransaction.objects.get(gateway_reference=order_id)
+                txn.metadata['paypal_verification'] = order_data
+                txn.save()
                 return GatewayTransaction
             except GatewayTransaction.DoesNotExist:
                 return None

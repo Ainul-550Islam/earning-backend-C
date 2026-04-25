@@ -27,8 +27,8 @@ class SiteGeoData(TimeStampedModel):
         verbose_name = _('Site Geo Data')
         ordering = ['-date', '-revenue']
         indexes = [
-            models.Index(fields=['site', 'date']),
-            models.Index(fields=['site', 'country_code']),
+            models.Index(fields=['site', 'date'], name='idx_site_date_1647'),
+            models.Index(fields=['site', 'country_code'], name='idx_site_country_code_1648'),
         ]
 
     def __str__(self):

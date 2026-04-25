@@ -50,7 +50,7 @@ class LoyaltyPoints(models.Model):
     class Meta:
         app_label = 'djoyalty'
         unique_together = [('tenant', 'customer')]
-        indexes = [models.Index(fields=['tenant', 'customer'])]
+        indexes = [models.Index(fields=['tenant', 'customer'], name='idx_tenant_customer_978')]
 
     def __str__(self):
         return f'{self.customer} — {self.balance} pts'
@@ -111,10 +111,10 @@ class PointsLedger(models.Model):
     class Meta:
         app_label = 'djoyalty'
         indexes = [
-            models.Index(fields=['tenant', 'customer']),
-            models.Index(fields=['txn_type', 'source']),
-            models.Index(fields=['expires_at']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['tenant', 'customer'], name='idx_tenant_customer_979'),
+            models.Index(fields=['txn_type', 'source'], name='idx_txn_type_source_980'),
+            models.Index(fields=['expires_at'], name='idx_expires_at_981'),
+            models.Index(fields=['created_at'], name='idx_created_at_982'),
         ]
         ordering = ['-created_at']
 
@@ -148,8 +148,8 @@ class PointsExpiry(models.Model):
     class Meta:
         app_label = 'djoyalty'
         indexes = [
-            models.Index(fields=['expires_at', 'is_processed']),
-            models.Index(fields=['tenant', 'customer']),
+            models.Index(fields=['expires_at', 'is_processed'], name='idx_expires_at_is_processe_538'),
+            models.Index(fields=['tenant', 'customer'], name='idx_tenant_customer_984'),
         ]
 
     def __str__(self):
@@ -184,7 +184,7 @@ class PointsTransfer(models.Model):
 
     class Meta:
         app_label = 'djoyalty'
-        indexes = [models.Index(fields=['status']), models.Index(fields=['tenant'])]
+        indexes = [models.Index(fields=['status'], name='idx_status_985'), models.Index(fields=['tenant'], name='idx_tenant_986')]
 
     def __str__(self):
         return f'{self.points} pts: {self.from_customer} → {self.to_customer} [{self.status}]'
@@ -237,7 +237,7 @@ class PointsReservation(models.Model):
 
     class Meta:
         app_label = 'djoyalty'
-        indexes = [models.Index(fields=['reference']), models.Index(fields=['expires_at'])]
+        indexes = [models.Index(fields=['reference'], name='idx_reference_987'), models.Index(fields=['expires_at'], name='idx_expires_at_988')]
 
     def __str__(self):
         return f'Reserved {self.points} pts for {self.customer} [{self.reference}]'

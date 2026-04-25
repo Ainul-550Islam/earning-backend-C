@@ -723,6 +723,489 @@ class BillingValidator(BaseValidator):
             raise BillingValidationError(str(e))
 
 
+# Additional Validators for Main Models
+class OfferValidator(BaseValidator):
+    """Validator for offer data."""
+    
+    def validate_offer_data(self, data: Dict[str, Any]) -> None:
+        """
+        Validate offer data.
+        
+        Args:
+            data: Offer data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate required fields
+            required_fields = ['name', 'advertiser', 'offer_type', 'pricing_model', 'payout_amount']
+            self.validate_required_fields(data, required_fields)
+            
+            # Validate name
+            self.validate_string_field(
+                data['name'],
+                min_length=1,
+                max_length=200,
+                field_name='name'
+            )
+            
+            # Validate payout amount
+            self.validate_decimal_range(
+                data['payout_amount'],
+                min_value=Decimal('0.01'),
+                max_value=Decimal('10000'),
+                field_name='payout_amount'
+            )
+            
+            # Validate dates
+            if 'start_date' in data and data['start_date']:
+                if 'end_date' in data and data['end_date']:
+                    self.validate_date_range(data['start_date'], data['end_date'], 'offer_')
+            
+            # Validate landing page URL
+            if 'landing_page' in data and data['landing_page']:
+                self.validate_url(data['landing_page'], 'landing_page')
+                
+        except ValidationError as e:
+            raise ValidationError(f"Offer validation failed: {str(e)}")
+
+
+class TrackingValidator(BaseValidator):
+    """Validator for tracking data."""
+    
+    def validate_tracking_pixel_data(self, data: Dict[str, Any]) -> None:
+        """
+        Validate tracking pixel data.
+        
+        Args:
+            data: Tracking pixel data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate required fields
+            required_fields = ['name', 'advertiser', 'pixel_type']
+            self.validate_required_fields(data, required_fields)
+            
+            # Validate name
+            self.validate_string_field(
+                data['name'],
+                min_length=1,
+                max_length=100,
+                field_name='name'
+            )
+            
+            # Validate pixel type
+            valid_pixel_types = ['conversion', 'impression', 'click', 'postback']
+            if data['pixel_type'] not in valid_pixel_types:
+                raise ValidationError(f"Invalid pixel type. Must be one of: {', '.join(valid_pixel_types)}")
+            
+            # Validate URLs
+            if 'url' in data and data['url']:
+                self.validate_url(data['url'], 'url')
+            
+            if 'postback_url' in data and data['postback_url']:
+                self.validate_url(data['postback_url'], 'postback_url')
+                
+        except ValidationError as e:
+            raise ValidationError(f"Tracking pixel validation failed: {str(e)}")
+    
+    def validate_conversion_data(self, data: Dict[str, Any]) -> None:
+        """
+        Validate conversion data.
+        
+        Args:
+            data: Conversion data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate required fields
+            required_fields = ['advertiser', 'offer', 'revenue']
+            self.validate_required_fields(data, required_fields)
+            
+            # Validate revenue
+            self.validate_decimal_range(
+                data['revenue'],
+                min_value=Decimal('0'),
+                max_value=Decimal('10000'),
+                field_name='revenue'
+            )
+            
+            # Validate IP address
+            if 'ip_address' in data and data['ip_address']:
+                self.validate_ip_address(data['ip_address'])
+                
+        except ValidationError as e:
+            raise ValidationError(f"Conversion validation failed: {str(e)}")
+
+
+class FraudValidator(BaseValidator):
+    """Validator for fraud detection data."""
+    
+    def validate_conversion_quality_score(self, data: Dict[str, Any]) -> None:
+        """
+        Validate conversion quality score data.
+        
+        Args:
+            data: Quality score data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate score ranges
+            score_fields = ['overall_score', 'behavioral_score', 'technical_score', 'timing_score', 'engagement_score']
+            
+            for field in score_fields:
+                if field in data and data[field] is not None:
+                    if not (0 <= float(data[field]) <= 1):
+                        raise ValidationError(f"{field} must be between 0 and 1")
+            
+            # Validate quality level
+            if 'quality_level' in data and data['quality_level']:
+                valid_levels = ['high', 'medium', 'low', 'invalid']
+                if data['quality_level'] not in valid_levels:
+                    raise ValidationError(f"Invalid quality level. Must be one of: {', '.join(valid_levels)}")
+                    
+        except ValidationError as e:
+            raise ValidationError(f"Quality score validation failed: {str(e)}")
+    
+    def validate_fraud_config(self, data: Dict[str, Any]) -> None:
+        """
+        Validate fraud configuration data.
+        
+        Args:
+            data: Fraud config data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate config name
+            if 'config_name' in data and data['config_name']:
+                self.validate_string_field(
+                    data['config_name'],
+                    min_length=1,
+                    max_length=100,
+                    field_name='config_name'
+                )
+            
+            # Validate rules
+            if 'rules' in data and data['rules']:
+                if not isinstance(data['rules'], dict):
+                    raise ValidationError("Rules must be a dictionary")
+            
+            # Validate thresholds
+            if 'thresholds' in data and data['thresholds']:
+                if not isinstance(data['thresholds'], dict):
+                    raise ValidationError("Thresholds must be a dictionary")
+                    
+        except ValidationError as e:
+            raise ValidationError(f"Fraud config validation failed: {str(e)}")
+
+
+class NotificationValidator(BaseValidator):
+    """Validator for notification data."""
+    
+    def validate_notification_data(self, data: Dict[str, Any]) -> None:
+        """
+        Validate notification data.
+        
+        Args:
+            data: Notification data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate required fields
+            required_fields = ['advertiser', 'notification_type', 'title', 'message']
+            self.validate_required_fields(data, required_fields)
+            
+            # Validate title
+            self.validate_string_field(
+                data['title'],
+                min_length=1,
+                max_length=200,
+                field_name='title'
+            )
+            
+            # Validate message
+            self.validate_string_field(
+                data['message'],
+                min_length=1,
+                max_length=1000,
+                field_name='message'
+            )
+            
+            # Validate notification type
+            valid_types = ['info', 'warning', 'error', 'success', 'billing', 'campaign', 'offer']
+            if data['notification_type'] not in valid_types:
+                raise ValidationError(f"Invalid notification type. Must be one of: {', '.join(valid_types)}")
+            
+            # Validate priority
+            if 'priority' in data and data['priority']:
+                valid_priorities = ['low', 'medium', 'high', 'urgent']
+                if data['priority'] not in valid_priorities:
+                    raise ValidationError(f"Invalid priority. Must be one of: {', '.join(valid_priorities)}")
+                    
+        except ValidationError as e:
+            raise ValidationError(f"Notification validation failed: {str(e)}")
+    
+    def validate_notification_template(self, data: Dict[str, Any]) -> None:
+        """
+        Validate notification template data.
+        
+        Args:
+            data: Template data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate required fields
+            required_fields = ['template_type', 'name', 'subject', 'body_template']
+            self.validate_required_fields(data, required_fields)
+            
+            # Validate name
+            self.validate_string_field(
+                data['name'],
+                min_length=1,
+                max_length=100,
+                field_name='name'
+            )
+            
+            # Validate subject
+            self.validate_string_field(
+                data['subject'],
+                min_length=1,
+                max_length=200,
+                field_name='subject'
+            )
+            
+            # Validate body template
+            self.validate_string_field(
+                data['body_template'],
+                min_length=1,
+                max_length=2000,
+                field_name='body_template'
+            )
+            
+            # Validate template type
+            valid_types = ['email', 'sms', 'push', 'in_app']
+            if data['template_type'] not in valid_types:
+                raise ValidationError(f"Invalid template type. Must be one of: {', '.join(valid_types)}")
+                    
+        except ValidationError as e:
+            raise ValidationError(f"Template validation failed: {str(e)}")
+
+
+class MLValidator(BaseValidator):
+    """Validator for ML model data."""
+    
+    def validate_ml_model_data(self, data: Dict[str, Any]) -> None:
+        """
+        Validate ML model data.
+        
+        Args:
+            data: ML model data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate required fields
+            required_fields = ['name', 'model_type', 'version']
+            self.validate_required_fields(data, required_fields)
+            
+            # Validate name
+            self.validate_string_field(
+                data['name'],
+                min_length=1,
+                max_length=100,
+                field_name='name'
+            )
+            
+            # Validate version
+            self.validate_string_field(
+                data['version'],
+                min_length=1,
+                max_length=20,
+                field_name='version'
+            )
+            
+            # Validate model type
+            valid_types = ['classification', 'regression', 'clustering', 'anomaly_detection', 'recommendation']
+            if data['model_type'] not in valid_types:
+                raise ValidationError(f"Invalid model type. Must be one of: {', '.join(valid_types)}")
+            
+            # Validate status
+            if 'status' in data and data['status']:
+                valid_statuses = ['training', 'trained', 'active', 'inactive', 'failed']
+                if data['status'] not in valid_statuses:
+                    raise ValidationError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+                    
+        except ValidationError as e:
+            raise ValidationError(f"ML model validation failed: {str(e)}")
+    
+    def validate_ml_prediction_data(self, data: Dict[str, Any]) -> None:
+        """
+        Validate ML prediction data.
+        
+        Args:
+            data: Prediction data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate required fields
+            required_fields = ['model', 'input_data', 'prediction']
+            self.validate_required_fields(data, required_fields)
+            
+            # Validate confidence score
+            if 'confidence_score' in data and data['confidence_score'] is not None:
+                if not (0 <= float(data['confidence_score']) <= 1):
+                    raise ValidationError("Confidence score must be between 0 and 1")
+            
+            # Validate input data
+            if not isinstance(data['input_data'], dict):
+                raise ValidationError("Input data must be a dictionary")
+                    
+        except ValidationError as e:
+            raise ValidationError(f"ML prediction validation failed: {str(e)}")
+
+
+class ReportValidator(BaseValidator):
+    """Validator for report data."""
+    
+    def validate_report_data(self, data: Dict[str, Any]) -> None:
+        """
+        Validate report data.
+        
+        Args:
+            data: Report data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate required fields
+            required_fields = ['advertiser', 'report_type', 'title']
+            self.validate_required_fields(data, required_fields)
+            
+            # Validate title
+            self.validate_string_field(
+                data['title'],
+                min_length=1,
+                max_length=200,
+                field_name='title'
+            )
+            
+            # Validate report type
+            valid_types = ['campaign', 'offer', 'billing', 'conversion', 'fraud', 'performance']
+            if data['report_type'] not in valid_types:
+                raise ValidationError(f"Invalid report type. Must be one of: {', '.join(valid_types)}")
+            
+            # Validate date range
+            if 'start_date' in data and data['start_date']:
+                if 'end_date' in data and data['end_date']:
+                    self.validate_date_range(data['start_date'], data['end_date'], 'report_')
+                    
+        except ValidationError as e:
+            raise ValidationError(f"Report validation failed: {str(e)}")
+
+
+class WalletValidator(BaseValidator):
+    """Validator for wallet data."""
+    
+    def validate_wallet_data(self, data: Dict[str, Any]) -> None:
+        """
+        Validate wallet data.
+        
+        Args:
+            data: Wallet data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate balance
+            if 'balance' in data and data['balance'] is not None:
+                if float(data['balance']) < 0:
+                    raise ValidationError("Balance cannot be negative")
+            
+            # Validate currency
+            if 'currency' in data and data['currency']:
+                valid_currencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY']
+                if data['currency'] not in valid_currencies:
+                    raise ValidationError(f"Invalid currency. Must be one of: {', '.join(valid_currencies)}")
+            
+            # Validate auto refill settings
+            if 'auto_refill_enabled' in data and data['auto_refill_enabled']:
+                if 'auto_refill_threshold' in data and data['auto_refill_threshold']:
+                    self.validate_decimal_range(
+                        data['auto_refill_threshold'],
+                        min_value=Decimal('0'),
+                        field_name='auto_refill_threshold'
+                    )
+                
+                if 'auto_refill_amount' in data and data['auto_refill_amount']:
+                    self.validate_decimal_range(
+                        data['auto_refill_amount'],
+                        min_value=Decimal('1'),
+                        field_name='auto_refill_amount'
+                    )
+                    
+        except ValidationError as e:
+            raise ValidationError(f"Wallet validation failed: {str(e)}")
+
+
+class TransactionValidator(BaseValidator):
+    """Validator for transaction data."""
+    
+    def validate_transaction_data(self, data: Dict[str, Any]) -> None:
+        """
+        Validate transaction data.
+        
+        Args:
+            data: Transaction data to validate
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        try:
+            # Validate required fields
+            required_fields = ['wallet', 'transaction_type', 'amount']
+            self.validate_required_fields(data, required_fields)
+            
+            # Validate amount
+            self.validate_decimal_range(
+                data['amount'],
+                min_value=Decimal('0.01'),
+                max_value=Decimal('100000'),
+                field_name='amount'
+            )
+            
+            # Validate transaction type
+            valid_types = ['deposit', 'withdrawal', 'spend', 'refund', 'bonus', 'penalty']
+            if data['transaction_type'] not in valid_types:
+                raise ValidationError(f"Invalid transaction type. Must be one of: {', '.join(valid_types)}")
+            
+            # Validate status
+            if 'status' in data and data['status']:
+                valid_statuses = ['pending', 'processing', 'completed', 'failed', 'cancelled']
+                if data['status'] not in valid_statuses:
+                    raise ValidationError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+                    
+        except ValidationError as e:
+            raise ValidationError(f"Transaction validation failed: {str(e)}")
+
+
 # Validator Factory
 class ValidatorFactory:
     """Factory class for creating validator instances."""
@@ -733,6 +1216,14 @@ class ValidatorFactory:
         'creative': CreativeValidator,
         'targeting': TargetingValidator,
         'billing': BillingValidator,
+        'offer': OfferValidator,
+        'tracking': TrackingValidator,
+        'fraud': FraudValidator,
+        'notification': NotificationValidator,
+        'ml': MLValidator,
+        'report': ReportValidator,
+        'wallet': WalletValidator,
+        'transaction': TransactionValidator,
     }
     
     @classmethod

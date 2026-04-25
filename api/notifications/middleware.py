@@ -42,7 +42,7 @@ class NotificationUserActivityMiddleware(MiddlewareMixin):
 
         # Update device tokens in background (non-blocking)
         try:
-            from notifications.models import DeviceToken
+            from api.notifications.models import DeviceToken
             DeviceToken.objects.filter(
                 user=request.user,
                 is_active=True,
@@ -71,7 +71,7 @@ class DoNotDisturbMiddleware(MiddlewareMixin):
             return None
 
         try:
-            from notifications.models import NotificationPreference
+            from api.notifications.models import NotificationPreference
             pref = NotificationPreference.objects.filter(user=request.user).first()
             if pref and getattr(pref, 'dnd_enabled', False):
                 if self._is_dnd_active(pref):

@@ -17,7 +17,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -158,13 +161,13 @@ class FraudLog(AdvertiserPortalBaseModel, AuditModel, TrackingModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_fraud_logs'
         indexes = [
-            models.Index(fields=['advertiser', 'fraud_type']),
-            models.Index(fields=['campaign', 'severity']),
-            models.Index(fields=['is_resolved', 'severity']),
-            models.Index(fields=['detection_method']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['resolved_at']),
+            models.Index(fields=['advertiser', 'fraud_type'], name='idx_advertiser_fraud_type_257'),
+            models.Index(fields=['campaign', 'severity'], name='idx_campaign_severity_258'),
+            models.Index(fields=['is_resolved', 'severity'], name='idx_is_resolved_severity_259'),
+            models.Index(fields=['detection_method'], name='idx_detection_method_260'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_261'),
+            models.Index(fields=['created_at'], name='idx_created_at_262'),
+            models.Index(fields=['resolved_at'], name='idx_resolved_at_263'),
         ]
         ordering = ['-created_at']
     
@@ -288,10 +291,10 @@ class FraudPattern(AdvertiserPortalBaseModel, StatusModel, AuditModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_fraud_patterns'
         indexes = [
-            models.Index(fields=['fraud_type', 'is_active']),
-            models.Index(fields=['severity_level']),
-            models.Index(fields=['match_count']),
-            models.Index(fields=['last_matched']),
+            models.Index(fields=['fraud_type', 'is_active'], name='idx_fraud_type_is_active_264'),
+            models.Index(fields=['severity_level'], name='idx_severity_level_265'),
+            models.Index(fields=['match_count'], name='idx_match_count_266'),
+            models.Index(fields=['last_matched'], name='idx_last_matched_267'),
         ]
         ordering = ['-created_at']
     
@@ -396,10 +399,10 @@ class FraudAlert(AdvertiserPortalBaseModel, AuditModel):
         app_label = 'advertiser_portal'
         db_table = 'advertiser_portal_fraud_alerts'
         indexes = [
-            models.Index(fields=['fraud_log', 'alert_type']),
-            models.Index(fields=['severity', 'acknowledged']),
-            models.Index(fields=['sent_at']),
-            models.Index(fields=['next_escalation_at']),
+            models.Index(fields=['fraud_log', 'alert_type'], name='idx_fraud_log_alert_type_268'),
+            models.Index(fields=['severity', 'acknowledged'], name='idx_severity_acknowledged_269'),
+            models.Index(fields=['sent_at'], name='idx_sent_at_270'),
+            models.Index(fields=['next_escalation_at'], name='idx_next_escalation_at_271'),
         ]
         ordering = ['-sent_at']
     

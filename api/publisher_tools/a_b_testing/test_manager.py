@@ -160,9 +160,9 @@ class ABTest(TimeStampedModel):
         verbose_name_plural = _('A/B Tests')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['publisher', 'status']),
-            models.Index(fields=['ad_unit', 'status']),
-            models.Index(fields=['test_type']),
+            models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1543'),
+            models.Index(fields=['ad_unit', 'status'], name='idx_ad_unit_status_1544'),
+            models.Index(fields=['test_type'], name='idx_test_type_1545'),
         ]
 
     def __str__(self):
@@ -360,7 +360,7 @@ class ABTestVariant(TimeStampedModel):
         verbose_name_plural = _('A/B Test Variants')
         ordering = ['test', 'is_control', 'name']
         indexes = [
-            models.Index(fields=['test', 'is_control']),
+            models.Index(fields=['test', 'is_control'], name='idx_test_is_control_1546'),
         ]
 
     def __str__(self):

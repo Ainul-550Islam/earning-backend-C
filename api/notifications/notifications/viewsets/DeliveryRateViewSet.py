@@ -18,7 +18,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import serializers
 
-from notifications.models.analytics import DeliveryRate, NotificationInsight
+from api.notifications.models.analytics import DeliveryRate, NotificationInsight
 
 logger = logging.getLogger(__name__)
 

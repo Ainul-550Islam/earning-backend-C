@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-from ._models_core import (
+from .models import (
     Notification, NotificationTemplate, NotificationPreference,
     DeviceToken, NotificationCampaign, NotificationRule,
     NotificationFeedback, NotificationAnalytics, NotificationLog

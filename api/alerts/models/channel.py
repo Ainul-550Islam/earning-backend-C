@@ -303,9 +303,9 @@ class AlertChannel(models.Model):
     class Meta:
         ordering = ['priority', 'name']
         indexes = [
-            models.Index(fields=['channel_type', 'is_enabled']),
-            models.Index(fields=['status']),
-            models.Index(fields=['priority']),
+            models.Index(fields=['channel_type', 'is_enabled'], name='idx_channel_type_is_enable_146'),
+            models.Index(fields=['status'], name='idx_status_693'),
+            models.Index(fields=['priority'], name='idx_priority_694'),
         ]
         db_table_comment = "Configuration for different alert notification channels"
         verbose_name = "Alert Channel"
@@ -500,8 +500,8 @@ class ChannelRoute(models.Model):
     class Meta:
         ordering = ['priority', 'name']
         indexes = [
-            models.Index(fields=['route_type', 'is_active']),
-            models.Index(fields=['priority']),
+            models.Index(fields=['route_type', 'is_active'], name='idx_route_type_is_active_695'),
+            models.Index(fields=['priority'], name='idx_priority_696'),
         ]
         db_table_comment = "Routing rules for alert channels"
         verbose_name = "Channel Route"
@@ -616,9 +616,9 @@ class ChannelHealthLog(models.Model):
     class Meta:
         ordering = ['-checked_at']
         indexes = [
-            models.Index(fields=['channel', 'checked_at']),
-            models.Index(fields=['status', 'checked_at']),
-            models.Index(fields=['check_type', 'checked_at']),
+            models.Index(fields=['channel', 'checked_at'], name='idx_channel_checked_at_697'),
+            models.Index(fields=['status', 'checked_at'], name='idx_status_checked_at_698'),
+            models.Index(fields=['check_type', 'checked_at'], name='idx_check_type_checked_at_699'),
         ]
         db_table_comment = "Health monitoring logs for channels"
         verbose_name = "Channel Health Log"
@@ -782,7 +782,7 @@ class ChannelRateLimit(models.Model):
     class Meta:
         ordering = ['channel__name']
         indexes = [
-            models.Index(fields=['channel', 'limit_type']),
+            models.Index(fields=['channel', 'limit_type'], name='idx_channel_limit_type_700'),
         ]
         db_table_comment = "Rate limiting configuration for channels"
         verbose_name = "Channel Rate Limit"
@@ -1004,8 +1004,8 @@ class AlertRecipient(models.Model):
     class Meta:
         ordering = ['priority', 'name']
         indexes = [
-            models.Index(fields=['recipient_type', 'is_active']),
-            models.Index(fields=['priority']),
+            models.Index(fields=['recipient_type', 'is_active'], name='idx_recipient_type_is_acti_266'),
+            models.Index(fields=['priority'], name='idx_priority_702'),
         ]
         db_table_comment = "Management of alert recipients"
         verbose_name = "Alert Recipient"

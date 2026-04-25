@@ -9,7 +9,7 @@ Supports:
   - Elasticsearch integration (optional, for large datasets)
 
 Usage:
-    from notifications.search import notification_search
+    from api.notifications.search import notification_search
 
     results = notification_search.search(
         user=request.user,
@@ -122,7 +122,7 @@ class NotificationSearchService:
         Returns:
             SearchResult with queryset and pagination metadata.
         """
-        from notifications.models import Notification
+        from api.notifications.models import Notification
 
         qs = Notification.objects.all()
 
@@ -169,7 +169,7 @@ class NotificationSearchService:
         active_only: bool = True,
     ) -> SearchResult:
         """Search NotificationTemplates."""
-        from notifications.models import NotificationTemplate
+        from api.notifications.models import NotificationTemplate
 
         qs = NotificationTemplate.objects.all()
         if active_only:
@@ -209,7 +209,7 @@ class NotificationSearchService:
         page_size: int = 50,
     ) -> SearchResult:
         """Search NotificationLogs."""
-        from notifications.models import NotificationLog
+        from api.notifications.models import NotificationLog
 
         qs = NotificationLog.objects.all()
 
@@ -239,7 +239,7 @@ class NotificationSearchService:
         page_size: int = 20,
     ) -> SearchResult:
         """Search NotificationCampaigns."""
-        from notifications.models import NotificationCampaign
+        from api.notifications.models import NotificationCampaign
 
         qs = NotificationCampaign.objects.all()
         if query:
@@ -260,7 +260,7 @@ class NotificationSearchService:
         if not query or len(query) < 2:
             return []
 
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         results = (
             Notification.objects
             .filter(user=user, is_deleted=False, title__icontains=query)

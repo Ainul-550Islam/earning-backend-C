@@ -10,7 +10,7 @@ class EchoWriter:
     def write(self, v): return v
 
 def export_notifications_csv(user=None, days=30, include_deleted=False):
-    from notifications.models import Notification
+    from api.notifications.models import Notification
     cutoff = timezone.now() - timedelta(days=days)
     qs = Notification.objects.filter(created_at__gte=cutoff)
     if user: qs = qs.filter(user=user)
@@ -25,12 +25,12 @@ def export_notifications_csv(user=None, days=30, include_deleted=False):
     return out.getvalue()
 
 def export_analytics_csv(channel=None, days=30):
-    from notifications.services.NotificationAnalytics import notification_analytics
+    from api.notifications.services.NotificationAnalytics import notification_analytics
     return notification_analytics.export_analytics_csv(
         start_date=timezone.now().date()-timedelta(days=days), end_date=timezone.now().date(), channel=channel)
 
 def export_opt_outs_csv(channel=None):
-    from notifications.models.analytics import OptOutTracking
+    from api.notifications.models.analytics import OptOutTracking
     qs = OptOutTracking.objects.filter(is_active=True).select_related("user")
     if channel: qs = qs.filter(channel=channel)
     out = io.StringIO()
@@ -42,7 +42,7 @@ def export_opt_outs_csv(channel=None):
     return out.getvalue()
 
 def export_campaign_results_json(campaign_id):
-    from notifications.models import NotificationCampaign, Notification
+    from api.notifications.models import NotificationCampaign, Notification
     from django.db.models import Count, Q
     try:
         c = NotificationCampaign.objects.get(pk=campaign_id)
@@ -56,8 +56,8 @@ def export_campaign_results_json(campaign_id):
             "total_targeted":c.total_count,"sent":c.sent_count,"failed":c.failed_count,"notifications":stats}
 
 def export_user_data_gdpr(user):
-    from notifications.models import Notification, NotificationPreference, DeviceToken
-    from notifications.models.analytics import OptOutTracking, NotificationFatigue
+    from api.notifications.models import Notification, NotificationPreference, DeviceToken
+    from api.notifications.models.analytics import OptOutTracking, NotificationFatigue
     return {
         "user_id":user.pk,"username":user.username,"exported_at":timezone.now().isoformat(),
         "notifications":list(Notification.objects.filter(user=user).values("pk","title","notification_type","channel","priority","is_read","created_at")[:1000]),

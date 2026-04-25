@@ -1,7 +1,8 @@
 # api/payment_gateways/services/PaymentProcessor.py
 
 from abc import ABC, abstractmethod
-from api.payment_gateways.models import GatewayTransaction as TxnModel, PaymentGateway
+from django.db import transaction as db_txn
+# Models imported inside methods to prevent circular imports
 from django.utils import timezone
 from decimal import Decimal
 
@@ -43,7 +44,7 @@ class PaymentProcessor(ABC):
     def calculate_fee(self, amount):
         """Calculate GatewayTransaction fee"""
         if self.gateway_config:
-            fee_percentage = self.gateway_config.GatewayTransaction_fee_percentage
+            fee_percentage = self.gateway_config.transaction_fee_percentage
             return (amount * fee_percentage) / 100
         return Decimal('0')
     

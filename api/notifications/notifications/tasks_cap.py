@@ -143,9 +143,9 @@ def enqueue_notification_send(notification_id: int, channel: str = 'in_app', pri
     Returns the Celery task ID or None on failure.
     """
     try:
-        from notifications.tasks.send_push_tasks import send_push_batch_task
-        from notifications.tasks.send_email_tasks import send_email_batch_task
-        from notifications.tasks.send_sms_tasks import send_sms_batch_task
+        from api.notifications.tasks.send_push_tasks import send_push_batch_task
+        from api.notifications.tasks.send_email_tasks import send_email_batch_task
+        from api.notifications.tasks.send_sms_tasks import send_sms_batch_task
 
         queue_map = {
             'push': ('notifications_push', send_push_batch_task),
@@ -162,7 +162,7 @@ def enqueue_notification_send(notification_id: int, channel: str = 'in_app', pri
             return result.id
         else:
             # in_app / all — use the high priority queue
-            from notifications.tasks.delivery_tracking_tasks import mark_notification_delivered_task
+            from api.notifications.tasks.delivery_tracking_tasks import mark_notification_delivered_task
             result = mark_notification_delivered_task.apply_async(
                 args=[notification_id],
                 queue='notifications_high',

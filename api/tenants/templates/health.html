@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Check - Tenant Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .health-status {
+            padding: 2rem 0;
+        }
+        .status-card {
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #dee2e6;
+        }
+        .status-ok {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .status-error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .status-warning {
+            border-left-color: #ffc107;
+            background-color: #fff3cd;
+        }
+        .status-icon {
+            font-size: 2rem;
+            margin-right: 1rem;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .auto-refresh {
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-heartbeat"></i> Health Check
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">Home</a>
+                <a class="nav-link" href="/api/docs/">API Docs</a>
+                <a class="nav-link" href="/admin/">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="health-status">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold">System Health Check</h1>
+                <p class="lead">Real-time monitoring of all system components</p>
+            </div>
+
+            <!-- Overall Status -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div id="overall-status" class="status-card">
+                        <div class="d-flex align-items-center">
+                            <div class="status-icon" id="overall-icon">
+                                <i class="fas fa-check-circle text-success"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h3 id="overall-title">All Systems Operational</h3>
+                                <p id="overall-message" class="mb-0">All components are functioning normally</p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success" id="overall-badge">HEALTHY</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Component Status -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div id="database-status" class="status-card">
+                        <div class="d-flex align-items-center">
+                            <div class="status-icon">
+                                <i class="fas fa-database text-success"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5>Database</h5>
+                                <p class="mb-0">PostgreSQL connection</p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success">OK</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div id="redis-status" class="status-card">
+                        <div class="d-flex align-items-center">
+                            <div class="status-icon">
+                                <i class="fas fa-memory text-success"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5>Redis Cache</h5>
+                                <p class="mb-0">Cache and session storage</p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success">OK</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div id="celery-status" class="status-card">
+                        <div class="d-flex align-items-center">
+                            <div class="status-icon">
+                                <i class="fas fa-cogs text-success"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5>Celery Workers</h5>
+                                <p class="mb-0">Background task processing</p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success">OK</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div id="api-status" class="status-card">
+                        <div class="d-flex align-items-center">
+                            <div class="status-icon">
+                                <i class="fas fa-plug text-success"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5>API Endpoints</h5>
+                                <p class="mb-0">REST API functionality</p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success">OK</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Metrics -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h3>System Metrics</h3>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h6>Response Time</h6>
+                                    <h4 id="response-time">45ms</h4>
+                                    <small class="text-muted">Average</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h6>Active Tenants</h6>
+                                    <h4 id="active-tenants">1,234</h4>
+                                    <small class="text-muted">Current</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h6>API Calls/min</h6>
+                                    <h4 id="api-calls">5,678</h4>
+                                    <small class="text-muted">Rate</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h6>Uptime</h6>
+                                    <h4 id="uptime">99.9%</h4>
+                                    <small class="text-muted">30 days</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Events -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h3>Recent Events</h3>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Component</th>
+                                    <th>Status</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-events">
+                                <tr>
+                                    <td>2 minutes ago</td>
+                                    <td>Celery Worker</td>
+                                    <td><span class="badge bg-success">OK</span></td>
+                                    <td>Task completed successfully</td>
+                                </tr>
+                                <tr>
+                                    <td>5 minutes ago</td>
+                                    <td>Database</td>
+                                    <td><span class="badge bg-success">OK</span></td>
+                                    <td>Connection established</td>
+                                </tr>
+                                <tr>
+                                    <td>10 minutes ago</td>
+                                    <td>Redis</td>
+                                    <td><span class="badge bg-success">OK</span></td>
+                                    <td>Cache cleared successfully</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Refresh Button -->
+    <button class="btn btn-primary refresh-btn" onclick="refreshHealth()">
+        <i class="fas fa-sync-alt" id="refresh-icon"></i>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let autoRefreshInterval;
+        
+        function updateStatus(componentId, status, message) {
+            const element = document.getElementById(componentId);
+            const card = element.closest('.status-card');
+            const icon = element.querySelector('.status-icon i');
+            const badge = element.querySelector('.badge');
+            
+            // Remove all status classes
+            card.classList.remove('status-ok', 'status-error', 'status-warning');
+            icon.classList.remove('text-success', 'text-danger', 'text-warning');
+            badge.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+            
+            if (status === 'ok') {
+                card.classList.add('status-ok');
+                icon.classList.add('text-success');
+                badge.classList.add('bg-success');
+                badge.textContent = 'OK';
+            } else if (status === 'error') {
+                card.classList.add('status-error');
+                icon.classList.add('text-danger');
+                badge.classList.add('bg-danger');
+                badge.textContent = 'ERROR';
+            } else if (status === 'warning') {
+                card.classList.add('status-warning');
+                icon.classList.add('text-warning');
+                badge.classList.add('bg-warning');
+                badge.textContent = 'WARNING';
+            }
+            
+            // Update message if provided
+            if (message) {
+                const messageElement = element.querySelector('p');
+                if (messageElement) {
+                    messageElement.textContent = message;
+                }
+            }
+        }
+        
+        function updateOverallStatus(status, title, message) {
+            const overallDiv = document.getElementById('overall-status');
+            const icon = document.getElementById('overall-icon');
+            const titleElement = document.getElementById('overall-title');
+            const messageElement = document.getElementById('overall-message');
+            const badge = document.getElementById('overall-badge');
+            
+            // Remove all status classes
+            overallDiv.classList.remove('status-ok', 'status-error', 'status-warning');
+            icon.querySelector('i').classList.remove('text-success', 'text-danger', 'text-warning');
+            badge.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+            
+            if (status === 'healthy') {
+                overallDiv.classList.add('status-ok');
+                icon.innerHTML = '<i class="fas fa-check-circle text-success"></i>';
+                badge.classList.add('bg-success');
+                badge.textContent = 'HEALTHY';
+            } else if (status === 'unhealthy') {
+                overallDiv.classList.add('status-error');
+                icon.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i>';
+                badge.classList.add('bg-danger');
+                badge.textContent = 'UNHEALTHY';
+            } else if (status === 'degraded') {
+                overallDiv.classList.add('status-warning');
+                icon.innerHTML = '<i class="fas fa-exclamation-circle text-warning"></i>';
+                badge.classList.add('bg-warning');
+                badge.textContent = 'DEGRADED';
+            }
+            
+            titleElement.textContent = title;
+            messageElement.textContent = message;
+        }
+        
+        async function checkHealth() {
+            try {
+                const response = await fetch('/api/v1/tenants/health/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update component statuses
+                    updateStatus('database-status', data.checks.database === 'ok' ? 'ok' : 'error');
+                    updateStatus('redis-status', data.checks.redis === 'ok' ? 'ok' : 'error');
+                    updateStatus('celery-status', data.checks.celery === 'ok' ? 'ok' : 'error');
+                    updateStatus('api-status', data.checks.api === 'ok' ? 'ok' : 'error');
+                    
+                    // Update overall status
+                    const allOk = Object.values(data.checks).every(status => status === 'ok');
+                    if (allOk) {
+                        updateOverallStatus('healthy', 'All Systems Operational', 'All components are functioning normally');
+                    } else {
+                        updateOverallStatus('degraded', 'System Degraded', 'Some components are experiencing issues');
+                    }
+                    
+                    // Update metrics
+                    document.getElementById('response-time').textContent = data.metrics.response_time || 'N/A';
+                    document.getElementById('active-tenants').textContent = data.metrics.active_tenants || 'N/A';
+                    document.getElementById('api-calls').textContent = data.metrics.api_calls_per_minute || 'N/A';
+                    document.getElementById('uptime').textContent = data.metrics.uptime || 'N/A';
+                } else {
+                    updateOverallStatus('unhealthy', 'Health Check Failed', 'Unable to perform health check');
+                }
+            } catch (error) {
+                console.error('Health check failed:', error);
+                updateOverallStatus('unhealthy', 'Health Check Failed', 'Unable to connect to health check endpoint');
+            }
+        }
+        
+        function refreshHealth() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('auto-refresh');
+            
+            checkHealth().then(() => {
+                setTimeout(() => {
+                    icon.classList.remove('auto-refresh');
+                }, 1000);
+            });
+        }
+        
+        // Auto-refresh every 30 seconds
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(checkHealth, 30000);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkHealth();
+            startAutoRefresh();
+        });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

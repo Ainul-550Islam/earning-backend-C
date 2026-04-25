@@ -224,7 +224,7 @@ class AdCreative(TimestampedModel):
         verbose_name        = _('Ad Creative')
         verbose_name_plural = _('Ad Creatives')
         indexes = [
-            models.Index(fields=['campaign', 'type']),
+            models.Index(fields=['campaign', 'type'], name='idx_campaign_type_1411'),
         ]
 
     def __str__(self):
@@ -280,7 +280,7 @@ class CurrencyRate(models.Model):
         verbose_name_plural = _('Currency Rates')
         # প্রতি pair এর জন্য শুধু একটি সর্বশেষ রেট — application layer এ enforce করুন
         indexes = [
-            models.Index(fields=['from_currency', 'to_currency', '-fetched_at']),
+            models.Index(fields=['from_currency', 'to_currency', '-fetched_at'], name='idx_from_currency_to_curre_728'),
         ]
         # constraints = [
         #     models.CheckConstraint(
@@ -427,20 +427,20 @@ class Campaign(SoftDeleteModel):
         verbose_name        = _('Campaign')
         verbose_name_plural = _('Campaigns')
         indexes = [
-            models.Index(fields=['advertiser', 'status']),
-            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['advertiser', 'status'], name='idx_advertiser_status_1413'),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_1414'),
         ]
         # constraints = [
         #     CheckConstraint(
-        #         condition=models.Q(spent_usd__lte=models.F('total_budget_usd')),
+        #         check=models.Q(spent_usd__lte=models.F('total_budget_usd')),
         #         name='chk_campaign_spent_not_exceed_budget',
         #     ),
         #     CheckConstraint(
-        #         condition=models.Q(filled_slots__lte=models.F('total_slots')),
+        #         check=models.Q(filled_slots__lte=models.F('total_slots')),
         #         name='chk_campaign_filled_not_exceed_total_slots',
         #     ),
         #     CheckConstraint(
-        #         condition=models.Q(total_budget_usd__gt=0),
+        #         check=models.Q(total_budget_usd__gt=0),
         #         name='chk_campaign_budget_positive',
         #     ),
         # ]
@@ -526,7 +526,7 @@ class TargetingCondition(TimestampedModel):
         verbose_name_plural = _('Targeting Conditions')
         # constraints = [
         #     CheckConstraint(
-        #         condition=models.Q(min_user_level__lte=models.F('max_user_level')),
+        #         check=models.Q(min_user_level__lte=models.F('max_user_level')),
         #         name='chk_targeting_user_level_range_valid',
         #     ),
         # ]
@@ -825,14 +825,14 @@ class TaskSubmission(TimestampedModel):
         verbose_name        = _('Task Submission')
         verbose_name_plural = _('Task Submissions')
         indexes = [
-            models.Index(fields=['worker', 'campaign']),
-            models.Index(fields=['status', 'submitted_at']),
-            models.Index(fields=['campaign', 'status']),
-            models.Index(fields=['ip_address']),
+            models.Index(fields=['worker', 'campaign'], name='idx_worker_campaign_1415'),
+            models.Index(fields=['status', 'submitted_at'], name='idx_status_submitted_at_1416'),
+            models.Index(fields=['campaign', 'status'], name='idx_campaign_status_1417'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_1418'),
         ]
         # constraints = [
         #     CheckConstraint(
-        #         condition=models.Q(bonus_usd__gte=0),
+        #         check=models.Q(bonus_usd__gte=0),
         #         name='chk_submission_bonus_non_negative',
         #     ),
         # ]
@@ -978,7 +978,7 @@ class VerificationLog(models.Model):
         verbose_name_plural = _('Verification Logs')
         ordering            = ['-verified_at']
         indexes = [
-            models.Index(fields=['submission', '-verified_at']),
+            models.Index(fields=['submission', '-verified_at'], name='idx_submission_verified_at_141'),
         ]
 
     def __str__(self):
@@ -1036,7 +1036,7 @@ class Dispute(TimestampedModel):
         verbose_name        = _('Dispute')
         verbose_name_plural = _('Disputes')
         indexes = [
-            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_1420'),
         ]
 
     def __str__(self):
@@ -1121,9 +1121,9 @@ class PromotionTransaction(TimestampedModel):
         verbose_name        = _('Promotion Transaction')
         verbose_name_plural = _('Promotion Transactions')
         indexes = [
-            models.Index(fields=['user', '-created_at']),
-            models.Index(fields=['campaign', 'type']),
-            models.Index(fields=['type', '-created_at']),
+            models.Index(fields=['user', '-created_at'], name='idx_user_created_at_1421'),
+            models.Index(fields=['campaign', 'type'], name='idx_campaign_type_1422'),
+            models.Index(fields=['type', '-created_at'], name='idx_type_created_at_1423'),
         ]
         # Transaction একবার তৈরি হলে delete করা যাবে না — permission দিয়ে enforce করুন
 
@@ -1178,11 +1178,11 @@ class EscrowWallet(TimestampedModel):
         verbose_name_plural = _('Escrow Wallets')
         # constraints = [
         #     CheckConstraint(
-        #         condition=models.Q(released_amount_usd__lte=models.F('locked_amount_usd')),
+        #         check=models.Q(released_amount_usd__lte=models.F('locked_amount_usd')),
         #         name='chk_escrow_released_not_exceed_locked',
         #     ),
         #     CheckConstraint(
-        #         condition=models.Q(locked_amount_usd__gt=0),
+        #         check=models.Q(locked_amount_usd__gt=0),
         #         name='chk_escrow_locked_positive',
         #     ),
         # ]
@@ -1266,11 +1266,11 @@ class AdminCommissionLog(models.Model):
         verbose_name_plural = _('Admin Commission Logs')
         # constraints = [
         #     CheckConstraint(
-        #         condition=models.Q(commission_usd__lte=models.F('gross_amount_usd')),
+        #         check=models.Q(commission_usd__lte=models.F('gross_amount_usd')),
         #         name='chk_commission_not_exceed_gross',
         #     ),
         #     CheckConstraint(
-        #         condition=(
+        #         check=(
         #             models.Q(worker_reward_usd__gte=0) &
         #             models.Q(commission_usd__gte=0) &
         #             models.Q(gross_amount_usd__gte=0)
@@ -1354,12 +1354,12 @@ class ReferralCommissionLog(TimestampedModel):
         verbose_name        = _('Referral Commission Log')
         verbose_name_plural = _('Referral Commission Logs')
         indexes = [
-            models.Index(fields=['referrer', 'status']),
-            models.Index(fields=['referred', 'level']),
+            models.Index(fields=['referrer', 'status'], name='idx_referrer_status_1424'),
+            models.Index(fields=['referred', 'level'], name='idx_referred_level_1425'),
         ]
         # constraints = [
         #     CheckConstraint(
-        #         condition=models.Q(referrer__ne=models.F('referred')),
+        #         check=models.Q(referrer__ne=models.F('referred')),
         #         name='chk_referral_referrer_not_same_as_referred',
         #     ),
         # ]
@@ -1415,14 +1415,14 @@ class UserReputation(models.Model):
         verbose_name_plural = _('User Reputations')
         # constraints = [
         #     CheckConstraint(
-        #         condition=(
+        #         check=(
         #             models.Q(approved_count__lte=models.F('total_submissions')) &
         #             models.Q(rejected_count__lte=models.F('total_submissions'))
         #         ),
         #         name='chk_reputation_counts_not_exceed_total',
         #     ),
         #     CheckConstraint(
-        #         condition=models.Q(trust_score__gte=0) & models.Q(trust_score__lte=100),
+        #         check=models.Q(trust_score__gte=0) & models.Q(trust_score__lte=100),
         #         name='chk_reputation_trust_score_range',
         #     ),
         # ]
@@ -1502,8 +1502,8 @@ class FraudReport(TimestampedModel):
         verbose_name        = _('Fraud Report')
         verbose_name_plural = _('Fraud Reports')
         indexes = [
-            models.Index(fields=['user', 'fraud_type']),
-            models.Index(fields=['action_taken', 'created_at']),
+            models.Index(fields=['user', 'fraud_type'], name='idx_user_fraud_type_1426'),
+            models.Index(fields=['action_taken', 'created_at'], name='idx_action_taken_created_a_4eb'),
         ]
 
     def __str__(self):
@@ -1559,8 +1559,8 @@ class DeviceFingerprint(TimestampedModel):
         verbose_name        = _('Device Fingerprint')
         verbose_name_plural = _('Device Fingerprints')
         indexes = [
-            models.Index(fields=['user', '-last_seen']),
-            models.Index(fields=['is_flagged']),
+            models.Index(fields=['user', '-last_seen'], name='idx_user_last_seen_1428'),
+            models.Index(fields=['is_flagged'], name='idx_is_flagged_1429'),
         ]
 
     def __str__(self):
@@ -1623,7 +1623,7 @@ class Blacklist(TimestampedModel):
             ),
         ]
         indexes = [
-            models.Index(fields=['type', 'value', 'is_active']),
+            models.Index(fields=['type', 'value', 'is_active'], name='idx_type_value_is_active_1430'),
         ]
 
     def __str__(self):
@@ -1712,16 +1712,16 @@ class CampaignAnalytics(models.Model):
                 name='uq_campaign_analytics_per_day',
             ),
             # CheckConstraint(
-            #     condition=models.Q(approved_count__lte=models.F('total_submissions')),
+            #     check=models.Q(approved_count__lte=models.F('total_submissions')),
             #     name='chk_analytics_approved_not_exceed_submissions',
             # ),
             # CheckConstraint(
-            #     condition=models.Q(total_clicks__lte=models.F('total_views')),
+            #     check=models.Q(total_clicks__lte=models.F('total_views')),
             #     name='chk_analytics_clicks_not_exceed_views',
             # ),
         ]
         indexes = [
-            models.Index(fields=['campaign', '-date']),
+            models.Index(fields=['campaign', '-date'], name='idx_campaign_date_1431'),
         ]
         ordering = ['-date']
 
@@ -1775,8 +1775,8 @@ class CampaignBid(TimestampedModel):
         verbose_name_plural = _('Campaign Bids')
         ordering            = ['-bid_at']
         indexes = [
-            models.Index(fields=['campaign', 'status']),
-            models.Index(fields=['advertiser', '-bid_at']),
+            models.Index(fields=['campaign', 'status'], name='idx_campaign_status_1432'),
+            models.Index(fields=['advertiser', '-bid_at'], name='idx_advertiser_bid_at_1433'),
         ]
 
     def __str__(self):
@@ -2107,7 +2107,7 @@ class SubIDClick(TimestampedModel):
     class Meta:
         db_table     = 'subid_click'
         verbose_name = _('SubID Click')
-        indexes      = [models.Index(fields=['publisher', 'created_at'])]
+        indexes      = [models.Index(fields=['publisher', 'created_at'], name='idx_publisher_created_at_1434')]
 
     def __str__(self):
         return f'Click {self.click_id[:8]} — s1:{self.s1}'

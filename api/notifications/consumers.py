@@ -226,7 +226,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def _get_unread_count(self):
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             return Notification.objects.filter(
                 user_id=self.user_id,
                 is_read=False,
@@ -238,7 +238,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def _mark_notification_read(self, notification_id):
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             notif = Notification.objects.get(pk=notification_id, user_id=self.user_id)
             notif.mark_as_read()
             return True
@@ -248,7 +248,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def _mark_all_read(self):
         try:
-            from notifications.models import Notification
+            from api.notifications.models import Notification
             count = Notification.objects.filter(
                 user_id=self.user_id, is_read=False, is_deleted=False
             ).update(is_read=True, read_at=timezone.now(), updated_at=timezone.now())
@@ -259,7 +259,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def _dismiss_in_app_message(self, message_id):
         try:
-            from notifications.models.channel import InAppMessage
+            from api.notifications.models.channel import InAppMessage
             msg = InAppMessage.objects.get(pk=message_id, user_id=self.user_id)
             msg.dismiss()
             return True
@@ -269,7 +269,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def _get_pending_in_app_messages(self):
         try:
-            from notifications.models.channel import InAppMessage
+            from api.notifications.models.channel import InAppMessage
             from django.db.models import Q
             messages = InAppMessage.objects.filter(
                 user_id=self.user_id,
@@ -291,7 +291,7 @@ def send_notification_to_user(user_id: int, notification_data: dict):
     Send a real-time notification to a specific user's WebSocket.
 
     Usage:
-        from notifications.consumers import send_notification_to_user
+        from api.notifications.consumers import send_notification_to_user
         send_notification_to_user(user.pk, notification.to_dict())
     """
     if not CHANNELS_AVAILABLE:

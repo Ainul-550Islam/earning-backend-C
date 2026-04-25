@@ -36,7 +36,7 @@ class OptOutService:
 
         Passing channel='all' checks if they are opted out of everything.
         """
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
 
         if channel == 'all':
             return OptOutTracking.objects.filter(user=user, is_active=True).exists()
@@ -49,7 +49,7 @@ class OptOutService:
 
     def get_opted_out_channels(self, user) -> List[str]:
         """Return a list of channel strings the user is currently opted out of."""
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
         return list(
             OptOutTracking.objects.filter(user=user, is_active=True)
             .values_list('channel', flat=True)
@@ -86,7 +86,7 @@ class OptOutService:
             }
 
         try:
-            from notifications.models.analytics import OptOutTracking
+            from api.notifications.models.analytics import OptOutTracking
 
             if channel == 'all':
                 channels_to_opt_out = [c for c in self.VALID_CHANNELS if c != 'all']
@@ -166,7 +166,7 @@ class OptOutService:
             }
 
         try:
-            from notifications.models.analytics import OptOutTracking
+            from api.notifications.models.analytics import OptOutTracking
 
             if channel == 'all':
                 channels = [c for c in self.VALID_CHANNELS if c != 'all']
@@ -219,7 +219,7 @@ class OptOutService:
         Returns: Dict with success, opted_out_count, errors.
         """
         from django.contrib.auth import get_user_model
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
 
         User = get_user_model()
         opted_out = 0
@@ -250,7 +250,7 @@ class OptOutService:
 
     def bulk_resubscribe(self, user_ids: List[int], channel: str) -> Dict:
         """Re-subscribe multiple users to a channel."""
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
 
         channels = [c for c in self.VALID_CHANNELS if c != 'all'] if channel == 'all' else [channel]
 
@@ -279,7 +279,7 @@ class OptOutService:
         """
         Return only user IDs that are NOT opted out of the given channel.
         """
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
 
         if channel == 'all':
             # Exclude users who have opted out of ANY channel
@@ -304,7 +304,7 @@ class OptOutService:
 
     def get_opt_out_stats(self) -> Dict:
         """Return aggregate opt-out counts per channel."""
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
         from django.db.models import Count
 
         stats = (
@@ -317,7 +317,7 @@ class OptOutService:
 
     def export_user_opt_outs(self, user) -> Dict:
         """Return a full opt-out export dict for a user (GDPR-style)."""
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
 
         records = OptOutTracking.objects.filter(user=user).order_by('channel', '-opted_out_at')
         return {

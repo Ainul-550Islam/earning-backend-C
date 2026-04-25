@@ -358,8 +358,8 @@ class PaymentValidator:
             account_number = PaymentValidator.validate_bank_account(account_number)
         
         # Check for duplicate payment method
-        from ..models import PaymentMethod
-        if PaymentMethod.objects.filter(
+        from ..models import PaymentGatewayMethod
+        if PaymentGatewayMethod.objects.filter(
             user=user,
             gateway=gateway,
             account_number=account_number
@@ -418,7 +418,7 @@ class PaymentValidator:
         Args:
             user (User): User object
             amount (Decimal): Withdrawal amount
-            payment_method (PaymentMethod): Payment method
+            payment_method (PaymentGatewayMethod): Payment method
             
         Returns:
             dict: Validated withdrawal data

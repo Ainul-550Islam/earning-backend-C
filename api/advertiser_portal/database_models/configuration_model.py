@@ -16,7 +16,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -133,11 +136,11 @@ class Configuration(AdvertiserPortalBaseModel, AuditModel):
         verbose_name_plural = 'Configurations'
         unique_together = ['advertiser', 'key', 'environment']
         indexes = [
-            models.Index(fields=['advertiser', 'category']),
-            models.Index(fields=['key']),
-            models.Index(fields=['category', 'subcategory']),
-            models.Index(fields=['environment']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['advertiser', 'category'], name='idx_advertiser_category_196'),
+            models.Index(fields=['key'], name='idx_key_197'),
+            models.Index(fields=['category', 'subcategory'], name='idx_category_subcategory_198'),
+            models.Index(fields=['environment'], name='idx_environment_199'),
+            models.Index(fields=['is_active'], name='idx_is_active_200'),
         ]
     
     def __str__(self) -> str:
@@ -463,10 +466,10 @@ class FeatureFlag(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Feature Flag'
         verbose_name_plural = 'Feature Flags'
         indexes = [
-            models.Index(fields=['key']),
-            models.Index(fields=['is_enabled']),
-            models.Index(fields=['environment']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['key'], name='idx_key_201'),
+            models.Index(fields=['is_enabled'], name='idx_is_enabled_202'),
+            models.Index(fields=['environment'], name='idx_environment_203'),
+            models.Index(fields=['is_active'], name='idx_is_active_204'),
         ]
     
     def __str__(self) -> str:
@@ -673,9 +676,9 @@ class SystemSetting(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'System Setting'
         verbose_name_plural = 'System Settings'
         indexes = [
-            models.Index(fields=['category']),
-            models.Index(fields=['group']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['category'], name='idx_category_205'),
+            models.Index(fields=['group'], name='idx_group_206'),
+            models.Index(fields=['is_active'], name='idx_is_active_207'),
         ]
     
     def __str__(self) -> str:
@@ -832,7 +835,7 @@ class ThemeConfiguration(AdvertiserPortalBaseModel, AuditModel):
         verbose_name_plural = 'Theme Configurations'
         unique_together = ['advertiser', 'name']
         indexes = [
-            models.Index(fields=['advertiser', 'is_active']),
+            models.Index(fields=['advertiser', 'is_active'], name='idx_advertiser_is_active_208'),
         ]
     
     def __str__(self) -> str:

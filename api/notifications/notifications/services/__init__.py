@@ -7,7 +7,7 @@ The monolithic service logic lives in _services_core.py (renamed from services.p
 to avoid Python shadowing the services/ package directory).
 
 Usage:
-    from notifications.services import (
+    from api.notifications.services import (
         notification_service, template_service, rule_service,
         analytics_service, preferences_service, device_service,
         feedback_service, notification_dispatcher, fatigue_service,

@@ -9,9 +9,9 @@ logger = logging.getLogger(__name__)
 class GDPRComplianceService:
     def process_erasure_request(self, user):
         try:
-            from notifications.models import Notification, NotificationPreference, DeviceToken
-            from notifications.models.analytics import OptOutTracking, NotificationFatigue
-            from notifications.caching import invalidate_all_user_caches
+            from api.notifications.models import Notification, NotificationPreference, DeviceToken
+            from api.notifications.models.analytics import OptOutTracking, NotificationFatigue
+            from api.notifications.caching import invalidate_all_user_caches
             Notification.objects.filter(user=user).update(title="[Deleted]",message="[Deleted - GDPR]",metadata={},is_deleted=True,deleted_at=timezone.now())
             DeviceToken.objects.filter(user=user).delete()
             NotificationPreference.objects.filter(user=user).delete()
@@ -25,7 +25,7 @@ class GDPRComplianceService:
             return {"success":False,"error":str(exc)}
 
     def export_user_data(self, user):
-        from notifications.data_export import export_user_data_gdpr
+        from api.notifications.data_export import export_user_data_gdpr
         return export_user_data_gdpr(user)
 
     def check_marketing_consent(self, user, channel="email"):
@@ -52,7 +52,7 @@ class DataRetentionService:
         return results
 
     def _delete_old_data(self, dtype, cutoff, dry_run):
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         if dtype == "notifications":
             qs = Notification.objects.filter(is_deleted=True, deleted_at__lt=cutoff)
             count = qs.count()

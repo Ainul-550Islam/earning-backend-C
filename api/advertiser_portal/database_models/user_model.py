@@ -10,6 +10,7 @@ from decimal import Decimal
 from datetime import datetime, date
 from uuid import UUID
 
+import uuid
 from django.db import models, transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -20,7 +21,10 @@ from django.db.models import QuerySet
 from django.contrib.auth.models import Group, Permission
 from django.contrib.auth.hashers import make_password
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -312,12 +316,12 @@ class AdvertiserUser(AbstractUser, AdvertiserPortalBaseModel):
         verbose_name = 'Advertiser User'
         verbose_name_plural = 'Advertiser Users'
         indexes = [
-            models.Index(fields=['advertiser', 'role']),
-            models.Index(fields=['email']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['is_verified']),
-            models.Index(fields=['last_login']),
-            models.Index(fields=['api_key']),
+            models.Index(fields=['advertiser', 'role'], name='idx_advertiser_role_363'),
+            models.Index(fields=['email'], name='idx_email_364'),
+            models.Index(fields=['is_active'], name='idx_is_active_365'),
+            models.Index(fields=['is_verified'], name='idx_is_verified_366'),
+            models.Index(fields=['last_login'], name='idx_last_login_367'),
+            models.Index(fields=['api_key'], name='idx_api_key_368'),
         ]
     
     def __str__(self) -> str:
@@ -696,11 +700,11 @@ class UserSession(AdvertiserPortalBaseModel):
         verbose_name = 'User Session'
         verbose_name_plural = 'User Sessions'
         indexes = [
-            models.Index(fields=['user', 'is_active']),
-            models.Index(fields=['session_key']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['expires_at']),
-            models.Index(fields=['last_activity']),
+            models.Index(fields=['user', 'is_active'], name='idx_user_is_active_369'),
+            models.Index(fields=['session_key'], name='idx_session_key_370'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_371'),
+            models.Index(fields=['expires_at'], name='idx_expires_at_372'),
+            models.Index(fields=['last_activity'], name='idx_last_activity_373'),
         ]
     
     def __str__(self) -> str:
@@ -813,10 +817,10 @@ class UserActivityLog(AdvertiserPortalBaseModel):
         verbose_name = 'User Activity Log'
         verbose_name_plural = 'User Activity Logs'
         indexes = [
-            models.Index(fields=['user', 'activity_type']),
-            models.Index(fields=['object_type', 'object_id']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['success']),
+            models.Index(fields=['user', 'activity_type'], name='idx_user_activity_type_374'),
+            models.Index(fields=['object_type', 'object_id'], name='idx_object_type_object_id_375'),
+            models.Index(fields=['created_at'], name='idx_created_at_376'),
+            models.Index(fields=['success'], name='idx_success_377'),
         ]
     
     def __str__(self) -> str:

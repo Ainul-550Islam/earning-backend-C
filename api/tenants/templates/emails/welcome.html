@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Tenant Management - {{ tenant.name }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .welcome-box {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .steps-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+        .step-number {
+            background: #28a745;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .step-content {
+            flex-grow: 1;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #218838;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .feature-list li:before {
+            content: "â";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .trial-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Welcome to Tenant Management!</h1>
+        <p>{{ tenant.name }}</p>
+    </div>
+    
+    <div class="content">
+        <div class="welcome-box">
+            <h3>Congratulations! Your Tenant is Ready</h3>
+            <p>Welcome to the Tenant Management System! Your tenant <strong>{{ tenant.name }}</strong> has been successfully created and is ready to use.</p>
+            <p>Your trial period starts today and you have <strong>{{ trial_days }} days</strong> to explore all our features.</p>
+        </div>
+        
+        <div class="steps-box">
+            <h3>Getting Started - Quick Steps</h3>
+            
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Complete Your Profile</h4>
+                    <p>Set up your tenant profile with company information, branding, and preferences.</p>
+                    <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/settings/" class="btn btn-secondary">
+                        Update Settings
+                    </a>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Configure Your Plan</h4>
+                    <p>Review your current plan features and upgrade if needed to access more capabilities.</p>
+                    <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/plans/" class="btn btn-secondary">
+                        View Plans
+                    </a>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Set Up API Access</h4>
+                    <p>Generate API keys to integrate our services with your applications.</p>
+                    <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/api-keys/" class="btn btn-secondary">
+                        Manage API Keys
+                    </a>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4>Explore Features</h4>
+                    <p>Discover all the powerful features available in your tenant dashboard.</p>
+                    <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/features/" class="btn btn-secondary">
+                        Explore Features
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="steps-box">
+            <h3>What's Included in Your Trial</h3>
+            <ul class="feature-list">
+                <li>Full access to all core features</li>
+                <li>Unlimited API calls during trial</li>
+                <li>Priority customer support</li>
+                <li>Analytics and reporting tools</li>
+                <li>Custom branding options</li>
+                <li>Security and compliance features</li>
+                <li>Data export capabilities</li>
+                <li>Integration with popular tools</li>
+            </ul>
+        </div>
+        
+        <div class="trial-info">
+            <h4>Trial Information</h4>
+            <p><strong>Trial Duration:</strong> {{ trial_days }} days</p>
+            <p><strong>Trial Ends:</strong> {{ trial_end_date|date:"F j, Y" }}</p>
+            <p><strong>Current Plan:</strong> {{ current_plan.name }}</p>
+            <p>No credit card required for trial. You can upgrade at any time during or after your trial.</p>
+        </div>
+        
+        <div class="steps-box">
+            <h3>Resources to Help You Get Started</h3>
+            
+            <div style="margin-bottom: 20px;">
+                <h4>Documentation</h4>
+                <p>Comprehensive guides and API documentation to help you make the most of our platform.</p>
+                <a href="{{ site_url }}/api/docs/" class="btn btn-secondary">
+                    View Documentation
+                </a>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <h4>Video Tutorials</h4>
+                <p>Step-by-step video guides covering everything from basic setup to advanced features.</p>
+                <a href="{{ site_url }}/tutorials/" class="btn btn-secondary">
+                    Watch Tutorials
+                </a>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <h4>Community Forum</h4>
+                <p>Connect with other users, share experiences, and get help from our community.</p>
+                <a href="{{ site_url }}/community/" class="btn btn-secondary">
+                    Join Community
+                </a>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/dashboard/" class="btn">
+                Go to Dashboard
+            </a>
+            <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/onboarding/" class="btn btn-secondary">
+                Start Onboarding
+            </a>
+        </div>
+        
+        <div style="background: #d1ecf1; padding: 15px; border-radius: 8px; border-left: 4px solid #17a2b8;">
+            <h4>Need Help?</h4>
+            <p>Our customer success team is here to help you get started. Schedule a free onboarding session with one of our experts.</p>
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="{{ site_url }}/api/v1/tenants/{{ tenant.id }}/support/onboarding/" class="btn btn-secondary">
+                    Schedule Onboarding
+                </a>
+            </div>
+        </div>
+        
+        <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border-left: 4px solid #dc3545;">
+            <h4>Important Security Notice</h4>
+            <p>Please secure your account by:</p>
+            <ul>
+                <li>Setting a strong password</li>
+                <li>Enabling two-factor authentication</li>
+                <li>Reviewing API key permissions</li>
+                <li>Setting up proper access controls</li>
+            </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <p><strong>Quick Links:</strong></p>
+            <p>
+                <a href="{{ site_url }}/api/docs/" style="margin-right: 15px;">API Docs</a> |
+                <a href="{{ site_url }}/support/" style="margin-right: 15px;">Support</a> |
+                <a href="{{ site_url }}/pricing/" style="margin-right: 15px;">Pricing</a> |
+                <a href="{{ site_url }}/blog/">Blog</a>
+            </p>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>This email was sent to {{ tenant.admin_email }} on behalf of {{ tenant.name }}</p>
+        <p>If you have any questions, please contact us at support@example.com</p>
+        <p>&copy; 2024 Tenant Management System. All rights reserved.</p>
+    </div>
+</body>
+</html>

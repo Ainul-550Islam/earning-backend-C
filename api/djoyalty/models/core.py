@@ -58,9 +58,9 @@ class Customer(models.Model):
     class Meta:
         app_label = 'djoyalty'
         indexes = [
-            models.Index(fields=['tenant', 'code']),
-            models.Index(fields=['tenant', 'email']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['tenant', 'code'], name='idx_tenant_code_968'),
+            models.Index(fields=['tenant', 'email'], name='idx_tenant_email_969'),
+            models.Index(fields=['is_active'], name='idx_is_active_970'),
         ]
 
     def __str__(self):
@@ -118,9 +118,9 @@ class Txn(models.Model):
     class Meta:
         app_label = 'djoyalty'
         indexes = [
-            models.Index(fields=['tenant', 'customer']),
-            models.Index(fields=['timestamp']),
-            models.Index(fields=['is_discount']),
+            models.Index(fields=['tenant', 'customer'], name='idx_tenant_customer_971'),
+            models.Index(fields=['timestamp'], name='idx_timestamp_972'),
+            models.Index(fields=['is_discount'], name='idx_is_discount_973'),
         ]
 
     def __str__(self):
@@ -160,9 +160,9 @@ class Event(models.Model):
     class Meta:
         app_label = 'djoyalty'
         indexes = [
-            models.Index(fields=['tenant', 'customer']),
-            models.Index(fields=['action']),
-            models.Index(fields=['timestamp']),
+            models.Index(fields=['tenant', 'customer'], name='idx_tenant_customer_974'),
+            models.Index(fields=['action'], name='idx_action_975'),
+            models.Index(fields=['timestamp'], name='idx_timestamp_976'),
         ]
 
     def __str__(self):

@@ -3,7 +3,7 @@ from django.urls import path, include
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -25,7 +25,7 @@ from .viewsets import (
     TranslationCoverageViewSet, GeoIPViewSet, AutoTranslateViewSet, PublicViewSet,
 )
 
-router = DefaultRouter()
+router = SimpleRouter()
 router.register(r'languages', LanguageViewSet, basename='language')
 router.register(r'translation-keys', TranslationKeyViewSet, basename='translation-key')
 router.register(r'translations', TranslationViewSet, basename='translation')

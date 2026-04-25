@@ -18,7 +18,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.gis.geos import Point
 
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -356,18 +359,18 @@ class Impression(AdvertiserPortalBaseModel):
         verbose_name = 'Impression'
         verbose_name_plural = 'Impressions'
         indexes = [
-            models.Index(fields=['campaign', 'date']),
-            models.Index(fields=['creative', 'date']),
-            models.Index(fields=['date', 'hour']),
-            models.Index(fields=['country']),
-            models.Index(fields=['device_type']),
-            models.Index(fields=['os_family']),
-            models.Index(fields=['user_id']),
-            models.Index(fields=['session_id']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['timestamp']),
-            models.Index(fields=['is_suspicious']),
-            models.Index(fields=['is_invalid']),
+            models.Index(fields=['campaign', 'date'], name='idx_campaign_date_272'),
+            models.Index(fields=['creative', 'date'], name='idx_creative_date_273'),
+            models.Index(fields=['date', 'hour'], name='idx_date_hour_274'),
+            models.Index(fields=['country'], name='idx_country_275'),
+            models.Index(fields=['device_type'], name='idx_device_type_276'),
+            models.Index(fields=['os_family'], name='idx_os_family_277'),
+            models.Index(fields=['user_id'], name='idx_user_id_278'),
+            models.Index(fields=['session_id'], name='idx_session_id_279'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_280'),
+            models.Index(fields=['timestamp'], name='idx_timestamp_281'),
+            models.Index(fields=['is_suspicious'], name='idx_is_suspicious_282'),
+            models.Index(fields=['is_invalid'], name='idx_is_invalid_283'),
         ]
     
     def __str__(self) -> str:
@@ -689,12 +692,12 @@ class ImpressionAggregation(AdvertiserPortalBaseModel):
             'campaign', 'date', 'hour', 'country', 'device_type', 'os_family'
         ]
         indexes = [
-            models.Index(fields=['campaign', 'date']),
-            models.Index(fields=['advertiser', 'date']),
-            models.Index(fields=['date']),
-            models.Index(fields=['country']),
-            models.Index(fields=['device_type']),
-            models.Index(fields=['os_family']),
+            models.Index(fields=['campaign', 'date'], name='idx_campaign_date_284'),
+            models.Index(fields=['advertiser', 'date'], name='idx_advertiser_date_285'),
+            models.Index(fields=['date'], name='idx_date_286'),
+            models.Index(fields=['country'], name='idx_country_287'),
+            models.Index(fields=['device_type'], name='idx_device_type_288'),
+            models.Index(fields=['os_family'], name='idx_os_family_289'),
         ]
     
     def __str__(self) -> str:
@@ -794,8 +797,8 @@ class ImpressionPixel(AdvertiserPortalBaseModel):
         verbose_name = 'Impression Pixel'
         verbose_name_plural = 'Impression Pixels'
         indexes = [
-            models.Index(fields=['impression', 'pixel_type']),
-            models.Index(fields=['fired_at']),
+            models.Index(fields=['impression', 'pixel_type'], name='idx_impression_pixel_type_290'),
+            models.Index(fields=['fired_at'], name='idx_fired_at_291'),
         ]
     
     def __str__(self) -> str:

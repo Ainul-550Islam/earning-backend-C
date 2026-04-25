@@ -6,7 +6,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 def build_fcm_message(notification, token, data=None):
-    from notifications.helpers import truncate, _get_sound, build_push_payload
+    from api.notifications.helpers import truncate, _get_sound, build_push_payload
     extra = build_push_payload(notification)
     if data:
         extra.update(data)
@@ -24,7 +24,7 @@ def build_fcm_message(notification, token, data=None):
     }
 
 def build_apns_payload(notification, badge=1):
-    from notifications.helpers import truncate, _get_sound
+    from api.notifications.helpers import truncate, _get_sound
     return {"aps":{"alert":{"title":truncate(notification.title,65),"body":truncate(notification.message,100)},
                    "badge":badge,"sound":_get_sound(getattr(notification,"notification_type","")),"mutable-content":1,
                    "category":getattr(notification,"notification_type","").upper()},
@@ -41,22 +41,22 @@ def validate_web_push_subscription(subscription):
 
 def get_badge_count(user):
     try:
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         return Notification.objects.filter(user=user,is_read=False,is_deleted=False).count()
     except Exception: return 0
 
 def reset_badge(user):
     try:
-        from notifications.models import DeviceToken
+        from api.notifications.models import DeviceToken
         DeviceToken.objects.filter(user=user,is_active=True).update(badge_count=0)
     except Exception: pass
 
 def get_push_eligible_users(user_ids):
-    from notifications.selectors import device_get_fcm_tokens, device_get_apns_tokens
+    from api.notifications.selectors import device_get_fcm_tokens, device_get_apns_tokens
     return {"fcm": device_get_fcm_tokens(user_ids=user_ids), "apns": device_get_apns_tokens(user_ids=user_ids)}
 
 def split_bd_international_phones(phones):
-    from notifications.helpers import is_bdphone
+    from api.notifications.helpers import is_bdphone
     bd, intl = [], []
     for p in phones:
         (bd if is_bdphone(p) else intl).append(p)

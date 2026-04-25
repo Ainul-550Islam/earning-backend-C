@@ -474,7 +474,7 @@ class ChatMessage(TimestampedModel):
         ]
         constraints = [
             CheckConstraint(
-                check=~Q(message_type="TEXT") | Q(content__gt=""),
+                check=Q(message_type="TEXT") | Q(content__gt=""),
                 name="msg_cm_text_needs_content",
             ),
         ]

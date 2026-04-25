@@ -39,8 +39,8 @@ class NotificationAnalyticsService:
         if target_date is None:
             target_date = (timezone.now() - timedelta(days=1)).date()
 
-        from notifications.models import Notification
-        from notifications.models.analytics import NotificationInsight, DeliveryRate
+        from api.notifications.models import Notification
+        from api.notifications.models.analytics import NotificationInsight, DeliveryRate
 
         channels = ['in_app', 'push', 'email', 'sms', 'telegram', 'whatsapp', 'browser']
         processed = 0
@@ -111,7 +111,7 @@ class NotificationAnalyticsService:
             week_end_date = timezone.now().date()
         week_start = week_end_date - timedelta(days=6)
 
-        from notifications.models.analytics import NotificationInsight
+        from api.notifications.models.analytics import NotificationInsight
         from django.db.models import Sum as DSum
 
         rows = (
@@ -165,7 +165,7 @@ class NotificationAnalyticsService:
         Return daily NotificationInsight rows for a date range (optionally
         filtered by channels).
         """
-        from notifications.models.analytics import NotificationInsight
+        from api.notifications.models.analytics import NotificationInsight
 
         if end_date is None:
             end_date = timezone.now().date()
@@ -188,7 +188,7 @@ class NotificationAnalyticsService:
         limit: int = 10,
     ) -> List[Dict]:
         """Return the top N notification types by send volume."""
-        from notifications.models import Notification
+        from api.notifications.models import Notification
 
         if end_date is None:
             end_date = timezone.now().date()
@@ -219,7 +219,7 @@ class NotificationAnalyticsService:
         days: int = 30,
     ) -> List[Dict]:
         """Return daily delivery_pct / open_pct / click_pct for a channel over N days."""
-        from notifications.models.analytics import DeliveryRate
+        from api.notifications.models.analytics import DeliveryRate
 
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=days - 1)
@@ -242,7 +242,7 @@ class NotificationAnalyticsService:
 
     def get_unsubscribe_trends(self, days: int = 30) -> List[Dict]:
         """Return daily unsubscribe counts per channel."""
-        from notifications.models.analytics import OptOutTracking
+        from api.notifications.models.analytics import OptOutTracking
         from django.db.models.functions import TruncDate
 
         end_date = timezone.now().date()
@@ -282,7 +282,7 @@ class NotificationAnalyticsService:
         """
         from datetime import timedelta
         from django.utils import timezone
-        from notifications.models import Notification
+        from api.notifications.models import Notification
         from django.db.models import Sum, Count, F
 
         cutoff = timezone.now() - timedelta(days=days_back)
@@ -353,7 +353,7 @@ class NotificationAnalyticsService:
         Returns CSV content as string (save to file or return as response).
         """
         import csv, io
-        from notifications.models.analytics import NotificationInsight
+        from api.notifications.models.analytics import NotificationInsight
         from django.utils import timezone
 
         end = end_date or timezone.now().date()

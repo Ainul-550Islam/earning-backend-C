@@ -34,8 +34,8 @@ class OTP(TimeStampedModel):
         verbose_name_plural = _('OTPs')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['code', 'is_used']),
-            models.Index(fields=['expires_at']),
+            models.Index(fields=['code', 'is_used'], name='idx_code_is_used_1860'),
+            models.Index(fields=['expires_at'], name='idx_expires_at_1861'),
         ]
 
     def __str__(self):
@@ -76,7 +76,7 @@ class UserActivity(models.Model):
         verbose_name = 'User Activity'
         verbose_name_plural = 'User Activities'
         indexes = [
-            models.Index(fields=['-timestamp']),
+            models.Index(fields=['-timestamp'], name='idx_timestamp_1862'),
         ]
     
     def __str__(self):
@@ -149,9 +149,9 @@ class DeviceFingerprint(models.Model):
         app_label = 'users'
         db_table = 'device_fingerprints'
         indexes = [
-            models.Index(fields=['fingerprint_hash']),
-            models.Index(fields=['is_suspicious']),
-            models.Index(fields=['is_blocked']),
+            models.Index(fields=['fingerprint_hash'], name='idx_fingerprint_hash_1863'),
+            models.Index(fields=['is_suspicious'], name='idx_is_suspicious_1864'),
+            models.Index(fields=['is_blocked'], name='idx_is_blocked_1865'),
         ]
     
     def __str__(self):
@@ -216,9 +216,9 @@ class IPReputation(models.Model):
         db_table = 'ip_reputations'
         verbose_name_plural = 'IP Reputations'
         indexes = [
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['reputation']),
-            models.Index(fields=['is_blacklisted']),
+            models.Index(fields=['ip_address'], name='idx_ip_address_1866'),
+            models.Index(fields=['reputation'], name='idx_reputation_1867'),
+            models.Index(fields=['is_blacklisted'], name='idx_is_blacklisted_1868'),
         ]
     
     def __str__(self):
@@ -277,9 +277,9 @@ class UserAccountLink(models.Model):
         db_table = 'user_account_links'
         unique_together = [['user', 'device']]
         indexes = [
-            models.Index(fields=['registration_ip']),
-            models.Index(fields=['registration_date']),
-            models.Index(fields=['is_flagged']),
+            models.Index(fields=['registration_ip'], name='idx_registration_ip_1869'),
+            models.Index(fields=['registration_date'], name='idx_registration_date_1870'),
+            models.Index(fields=['is_flagged'], name='idx_is_flagged_1871'),
         ]
     
     def __str__(self):
@@ -382,10 +382,10 @@ class FraudDetectionLog(models.Model):
         db_table = 'fraud_detection_logs'
         ordering = ['-detected_at']
         indexes = [
-            models.Index(fields=['event_type']),
-            models.Index(fields=['severity']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['detected_at']),
+            models.Index(fields=['event_type'], name='idx_event_type_1872'),
+            models.Index(fields=['severity'], name='idx_severity_1873'),
+            models.Index(fields=['ip_address'], name='idx_ip_address_1874'),
+            models.Index(fields=['detected_at'], name='idx_detected_at_1875'),
         ]
     
     def __str__(self):
@@ -427,7 +427,7 @@ class RiskScoreHistory(models.Model):
         verbose_name_plural = 'Risk Score Histories'
         ordering = ['-calculated_at']
         indexes = [
-            models.Index(fields=['user', 'calculated_at']),
+            models.Index(fields=['user', 'calculated_at'], name='idx_user_calculated_at_1876'),
         ]
     
     def __str__(self):
@@ -473,8 +473,8 @@ class RateLimitTracker(models.Model):
         db_table = 'rate_limit_trackers'
         unique_together = [['identifier', 'limit_type']]
         indexes = [
-            models.Index(fields=['identifier', 'limit_type']),
-            models.Index(fields=['is_blocked']),
+            models.Index(fields=['identifier', 'limit_type'], name='idx_identifier_limit_type_1877'),
+            models.Index(fields=['is_blocked'], name='idx_is_blocked_1878'),
         ]
     
     def __str__(self):
@@ -782,8 +782,8 @@ class UserStatistics(models.Model):
         verbose_name = 'User Statistics'
         verbose_name_plural = 'User Statistics'
         indexes = [
-            models.Index(fields=['user', 'total_earned']),
-            models.Index(fields=['user', 'current_streak']),
+            models.Index(fields=['user', 'total_earned'], name='idx_user_total_earned_1879'),
+            models.Index(fields=['user', 'current_streak'], name='idx_user_current_streak_1880'),
         ]
     
     def __str__(self):

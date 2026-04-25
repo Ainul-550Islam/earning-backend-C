@@ -16,7 +16,10 @@ from django.utils import timezone
 from django.db.models import Q, Sum, Count, Avg, F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from ..models import *
+from api.advertiser_portal.models_base import (
+    AdvertiserPortalBaseModel, StatusModel, AuditModel,
+    APIKeyModel, BudgetModel, GeoModel, TrackingModel, ConfigurationModel,
+)
 from ..enums import *
 from ..utils import *
 from ..validators import *
@@ -220,12 +223,12 @@ class AnalyticsReport(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Analytics Report'
         verbose_name_plural = 'Analytics Reports'
         indexes = [
-            models.Index(fields=['advertiser', 'status']),
-            models.Index(fields=['campaign']),
-            models.Index(fields=['report_type']),
-            models.Index(fields=['is_scheduled']),
-            models.Index(fields=['next_run']),
-            models.Index(fields=['last_run']),
+            models.Index(fields=['advertiser', 'status'], name='idx_advertiser_status_072'),
+            models.Index(fields=['campaign'], name='idx_campaign_073'),
+            models.Index(fields=['report_type'], name='idx_report_type_074'),
+            models.Index(fields=['is_scheduled'], name='idx_is_scheduled_075'),
+            models.Index(fields=['next_run'], name='idx_next_run_076'),
+            models.Index(fields=['last_run'], name='idx_last_run_077'),
         ]
     
     def __str__(self) -> str:
@@ -521,10 +524,10 @@ class AnalyticsMetric(AdvertiserPortalBaseModel):
         verbose_name = 'Analytics Metric'
         verbose_name_plural = 'Analytics Metrics'
         indexes = [
-            models.Index(fields=['category']),
-            models.Index(fields=['metric_type']),
-            models.Index(fields=['data_source']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['category'], name='idx_category_078'),
+            models.Index(fields=['metric_type'], name='idx_metric_type_079'),
+            models.Index(fields=['data_source'], name='idx_data_source_080'),
+            models.Index(fields=['is_active'], name='idx_is_active_081'),
         ]
     
     def __str__(self) -> str:
@@ -660,9 +663,9 @@ class AnalyticsDashboard(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Analytics Dashboard'
         verbose_name_plural = 'Analytics Dashboards'
         indexes = [
-            models.Index(fields=['advertiser', 'is_active']),
-            models.Index(fields=['is_public']),
-            models.Index(fields=['is_default']),
+            models.Index(fields=['advertiser', 'is_active'], name='idx_advertiser_is_active_082'),
+            models.Index(fields=['is_public'], name='idx_is_public_083'),
+            models.Index(fields=['is_default'], name='idx_is_default_084'),
         ]
     
     def __str__(self) -> str:
@@ -856,11 +859,11 @@ class AnalyticsAlert(AdvertiserPortalBaseModel, AuditModel):
         verbose_name = 'Analytics Alert'
         verbose_name_plural = 'Analytics Alerts'
         indexes = [
-            models.Index(fields=['advertiser', 'is_active']),
-            models.Index(fields=['campaign']),
-            models.Index(fields=['alert_type']),
-            models.Index(fields=['metric']),
-            models.Index(fields=['last_triggered']),
+            models.Index(fields=['advertiser', 'is_active'], name='idx_advertiser_is_active_085'),
+            models.Index(fields=['campaign'], name='idx_campaign_086'),
+            models.Index(fields=['alert_type'], name='idx_alert_type_087'),
+            models.Index(fields=['metric'], name='idx_metric_088'),
+            models.Index(fields=['last_triggered'], name='idx_last_triggered_089'),
         ]
     
     def __str__(self) -> str:
@@ -1058,11 +1061,11 @@ class AnalyticsDataPoint(AdvertiserPortalBaseModel):
             'advertiser', 'campaign', 'metric', 'timestamp', 'dimension_values'
         ]
         indexes = [
-            models.Index(fields=['advertiser', 'date']),
-            models.Index(fields=['campaign', 'date']),
-            models.Index(fields=['metric', 'date']),
-            models.Index(fields=['timestamp']),
-            models.Index(fields=['date', 'hour']),
+            models.Index(fields=['advertiser', 'date'], name='idx_advertiser_date_090'),
+            models.Index(fields=['campaign', 'date'], name='idx_campaign_date_091'),
+            models.Index(fields=['metric', 'date'], name='idx_metric_date_092'),
+            models.Index(fields=['timestamp'], name='idx_timestamp_093'),
+            models.Index(fields=['date', 'hour'], name='idx_date_hour_094'),
         ]
     
     def __str__(self) -> str:
