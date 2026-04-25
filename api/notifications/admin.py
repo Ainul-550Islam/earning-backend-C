@@ -2521,3 +2521,14 @@ def _force_register_notifications():
         print(f"[OK] notifications registered {registered} models")
     except Exception as e:
         print(f"[WARN] notifications: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Register all new split models with Django admin
+# ---------------------------------------------------------------------------
+try:
+    from api.notifications.admin_new_models import register_all_new_models
+    register_all_new_models()
+except Exception as _e:
+    import traceback
+    traceback.print_exc()

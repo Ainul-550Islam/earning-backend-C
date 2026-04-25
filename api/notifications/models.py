@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Count, Sum, Avg
+from django.db.models.functions import TruncDate
 import uuid
 import json
 from datetime import timedelta
@@ -177,6 +178,22 @@ class Notification(models.Model):
         ('referral_completed', 'Referral Completed'),
         ('referral_reward', 'Referral Reward'),
         ('referral_expired', 'Referral Expired'),
+        # CPAlead / Offerwall specific
+        ('offer_completed', 'Offer/Offerwall Completed'),
+        ('offer_available', 'New Offer Available'),
+        ('postback_received', 'Advertiser Postback Received'),
+        ('postback_failed', 'Postback Failed'),
+        ('ip_fraud_blocked', 'IP/Fraud Blocked'),
+        ('account_suspended', 'Account Suspended'),
+        ('account_reinstated', 'Account Reinstated'),
+        ('account_warning', 'Account Warning'),
+        ('affiliate_commission', 'Affiliate Commission Earned'),
+        ('sub_affiliate_earn', 'Sub-Affiliate Earning'),
+        ('leaderboard_update', 'Leaderboard Position Update'),
+        ('publisher_payout', 'Publisher Payout'),
+        ('conversion_received', 'Conversion Received'),
+        ('campaign_live', 'Campaign Went Live'),
+        ('campaign_paused', 'Campaign Paused'),
         ('referral_bonus', 'Referral Bonus'),
         ('team_bonus', 'Team Bonus'),
         
@@ -208,6 +225,7 @@ class Notification(models.Model):
         
         # Gamification Notifications
         ('daily_reward', 'Daily Reward'),
+        ('streak_reward', 'Streak Reward'),
         ('weekly_reward', 'Weekly Reward'),
         ('monthly_reward', 'Monthly Reward'),
         ('spin_wheel', 'Spin Wheel'),
@@ -1338,7 +1356,7 @@ class Notification(models.Model):
     
     def send_test_notification(self):
         """Send test notification (for debugging)"""
-        from .services import NotificationService
+        from ._services_core import NotificationService
         return NotificationService.send_test_notification(self)
     
     def archive(self, reason=None, save=True):
@@ -1825,9 +1843,7 @@ class Notification(models.Model):
             'by_status': list(queryset.values('status').annotate(
                 count=Count('id')
             ).order_by('-count')),
-            'daily_count': list(queryset.extra({
-                'date': "DATE(created_at)"
-            }).values('date').annotate(
+            'daily_count': list(queryset.annotate(date=TruncDate('created_at')).values('date').annotate(
                 count=Count('id')
             ).order_by('date')),
             'avg_engagement': queryset.aggregate(
@@ -1849,7 +1865,7 @@ class Notification(models.Model):
     @classmethod
     def create_from_template(cls, template_name, user, context=None, **kwargs):
         """Create notification from template"""
-        from .services import NotificationTemplateService
+        from ._services_core import NotificationTemplateService
         return NotificationTemplateService.create_from_template(
             template_name, user, context, **kwargs
         )
@@ -1857,7 +1873,7 @@ class Notification(models.Model):
     @classmethod
     def send_bulk_notifications(cls, users, title, message, **kwargs):
         """Send bulk notifications to multiple users"""
-        from .services import NotificationService
+        from ._services_core import NotificationService
         return NotificationService.send_bulk_notifications(users, title, message, **kwargs)
     
     @classmethod
@@ -2120,7 +2136,7 @@ class NotificationTemplate(models.Model):
     
     def create_notification(self, user, context=None, **kwargs):
         """Create notification from template"""
-        from .services import NotificationTemplateService
+        from ._services_core import NotificationTemplateService
         return NotificationTemplateService.create_from_template(
             self.name, user, context, **kwargs
         )
@@ -3396,7 +3412,7 @@ class NotificationRule(models.Model):
         self.last_triggered = timezone.now()
         
         try:
-            from .services import NotificationRuleService
+            from ._services_core import NotificationRuleService
             result = NotificationRuleService.execute_rule(self, context)
             
             if result:
@@ -3417,17 +3433,17 @@ class NotificationRule(models.Model):
         if not self.conditions:
             return True
         
-        from .services import NotificationRuleService
+        from ._services_core import NotificationRuleService
         return NotificationRuleService.evaluate_conditions(self.conditions, context)
     
     def get_target_users(self):
         """Get target users for rule"""
-        from .services import NotificationRuleService
+        from ._services_core import NotificationRuleService
         return NotificationRuleService.get_target_users(self)
     
     def test_execution(self, test_context=None):
         """Test rule execution"""
-        from .services import NotificationRuleService
+        from ._services_core import NotificationRuleService
         return NotificationRuleService.test_rule(self, test_context)
 
 
