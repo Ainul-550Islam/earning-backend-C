@@ -9219,3 +9219,1039 @@ DEBUG 2026-04-27 10:47:33,779 hooks Hook registered: after:credit -> after_credi
 DEBUG 2026-04-27 10:47:33,779 hooks Hook registered: after:credit -> after_credit_update_user_stats
 DEBUG 2026-04-27 10:47:33,779 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
 INFO 2026-04-27 10:47:33,780 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:48:56,471 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:48:57,295 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:48:57,297 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:48:57,320 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:48:57,321 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:48:57,321 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:48:57,321 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:48:57,322 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:48:57,322 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:48:57,322 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:48:57,323 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:48:57,323 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:48:57,323 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:48:57,323 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:48:57,323 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:48:57,324 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:48:57,344 registry Registered service: WalletService
+DEBUG 2026-04-27 10:48:57,344 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:48:57,345 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:48:57,345 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:48:57,345 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:48:57,345 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:48:57,345 registry Registered service: EarningService
+DEBUG 2026-04-27 10:48:57,346 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:48:57,346 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:48:57,346 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:48:57,348 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:48:57,349 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:48:57,349 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:48:57,350 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:48:57,351 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:48:57,352 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:48:57,353 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:48:57,354 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:48:57,354 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:48:57,354 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:48:57,354 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:49:24,917 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:49:25,724 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:49:25,726 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:49:25,786 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:49:25,791 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:49:25,792 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:49:25,792 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:49:25,793 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:49:25,793 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:49:25,793 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:49:25,794 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:49:25,794 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:49:25,794 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:49:25,794 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:49:25,794 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:49:25,794 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:49:25,820 registry Registered service: WalletService
+DEBUG 2026-04-27 10:49:25,820 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:49:25,820 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:49:25,821 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:49:25,821 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:49:25,821 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:49:25,821 registry Registered service: EarningService
+DEBUG 2026-04-27 10:49:25,821 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:49:25,821 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:49:25,821 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:49:25,823 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:49:25,823 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:49:25,824 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:49:25,825 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:49:25,826 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:49:25,827 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:49:25,828 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:49:25,829 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:49:25,829 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:49:25,829 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:49:25,829 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:50:15,209 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:50:15,990 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:50:15,990 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:50:16,013 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:50:16,014 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:50:16,031 registry Registered service: WalletService
+DEBUG 2026-04-27 10:50:16,031 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:50:16,031 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:50:16,031 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:50:16,031 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:50:16,031 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:50:16,031 registry Registered service: EarningService
+DEBUG 2026-04-27 10:50:16,032 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:50:16,032 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:50:16,032 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:50:16,033 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:50:16,034 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:50:16,034 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:50:16,035 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:50:16,036 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:50:16,036 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:50:16,037 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:50:16,038 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:50:16,038 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:50:16,038 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:50:16,038 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:50:53,255 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:50:54,035 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:50:54,036 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:50:54,060 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:50:54,060 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:50:54,060 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:50:54,060 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:50:54,060 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:50:54,060 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:50:54,060 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:50:54,060 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:50:54,061 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:50:54,061 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:50:54,061 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:50:54,061 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:50:54,061 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:50:54,080 registry Registered service: WalletService
+DEBUG 2026-04-27 10:50:54,080 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:50:54,080 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:50:54,080 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:50:54,080 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:50:54,080 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:50:54,080 registry Registered service: EarningService
+DEBUG 2026-04-27 10:50:54,080 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:50:54,080 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:50:54,080 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:50:54,082 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:50:54,083 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:50:54,083 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:50:54,084 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:50:54,085 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:50:54,085 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:50:54,086 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:50:54,087 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:50:54,087 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:50:54,087 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:50:54,087 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:51:43,136 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:51:44,022 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:51:44,024 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:51:44,048 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:51:44,048 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:51:44,048 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:51:44,048 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:51:44,048 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:51:44,048 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:51:44,048 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:51:44,048 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:51:44,048 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:51:44,049 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:51:44,049 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:51:44,049 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:51:44,049 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:51:44,070 registry Registered service: WalletService
+DEBUG 2026-04-27 10:51:44,070 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:51:44,070 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:51:44,070 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:51:44,071 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:51:44,071 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:51:44,071 registry Registered service: EarningService
+DEBUG 2026-04-27 10:51:44,071 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:51:44,071 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:51:44,071 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:51:44,073 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:51:44,074 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:51:44,074 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:51:44,075 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:51:44,076 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:51:44,076 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:51:44,077 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:51:44,078 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:51:44,078 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:51:44,078 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:51:44,078 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:52:10,144 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:52:10,922 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:52:10,948 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:52:10,973 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:52:10,973 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:52:10,973 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:52:10,973 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:52:10,973 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:52:10,973 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:52:10,973 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:52:10,973 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:52:10,973 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:52:10,973 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:52:10,974 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:52:10,974 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:52:10,974 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:52:10,991 registry Registered service: WalletService
+DEBUG 2026-04-27 10:52:10,992 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:52:10,993 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:52:10,993 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:52:10,993 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:52:10,993 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:52:10,993 registry Registered service: EarningService
+DEBUG 2026-04-27 10:52:10,993 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:52:10,993 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:52:10,993 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:52:10,995 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:52:10,995 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:52:10,996 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:52:10,997 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:52:10,998 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:52:10,999 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:52:11,000 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:52:11,001 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:52:11,001 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:52:11,001 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:52:11,001 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:52:50,506 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:52:51,332 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:52:51,333 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:52:51,360 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:52:51,361 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:52:51,361 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:52:51,361 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:52:51,361 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:52:51,361 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:52:51,362 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:52:51,362 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:52:51,362 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:52:51,362 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:52:51,363 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:52:51,363 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:52:51,363 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:52:51,383 registry Registered service: WalletService
+DEBUG 2026-04-27 10:52:51,384 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:52:51,384 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:52:51,384 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:52:51,384 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:52:51,384 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:52:51,385 registry Registered service: EarningService
+DEBUG 2026-04-27 10:52:51,385 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:52:51,385 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:52:51,385 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:52:51,387 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:52:51,389 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:52:51,390 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:52:51,391 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:52:51,392 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:52:51,393 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:52:51,393 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:52:51,395 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:52:51,395 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:52:51,395 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:52:51,396 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:53:03,315 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:53:04,086 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:53:04,087 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:53:04,109 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:53:04,110 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:53:04,128 registry Registered service: WalletService
+DEBUG 2026-04-27 10:53:04,128 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:53:04,128 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:53:04,128 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:53:04,128 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:53:04,128 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:53:04,128 registry Registered service: EarningService
+DEBUG 2026-04-27 10:53:04,128 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:53:04,128 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:53:04,128 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:53:04,130 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:53:04,130 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:53:04,131 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:53:04,132 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:53:04,132 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:53:04,133 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:53:04,134 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:53:04,134 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:53:04,134 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:53:04,134 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:53:04,135 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:54:22,143 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:54:22,915 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:54:22,916 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:54:22,939 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:54:22,956 registry Registered service: WalletService
+DEBUG 2026-04-27 10:54:22,956 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:54:22,957 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:54:22,957 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:54:22,957 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:54:22,957 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:54:22,957 registry Registered service: EarningService
+DEBUG 2026-04-27 10:54:22,957 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:54:22,957 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:54:22,957 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:54:22,958 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:54:22,959 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:54:22,960 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:54:22,960 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:54:22,961 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:54:22,962 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:54:22,962 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:54:22,963 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:54:22,963 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:54:22,963 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:54:22,963 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:55:01,162 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:55:02,462 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:55:02,463 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:55:02,487 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:55:02,488 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:55:02,488 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:55:02,488 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:55:02,488 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:55:02,488 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:55:02,488 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:55:02,489 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:55:02,489 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:55:02,489 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:55:02,489 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:55:02,489 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:55:02,489 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:55:02,556 registry Registered service: WalletService
+DEBUG 2026-04-27 10:55:02,556 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:55:02,556 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:55:02,556 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:55:02,556 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:55:02,556 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:55:02,556 registry Registered service: EarningService
+DEBUG 2026-04-27 10:55:02,556 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:55:02,556 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:55:02,556 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:55:02,558 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:55:02,559 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:55:02,559 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:55:02,560 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:55:02,561 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:55:02,562 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:55:02,562 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:55:02,563 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:55:02,563 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:55:02,564 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:55:02,564 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:57:35,054 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:57:35,831 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:57:35,832 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:57:35,854 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:57:35,855 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:57:35,873 registry Registered service: WalletService
+DEBUG 2026-04-27 10:57:35,873 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:57:35,873 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:57:35,873 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:57:35,873 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:57:35,873 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:57:35,873 registry Registered service: EarningService
+DEBUG 2026-04-27 10:57:35,873 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:57:35,873 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:57:35,873 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:57:35,875 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:57:35,875 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:57:35,876 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:57:35,877 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:57:35,877 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:57:35,878 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:57:35,879 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:57:35,879 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:57:35,879 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:57:35,880 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:57:35,880 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:59:01,242 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:59:02,020 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:59:02,021 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:59:02,043 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:59:02,043 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:59:02,043 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:59:02,043 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:59:02,043 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:59:02,044 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:59:02,044 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:59:02,044 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:59:02,044 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:59:02,044 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:59:02,044 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:59:02,044 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:59:02,044 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:59:02,061 registry Registered service: WalletService
+DEBUG 2026-04-27 10:59:02,061 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:59:02,061 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:59:02,061 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:59:02,061 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:59:02,061 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:59:02,061 registry Registered service: EarningService
+DEBUG 2026-04-27 10:59:02,061 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:59:02,061 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:59:02,061 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:59:02,063 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:59:02,063 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:59:02,064 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:59:02,065 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:59:02,067 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:59:02,068 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:59:02,068 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:59:02,069 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:59:02,069 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:59:02,069 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:59:02,069 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:59:20,281 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:59:21,162 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:59:21,163 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:59:21,187 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:59:21,187 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:59:21,187 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:59:21,187 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:59:21,187 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:59:21,187 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:59:21,187 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:59:21,187 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:59:21,188 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:59:21,188 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:59:21,188 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:59:21,188 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:59:21,188 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:59:21,206 registry Registered service: WalletService
+DEBUG 2026-04-27 10:59:21,207 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:59:21,207 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:59:21,207 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:59:21,207 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:59:21,207 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:59:21,207 registry Registered service: EarningService
+DEBUG 2026-04-27 10:59:21,207 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:59:21,207 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:59:21,207 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:59:21,209 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:59:21,210 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:59:21,211 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:59:21,211 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:59:21,212 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:59:21,213 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:59:21,213 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:59:21,214 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:59:21,214 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:59:21,214 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:59:21,214 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 10:59:34,467 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 10:59:35,249 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 10:59:35,250 receivers Wallet receivers connected
+DEBUG 2026-04-27 10:59:35,275 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 10:59:35,275 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 10:59:35,275 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 10:59:35,275 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 10:59:35,275 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 10:59:35,275 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 10:59:35,275 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 10:59:35,275 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 10:59:35,275 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 10:59:35,275 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 10:59:35,276 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 10:59:35,276 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 10:59:35,276 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 10:59:35,298 registry Registered service: WalletService
+DEBUG 2026-04-27 10:59:35,298 registry Registered service: TransactionService
+DEBUG 2026-04-27 10:59:35,298 registry Registered service: BalanceService
+DEBUG 2026-04-27 10:59:35,298 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 10:59:35,298 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 10:59:35,298 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 10:59:35,298 registry Registered service: EarningService
+DEBUG 2026-04-27 10:59:35,298 registry Registered service: EarningCapService
+DEBUG 2026-04-27 10:59:35,298 registry Registered service: CPALeadService
+DEBUG 2026-04-27 10:59:35,298 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 10:59:35,301 registry Registered gateway: bkash
+DEBUG 2026-04-27 10:59:35,302 registry Registered gateway: nagad
+DEBUG 2026-04-27 10:59:35,303 registry Registered gateway: usdt
+DEBUG 2026-04-27 10:59:35,304 registry Registered gateway: rocket
+DEBUG 2026-04-27 10:59:35,305 registry Registered gateway: paypal
+DEBUG 2026-04-27 10:59:35,306 registry Registered gateway: stripe
+DEBUG 2026-04-27 10:59:35,307 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 10:59:35,308 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 10:59:35,308 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 10:59:35,308 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 10:59:35,308 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:01:08,235 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:01:09,114 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:01:09,115 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:01:09,147 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:01:09,147 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:01:09,147 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:01:09,147 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:01:09,147 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:01:09,147 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:01:09,147 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:01:09,147 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:01:09,147 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:01:09,147 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:01:09,148 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:01:09,148 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:01:09,148 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:01:09,166 registry Registered service: WalletService
+DEBUG 2026-04-27 11:01:09,166 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:01:09,166 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:01:09,166 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:01:09,167 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:01:09,167 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:01:09,167 registry Registered service: EarningService
+DEBUG 2026-04-27 11:01:09,167 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:01:09,167 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:01:09,167 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:01:09,168 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:01:09,169 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:01:09,170 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:01:09,171 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:01:09,171 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:01:09,172 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:01:09,173 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:01:09,174 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:01:09,174 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:01:09,174 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:01:09,174 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:01:36,553 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:01:37,322 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:01:37,323 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:01:37,346 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:01:37,362 registry Registered service: WalletService
+DEBUG 2026-04-27 11:01:37,362 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:01:37,363 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:01:37,363 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:01:37,363 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:01:37,363 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:01:37,363 registry Registered service: EarningService
+DEBUG 2026-04-27 11:01:37,363 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:01:37,363 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:01:37,363 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:01:37,365 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:01:37,365 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:01:37,366 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:01:37,367 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:01:37,367 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:01:37,368 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:01:37,368 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:01:37,370 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:01:37,370 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:01:37,370 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:01:37,370 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:03:52,816 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:03:53,605 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:03:53,606 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:03:53,628 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:03:53,628 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:03:53,629 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:03:53,647 registry Registered service: WalletService
+DEBUG 2026-04-27 11:03:53,647 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:03:53,648 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:03:53,648 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:03:53,648 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:03:53,648 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:03:53,648 registry Registered service: EarningService
+DEBUG 2026-04-27 11:03:53,648 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:03:53,648 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:03:53,648 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:03:53,650 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:03:53,650 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:03:53,651 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:03:53,652 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:03:53,653 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:03:53,653 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:03:53,654 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:03:53,655 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:03:53,655 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:03:53,655 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:03:53,655 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:05:29,775 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:05:30,552 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:05:30,552 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:05:30,577 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:05:30,577 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:05:30,577 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:05:30,577 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:05:30,577 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:05:30,577 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:05:30,577 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:05:30,577 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:05:30,577 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:05:30,577 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:05:30,578 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:05:30,578 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:05:30,578 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:05:30,595 registry Registered service: WalletService
+DEBUG 2026-04-27 11:05:30,595 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:05:30,595 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:05:30,595 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:05:30,595 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:05:30,595 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:05:30,595 registry Registered service: EarningService
+DEBUG 2026-04-27 11:05:30,595 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:05:30,596 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:05:30,596 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:05:30,597 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:05:30,598 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:05:30,598 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:05:30,599 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:05:30,600 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:05:30,600 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:05:30,601 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:05:30,602 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:05:30,602 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:05:30,602 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:05:30,602 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:07:50,781 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:07:51,547 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:07:51,548 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:07:51,572 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:07:51,572 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:07:51,572 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:07:51,572 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:07:51,572 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:07:51,572 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:07:51,572 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:07:51,572 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:07:51,573 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:07:51,573 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:07:51,573 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:07:51,573 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:07:51,573 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:07:51,596 registry Registered service: WalletService
+DEBUG 2026-04-27 11:07:51,596 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:07:51,596 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:07:51,596 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:07:51,596 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:07:51,596 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:07:51,596 registry Registered service: EarningService
+DEBUG 2026-04-27 11:07:51,596 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:07:51,596 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:07:51,596 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:07:51,598 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:07:51,599 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:07:51,600 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:07:51,601 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:07:51,602 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:07:51,603 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:07:51,604 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:07:51,604 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:07:51,604 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:07:51,605 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:07:51,605 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:08:36,122 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:08:36,894 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:08:36,895 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:08:36,917 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:08:36,917 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:08:36,917 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:08:36,917 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:08:36,917 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:08:36,918 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:08:36,918 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:08:36,918 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:08:36,918 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:08:36,918 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:08:36,918 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:08:36,918 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:08:36,918 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:08:36,934 registry Registered service: WalletService
+DEBUG 2026-04-27 11:08:36,934 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:08:36,935 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:08:36,935 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:08:36,935 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:08:36,935 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:08:36,935 registry Registered service: EarningService
+DEBUG 2026-04-27 11:08:36,935 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:08:36,935 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:08:36,935 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:08:36,936 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:08:36,937 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:08:36,938 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:08:36,939 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:08:36,939 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:08:36,940 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:08:36,940 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:08:36,941 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:08:36,941 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:08:36,941 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:08:36,941 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:10:02,246 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:10:03,188 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:10:03,189 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:10:03,214 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:10:03,214 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:10:03,215 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:10:03,237 registry Registered service: WalletService
+DEBUG 2026-04-27 11:10:03,237 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:10:03,237 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:10:03,238 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:10:03,238 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:10:03,238 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:10:03,238 registry Registered service: EarningService
+DEBUG 2026-04-27 11:10:03,238 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:10:03,238 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:10:03,238 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:10:03,239 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:10:03,240 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:10:03,241 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:10:03,242 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:10:03,242 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:10:03,243 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:10:03,243 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:10:03,244 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:10:03,245 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:10:03,245 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:10:03,245 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:10:37,810 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:10:38,582 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:10:38,583 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:10:38,606 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:10:38,606 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:10:38,606 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:10:38,606 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:10:38,606 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:10:38,606 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:10:38,606 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:10:38,607 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:10:38,607 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:10:38,607 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:10:38,607 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:10:38,607 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:10:38,607 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:10:38,623 registry Registered service: WalletService
+DEBUG 2026-04-27 11:10:38,623 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:10:38,623 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:10:38,623 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:10:38,623 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:10:38,624 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:10:38,624 registry Registered service: EarningService
+DEBUG 2026-04-27 11:10:38,624 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:10:38,624 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:10:38,624 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:10:38,625 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:10:38,626 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:10:38,627 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:10:38,627 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:10:38,628 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:10:38,628 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:10:38,629 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:10:38,630 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:10:38,630 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:10:38,630 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:10:38,630 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:11:03,589 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:11:04,432 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:11:04,433 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:11:04,458 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:11:04,458 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:11:04,458 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:11:04,458 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:11:04,458 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:11:04,458 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:11:04,459 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:11:04,459 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:11:04,459 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:11:04,459 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:11:04,459 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:11:04,459 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:11:04,459 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:11:04,477 registry Registered service: WalletService
+DEBUG 2026-04-27 11:11:04,477 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:11:04,478 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:11:04,478 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:11:04,478 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:11:04,478 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:11:04,478 registry Registered service: EarningService
+DEBUG 2026-04-27 11:11:04,478 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:11:04,478 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:11:04,478 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:11:04,480 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:11:04,480 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:11:04,481 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:11:04,481 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:11:04,482 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:11:04,483 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:11:04,483 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:11:04,484 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:11:04,484 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:11:04,484 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:11:04,484 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:11:54,182 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:11:54,968 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:11:54,970 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:11:54,992 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:11:54,992 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:11:54,992 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:11:54,992 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:11:54,992 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:11:54,993 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:11:54,993 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:11:54,993 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:11:54,993 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:11:54,993 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:11:54,993 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:11:54,993 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:11:54,993 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:11:55,010 registry Registered service: WalletService
+DEBUG 2026-04-27 11:11:55,010 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:11:55,010 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:11:55,010 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:11:55,010 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:11:55,011 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:11:55,011 registry Registered service: EarningService
+DEBUG 2026-04-27 11:11:55,011 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:11:55,011 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:11:55,011 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:11:55,012 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:11:55,013 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:11:55,013 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:11:55,014 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:11:55,015 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:11:55,015 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:11:55,016 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:11:55,017 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:11:55,017 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:11:55,017 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:11:55,017 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:12:52,908 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:12:53,729 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:12:53,730 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:12:53,756 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:12:53,756 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:12:53,756 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:12:53,756 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:12:53,756 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:12:53,756 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:12:53,756 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:12:53,757 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:12:53,757 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:12:53,757 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:12:53,757 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:12:53,757 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:12:53,757 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:12:53,779 registry Registered service: WalletService
+DEBUG 2026-04-27 11:12:53,779 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:12:53,779 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:12:53,779 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:12:53,779 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:12:53,779 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:12:53,779 registry Registered service: EarningService
+DEBUG 2026-04-27 11:12:53,779 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:12:53,779 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:12:53,779 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:12:53,781 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:12:53,782 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:12:53,783 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:12:53,784 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:12:53,785 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:12:53,787 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:12:53,788 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:12:53,790 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:12:53,790 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:12:53,790 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:12:53,791 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:14:15,587 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:14:16,391 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:14:16,392 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:14:16,417 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:14:16,417 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:14:16,418 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:14:16,418 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:14:16,418 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:14:16,418 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:14:16,419 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:14:16,419 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:14:16,419 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:14:16,419 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:14:16,419 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:14:16,420 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:14:16,420 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:14:16,439 registry Registered service: WalletService
+DEBUG 2026-04-27 11:14:16,439 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:14:16,439 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:14:16,440 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:14:16,440 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:14:16,440 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:14:16,440 registry Registered service: EarningService
+DEBUG 2026-04-27 11:14:16,440 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:14:16,441 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:14:16,441 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:14:16,444 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:14:16,447 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:14:16,450 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:14:16,451 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:14:16,452 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:14:16,452 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:14:16,452 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:14:16,454 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:14:16,454 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:14:16,454 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:14:16,454 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:15:07,004 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:15:07,846 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:15:07,848 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:15:07,873 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:15:07,873 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:15:07,874 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:15:07,874 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:15:07,874 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:15:07,874 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:15:07,875 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:15:07,875 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:15:07,875 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:15:07,875 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:15:07,875 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:15:07,875 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:15:07,876 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:15:07,894 registry Registered service: WalletService
+DEBUG 2026-04-27 11:15:07,894 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:15:07,895 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:15:07,895 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:15:07,895 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:15:07,895 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:15:07,895 registry Registered service: EarningService
+DEBUG 2026-04-27 11:15:07,896 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:15:07,896 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:15:07,896 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:15:07,898 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:15:07,899 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:15:07,901 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:15:07,903 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:15:07,904 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:15:07,905 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:15:07,905 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:15:07,906 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:15:07,906 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:15:07,906 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:15:07,906 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected
+INFO 2026-04-27 11:15:26,232 integ_adapter IntegrationAdapter: all integrations registered
+DEBUG 2026-04-27 11:15:27,243 signals_cap CPAlead signals connected
+DEBUG 2026-04-27 11:15:27,245 receivers Wallet receivers connected
+DEBUG 2026-04-27 11:15:27,271 event_bus EventBus: subscribed notify_on_credit to WalletCredited
+DEBUG 2026-04-27 11:15:27,271 event_bus EventBus: subscribed notify_on_withdrawal_request to WithdrawalRequested
+DEBUG 2026-04-27 11:15:27,272 event_bus EventBus: subscribed notify_on_withdrawal_complete to WithdrawalCompleted
+DEBUG 2026-04-27 11:15:27,272 event_bus EventBus: subscribed notify_on_withdrawal_failed to WithdrawalFailed
+DEBUG 2026-04-27 11:15:27,272 event_bus EventBus: subscribed notify_on_streak to StreakMilestone
+DEBUG 2026-04-27 11:15:27,272 event_bus EventBus: subscribed notify_on_kyc_approved to KYCApproved
+DEBUG 2026-04-27 11:15:27,272 event_bus EventBus: subscribed notify_on_level_upgrade to PublisherLevelUpgraded
+DEBUG 2026-04-27 11:15:27,273 event_bus EventBus: subscribed invalidate_cache_on_credit to WalletCredited
+DEBUG 2026-04-27 11:15:27,273 event_bus EventBus: subscribed invalidate_cache_on_debit to WalletDebited
+DEBUG 2026-04-27 11:15:27,273 event_bus EventBus: subscribed audit_wallet_locked to WalletLocked
+DEBUG 2026-04-27 11:15:27,273 event_bus EventBus: subscribed audit_fraud_detected to FraudDetected
+DEBUG 2026-04-27 11:15:27,273 event_bus EventBus: subscribed deliver_webhook_on_credit to WalletCredited
+DEBUG 2026-04-27 11:15:27,274 event_bus EventBus: subscribed deliver_webhook_on_withdrawal to WithdrawalCompleted
+DEBUG 2026-04-27 11:15:27,296 registry Registered service: WalletService
+DEBUG 2026-04-27 11:15:27,296 registry Registered service: TransactionService
+DEBUG 2026-04-27 11:15:27,296 registry Registered service: BalanceService
+DEBUG 2026-04-27 11:15:27,297 registry Registered service: IdempotencyService
+DEBUG 2026-04-27 11:15:27,297 registry Registered service: WithdrawalService
+DEBUG 2026-04-27 11:15:27,297 registry Registered service: WithdrawalFeeService
+DEBUG 2026-04-27 11:15:27,298 registry Registered service: EarningService
+DEBUG 2026-04-27 11:15:27,298 registry Registered service: EarningCapService
+DEBUG 2026-04-27 11:15:27,298 registry Registered service: CPALeadService
+DEBUG 2026-04-27 11:15:27,298 registry Registered service: WalletAnalyticsService
+DEBUG 2026-04-27 11:15:27,300 registry Registered gateway: bkash
+DEBUG 2026-04-27 11:15:27,301 registry Registered gateway: nagad
+DEBUG 2026-04-27 11:15:27,302 registry Registered gateway: usdt
+DEBUG 2026-04-27 11:15:27,303 registry Registered gateway: rocket
+DEBUG 2026-04-27 11:15:27,304 registry Registered gateway: paypal
+DEBUG 2026-04-27 11:15:27,305 registry Registered gateway: stripe
+DEBUG 2026-04-27 11:15:27,306 registry Registered gateway: sslcommerz
+DEBUG 2026-04-27 11:15:27,307 hooks Hook registered: after:credit -> after_credit_push_websocket
+DEBUG 2026-04-27 11:15:27,307 hooks Hook registered: after:credit -> after_credit_update_user_stats
+DEBUG 2026-04-27 11:15:27,307 hooks Hook registered: after:withdrawal_complete -> after_withdrawal_push_websocket
+INFO 2026-04-27 11:15:27,307 apps WalletConfig.ready() — signals, events, receivers, registry, hooks all connected

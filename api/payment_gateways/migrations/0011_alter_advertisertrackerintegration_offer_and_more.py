@@ -16,47 +16,47 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='advertisertrackerintegration',
             name='offer',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='tracker_integration', to='offers.offer'),
+            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='tracker_integration', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='click',
             name='campaign',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='clicks', to='offers.campaign'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='clicks', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='click',
             name='offer',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='clicks', to='offers.offer'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='clicks', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='contentlocker',
             name='require_specific_offer',
-            field=models.ForeignKey(blank=True, help_text='Force a specific offer (null = show best available)', null=True, on_delete=django.db.models.deletion.SET_NULL, to='offers.offer'),
+            field=models.ForeignKey(blank=True, help_text='Force a specific offer (null = show best available)', null=True, on_delete=django.db.models.deletion.SET_NULL, to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='conversion',
             name='campaign',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='conversions', to='offers.campaign'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='conversions', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='conversion',
             name='offer',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='conversions', to='offers.offer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='conversions', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='impression',
             name='offer',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='impressions', to='offers.offer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='impressions', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='lockersession',
             name='conversion',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='tracking.conversion'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='offerwall.OfferConversion'),
         ),
         migrations.AlterField(
             model_name='lockersession',
             name='offer',
-            field=models.ForeignKey(blank=True, help_text='Offer shown to this visitor', null=True, on_delete=django.db.models.deletion.SET_NULL, to='offers.offer'),
+            field=models.ForeignKey(blank=True, help_text='Offer shown to this visitor', null=True, on_delete=django.db.models.deletion.SET_NULL, to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='lockersession',
@@ -66,41 +66,41 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='offerqualityscore',
             name='offer',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='quality_scores', to='offers.offer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='quality_scores', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='postbacklog',
             name='offer',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='postback_logs', to='offers.offer'),
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='postback_logs', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='publisherdailystats',
             name='offer',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='daily_stats', to='offers.offer'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='daily_stats', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='smartlink',
             name='manual_offers',
-            field=models.ManyToManyField(blank=True, help_text='Specific offers to include (empty = auto-select all eligible)', related_name='smart_links', to='offers.offer'),
+            field=models.ManyToManyField(blank=True, help_text='Specific offers to include (empty = auto-select all eligible)', related_name='smart_links', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='smartlinkrotation',
             name='offer',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='offers.offer'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='trafficblacklist',
             name='offer',
-            field=models.ForeignKey(blank=True, help_text='Specific offer to apply to (null = all offers)', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='blacklist_entries', to='offers.offer'),
+            field=models.ForeignKey(blank=True, help_text='Specific offer to apply to (null = all offers)', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='blacklist_entries', to='offerwall.Offer'),
         ),
         migrations.AlterField(
             model_name='virtualreward',
             name='conversion',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='tracking.conversion'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='offerwall.OfferConversion'),
         ),
         migrations.AlterField(
             model_name='virtualreward',
             name='offer',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='offers.offer'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='offerwall.Offer'),
         ),
     ]

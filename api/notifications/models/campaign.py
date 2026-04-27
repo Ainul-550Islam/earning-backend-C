@@ -1,3 +1,4 @@
+import uuid
 # earning_backend/api/notifications/models/campaign.py
 """
 Campaign management models:
@@ -106,6 +107,7 @@ class CampaignSegment(models.Model):
 # ---------------------------------------------------------------------------
 
 class NotificationCampaign(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     """
     A marketing / engagement campaign that sends a template to a segment.
 
