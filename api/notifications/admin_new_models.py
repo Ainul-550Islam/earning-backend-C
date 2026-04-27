@@ -1,6 +1,6 @@
 # earning_backend/api/notifications/admin_new_models.py
 """
-Admin registration for all 17 new split models.
+Admin registration for all new split models.
 Import this from admin.py to register.
 """
 from django.contrib import admin
@@ -8,43 +8,9 @@ from django.utils.html import format_html
 from django.utils import timezone
 
 
-# ============================================================
-# channel.py admins
-# ============================================================
-
-def register_push_device():
-    from api.notifications.models.channel import PushDevice
-
-    @admin.register(PushDevice)
-    class PushDeviceAdmin(admin.ModelAdmin):
-        list_display = ['user', 'device_type', 'device_name', 'is_active', 'last_used', 'delivery_rate_display']
-        list_filter = ['device_type', 'is_active']
-        search_fields = ['user__username', 'user__email', 'device_name', 'device_model']
-        readonly_fields = ['created_at', 'updated_at', 'last_used']
-        ordering = ['-last_used']
-        list_select_related = ['user']
-
-        def delivery_rate_display(self, obj):
-            rate = obj.get_delivery_rate()
-            color = 'green' if rate >= 80 else ('orange' if rate >= 50 else 'red')
-            return format_html('<span style="color:{}">{:.1f}%</span>', color, rate)
-        delivery_rate_display.short_description = 'Delivery Rate'
-
-        actions = ['deactivate_devices', 'activate_devices']
-
-        def deactivate_devices(self, request, queryset):
-            queryset.update(is_active=False, updated_at=timezone.now())
-            self.message_user(request, f'{queryset.count()} devices deactivated.')
-        deactivate_devices.short_description = 'Deactivate selected devices'
-
-        def activate_devices(self, request, queryset):
-            queryset.update(is_active=True, updated_at=timezone.now())
-            self.message_user(request, f'{queryset.count()} devices activated.')
-        activate_devices.short_description = 'Activate selected devices'
-
-
 def register_all_new_models():
     """Register all new split models with Django admin."""
+    from django.contrib.admin.exceptions import AlreadyRegistered
     try:
         from api.notifications.models.channel import (
             PushDevice, PushDeliveryLog, EmailDeliveryLog, SMSDeliveryLog, InAppMessage
@@ -112,20 +78,6 @@ def register_all_new_models():
                 list_select_related = ['user']
                 date_hierarchy = 'created_at'
 
-                actions = ['mark_all_read', 'dismiss_all']
-
-                def mark_all_read(self, request, queryset):
-                    from django.utils import timezone
-                    queryset.filter(is_read=False).update(is_read=True, read_at=timezone.now())
-                    self.message_user(request, f'Marked as read.')
-                mark_all_read.short_description = 'Mark selected as read'
-
-                def dismiss_all(self, request, queryset):
-                    from django.utils import timezone
-                    queryset.filter(is_dismissed=False).update(is_dismissed=True, dismissed_at=timezone.now())
-                    self.message_user(request, 'Dismissed.')
-                dismiss_all.short_description = 'Dismiss selected messages'
-
         # --- schedule models ---
         if not admin.site.is_registered(NotificationSchedule):
             @admin.register(NotificationSchedule)
@@ -137,35 +89,15 @@ def register_all_new_models():
                 ordering = ['send_at']
                 date_hierarchy = 'send_at'
 
-                actions = ['cancel_schedules']
-
-                def cancel_schedules(self, request, queryset):
-                    queryset.filter(status='pending').update(
-                        status='cancelled', updated_at=timezone.now()
-                    )
-                    self.message_user(request, 'Cancelled selected schedules.')
-                cancel_schedules.short_description = 'Cancel selected schedules'
-
         if not admin.site.is_registered(NotificationBatch):
             @admin.register(NotificationBatch)
             class NotificationBatchAdmin(admin.ModelAdmin):
-                list_display = [
-                    'id', 'name', 'status', 'total_count', 'sent_count',
-                    'failed_count', 'progress_pct_display', 'created_at'
-                ]
+                list_display = ['id', 'name', 'status', 'total_count', 'sent_count', 'failed_count', 'created_at']
                 list_filter = ['status']
                 search_fields = ['name', 'description']
-                readonly_fields = [
-                    'created_at', 'updated_at', 'started_at', 'completed_at',
-                    'sent_count', 'failed_count', 'total_count', 'celery_task_id'
-                ]
+                readonly_fields = ['created_at', 'updated_at', 'started_at', 'completed_at', 'sent_count', 'failed_count', 'total_count', 'celery_task_id']
                 ordering = ['-created_at']
                 date_hierarchy = 'created_at'
-
-                def progress_pct_display(self, obj):
-                    pct = obj.progress_pct
-                    return format_html('<progress value="{}" max="100"></progress> {:.1f}%', pct, pct)
-                progress_pct_display.short_description = 'Progress'
 
         if not admin.site.is_registered(NotificationQueue):
             @admin.register(NotificationQueue)
@@ -198,40 +130,12 @@ def register_all_new_models():
         if not admin.site.is_registered(NewNotificationCampaign):
             @admin.register(NewNotificationCampaign)
             class NewNotificationCampaignAdmin(admin.ModelAdmin):
-                list_display = [
-                    'id', 'name', 'status', 'total_users', 'sent_count',
-                    'failed_count', 'send_at', 'created_at'
-                ]
+                list_display = ['id', 'name', 'status', 'total_users', 'sent_count', 'failed_count', 'send_at', 'created_at']
                 list_filter = ['status']
                 search_fields = ['name', 'description']
-                readonly_fields = [
-                    'created_at', 'updated_at', 'started_at', 'completed_at',
-                    'sent_count', 'failed_count', 'total_users', 'celery_task_id'
-                ]
+                readonly_fields = ['created_at', 'updated_at', 'started_at', 'completed_at', 'sent_count', 'failed_count', 'total_users', 'celery_task_id']
                 ordering = ['-created_at']
                 date_hierarchy = 'created_at'
-
-                actions = ['start_campaigns', 'cancel_campaigns']
-
-                def start_campaigns(self, request, queryset):
-                    from api.notifications.services.CampaignService import campaign_service
-                    started = 0
-                    for campaign in queryset.filter(status__in=('draft', 'scheduled')):
-                        result = campaign_service.start_campaign(campaign.pk)
-                        if result.get('success'):
-                            started += 1
-                    self.message_user(request, f'Started {started} campaign(s).')
-                start_campaigns.short_description = 'Start selected campaigns'
-
-                def cancel_campaigns(self, request, queryset):
-                    from api.notifications.services.CampaignService import campaign_service
-                    cancelled = 0
-                    for campaign in queryset:
-                        result = campaign_service.cancel_campaign(campaign.pk)
-                        if result.get('success'):
-                            cancelled += 1
-                    self.message_user(request, f'Cancelled {cancelled} campaign(s).')
-                cancel_campaigns.short_description = 'Cancel selected campaigns'
 
         if not admin.site.is_registered(CampaignABTest):
             @admin.register(CampaignABTest)
@@ -244,10 +148,7 @@ def register_all_new_models():
         if not admin.site.is_registered(CampaignResult):
             @admin.register(CampaignResult)
             class CampaignResultAdmin(admin.ModelAdmin):
-                list_display = [
-                    'campaign', 'sent', 'delivered', 'opened', 'clicked',
-                    'delivery_rate', 'open_rate', 'click_rate', 'calculated_at'
-                ]
+                list_display = ['campaign', 'sent', 'delivered', 'opened', 'clicked', 'delivery_rate', 'open_rate', 'click_rate', 'calculated_at']
                 readonly_fields = [f.name for f in CampaignResult._meta.fields]
                 ordering = ['-calculated_at']
 
@@ -281,50 +182,17 @@ def register_all_new_models():
                 list_select_related = ['user']
                 date_hierarchy = 'opted_out_at'
 
-                actions = ['resubscribe_users']
-
-                def resubscribe_users(self, request, queryset):
-                    count = queryset.filter(is_active=True).update(
-                        is_active=False, opted_in_at=timezone.now(), updated_at=timezone.now()
-                    )
-                    self.message_user(request, f'Re-subscribed {count} user(s).')
-                resubscribe_users.short_description = 'Re-subscribe selected users'
-
         if not admin.site.is_registered(NotificationFatigue):
             @admin.register(NotificationFatigue)
             class NotificationFatigueAdmin(admin.ModelAdmin):
-                list_display = [
-                    'user', 'sent_today', 'sent_this_week', 'sent_this_month',
-                    'is_fatigued', 'daily_limit', 'weekly_limit', 'last_evaluated_at'
-                ]
+                list_display = ['user', 'sent_today', 'sent_this_week', 'sent_this_month', 'is_fatigued', 'daily_limit', 'weekly_limit', 'last_evaluated_at']
                 list_filter = ['is_fatigued']
                 search_fields = ['user__username', 'user__email']
-                readonly_fields = [
-                    'sent_today', 'sent_this_week', 'sent_this_month',
-                    'is_fatigued', 'last_evaluated_at', 'daily_reset_at',
-                    'weekly_reset_at', 'created_at', 'updated_at'
-                ]
+                readonly_fields = ['sent_today', 'sent_this_week', 'sent_this_month', 'is_fatigued', 'last_evaluated_at', 'daily_reset_at', 'weekly_reset_at', 'created_at', 'updated_at']
                 ordering = ['-sent_this_week']
                 list_select_related = ['user']
-
-                actions = ['clear_fatigue', 'reset_counters']
-
-                def clear_fatigue(self, request, queryset):
-                    queryset.update(is_fatigued=False, last_evaluated_at=timezone.now(), updated_at=timezone.now())
-                    self.message_user(request, f'Cleared fatigue for {queryset.count()} user(s).')
-                clear_fatigue.short_description = 'Clear fatigue flag'
-
-                def reset_counters(self, request, queryset):
-                    queryset.update(
-                        sent_today=0, sent_this_week=0,
-                        is_fatigued=False, updated_at=timezone.now()
-                    )
-                    self.message_user(request, f'Reset counters for {queryset.count()} user(s).')
-                reset_counters.short_description = 'Reset send counters'
 
         print('[OK] All new split models registered with admin.')
 
     except Exception as e:
-        import traceback
         print(f'[WARN] admin_new_models register error: {e}')
-        traceback.print_exc()
