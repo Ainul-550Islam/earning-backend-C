@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     dependencies = [
         # ('offers', '__first__'),  # removed - app not installed
         ('payment_gateways', '0010_alter_lockersession_session_id'),
-        ('tracking', '__first__'),
+        # ('tracking', '__first__'),  # removed - app not installed
     ]
 
     operations = [
