@@ -23,9 +23,9 @@ class Click(TimeStampedModel):
     """
     click_id        = models.CharField(max_length=64, unique=True, default=generate_click_id,
                        db_index=True)
-    offer           = models.ForeignKey('offers.Offer', on_delete=models.CASCADE,
+    offer           = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
                        related_name='clicks', null=True, blank=True)
-    campaign        = models.ForeignKey('offers.Campaign', on_delete=models.CASCADE,
+    campaign        = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
                        related_name='clicks', null=True, blank=True)
     publisher       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
                        null=True, related_name='tracking_clicks')
@@ -100,7 +100,7 @@ class Impression(TimeStampedModel):
     Used to calculate CTR (click-through rate).
     """
     impression_id   = models.CharField(max_length=64, unique=True, default=generate_click_id)
-    offer           = models.ForeignKey('offers.Offer', on_delete=models.CASCADE,
+    offer           = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
                        related_name='impressions')
     publisher       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
                        null=True, related_name='impressions')
@@ -152,9 +152,9 @@ class Conversion(TimeStampedModel):
     click_id_raw    = models.CharField(max_length=64, blank=True, db_index=True,
                        help_text='Raw click_id from postback (even if Click deleted)')
 
-    offer           = models.ForeignKey('offers.Offer', on_delete=models.CASCADE,
+    offer           = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
                        related_name='conversions')
-    campaign        = models.ForeignKey('offers.Campaign', on_delete=models.CASCADE,
+    campaign        = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
                        related_name='conversions', null=True, blank=True)
     publisher       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
                        null=True, related_name='conversions')
@@ -225,7 +225,7 @@ class PostbackLog(TimeStampedModel):
     """
     STATUS = (('success','Success'),('failed','Failed'),('duplicate','Duplicate'),('invalid','Invalid'))
 
-    offer           = models.ForeignKey('offers.Offer', on_delete=models.SET_NULL,
+    offer           = models.ForeignKey('offerwall.Offer', on_delete=models.SET_NULL,
                        null=True, related_name='postback_logs')
     click_id        = models.CharField(max_length=64, db_index=True)
     raw_url         = models.TextField(help_text='Full postback URL received')
@@ -255,7 +255,7 @@ class PublisherDailyStats(models.Model):
     """
     publisher       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                        related_name='daily_stats')
-    offer           = models.ForeignKey('offers.Offer', on_delete=models.CASCADE,
+    offer           = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
                        related_name='daily_stats', null=True, blank=True)
     date            = models.DateField(db_index=True)
 

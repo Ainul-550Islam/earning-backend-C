@@ -43,7 +43,7 @@ class TrafficBlacklist(TimeStampedModel):
     block_count     = models.IntegerField(default=0, help_text='Times this rule has blocked traffic')
 
     # Scope (null = applies to all their offers)
-    offer           = models.ForeignKey('offers.Offer', on_delete=models.CASCADE,
+    offer           = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
                        null=True, blank=True, related_name='blacklist_entries',
                        help_text='Specific offer to apply to (null = all offers)')
 
@@ -64,7 +64,7 @@ class OfferQualityScore(TimeStampedModel):
     """
     publisher       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                        related_name='quality_scores')
-    offer           = models.ForeignKey('offers.Offer', on_delete=models.CASCADE,
+    offer           = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
                        related_name='quality_scores')
 
     # Volume

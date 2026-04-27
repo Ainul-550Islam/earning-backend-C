@@ -17,7 +17,7 @@ class AdvertiserTrackerIntegration(TimeStampedModel):
 
     advertiser      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                        related_name='tracker_integrations')
-    offer           = models.OneToOneField('offers.Offer', on_delete=models.CASCADE,
+    offer           = models.OneToOneField('offerwall.Offer', on_delete=models.CASCADE,
                        related_name='tracker_integration')
     tracker         = models.CharField(max_length=20, choices=TRACKERS)
     app_id          = models.CharField(max_length=200, help_text='App ID in tracker dashboard')

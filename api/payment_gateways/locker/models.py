@@ -66,7 +66,7 @@ class ContentLocker(TimeStampedModel):
 
     # Unlock settings
     unlock_duration_hours = models.CharField(max_length=10, choices=UNLOCK_DURATION, default='24')
-    require_specific_offer= models.ForeignKey('offers.Offer', on_delete=models.SET_NULL,
+    require_specific_offer= models.ForeignKey('offerwall.Offer', on_delete=models.SET_NULL,
                             null=True, blank=True,
                             help_text='Force a specific offer (null = show best available)')
     show_offer_count = models.IntegerField(default=1, help_text='How many offers to show')
@@ -133,11 +133,11 @@ class LockerSession(TimeStampedModel):
     device_type      = models.CharField(max_length=20, blank=True)
     os_name          = models.CharField(max_length=50, blank=True)
     status           = models.CharField(max_length=10, choices=STATUS, default='shown')
-    offer            = models.ForeignKey('offers.Offer', on_delete=models.SET_NULL,
+    offer            = models.ForeignKey('offerwall.Offer', on_delete=models.SET_NULL,
                         null=True, blank=True, help_text='Offer shown to this visitor')
     click_id         = models.CharField(max_length=64, blank=True,
                         help_text='Tracking click_id for this session')
-    conversion       = models.ForeignKey('tracking.Conversion', on_delete=models.SET_NULL,
+    conversion       = models.ForeignKey('offerwall.OfferConversion', on_delete=models.SET_NULL,
                         null=True, blank=True)
     unlocked_at      = models.DateTimeField(null=True, blank=True)
     expires_at       = models.DateTimeField(null=True, blank=True)
@@ -271,9 +271,9 @@ class VirtualReward(TimeStampedModel):
     amount           = models.DecimalField(max_digits=12, decimal_places=2,
                         help_text='Virtual currency amount (positive=credit, negative=debit)')
     usd_equivalent   = models.DecimalField(max_digits=10, decimal_places=4, default=Decimal('0'))
-    offer            = models.ForeignKey('offers.Offer', on_delete=models.SET_NULL,
+    offer            = models.ForeignKey('offerwall.Offer', on_delete=models.SET_NULL,
                         null=True, blank=True)
-    conversion       = models.ForeignKey('tracking.Conversion', on_delete=models.SET_NULL,
+    conversion       = models.ForeignKey('offerwall.OfferConversion', on_delete=models.SET_NULL,
                         null=True, blank=True)
     description      = models.CharField(max_length=200, blank=True)
     metadata         = models.JSONField(default=dict, blank=True)

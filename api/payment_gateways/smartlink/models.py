@@ -52,7 +52,7 @@ class SmartLink(TimeStampedModel):
                        help_text='["gaming","finance"] — filter categories')
     min_payout      = models.DecimalField(max_digits=10, decimal_places=4,
                        null=True, blank=True, help_text='Minimum offer payout')
-    manual_offers   = models.ManyToManyField('offers.Offer', blank=True,
+    manual_offers   = models.ManyToManyField('offerwall.Offer', blank=True,
                        related_name='smart_links',
                        help_text='Specific offers to include (empty = auto-select all eligible)')
 
@@ -88,7 +88,7 @@ class SmartLink(TimeStampedModel):
 class SmartLinkRotation(TimeStampedModel):
     """A/B test or weighted rotation config per offer in a smart link."""
     smart_link  = models.ForeignKey(SmartLink, on_delete=models.CASCADE, related_name='rotations')
-    offer       = models.ForeignKey('offers.Offer', on_delete=models.CASCADE)
+    offer       = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE)
     weight      = models.IntegerField(default=50, help_text='Weight % for weighted/ab_test mode')
     is_control  = models.BooleanField(default=False, help_text='Control group for A/B test')
     clicks      = models.IntegerField(default=0)
