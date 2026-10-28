@@ -20,7 +20,7 @@ class ReferralPointsService:
                 reason=f'Welcome bonus (referred by {referrer.code})',
                 triggered_by='referral', tenant=tenant,
             )
-            logger.info('Referral processed: %s → %s', referrer, referee)
+            logger.info('Referral processed: %s -> %s', referrer, referee)
             return True
         except Exception as e:
             logger.error('Referral error: %s', e)

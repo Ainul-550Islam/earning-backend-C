@@ -25,6 +25,7 @@ class AppApprovalRecord(TimeStampedModel):
     auto_approved       = models.BooleanField(default=False)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_app_approval_records"
         verbose_name = _("App Approval Record")
         ordering = ["-created_at"]

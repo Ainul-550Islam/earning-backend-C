@@ -12,6 +12,7 @@ from decimal import Decimal
 from django.db import models
 from django.db.models import Avg, Count, DecimalField, F, Q, Sum
 from django.utils import timezone
+from api.monetization_tools.models import RevenueDailySummary
 
 
 class RevenueDailySummaryQuerySet(models.QuerySet):

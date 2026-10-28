@@ -4,6 +4,7 @@ Integration Module for Advertiser Portal
 This module provides comprehensive integration layers for connecting
 the advertiser_portal with external modules and legacy systems.
 """
+import asyncio
 
 # Import main integration classes
 from .data_bridge import DataBridge, DataSyncResult, data_bridge

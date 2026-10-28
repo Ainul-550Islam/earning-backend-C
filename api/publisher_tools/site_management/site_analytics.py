@@ -93,6 +93,7 @@ class SiteTrafficData(TimeStampedModel):
     is_estimated = models.BooleanField(default=False, verbose_name=_("Estimated Data"))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_traffic_data'
         verbose_name = _('Site Traffic Data')
         verbose_name_plural = _('Site Traffic Data')
@@ -185,6 +186,7 @@ class SiteAudienceProfile(TimeStampedModel):
     repeat_visitor_pct  = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_audience_profiles'
         verbose_name = _('Site Audience Profile')
         verbose_name_plural = _('Site Audience Profiles')

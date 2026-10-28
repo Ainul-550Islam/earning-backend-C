@@ -1,5 +1,4 @@
 # api/promotions/data_science/cohort_analysis.py
-cohort_analysis.py
 # Cohort Analysis — Retention Tracking
 # =============================================================================
 

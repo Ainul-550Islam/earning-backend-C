@@ -11,8 +11,13 @@ from ..models import WebhookEndpoint, WebhookHealthLog
 from ..services.analytics import HealthMonitorService
 from ..choices import WebhookStatus
 
+import logging
 
-@shared_task
+logger = logging.getLogger('ainul.webhooks.tasks.auto.suspend.endpoints')
+
+
+
+@shared_task(name="ainul.webhooks.auto_suspend_endpoints")
 def auto_suspend_endpoints(consecutive_failures=3, hours=24):
     """
     Automatically suspend endpoints with consecutive health check failures.
@@ -24,6 +29,7 @@ def auto_suspend_endpoints(consecutive_failures=3, hours=24):
     Returns:
         dict: Summary of suspension operations
     """
+    logger.info('[Task] auto_suspend_endpoints started')
     try:
         # Calculate time window
         since = timezone.now() - timedelta(hours=hours)
@@ -67,7 +73,7 @@ def auto_suspend_endpoints(consecutive_failures=3, hours=24):
                 endpoint_count += 1
                 
             except Exception as e:
-                print(f"Failed to process endpoint {endpoint.id}: {e}")
+                logger.error("Failed to process endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -98,6 +104,7 @@ def auto_suspend_by_success_rate(success_rate_threshold=70, hours=24):
     Returns:
         dict: Summary of suspension operations
     """
+    logger.info('[Task] auto_suspend_by_success_rate started')
     try:
         # Calculate time window
         since = timezone.now() - timedelta(hours=hours)
@@ -142,7 +149,7 @@ def auto_suspend_by_success_rate(success_rate_threshold=70, hours=24):
                 endpoint_count += 1
                 
             except Exception as e:
-                print(f"Failed to process endpoint {endpoint.id}: {e}")
+                logger.error("Failed to process endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -172,6 +179,7 @@ def auto_resume_endpoints(hours=6):
     Returns:
         dict: Summary of resume operations
     """
+    logger.info('[Task] auto_resume_endpoints started')
     try:
         # Calculate time window
         since = timezone.now() - timedelta(hours=hours)
@@ -217,7 +225,7 @@ def auto_resume_endpoints(hours=6):
                             break
                 
             except Exception as e:
-                print(f"Failed to process endpoint {endpoint.id}: {e}")
+                logger.error("Failed to process endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -242,6 +250,7 @@ def check_endpoint_health_summary():
     Returns:
         dict: Health summary statistics
     """
+    logger.info('[Task] check_endpoint_health_summary started')
     try:
         from django.db.models import Count
         

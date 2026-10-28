@@ -1,60 +1,45 @@
-# api/support/apps.py
+# api/support/apps.py  — WORLD #1 FINAL
+import logging
 from django.apps import AppConfig
+
+logger = logging.getLogger(__name__)
+
 
 class SupportConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'api.support'
-    verbose_name = '🆘 Support Management'
-    
+    name               = 'api.support'
+    verbose_name       = 'Support Management'
+
     def ready(self):
-        """Initialize support app"""
+        # 1. Load signals
         try:
-            import api.support.signals
-            print("[OK] Support signals loaded")
-        except ImportError:
-            pass
-        
-        # Force admin registration
-        try:
-            from django.contrib import admin
-            from .models import FAQ, SupportSettings, SupportTicket
-            from .admin import FAQAdmin, SupportTicketAdmin
-            
-            print("[LOADING] Loading support admin...")
-            registered = 0
-            
-            # Register FAQ
-            if not admin.site.is_registered(FAQ):
-                admin.site.register(FAQ, FAQAdmin)
-                registered += 1
-                print("[OK] Registered: FAQ")
-            
-            # Register SupportTicket
-            if not admin.site.is_registered(SupportTicket):
-                admin.site.register(SupportTicket, SupportTicketAdmin)
-                registered += 1
-                print("[OK] Registered: SupportTicket")
-            
-            # Register SupportSettings
-            if not admin.site.is_registered(SupportSettings):
-                # Try to import SupportSettingsAdmin if exists
-                try:
-                    from .admin import SupportSettingsAdmin
-                    admin.site.register(SupportSettings, SupportSettingsAdmin)
-                except ImportError:
-                    admin.site.register(SupportSettings)
-                registered += 1
-                print("[OK] Registered: SupportSettings")
-            
-            if registered > 0:
-                print(f"[OK][OK][OK] {registered} support models registered from apps.py")
-            else:
-                print("[OK] All support models already registered")
-                
+            import api.support.signals  # noqa
         except Exception as e:
-            print(f"[WARN] Support admin registration error: {e}")
+            logger.debug(f'Support signals: {e}')
+
+        # 2. Load CPA signals
+        try:
+            import api.support.singals_cap  # noqa
+        except Exception as e:
+            logger.debug(f'CPA signals: {e}')
+
+        # 3. Setup integration adapters
+        try:
+            from api.support.integrations.integ_adapter import setup_adapters
+            setup_adapters()
+        except Exception as e:
+            logger.debug(f'Integration adapters: {e}')
+
+        # 4. Connect integration signals (other apps → support)
+        try:
+            from api.support.integrations.integ_signals import connect_all_signals
+            connect_all_signals()
+        except Exception as e:
+            logger.debug(f'Integration signals: {e}')
+
+        # 5. Register on custom admin if available
         try:
             from api.support.admin import _force_register_support
             _force_register_support()
-        except Exception as e:
+        except Exception:
             pass

@@ -4,7 +4,9 @@ Configuration Viewsets for Offer Routing System
 This module contains viewsets for managing routing configurations,
 feature flags, and personalization settings.
 """
+from django.db.models import Count
 
+from ..throttling import BulkOperationThrottle, RoutingEngineThrottle, AnalyticsThrottle, BulkOperationThrottle, EvaluatorThrottle
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -15,6 +17,8 @@ from ..models import RoutingConfig, PersonalizationConfig
 from ..services.config import config_service
 from ..permissions import IsAuthenticatedOrReadOnly, CanManageOffers
 from ..exceptions import ValidationError, ConfigurationError
+from ..serializers import PersonalizationConfigSerializer
+
 
 User = get_user_model()
 
@@ -28,8 +32,9 @@ class RoutingConfigViewSet(viewsets.ModelViewSet):
     """
     
     queryset = RoutingConfig.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = PersonalizationConfigSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [BulkOperationThrottle]
     
     def get_queryset(self):
         """Filter configs by tenant."""
@@ -355,8 +360,9 @@ class PersonalizationConfigViewSet(viewsets.ModelViewSet):
     """
     
     queryset = PersonalizationConfig.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = PersonalizationConfigSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [BulkOperationThrottle]
     
     def get_queryset(self):
         """Filter configs by tenant."""

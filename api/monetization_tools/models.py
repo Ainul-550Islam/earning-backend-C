@@ -210,12 +210,10 @@ class AdCampaign(TenantScopedModel):
         ordering = ['-created_at']
         constraints = [
             CheckConstraint(check=Q(total_budget__gt=0), name='mt_campaign_budget_positive'),
-            CheckConstraint(
-                check=Q(end_date__isnull=True) | Q(end_date__gt=F('start_date')),
+            CheckConstraint(check=Q(end_date__isnull=True) | Q(end_date__gt=F('start_date')),
                 name='mt_campaign_end_after_start',
             ),
-            CheckConstraint(
-                check=Q(daily_budget__isnull=True) | Q(daily_budget__lte=F('total_budget')),
+            CheckConstraint(check=Q(daily_budget__isnull=True) | Q(daily_budget__lte=F('total_budget')),
                 name='mt_campaign_daily_lte_total',
             ),
         ]
@@ -321,8 +319,7 @@ class AdUnit(TenantScopedModel):
         verbose_name_plural = _('Ad Units')
         ordering = ['-created_at']
         constraints = [
-            CheckConstraint(
-                check=Q(floor_ecpm__isnull=True) | Q(floor_ecpm__gte=0),
+            CheckConstraint(check=Q(floor_ecpm__isnull=True) | Q(floor_ecpm__gte=0),
                 name='mt_adunit_floor_non_negative',
             ),
         ]
@@ -852,8 +849,7 @@ class RewardTransaction(TenantScopedModel):
         ordering = ['-created_at']
         constraints = [
             # Core ledger invariant
-            CheckConstraint(
-                check=Q(balance_after=F('balance_before') + F('amount')),
+            CheckConstraint(check=Q(balance_after=F('balance_before') + F('amount')),
                 name='mt_reward_txn_ledger_invariant',
             ),
             CheckConstraint(check=Q(balance_before__gte=0), name='mt_reward_txn_balance_before_non_neg'),
@@ -2688,8 +2684,7 @@ class PublisherAccount(TenantScopedModel):
         constraints = [
             CheckConstraint(check=Q(credit_limit_usd__gte=0),   name='mt_pub_credit_non_neg'),
             CheckConstraint(check=Q(current_balance_usd__gte=0), name='mt_pub_balance_non_neg'),
-            CheckConstraint(
-                check=Q(custom_rev_share__isnull=True) |
+            CheckConstraint(check=Q(custom_rev_share__isnull=True) |
                       (Q(custom_rev_share__gte=0) & Q(custom_rev_share__lte=1)),
                 name='mt_pub_revshare_range',
             ),

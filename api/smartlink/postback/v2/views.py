@@ -146,7 +146,7 @@ class PostbackV2View(View):
     def _log_postback(self, **kwargs):
         """Write postback audit log to database."""
         try:
-            from ...models.postback_log import PostbackLog
+            from api.smartlink.models.postback_log import PostbackLog
             PostbackLog.objects.create(**kwargs)
         except Exception:
             # Model may not exist — just log to file

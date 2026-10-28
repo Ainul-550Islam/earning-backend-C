@@ -1,6 +1,6 @@
 # api/djoyalty/webhooks/webhook_payloads.py
 """
-Webhook payload builders — outbound webhook data structure।
+Webhook payload builders -- outbound webhook data structure।
 """
 from ..events.loyalty_events import LoyaltyEvent
 

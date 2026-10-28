@@ -4,9 +4,10 @@ This module contains tests for the webhook replay service
 including replay creation, processing, and batch operations.
 """
 
+from datetime import timedelta
 import pytest
 from unittest.mock import Mock, patch
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -33,10 +34,10 @@ class ReplayServiceTest(TestCase):
             password='testpass123'
         )
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         self.replay_service = ReplayService()
     
@@ -47,8 +48,7 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345, 'email': 'test@example.com'},
             status=DeliveryStatus.FAILED,
-            response_code=500,
-            created_by=self.user,
+            http_status_code=500,
         )
         
         replay = self.replay_service.create_replay(
@@ -79,7 +79,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         with self.assertRaises(ValueError):
@@ -96,7 +95,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         with self.assertRaises(ValueError):
@@ -113,8 +111,7 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345, 'email': 'test@example.com'},
             status=DeliveryStatus.FAILED,
-            response_code=500,
-            created_by=self.user,
+            http_status_code=500,
         )
         
         replay = self.replay_service.create_replay(
@@ -123,7 +120,7 @@ class ReplayServiceTest(TestCase):
             reason='Test replay'
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.return_value = True
             
             result = self.replay_service.process_replay(replay)
@@ -144,8 +141,7 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345, 'email': 'test@example.com'},
             status=DeliveryStatus.FAILED,
-            response_code=500,
-            created_by=self.user,
+            http_status_code=500,
         )
         
         replay = self.replay_service.create_replay(
@@ -154,7 +150,7 @@ class ReplayServiceTest(TestCase):
             reason='Test replay'
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.return_value = False
             
             result = self.replay_service.process_replay(replay)
@@ -175,7 +171,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         replay = self.replay_service.create_replay(
@@ -200,7 +195,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         replay = self.replay_service.create_replay(
@@ -225,7 +219,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         replay = self.replay_service.create_replay(
@@ -234,7 +227,7 @@ class ReplayServiceTest(TestCase):
             reason='Test replay'
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.side_effect = Exception('Dispatch error')
             
             result = self.replay_service.process_replay(replay)
@@ -256,14 +249,13 @@ class ReplayServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i, 'email': f'user{i}@example.com'},
                 status=DeliveryStatus.FAILED,
-                response_code=500,
-                created_by=self.user,
+                http_status_code=500,
             )
             delivery_logs.append(log)
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Batch test replay'
         )
         
@@ -283,7 +275,7 @@ class ReplayServiceTest(TestCase):
         with self.assertRaises(ValueError):
             self.replay_service.create_replay_batch(
                 delivery_logs=[],
-                replayed_by=self.user,
+                replayed_by_id=self.user.id,
                 reason='Batch test replay'
             )
     
@@ -292,7 +284,7 @@ class ReplayServiceTest(TestCase):
         with self.assertRaises(ValueError):
             self.replay_service.create_replay_batch(
                 delivery_logs=None,
-                replayed_by=self.user,
+                replayed_by_id=self.user.id,
                 reason='Batch test replay'
             )
     
@@ -306,14 +298,13 @@ class ReplayServiceTest(TestCase):
                 event_type='user.created' if i < 3 else 'user.updated',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.FAILED,
-                response_code=500,
-                created_by=self.user,
+                http_status_code=500,
             )
             delivery_logs.append(log)
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Batch test replay',
             event_type_filter='user.created'
         )
@@ -332,18 +323,17 @@ class ReplayServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.FAILED,
-                response_code=500,
-                created_by=self.user,
+                http_status_code=500,
             )
             delivery_logs.append(log)
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Batch test replay'
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.return_value = True
             
             result = self.replay_service.process_replay_batch(batch)
@@ -368,18 +358,17 @@ class ReplayServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.FAILED,
-                response_code=500,
-                created_by=self.user,
+                http_status_code=500,
             )
             delivery_logs.append(log)
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Batch test replay'
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             # First two succeed, third fails
             mock_emit.side_effect = [True, True, False]
             
@@ -401,12 +390,11 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )]
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Batch test replay'
         )
         
@@ -426,12 +414,11 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )]
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Batch test replay'
         )
         
@@ -451,7 +438,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         replay = self.replay_service.create_replay(
@@ -475,7 +461,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         replay = self.replay_service.create_replay(
@@ -500,12 +485,11 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )]
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Batch test replay'
         )
         
@@ -525,7 +509,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         replay = self.replay_service.create_replay(
@@ -550,7 +533,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         replay = self.replay_service.create_replay(
@@ -565,8 +547,7 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.SUCCESS,
-            response_code=200,
-            created_by=self.user,
+            http_status_code=200,
         )
         
         replay.status = ReplayStatus.COMPLETED
@@ -588,14 +569,13 @@ class ReplayServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.FAILED,
-                created_by=self.user,
             )
             for i in range(3)
         ]
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Batch test replay'
         )
         
@@ -616,19 +596,25 @@ class ReplayServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.FAILED,
-                created_by=self.user,
             )
             for i in range(3)
         ]
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Batch test replay'
         )
         
-        # Mark some items as completed
-        items = batch.items.all()
+        # batch.items.all() is a lazy, unevaluated queryset - indexing it
+        # twice (once to set .status, once to .save()) triggers two SEPARATE
+        # queries returning two DIFFERENT Python objects each time (confirmed
+        # empirically: `items[0] is items[0]` is False on an unevaluated
+        # queryset). The mutation on the first fetch was silently lost, and
+        # .save() persisted an unmodified, freshly-refetched copy instead.
+        # list() evaluates the queryset once so both accesses share the
+        # same cached objects.
+        items = list(batch.items.all())
         items[0].status = ReplayStatus.COMPLETED
         items[0].save()
         items[1].status = ReplayStatus.FAILED
@@ -650,7 +636,6 @@ class ReplayServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.FAILED,
-                created_by=self.user,
             )
             for i in range(5)
         ]
@@ -704,7 +689,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         log2 = WebhookDeliveryLog.objects.create(
@@ -712,7 +696,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.updated',
             payload={'user_id': 12346},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         replay1 = self.replay_service.create_replay(
@@ -749,7 +732,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         replay = self.replay_service.create_replay(
@@ -759,7 +741,7 @@ class ReplayServiceTest(TestCase):
         )
         
         # Set old creation time
-        replay.created_at = timezone.now() - timezone.timedelta(days=30)
+        replay.created_at = timezone.now() - timedelta(days=30)
         replay.save()
         
         result = self.replay_service.cleanup_old_replays(days=7)
@@ -778,17 +760,16 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )]
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Test batch replay'
         )
         
         # Set old creation time
-        batch.created_at = timezone.now() - timezone.timedelta(days=30)
+        batch.created_at = timezone.now() - timedelta(days=30)
         batch.save()
         
         result = self.replay_service.cleanup_old_replay_batches(days=7)
@@ -808,8 +789,7 @@ class ReplayServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.FAILED,
-                response_code=500,
-                created_by=self.user,
+                http_status_code=500,
             )
         
         recommendations = self.replay_service.get_replay_recommendations(
@@ -829,8 +809,7 @@ class ReplayServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.SUCCESS,
-                response_code=200,
-                created_by=self.user,
+                http_status_code=200,
             )
         
         recommendations = self.replay_service.get_replay_recommendations(
@@ -848,8 +827,7 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            response_code=500,
-            created_by=self.user,
+            http_status_code=500,
         )
         
         # Create successful delivery log
@@ -858,8 +836,7 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12346},
             status=DeliveryStatus.SUCCESS,
-            response_code=200,
-            created_by=self.user,
+            http_status_code=200,
         )
         
         # Failed log should be eligible
@@ -878,7 +855,6 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
         
         # Create existing replay
@@ -900,8 +876,7 @@ class ReplayServiceTest(TestCase):
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_at=timezone.now() - timezone.timedelta(days=30),
-            created_by=self.user,
+            created_at=timezone.now() - timedelta(days=30),
         )
         
         eligibility = self.replay_service.validate_replay_eligibility(old_log)
@@ -921,17 +896,16 @@ class ReplayServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.FAILED,
-                created_by=self.user,
             )
             delivery_logs.append(log)
         
         batch = self.replay_service.create_replay_batch(
             delivery_logs=delivery_logs,
-            replayed_by=self.user,
+            replayed_by_id=self.user.id,
             reason='Performance test'
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.return_value = True
             
             start_time = time.time()
@@ -947,47 +921,81 @@ class ReplayServiceTest(TestCase):
             # Should complete in reasonable time (less than 5 seconds)
             self.assertLess(end_time - start_time, 5.0)
     
+    # test_replay_concurrent_safety moved to ReplayServiceConcurrencyTest
+    # below - it needs TransactionTestCase, not TestCase (see that class's
+    # docstring for why).
+
+
+class ReplayServiceConcurrencyTest(TransactionTestCase):
+    """Concurrency test for ReplayService.
+
+    Split out into its own TransactionTestCase, matching the established
+    pattern in test_integration.py's WebhookIntegrationConcurrencyTest and
+    test_dispatch_service.py's DispatchServiceConcurrencyTest: TestCase
+    wraps each test in an outer transaction, which real multi-threaded DB
+    writes under SQLite contend with ("database table is locked") since
+    other threads' own connections don't share that transaction.
+    TransactionTestCase avoids the outer wrapper entirely. Confirmed
+    empirically: under plain TestCase this failed consistently (not just
+    occasionally) with sqlite3.OperationalError: database table is locked
+    from every thread past the first; under TransactionTestCase it passes.
+    """
+
+    def setUp(self):
+        """Set up test data."""
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.endpoint = WebhookEndpoint.objects.create(
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
+            status=WebhookStatus.ACTIVE,
+            owner=self.user,
+        )
+        self.replay_service = ReplayService()
+
     def test_replay_concurrent_safety(self):
         """Test replay concurrent safety."""
         import threading
-        
+
         original_log = WebhookDeliveryLog.objects.create(
             endpoint=self.endpoint,
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.FAILED,
-            created_by=self.user,
         )
-        
+
         results = []
-        
+
         def process_replay():
             replay = self.replay_service.create_replay(
                 original_log=original_log,
                 replayed_by=self.user,
                 reason='Concurrent test'
             )
-            
-            with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+
+            with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
                 mock_emit.return_value = True
-                
+
                 result = self.replay_service.process_replay(replay)
                 results.append(result)
-        
+
         # Create multiple threads
         threads = []
         for _ in range(5):
             thread = threading.Thread(target=process_replay)
             threads.append(thread)
-        
+
         # Start all threads
         for thread in threads:
             thread.start()
-        
+
         # Wait for all threads to complete
         for thread in threads:
             thread.join()
-        
+
         # All replays should succeed
         self.assertEqual(len(results), 5)
         self.assertTrue(all(result['success'] for result in results))

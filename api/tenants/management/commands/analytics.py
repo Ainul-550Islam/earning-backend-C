@@ -570,7 +570,7 @@ class DataIntegrityCheckCommand(BaseCommand):
             status = "OK" if check_data['count'] == 0 else "ISSUE"
             color = self.style.SUCCESS if check_data['count'] == 0 else self.style.WARNING
             
-            self.stdout.write(f"  {color}{status)} {check_name}: {check_data['count']} found")
+            self.stdout.write(f"  {color}{status} {check_name}: {check_data['count']} found")
             if check_data['fixed'] > 0:
                 self.stdout.write(f"    Fixed: {check_data['fixed']}")
         

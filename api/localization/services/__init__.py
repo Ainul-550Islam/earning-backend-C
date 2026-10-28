@@ -1,2 +1,1 @@
-# services/__init__.py
-from .services_loca import *
+# services/__init__.py — lazy imports only, no eager star import

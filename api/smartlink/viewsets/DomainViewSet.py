@@ -2,10 +2,10 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..models.publisher import PublisherDomain
-from ..serializers.DomainSerializer import DomainSerializer
-from ..services.core.DomainService import DomainService
-from ..permissions import IsPublisher
+from api.smartlink.models.publisher import PublisherDomain
+from api.smartlink.serializers.DomainSerializer import DomainSerializer
+from api.smartlink.services.core.DomainService import DomainService
+from api.smartlink.permissions import IsPublisher
 
 
 class DomainViewSet(viewsets.ModelViewSet):
@@ -20,7 +20,7 @@ class DomainViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
-            return PublisherDomain.objects.all()
+            return PublisherDomain.objects.select_related("smartlink", "publisher")
         return PublisherDomain.objects.filter(publisher=user)
 
     def perform_create(self, serializer):

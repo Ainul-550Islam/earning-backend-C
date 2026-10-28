@@ -4,6 +4,7 @@ Reseller Viewsets
 This module contains viewsets for reseller-related models including
 ResellerConfig and ResellerInvoice.
 """
+from django.db import models
 
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action

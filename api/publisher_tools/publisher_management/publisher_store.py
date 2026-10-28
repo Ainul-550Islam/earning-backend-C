@@ -35,6 +35,7 @@ class PublisherStore(TimeStampedModel):
     metadata            = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_stores'
         verbose_name = _('Publisher Store')
         verbose_name_plural = _('Publisher Stores')
@@ -69,6 +70,7 @@ class StoreContactMessage(TimeStampedModel):
     ip_address       = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_store_contact_messages'
         verbose_name = _('Store Contact Message')
         ordering = ['-created_at']

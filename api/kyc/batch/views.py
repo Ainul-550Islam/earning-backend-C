@@ -10,6 +10,7 @@ from .models import BatchVerificationJob, BatchVerificationRecord
 
 
 @api_view(['GET', 'POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 @parser_classes([MultiPartParser, FormParser, JSONParser])
 def batch_jobs(request):
@@ -76,8 +77,6 @@ def batch_jobs(request):
         'message':       'Batch job created. Processing will start shortly.',
     }, status=202)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def batch_job_status(request, job_id):
     """Get batch job progress"""
@@ -98,9 +97,6 @@ def batch_job_status(request, job_id):
         'started_at':      job.started_at,
         'completed_at':    job.completed_at,
     })
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def batch_job_records(request, job_id):
     """Get individual records from a batch job"""

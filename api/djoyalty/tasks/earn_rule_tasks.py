@@ -1,6 +1,6 @@
 # api/djoyalty/tasks/earn_rule_tasks.py
 """
-Celery task: Bulk earn rule processing — deactivate expired rules।
+Celery task: Bulk earn rule processing -- deactivate expired rules।
 Schedule: Daily cron।
 """
 import logging

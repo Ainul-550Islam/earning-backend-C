@@ -1,5 +1,5 @@
 from django.contrib import admin
-from ..models import ABTestResult, SmartLinkVersion
+from api.smartlink.models import ABTestResult, SmartLinkVersion
 from ..choices import ABTestStatus
 
 

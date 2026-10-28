@@ -1,7 +1,7 @@
 import logging
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from ..models import SmartLink
+from api.smartlink.models import SmartLink
 
 logger = logging.getLogger('smartlink.signals')
 

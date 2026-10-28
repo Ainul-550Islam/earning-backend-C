@@ -29,6 +29,7 @@ class DemandPartner(TimeStampedModel):
     notes            = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_demand_partners"
         verbose_name = _("Demand Partner")
         verbose_name_plural = _("Demand Partners")

@@ -35,6 +35,7 @@ class VideoAdConfig(TimeStampedModel):
     player_color      = models.CharField(max_length=10, default="#000000")
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_video_ad_configs"
         verbose_name = _("Video Ad Config")
 

@@ -114,6 +114,8 @@ class BaseAPIView:
 # Advertiser Views with Integration Layers
 @api_view(['GET', 'POST'])
 @api_endpoint
+@api_view(['GET', 'PUT', 'DELETE'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def advertiser_list_create(request):
     """List all advertisers or create a new advertiser with Data Bridge integration."""
@@ -182,7 +184,6 @@ def advertiser_list_create(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def advertiser_detail(request, pk):
     """Retrieve, update or delete an advertiser."""
@@ -209,8 +210,6 @@ def advertiser_detail(request, pk):
     elif request.method == 'DELETE':
         advertiser.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def advertiser_profile(request):
@@ -242,8 +241,6 @@ def advertiser_profile(request):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def advertiser_verification(request):
@@ -269,7 +266,8 @@ def advertiser_verification(request):
 
 
 # Campaign Views
-@api_view(['GET', 'POST'])
+
+@api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def campaign_list_create(request):
     """List all campaigns or create a new campaign."""
@@ -309,8 +307,6 @@ def campaign_list_create(request):
             serializer.save(advertiser=advertiser)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def campaign_detail(request, pk):
@@ -339,8 +335,6 @@ def campaign_detail(request, pk):
     elif request.method == 'DELETE':
         campaign.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def campaign_creatives(request, campaign_id):
@@ -366,8 +360,6 @@ def campaign_creatives(request, campaign_id):
             serializer.save(campaign=campaign)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def campaign_targeting(request, campaign_id):
@@ -396,7 +388,8 @@ def campaign_targeting(request, campaign_id):
 
 
 # Offer Views
-@api_view(['GET', 'POST'])
+
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def offer_list_create(request):
     """List all offers or create a new offer."""
@@ -432,9 +425,7 @@ def offer_list_create(request):
             serializer.save(advertiser=advertiser)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET', 'PUT', 'DELETE'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def offer_detail(request, pk):
     """Retrieve, update or delete an offer."""
@@ -465,6 +456,7 @@ def offer_detail(request, pk):
 
 
 # Tracking Views
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def tracking_pixel_list_create(request):
@@ -501,9 +493,7 @@ def tracking_pixel_list_create(request):
             serializer.save(advertiser=advertiser)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET', 'PUT', 'DELETE'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def tracking_pixel_detail(request, pk):
     """Retrieve, update or delete a tracking pixel."""
@@ -531,9 +521,7 @@ def tracking_pixel_detail(request, pk):
     elif request.method == 'DELETE':
         pixel.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([])
 def tracking_pixel_fire(request, pixel_id):
     """Fire tracking pixel."""
@@ -559,9 +547,7 @@ def tracking_pixel_fire(request, pixel_id):
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
-
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def conversion_list_create(request):
     """List all conversions or create a new conversion."""
@@ -604,7 +590,8 @@ def conversion_list_create(request):
 
 
 # Billing Views
-@api_view(['GET', 'POST'])
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def wallet_detail(request):
     """Get or update advertiser wallet."""
@@ -635,8 +622,6 @@ def wallet_detail(request):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def transaction_list_create(request):
@@ -693,9 +678,7 @@ def transaction_list_create(request):
             serializer.save(wallet=wallet)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def deposit_create(request):
     """Create a new deposit."""
@@ -720,8 +703,6 @@ def deposit_create(request):
             serializer.save(wallet=wallet)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def invoice_list(request):
@@ -754,8 +735,6 @@ def invoice_list(request):
     serializer = AdvertiserInvoiceSerializer(page, many=True)
     
     return paginator.get_paginated_response(serializer.data)
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def invoice_detail(request, pk):
@@ -775,7 +754,8 @@ def invoice_detail(request, pk):
 
 
 # Reporting Views
-@api_view(['GET', 'POST'])
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def report_list_create(request):
     """List all reports or create a new report."""
@@ -811,9 +791,7 @@ def report_list_create(request):
             serializer.save(advertiser=advertiser)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET'])
+@api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def report_detail(request, pk):
     """Retrieve report details."""
@@ -829,9 +807,7 @@ def report_detail(request, pk):
     
     serializer = AdvertiserReportSerializer(report)
     return Response(serializer.data)
-
-
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def dashboard_metrics(request):
     """Get dashboard metrics."""
@@ -853,8 +829,6 @@ def dashboard_metrics(request):
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def performance_metrics(request):
@@ -889,6 +863,7 @@ def performance_metrics(request):
 
 
 # Fraud Detection Views
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def fraud_metrics(request):
@@ -911,9 +886,6 @@ def fraud_metrics(request):
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def conversion_quality_scores(request):
     """Get conversion quality scores."""
@@ -947,7 +919,7 @@ def conversion_quality_scores(request):
 
 
 # Notification Views
-@api_view(['GET', 'POST'])
+
 @permission_classes([IsAuthenticated])
 def notification_list_create(request):
     """List all notifications or create a new notification."""
@@ -991,8 +963,6 @@ def notification_list_create(request):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-@api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def notification_mark_read(request, pk):
     """Mark notification as read."""
@@ -1015,7 +985,7 @@ def notification_mark_read(request, pk):
 
 
 # Utility Views
-@api_view(['GET'])
+
 @permission_classes([IsAuthenticated])
 def system_health(request):
     """Get system health status."""
@@ -1049,9 +1019,6 @@ def system_health(request):
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def system_stats(request):
     """Get system statistics."""

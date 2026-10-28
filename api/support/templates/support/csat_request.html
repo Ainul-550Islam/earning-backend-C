@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0}
+.container{max-width:600px;margin:40px auto;background:#fff;border-radius:8px;overflow:hidden}
+.header{background:#f59e0b;color:#fff;padding:30px;text-align:center}
+.header h1{margin:0}.body{padding:30px;text-align:center}
+.stars-row{margin:20px 0}
+.star-btn{display:inline-block;width:50px;height:50px;line-height:50px;font-size:24px;border-radius:50%;text-decoration:none;margin:5px;background:#f3f4f6}
+.star-btn:hover{background:#f59e0b}
+.footer{background:#f9fafb;padding:20px;text-align:center;color:#6b7280;font-size:13px}
+</style></head><body>
+<div class="container">
+  <div class="header"><h1>⭐ How was your experience?</h1></div>
+  <div class="body">
+    <p>Hello <strong>{{ username }}</strong>,</p>
+    <p>Your ticket <strong>#{{ ticket_id }}</strong> was recently resolved. We'd love your feedback!</p>
+    <div class="stars-row">
+      <a href="{{ rate_1 }}" class="star-btn">😞</a>
+      <a href="{{ rate_2 }}" class="star-btn">😕</a>
+      <a href="{{ rate_3 }}" class="star-btn">😐</a>
+      <a href="{{ rate_4 }}" class="star-btn">😊</a>
+      <a href="{{ rate_5 }}" class="star-btn">🤩</a>
+    </div>
+    <p style="color:#6b7280">1 = Very Dissatisfied &nbsp;·&nbsp; 5 = Very Satisfied</p>
+    <p>Your feedback helps us improve our service. It takes just 10 seconds!</p>
+  </div>
+  <div class="footer">© {{ year }} {{ site_name }}</div>
+</div></body></html>

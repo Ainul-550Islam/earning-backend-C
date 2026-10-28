@@ -12,6 +12,7 @@ Or connect manually in your app's ready():
 from __future__ import annotations
 import logging
 from django.dispatch import receiver
+from .utils.http import safe_receiver_error_handler
 from .signals_cpa import (
     offer_status_changed, new_offer_published, offer_expiring_soon,
     conversion_received, conversion_status_changed, postback_failed,
@@ -53,7 +54,7 @@ def on_offer_status_changed(sender, **kwargs):
             notify_offer_paused(offer_id=offer_id, offer_name=offer_name,
                                 reason=reason or "Cap reached", tenant=tenant)
     except Exception as exc:
-        logger.error("on_offer_status_changed: %s", exc)
+        safe_receiver_error_handler("offer_status_changed", exc)
 
 
 @receiver(new_offer_published)
@@ -69,7 +70,7 @@ def on_new_offer_published(sender, **kwargs):
             tenant=kwargs.get("tenant"),
         )
     except Exception as exc:
-        logger.error("on_new_offer_published: %s", exc)
+        safe_receiver_error_handler("new_offer_published", exc)
 
 
 @receiver(conversion_received)
@@ -84,7 +85,7 @@ def on_conversion_received(sender, **kwargs):
             tenant=kwargs.get("tenant"),
         )
     except Exception as exc:
-        logger.error("on_conversion_received: %s", exc)
+        safe_receiver_error_handler("conversion_received", exc)
 
 
 @receiver(conversion_status_changed)
@@ -102,7 +103,7 @@ def on_conversion_status_changed(sender, **kwargs):
                 tenant=kwargs.get("tenant"),
             )
     except Exception as exc:
-        logger.error("on_conversion_status_changed: %s", exc)
+        safe_receiver_error_handler("conversion_status_changed", exc)
 
 
 @receiver(postback_failed)
@@ -117,7 +118,7 @@ def on_postback_failed(sender, **kwargs):
             tenant=kwargs.get("tenant"),
         )
     except Exception as exc:
-        logger.error("on_postback_failed: %s", exc)
+        safe_receiver_error_handler("postback_failed", exc)
 
 
 @receiver(payout_processed)
@@ -134,7 +135,7 @@ def on_payout_processed(sender, **kwargs):
             tenant=kwargs.get("tenant"),
         )
     except Exception as exc:
-        logger.error("on_payout_processed: %s", exc)
+        safe_receiver_error_handler("payout_processed", exc)
 
 
 @receiver(payout_threshold_reached)
@@ -149,7 +150,7 @@ def on_payout_threshold_reached(sender, **kwargs):
             tenant=kwargs.get("tenant"),
         )
     except Exception as exc:
-        logger.error("on_payout_threshold_reached: %s", exc)
+        safe_receiver_error_handler("payout_threshold_reached", exc)
 
 
 @receiver(payout_on_hold)
@@ -164,7 +165,7 @@ def on_payout_on_hold(sender, **kwargs):
             tenant=kwargs.get("tenant"),
         )
     except Exception as exc:
-        logger.error("on_payout_on_hold: %s", exc)
+        safe_receiver_error_handler("payout_on_hold", exc)
 
 
 @receiver(affiliate_status_changed)
@@ -194,7 +195,7 @@ def on_affiliate_status_changed(sender, **kwargs):
                 tenant=tenant,
             )
     except Exception as exc:
-        logger.error("on_affiliate_status_changed: %s", exc)
+        safe_receiver_error_handler("affiliate_status_changed", exc)
 
 
 @receiver(manager_assigned)
@@ -209,7 +210,7 @@ def on_manager_assigned(sender, **kwargs):
             tenant=kwargs.get("tenant"),
         )
     except Exception as exc:
-        logger.error("on_manager_assigned: %s", exc)
+        safe_receiver_error_handler("manager_assigned", exc)
 
 
 @receiver(fraud_detected)
@@ -224,7 +225,7 @@ def on_fraud_detected(sender, **kwargs):
             tenant=kwargs.get("tenant"),
         )
     except Exception as exc:
-        logger.error("on_fraud_detected: %s", exc)
+        safe_receiver_error_handler("fraud_detected", exc)
 
 
 @receiver(milestone_reached)
@@ -239,7 +240,7 @@ def on_milestone_reached(sender, **kwargs):
             tenant=kwargs.get("tenant"),
         )
     except Exception as exc:
-        logger.error("on_milestone_reached: %s", exc)
+        safe_receiver_error_handler("milestone_reached", exc)
 
 
 @receiver(epc_dropped)
@@ -270,4 +271,90 @@ def on_epc_dropped(sender, **kwargs):
             tenant=kwargs.get("tenant"),
         )
     except Exception as exc:
-        logger.error("on_epc_dropped: %s", exc)
+        safe_receiver_error_handler("epc_dropped", exc)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fix 7: offer_expiring_soon receiver (was imported but had no @receiver)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@receiver(offer_expiring_soon)
+def on_offer_expiring_soon(sender, **kwargs):
+    """
+    Notify affiliate that their active offer is expiring within 24 hours.
+    Uses notify_offer_paused as the closest available service function
+    (there is no dedicated notify_offer_expiring — reuse with expiry context).
+    """
+    affiliate_id  = kwargs.get("affiliate_id")
+    offer_id      = kwargs.get("offer_id")
+    offer_name    = kwargs.get("offer_name", "Your Offer")
+    expires_at    = kwargs.get("expires_at", "")
+    hours_left    = kwargs.get("hours_left", 24)
+    tenant        = kwargs.get("tenant")
+
+    if not affiliate_id or not offer_id:
+        return
+
+    try:
+        from .services_cpa import _create_notification
+        _create_notification(
+            recipient_id=affiliate_id,
+            notification_type="offer.expiring_soon",
+            title=f"Offer Expiring Soon: {offer_name}",
+            body=(
+                f"Your offer \"{offer_name}\" will expire in "
+                f"{hours_left} hour{'s' if hours_left != 1 else ''}. "
+                f"Make sure to use your remaining time to maximize earnings."
+            ),
+            data={
+                "offer_id":   str(offer_id),
+                "offer_name": offer_name,
+                "expires_at": str(expires_at),
+                "hours_left": hours_left,
+            },
+            tenant=tenant,
+        )
+    except Exception as exc:
+        safe_receiver_error_handler("offer_expiring_soon", exc)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fix 7: payout_failed receiver (was imported but had no @receiver)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@receiver(payout_failed)
+def on_payout_failed(sender, **kwargs):
+    """
+    Notify affiliate when a scheduled payout fails (payment processor error,
+    invalid bank details, compliance hold, etc.).
+    """
+    affiliate_id = kwargs.get("affiliate_id")
+    payout_id    = kwargs.get("payout_id")
+    amount       = kwargs.get("amount", "$0.00")
+    reason       = kwargs.get("reason", "Payment processing failed.")
+    retry_at     = kwargs.get("retry_at")
+    tenant       = kwargs.get("tenant")
+
+    if not affiliate_id:
+        return
+
+    try:
+        from .services_cpa import _create_notification
+        body = f"Your payout of {amount} could not be processed. Reason: {reason}"
+        if retry_at:
+            body += f" We will retry on {retry_at}."
+
+        _create_notification(
+            recipient_id=affiliate_id,
+            notification_type="payout.failed",
+            title="Payout Failed",
+            body=body,
+            data={
+                "payout_id":   str(payout_id) if payout_id else None,
+                "amount":      amount,
+                "reason":      reason,
+                "retry_at":    str(retry_at) if retry_at else None,
+            },
+            tenant=tenant,
+        )
+    except Exception as exc:
+        safe_receiver_error_handler("payout_failed", exc)

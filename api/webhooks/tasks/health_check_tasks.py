@@ -11,6 +11,11 @@ from ..models import WebhookEndpoint, WebhookHealthLog
 from ..services.analytics import HealthMonitorService
 from ..choices import WebhookStatus
 
+import logging
+
+logger = logging.getLogger('ainul.webhooks.tasks.health.check.tasks')
+
+
 
 @shared_task
 def health_check_all_endpoints():
@@ -21,6 +26,7 @@ def health_check_all_endpoints():
     Returns:
         dict: Summary of health check operations
     """
+    logger.info('[Task] health_check_all_endpoints started')
     try:
         # Get all active endpoints
         active_endpoints = WebhookEndpoint.objects.filter(status=WebhookStatus.ACTIVE)
@@ -45,7 +51,7 @@ def health_check_all_endpoints():
                 
             except Exception as e:
                 error_count += 1
-                print(f"Failed to check health for endpoint {endpoint.id}: {e}")
+                logger.error("Failed to check health for endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -74,6 +80,7 @@ def health_check_endpoint(self, endpoint_id):
     Returns:
         dict: Result of the health check
     """
+    logger.info('[Task] health_check_endpoint started')
     try:
         # Get the endpoint
         endpoint = WebhookEndpoint.objects.get(id=endpoint_id)
@@ -114,6 +121,7 @@ def health_check_endpoint_batch(endpoint_ids):
     Returns:
         dict: Summary of health check operations
     """
+    logger.info('[Task] health_check_endpoint_batch started')
     try:
         # Get endpoints
         endpoints = WebhookEndpoint.objects.filter(id__in=endpoint_ids)
@@ -138,7 +146,7 @@ def health_check_endpoint_batch(endpoint_ids):
                 
             except Exception as e:
                 error_count += 1
-                print(f"Failed to check health for endpoint {endpoint.id}: {e}")
+                logger.error("Failed to check health for endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -165,6 +173,7 @@ def schedule_health_checks():
     Returns:
         dict: Summary of scheduled health checks
     """
+    logger.info('[Task] schedule_health_checks started')
     try:
         # Get endpoints that need health checks
         # Check endpoints that haven't been checked in the last 5 minutes
@@ -184,7 +193,7 @@ def schedule_health_checks():
                 health_check_endpoint.delay(str(endpoint.id))
                 scheduled_count += 1
             except Exception as e:
-                print(f"Failed to schedule health check for endpoint {endpoint.id}: {e}")
+                logger.error("Failed to schedule health check for endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -211,6 +220,7 @@ def cleanup_old_health_logs(days=30):
     Returns:
         dict: Summary of cleanup operations
     """
+    logger.info('[Task] cleanup_old_health_logs started')
     try:
         # Calculate cutoff date
         cutoff_date = timezone.now() - timedelta(days=days)
@@ -227,7 +237,7 @@ def cleanup_old_health_logs(days=30):
                 log.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete health log {log.id}: {e}")
+                logger.error("Failed to delete health log %s: %s", log.id, e)
         
         return {
             'success': True,
@@ -255,6 +265,7 @@ def generate_health_report(hours=24):
     Returns:
         dict: Health report summary
     """
+    logger.info('[Task] generate_health_report started')
     try:
         # Calculate time window
         since = timezone.now() - timedelta(hours=hours)
@@ -279,7 +290,7 @@ def generate_health_report(hours=24):
                 uptime = (healthy / total * 100) if total > 0 else 0
                 
                 endpoint_stats[str(endpoint.id)] = {
-                    'endpoint_label': endpoint.label or endpoint.url,
+                    'endpoint_label': endpoint.label or endpoint.target_url,
                     'total_checks': total,
                     'healthy_checks': healthy,
                     'uptime_percentage': round(uptime, 2)
@@ -312,6 +323,7 @@ def health_monitor_summary():
     Returns:
         dict: Health monitoring summary
     """
+    logger.info('[Task] health_monitor_summary started')
     try:
         from django.db.models import Count, Avg
         
@@ -350,3 +362,43 @@ def health_monitor_summary():
             'success': False,
             'error': str(e)
         }
+
+@shared_task(bind=True)
+def schedule_health_check(self, endpoint_id, interval_minutes=5):
+    """
+    Run a single health check for an endpoint. Intended to be invoked
+    periodically (e.g. via django_celery_beat's PeriodicTask, keyed on
+    interval_minutes) rather than self-rescheduling — Celery's beat
+    scheduler, already an installed app here, is the standard mechanism for
+    recurring tasks rather than tasks re-queuing themselves.
+
+    Args:
+        endpoint_id: WebhookEndpoint pk
+        interval_minutes: informational; the actual recurrence should be
+            configured via a PeriodicTask pointing at this task
+
+    Returns:
+        The check_endpoint_health() result dict
+    """
+    try:
+        endpoint = WebhookEndpoint.objects.get(id=endpoint_id)
+    except WebhookEndpoint.DoesNotExist:
+        logger.error(f"schedule_health_check: endpoint {endpoint_id} not found")
+        return {'success': False, 'error': 'endpoint not found'}
+
+    return HealthMonitorService().check_endpoint_health(endpoint)
+
+
+@shared_task(bind=True)
+def cancel_health_check(self, endpoint_id, task_id=None):
+    """
+    Placeholder for cancelling a scheduled health check. Real cancellation
+    of a recurring check means deleting/disabling the corresponding
+    django_celery_beat PeriodicTask row, not revoking a single task_id
+    (there's no long-running task instance to revoke between runs).
+
+    Returns:
+        bool: True (accepted)
+    """
+    logger.info(f"cancel_health_check requested for endpoint={endpoint_id} task_id={task_id}")
+    return True

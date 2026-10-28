@@ -1,5 +1,10 @@
 """
-VPN Detection System with Defensive Coding and Bulletproof Patterns
+Enhanced VPN Detection System with comprehensive security model integration
+Author: System Security Team
+Version: 2.0.0
+
+Advanced VPN/Proxy detection with multiple data sources, real-time analysis,
+and comprehensive security model integration for complete threat assessment.
 """
 
 import logging
@@ -7,6 +12,7 @@ import requests
 import ipaddress
 import json
 import time
+import hashlib
 from typing import Optional, Dict, Any, Tuple, List
 from django.conf import settings
 from django.core.cache import cache
@@ -15,6 +21,17 @@ from datetime import timedelta
 import functools
 
 logger = logging.getLogger(__name__)
+
+# Import security models for enhanced VPN detection integration
+try:
+    from .models import (
+        SecurityLog, IPBlacklist, ThreatIntelligence, 
+        GeolocationLog, SecurityIncident, RiskScore
+    )
+    SECURITY_MODELS_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Security models import failed in VPN detector: {e}")
+    SECURITY_MODELS_AVAILABLE = False
 
 
 class VPNServiceError(Exception):
@@ -395,7 +412,7 @@ class VPNDetector:
     
     def is_vpn(self, ip_address: str) -> Tuple[bool, Dict[str, Any]]:
         """
-        Main method to check if IP is VPN with comprehensive defensive coding
+        Enhanced main method to check if IP is VPN with comprehensive security model integration
         """
         # Update stats safely
         self.stats['total_checks'] = self.stats.get('total_checks', 0) + 1
@@ -411,7 +428,8 @@ class VPNDetector:
             'service': 'none',
             'error': None,
             'timestamp': timezone.now().isoformat(),
-            'patterns': []
+            'patterns': [],
+            'security_model_integration': False
         }
         
         try:
@@ -438,54 +456,73 @@ class VPNDetector:
             
             self.stats['cache_misses'] = self.stats.get('cache_misses', 0) + 1
             
-            # Check with services in priority order
-            services_by_priority = sorted(
-                self.services.items(),
-                key=lambda x: x[1].get('priority', 1)
-            )
-            
-            final_result = None
-            
-            for service_name, service_config in services_by_priority:
-                try:
-                    self.stats['service_calls'] = self.stats.get('service_calls', 0) + 1
-                    
-                    service_result = self.check_ip_with_service(
-                        ip_address, 
-                        service_name, 
-                        service_config
-                    )
-                    
-                    if service_result:
-                        confidence = service_result.get('confidence', 0)
-                        threshold = self.config.get('threshold_score', 70)
+            # Check security models first for existing data
+            security_result = self._check_security_models(ip_address)
+            if security_result:
+                confidence = security_result.get('confidence', 0)
+                threshold = self.config.get('threshold_score', 70)
+                
+                if confidence >= threshold:
+                    final_result = security_result
+                    final_result['security_model_integration'] = True
+                    logger.info(f"VPN detected by security models with confidence {confidence}%")
+                else:
+                    # Continue with external services if security models have low confidence
+                    pass
+        
+            # Check with external services if needed
+            if not security_result or security_result.get('confidence', 0) < threshold:
+                services_by_priority = sorted(
+                    self.services.items(),
+                    key=lambda x: x[1].get('priority', 1)
+                )
+                
+                final_result = None
+                
+                for service_name, service_config in services_by_priority:
+                    try:
+                        self.stats['service_calls'] = self.stats.get('service_calls', 0) + 1
                         
-                        if confidence >= threshold:
-                            final_result = service_result
-                            logger.info(f"VPN detected by {service_name} with confidence {confidence}%")
-                            break
-                        else:
-                            logger.debug(f"Service {service_name} returned low confidence: {confidence}%")
-                    
-                except VPNServiceUnavailableError:
-                    logger.warning(f"Service {service_name} unavailable, trying next...")
-                    continue
-                except Exception as e:
-                    logger.error(f"Error with service {service_name}: {str(e)}")
-                    self.stats['errors'] = self.stats.get('errors', 0) + 1
-                    continue
-            
-            # If no service returned high confidence, use local patterns
-            if not final_result:
-                local_result = self._check_local_patterns(ip_address)
-                # Merge results with local_result taking priority
-                final_result = default_result.copy()
-                final_result.update(local_result)
-                final_result['service'] = 'local_patterns'
+                        service_result = self.check_ip_with_service(
+                            ip_address, 
+                            service_name, 
+                            service_config
+                        )
+                        
+                        if service_result:
+                            confidence = service_result.get('confidence', 0)
+                            threshold = self.config.get('threshold_score', 70)
+                            
+                            if confidence >= threshold:
+                                final_result = service_result
+                                logger.info(f"VPN detected by {service_name} with confidence {confidence}%")
+                                break
+                            else:
+                                logger.debug(f"Service {service_name} returned low confidence: {confidence}%")
+                        
+                    except VPNServiceUnavailableError:
+                        logger.warning(f"Service {service_name} unavailable, trying next...")
+                        continue
+                    except Exception as e:
+                        logger.error(f"Error with service {service_name}: {str(e)}")
+                        self.stats['errors'] = self.stats.get('errors', 0) + 1
+                        continue
+                
+                # If no service returned high confidence, use local patterns
+                if not final_result:
+                    local_result = self._check_local_patterns(ip_address)
+                    # Merge results with local_result taking priority
+                    final_result = default_result.copy()
+                    final_result.update(local_result)
+                    final_result['service'] = 'local_patterns'
+            else:
+                final_result = security_result
             
             # Update statistics
             if final_result.get('is_vpn', False):
                 self.stats['vpn_detections'] = self.stats.get('vpn_detections', 0) + 1
+                # Log to security models if VPN detected
+                self._log_vpn_detection_to_security_models(ip_address, final_result)
             
             if final_result.get('is_proxy', False):
                 self.stats['proxy_detections'] = self.stats.get('proxy_detections', 0) + 1
@@ -508,6 +545,138 @@ class VPNDetector:
             })
             
             return False, error_result
+
+    def _check_security_models(self, ip_address: str) -> Optional[Dict[str, Any]]:
+        """
+        Check security models for existing VPN/proxy data
+        """
+        if not SECURITY_MODELS_AVAILABLE:
+            return None
+        
+        try:
+            # Check IPBlacklist first
+            ip_blacklist = IPBlacklist.objects.filter(
+                ip_address=ip_address,
+                is_active=True,
+                expires_at__gt=timezone.now()
+            ).first()
+            
+            if ip_blacklist:
+                return {
+                    'is_vpn': True,
+                    'is_proxy': True,
+                    'confidence': 90,
+                    'service': 'ip_blacklist',
+                    'details': {
+                        'reason': ip_blacklist.reason,
+                        'blacklist_type': ip_blacklist.blacklist_type,
+                        'created_at': ip_blacklist.created_at.isoformat()
+                    },
+                    'timestamp': timezone.now().isoformat()
+                }
+            
+            # Check ThreatIntelligence
+            threat_data = ThreatIntelligence.objects.filter(
+                indicators__contains=[ip_address],
+                is_active=True
+            ).first()
+            
+            if threat_data:
+                return {
+                    'is_vpn': threat_data.indicator_type in ['vpn', 'proxy'],
+                    'is_proxy': threat_data.indicator_type in ['vpn', 'proxy'],
+                    'confidence': threat_data.confidence * 100,
+                    'service': 'threat_intelligence',
+                    'details': {
+                        'threat_type': threat_data.threat_type,
+                        'severity': threat_data.severity,
+                        'indicator_type': threat_data.indicator_type
+                    },
+                    'timestamp': timezone.now().isoformat()
+                }
+            
+            # Check GeolocationLog for suspicious patterns
+            geo_logs = GeolocationLog.objects.filter(
+                ip_address=ip_address
+            ).order_by('-queried_at')[:10]
+            
+            if geo_logs.exists():
+                # Analyze geolocation patterns
+                recent_logs = geo_logs[:5]
+                unique_countries = set(log.country for log in recent_logs if log.country)
+                
+                # If IP has been seen from multiple countries recently, might be VPN
+                if len(unique_countries) > 2:
+                    return {
+                        'is_vpn': True,
+                        'is_proxy': True,
+                        'confidence': 60,
+                        'service': 'geolocation_analysis',
+                        'details': {
+                            'countries': list(unique_countries),
+                            'pattern': 'multiple_countries',
+                            'log_count': len(recent_logs)
+                        },
+                        'timestamp': timezone.now().isoformat()
+                    }
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error checking security models: {e}")
+            return None
+
+    def _log_vpn_detection_to_security_models(self, ip_address: str, detection_result: Dict[str, Any]) -> None:
+        """
+        Log VPN detection to security models for tracking
+        """
+        if not SECURITY_MODELS_AVAILABLE:
+            return
+        
+        try:
+            # Log to SecurityLog
+            SecurityLog.objects.create(
+                security_type='vpn_detected',
+                severity='warning',
+                ip_address=ip_address,
+                metadata={
+                    'detection_service': detection_result.get('service'),
+                    'confidence': detection_result.get('confidence'),
+                    'is_proxy': detection_result.get('is_proxy'),
+                    'is_tor': detection_result.get('is_tor'),
+                    'details': detection_result.get('details', {}),
+                    'patterns': detection_result.get('patterns', [])
+                }
+            )
+            
+            # Update or create IPBlacklist entry if confidence is high
+            confidence = detection_result.get('confidence', 0)
+            if confidence >= 80:
+                IPBlacklist.objects.update_or_create(
+                    ip_address=ip_address,
+                    defaults={
+                        'reason': f"VPN detection by {detection_result.get('service')}",
+                        'blacklist_type': 'vpn',
+                        'is_active': True,
+                        'expires_at': timezone.now() + timezone.timedelta(days=30)
+                    }
+                )
+            
+            # Create or update ThreatIntelligence entry
+            ThreatIntelligence.objects.update_or_create(
+                indicators=[ip_address],
+                defaults={
+                    'threat_type': 'vpn_proxy',
+                    'indicator_type': 'vpn',
+                    'severity': 'medium' if confidence >= 70 else 'low',
+                    'confidence': confidence / 100,
+                    'is_active': True,
+                    'expires_at': timezone.now() + timezone.timedelta(days=7)
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"Error logging VPN detection to security models: {e}")
     
     def _fallback_check(self, ip_address: str) -> Tuple[bool, Dict[str, Any]]:
         """

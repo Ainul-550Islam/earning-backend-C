@@ -32,7 +32,7 @@ class MTCostTracker:
     def record(self, provider: str, char_count: int, success: bool = True):
         """Translation cost record করে।"""
         try:
-            from ..models.analytics import LocalizationAnalytics
+            from api.localization.models.analytics import LocalizationAnalytics
             LocalizationAnalytics.log_event(
                 event_type="mt_usage",
                 extra_data={
@@ -61,7 +61,7 @@ class MTCostTracker:
     def get_monthly_report(self) -> Dict:
         """Monthly cost report।"""
         try:
-            from ..models.analytics import LocalizationAnalytics
+            from api.localization.models.analytics import LocalizationAnalytics
             from django.db.models import Sum
             from django.utils import timezone
             from datetime import timedelta
@@ -97,7 +97,7 @@ class MTCostTracker:
 
     def _estimate_tm_savings(self) -> float:
         try:
-            from ..models.translation import TranslationMemory
+            from api.localization.models.translation import TranslationMemory
             tm_hits = TranslationMemory.objects.filter(usage_count__gt=0).aggregate(
                 total=__import__("django.db.models", fromlist=["Sum"]).Sum("usage_count")
             )["total"] or 0

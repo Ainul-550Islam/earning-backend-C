@@ -10,10 +10,42 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from ..services.core import DispatchService
+import logging
+
+from ..services.core.DispatchService import DispatchService
 from ..models import WebhookSubscription
 
 User = get_user_model()
+
+logger = logging.getLogger("ainul.webhooks.signals")
+
+
+def _resolve_withdrawal_request_model():
+    """
+    BUG FIX: this previously imported `from apps.wallets.models import
+    WithdrawalRequest`, a package (`apps.`) that does not exist in this
+    project. There is no single unambiguous owner without the sibling app
+    source (WithdrawalRequest could live alongside the wallet models, or in
+    a dedicated payout_queue app per the project's directory listing), so
+    this tries the most likely candidates in order. Downstream
+    (connect_withdrawal_signals) already degrades safely if this raises
+    ImportError.
+    """
+    candidates = (
+        "api.wallet.models",
+        "api.payout_queue.models",
+    )
+    last_error = None
+    for module_path in candidates:
+        try:
+            module = __import__(module_path, fromlist=["WithdrawalRequest"])
+            return module.WithdrawalRequest
+        except (ImportError, AttributeError) as e:
+            last_error = e
+            continue
+    raise ImportError(
+        f"Could not locate WithdrawalRequest model in any of {candidates}: {last_error}"
+    )
 
 
 # Signal definitions
@@ -24,6 +56,9 @@ withdrawal_completed = Signal()
 withdrawal_failed = Signal()
 
 
+from ._isolation import isolated_receiver
+
+@isolated_receiver
 def on_withdrawal_requested(sender, instance, created, **kwargs):
     """
     Signal handler for withdrawal request creation.
@@ -60,11 +95,11 @@ def on_withdrawal_requested(sender, instance, created, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -78,9 +113,10 @@ def on_withdrawal_requested(sender, instance, created, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending withdrawal requested webhook: {e}")
+            logger.error("sending withdrawal requested webhook: %s", e)
 
 
+@isolated_receiver
 def on_withdrawal_approved(sender, instance, **kwargs):
     """
     Signal handler for withdrawal approval.
@@ -118,11 +154,11 @@ def on_withdrawal_approved(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -136,9 +172,10 @@ def on_withdrawal_approved(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending withdrawal approved webhook: {e}")
+            logger.error("sending withdrawal approved webhook: %s", e)
 
 
+@isolated_receiver
 def on_withdrawal_rejected(sender, instance, **kwargs):
     """
     Signal handler for withdrawal rejection.
@@ -176,11 +213,11 @@ def on_withdrawal_rejected(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -194,9 +231,10 @@ def on_withdrawal_rejected(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending withdrawal rejected webhook: {e}")
+            logger.error("sending withdrawal rejected webhook: %s", e)
 
 
+@isolated_receiver
 def on_withdrawal_completed(sender, instance, **kwargs):
     """
     Signal handler for withdrawal completion.
@@ -235,11 +273,11 @@ def on_withdrawal_completed(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -253,9 +291,10 @@ def on_withdrawal_completed(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending withdrawal completed webhook: {e}")
+            logger.error("sending withdrawal completed webhook: %s", e)
 
 
+@isolated_receiver
 def on_withdrawal_failed(sender, instance, **kwargs):
     """
     Signal handler for withdrawal failure.
@@ -294,11 +333,11 @@ def on_withdrawal_failed(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -312,44 +351,42 @@ def on_withdrawal_failed(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending withdrawal failed webhook: {e}")
+            logger.error("sending withdrawal failed webhook: %s", e)
 
 
 # Connect signal handlers
 # Note: These would be connected in the apps.py ready() method
 def connect_withdrawal_signals():
-    """Connect withdrawal-related signals to their handlers."""
-    from apps.wallets.models import WithdrawalRequest
-    
-    try:
-        post_save.connect(on_withdrawal_requested, sender=WithdrawalRequest)
-        post_save.connect(on_withdrawal_approved, sender=WithdrawalRequest)
-        post_save.connect(on_withdrawal_rejected, sender=WithdrawalRequest)
-        post_save.connect(on_withdrawal_completed, sender=WithdrawalRequest)
-        post_save.connect(on_withdrawal_failed, sender=WithdrawalRequest)
-        
-        print("Withdrawal signals connected successfully")
-    except ImportError:
-        # Withdrawal app not available
-        print("Withdrawal app not available, skipping signal connections")
-    except Exception as e:
-        print(f"Error connecting withdrawal signals: {e}")
+    """
+    Connect withdrawal-related signals to their handlers.
+
+    BUG FIX: was catching its own ImportError/Exception and just logging,
+    so it always returned normally - silently defeating connector.py's
+    _try_connect(), which exists specifically to catch this ImportError
+    and report {'withdrawal': False}. System was logging "withdrawal
+    signals connected successfully" even when the sibling app genuinely
+    wasn't installed and zero handlers got connected. Let exceptions
+    propagate to connector.py, the single owner of that decision.
+    """
+    WithdrawalRequest = _resolve_withdrawal_request_model()
+
+    post_save.connect(on_withdrawal_requested, sender=WithdrawalRequest)
+    post_save.connect(on_withdrawal_approved, sender=WithdrawalRequest)
+    post_save.connect(on_withdrawal_rejected, sender=WithdrawalRequest)
+    post_save.connect(on_withdrawal_completed, sender=WithdrawalRequest)
+    post_save.connect(on_withdrawal_failed, sender=WithdrawalRequest)
+
+    logger.info("[Webhooks] %s", "Withdrawal signals connected successfully")
 
 
 def disconnect_withdrawal_signals():
     """Disconnect withdrawal-related signals."""
-    from apps.wallets.models import WithdrawalRequest
-    
-    try:
-        post_save.disconnect(on_withdrawal_requested, sender=WithdrawalRequest)
-        post_save.disconnect(on_withdrawal_approved, sender=WithdrawalRequest)
-        post_save.disconnect(on_withdrawal_rejected, sender=WithdrawalRequest)
-        post_save.disconnect(on_withdrawal_completed, sender=WithdrawalRequest)
-        post_save.disconnect(on_withdrawal_failed, sender=WithdrawalRequest)
-        
-        print("Withdrawal signals disconnected successfully")
-    except ImportError:
-        # Withdrawal app not available
-        print("Withdrawal app not available, skipping signal disconnection")
-    except Exception as e:
-        print(f"Error disconnecting withdrawal signals: {e}")
+    WithdrawalRequest = _resolve_withdrawal_request_model()
+
+    post_save.disconnect(on_withdrawal_requested, sender=WithdrawalRequest)
+    post_save.disconnect(on_withdrawal_approved, sender=WithdrawalRequest)
+    post_save.disconnect(on_withdrawal_rejected, sender=WithdrawalRequest)
+    post_save.disconnect(on_withdrawal_completed, sender=WithdrawalRequest)
+    post_save.disconnect(on_withdrawal_failed, sender=WithdrawalRequest)
+
+    logger.info("[Webhooks] %s", "Withdrawal signals disconnected successfully")

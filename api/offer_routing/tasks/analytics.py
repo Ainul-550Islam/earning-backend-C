@@ -4,6 +4,10 @@ Analytics Tasks for Offer Routing System
 This module contains background tasks for analytics,
 including data aggregation, insight generation, and reporting.
 """
+from django.db.models import Avg
+from django.db.models import Count
+from django.db.models import Q
+from django.db.models import Sum
 
 import logging
 from celery import shared_task

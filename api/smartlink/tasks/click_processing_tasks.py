@@ -21,7 +21,10 @@ def process_click_async(self, smartlink_id: int, offer_id: int = None, **context
             offer_id=offer_id,
             context=context,
         )
-        logger.debug(f"Click recorded async: sl#{smartlink_id} offer#{offer_id} → click#{click.pk if click else None}")
+        logger.debug(
+            f"Click recorded async: sl#{smartlink_id} offer#{offer_id} "
+            f"→ click#{click.pk if click else None}"
+        )
         return {'click_id': click.pk if click else None}
     except Exception as exc:
         logger.error(f"process_click_async failed: {exc}", exc_info=True)
@@ -33,7 +36,8 @@ def record_bot_click(smartlink_id: int, ip: str, user_agent: str,
                      bot_type: str = '', country: str = ''):
     """Record bot click to BotClick table for reporting."""
     try:
-        from ..models import SmartLink, BotClick
+        from api.smartlink.models import SmartLink
+        from api.smartlink.models.click import BotClick
         sl = SmartLink.objects.get(pk=smartlink_id)
         BotClick.objects.create(
             smartlink=sl,
@@ -51,7 +55,7 @@ def record_bot_click(smartlink_id: int, ip: str, user_agent: str,
 def log_redirect_async(slug: str, result: dict):
     """Async redirect log creation."""
     try:
-        from ..models import SmartLink, RedirectLog
+        from api.smartlink.models import SmartLink, RedirectLog
         sl = SmartLink.objects.get(slug=slug)
         RedirectLog.objects.create(
             smartlink=sl,
@@ -74,7 +78,7 @@ def log_redirect_async(slug: str, result: dict):
 def update_cap_tracker_db(pool_entry_id: int):
     """Persist cap counter increment to DB from Redis."""
     try:
-        from ..models import OfferPoolEntry, OfferCapTracker
+        from api.smartlink.models import OfferPoolEntry, OfferCapTracker
         from ..choices import CapPeriod
         entry = OfferPoolEntry.objects.get(pk=pool_entry_id)
         today = timezone.now().date()
@@ -87,7 +91,9 @@ def update_cap_tracker_db(pool_entry_id: int):
                 defaults={'cap_limit': entry.cap_per_day, 'clicks_count': 0},
             )
             from django.db.models import F
-            OfferCapTracker.objects.filter(pk=tracker.pk).update(clicks_count=F('clicks_count') + 1)
+            OfferCapTracker.objects.filter(pk=tracker.pk).update(
+                clicks_count=F('clicks_count') + 1
+            )
             tracker.refresh_from_db()
             if tracker.clicks_count >= entry.cap_per_day:
                 OfferCapTracker.objects.filter(pk=tracker.pk).update(is_capped=True)
@@ -103,17 +109,29 @@ def attribute_conversion(offer_id: int, sub1: str = '', ip: str = '',
         from ..services.click.ClickAttributionService import ClickAttributionService
         svc = ClickAttributionService()
         click = svc.attribute(
-            offer_id=offer_id, sub1=sub1, ip=ip,
-            payout=payout, transaction_id=transaction_id,
+            offer_id=offer_id,
+            sub1=sub1,
+            ip=ip,
+            payout=payout,
+            transaction_id=transaction_id,
         )
         if click:
-            from ..services.redirect.TrackingPixelService import TrackingPixelService
+            # FIX: properly guarded optional import — not at module level or wrong indentation
             try:
-    from api.offer_inventory.models import Offer
-except ImportError:
-    Offer = None
-            offer = Offer.objects.get(pk=offer_id)
-            TrackingPixelService().fire_postback(offer, click.pk, payout)
+                from django.conf import settings
+                from django.apps import apps
+                offer_model_label = getattr(
+                    settings, 'SMARTLINK_OFFER_MODEL', 'offer_inventory.Offer'
+                )
+                OfferModel = apps.get_model(offer_model_label)
+                offer = OfferModel.objects.get(pk=offer_id)
+                from ..services.redirect.TrackingPixelService import TrackingPixelService
+                TrackingPixelService().fire_postback(offer, click.pk, payout)
+            except (LookupError, ImportError, Exception) as fire_err:
+                # Postback pixel fire is optional — attribution already recorded
+                logger.warning(f"Postback pixel fire skipped: {fire_err}")
+
         return {'attributed': click is not None, 'click_id': click.pk if click else None}
     except Exception as e:
-        logger.error(f"attribute_conversion failed: {e}")
+        logger.error(f"attribute_conversion failed: {e}", exc_info=True)
+        return {'attributed': False, 'click_id': None, 'error': str(e)}

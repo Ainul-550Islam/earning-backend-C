@@ -4,6 +4,7 @@ WebSocket Consumers for Offer Routing System
 This module provides WebSocket consumers for real-time routing decisions,
 including live routing stats, cap monitoring, and dashboard updates.
 """
+from django.db import models
 
 import json
 import asyncio
@@ -22,6 +23,7 @@ from .models import (
 )
 from .services.analytics import analytics_service
 from .services.monitoring import monitoring_service
+from api.offer_routing.models.core import OfferRoute
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -49,6 +51,8 @@ class RoutingDashboardConsumer(AsyncWebsocketConsumer):
             # Get tenant from user
             tenant_id = getattr(user, 'tenant_id', None)
             
+            await self.accept()
+
             # Join tenant-specific group
             group_name = f"routing_dashboard_{tenant_id}"
             await self.channel_layer.group_add(
@@ -170,6 +174,18 @@ class RoutingDashboardConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             logger.error(f"Error getting dashboard stats: {e}")
             return {}
+
+    async def receive(self, text_data):
+        """Handle incoming WebSocket messages from client."""
+        import json
+        try:
+            data = json.loads(text_data)
+            action = data.get('action', 'ping')
+            if action == 'ping':
+                await self.send(text_data=json.dumps({'type': 'pong', 'status': 'ok'}))
+        except Exception as e:
+            await self.send(text_data=json.dumps({'type': 'error', 'message': str(e)}))
+
 
 
 class CapMonitorConsumer(AsyncWebsocketConsumer):
@@ -363,6 +379,18 @@ class CapMonitorConsumer(AsyncWebsocketConsumer):
             logger.error(f"Error checking cap alerts: {e}")
             return []
 
+    async def receive(self, text_data):
+        """Handle incoming WebSocket messages from client."""
+        import json
+        try:
+            data = json.loads(text_data)
+            action = data.get('action', 'ping')
+            if action == 'ping':
+                await self.send(text_data=json.dumps({'type': 'pong', 'status': 'ok'}))
+        except Exception as e:
+            await self.send(text_data=json.dumps({'type': 'error', 'message': str(e)}))
+
+
 
 class RoutingDecisionConsumer(AsyncWebsocketConsumer):
     """
@@ -463,6 +491,18 @@ class RoutingDecisionConsumer(AsyncWebsocketConsumer):
             logger.error(f"Error getting recent decisions: {e}")
             return []
 
+    async def receive(self, text_data):
+        """Handle incoming WebSocket messages from client."""
+        import json
+        try:
+            data = json.loads(text_data)
+            action = data.get('action', 'ping')
+            if action == 'ping':
+                await self.send(text_data=json.dumps({'type': 'pong', 'status': 'ok'}))
+        except Exception as e:
+            await self.send(text_data=json.dumps({'type': 'error', 'message': str(e)}))
+
+
 
 class PerformanceMetricsConsumer(AsyncWebsocketConsumer):
     """
@@ -483,6 +523,8 @@ class PerformanceMetricsConsumer(AsyncWebsocketConsumer):
             
             tenant_id = getattr(user, 'tenant_id', None)
             
+            await self.accept()
+
             # Join performance metrics group
             group_name = f"performance_metrics_{tenant_id}"
             await self.channel_layer.group_add(
@@ -598,6 +640,26 @@ class PerformanceMetricsConsumer(AsyncWebsocketConsumer):
 
 
 # Utility functions for WebSocket consumers
+    async def routing_dashboard_update(self, event):
+        """Handle broadcast messages for this consumer."""
+        await self.send(text_data=json.dumps(event.get("data", {})))
+
+    async def cap_alert(self, event):
+        """Receive cap alert pushed from channel layer."""
+        await self.send(text_data=json.dumps(event.get("data", {})))
+
+    async def cap_update(self, event):
+        """Receive cap update pushed from channel layer."""
+        await self.send(text_data=json.dumps(event.get("data", {})))
+
+    async def new_decision(self, event):
+        """Receive new routing decision pushed from channel layer."""
+        await self.send(text_data=json.dumps(event.get("data", {})))
+
+    async def metrics_update(self, event):
+        """Receive performance metrics update from channel layer."""
+        await self.send(text_data=json.dumps(event.get("data", {})))
+
 async def broadcast_to_tenant(tenant_id, message_type, data):
     """Broadcast message to all WebSocket connections for a tenant."""
     try:
@@ -649,6 +711,18 @@ async def send_alert(tenant_id, alert_type, message, data=None):
     
     except Exception as e:
         logger.error(f"Error sending alert: {e}")
+
+    async def receive(self, text_data):
+        """Handle incoming WebSocket messages from client."""
+        import json
+        try:
+            data = json.loads(text_data)
+            action = data.get('action', 'ping')
+            if action == 'ping':
+                await self.send(text_data=json.dumps({'type': 'pong', 'status': 'ok'}))
+        except Exception as e:
+            await self.send(text_data=json.dumps({'type': 'error', 'message': str(e)}))
+
 
 
 # Consumer registry

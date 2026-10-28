@@ -110,13 +110,16 @@ class ConversionHandler:
         # Clawback from wallet
         try:
             from api.wallet.services import debit_for_reversal
-            debit_for_reversal(
-                user=conversion.user,
-                amount=conversion.actual_payout,
-                points=conversion.points_awarded,
-                ref_id=str(conversion.id),
-                description=f"Conversion reversal: {conversion.offer_id}",
-            )
+            if not getattr(conversion, 'wallet_credited', False):
+                logger.info('Reversal of conversion=%s: wallet was never credited, no wallet debit', conversion.id)
+            else:
+                debit_for_reversal(
+                    user=conversion.user,
+                    amount=conversion.actual_payout,
+                    points=conversion.points_awarded,
+                    ref_id=str(conversion.id),
+                    description=f"Conversion reversal: {conversion.offer_id}",
+                )
         except Exception as exc:
             logger.error("Wallet debit failed during reversal %s: %s", conversion.id, exc)
 

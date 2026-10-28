@@ -8,6 +8,7 @@ from .service import LivenessService
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
 def run_liveness_check(request):
@@ -50,8 +51,6 @@ def run_liveness_check(request):
         'deepfake_probability': deepfake['deepfake_probability'],
     })
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_liveness_history(request):
     """User's own liveness check history"""
@@ -69,9 +68,6 @@ def my_liveness_history(request):
         'passed':        c.passed,
         'created_at':    c.created_at,
     } for c in checks])
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def liveness_admin_list(request):
     """Admin — All liveness checks with filters"""

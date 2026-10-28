@@ -39,14 +39,12 @@ class TOSManager:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def accept_tos_view(request):
     mgr = TOSManager()
     ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
     return Response(mgr.accept_tos(request.user.id, ip=ip))
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def tos_status_view(request):
     mgr = TOSManager()

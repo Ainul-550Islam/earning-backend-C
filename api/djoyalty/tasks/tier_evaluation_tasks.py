@@ -31,7 +31,7 @@ def evaluate_all_tiers_task(self):
                 logger.warning('[djoyalty] Tier eval error for %s: %s', customer.id, e)
 
         logger.info('[djoyalty] Tier evaluation done: %d ok, %d errors', count, errors)
-        return {'evaluated': count, 'errors': errors}
+        return count
     except Exception as exc:
         logger.error('[djoyalty] evaluate_all_tiers error: %s', exc)
         raise self.retry(exc=exc) if hasattr(self, 'retry') else exc
@@ -39,7 +39,7 @@ def evaluate_all_tiers_task(self):
 
 @shared_task(name='djoyalty.evaluate_single_customer_tier', bind=True, max_retries=3, default_retry_delay=30)
 def evaluate_single_customer_tier_task(self, customer_id: int):
-    """Single customer tier evaluation — signal থেকে trigger হয়।"""
+    """Single customer tier evaluation -- signal থেকে trigger হয়।"""
     try:
         from ..models.core import Customer
         from ..services.tiers.TierEvaluationService import TierEvaluationService

@@ -12,19 +12,19 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q, Count, Avg, Sum
 from django.core.cache import cache
-from ....models import (
+from offer_routing.models import (
     OfferRoute, UserOfferHistory, OfferScore, OfferAffinityScore,
     UserPreferenceVector, RoutingDecisionLog, PersonalizationConfig
 )
-from ....choices import PersonalizationAlgorithm, EventType
-from ....constants import (
+from offer_routing.choices import PersonalizationAlgorithm, EventType
+from offer_routing.constants import (
     HYBRID_CACHE_TIMEOUT, PERSONALIZATION_CACHE_TIMEOUT,
     MIN_HYBRID_USERS, MAX_HYBRID_OFFERS,
     HYBRID_WEIGHT_DECAY, HYBRID_CONFIDENCE_THRESHOLD,
     COLLABORATIVE_WEIGHT, CONTENT_BASED_WEIGHT, HYBRID_WEIGHT
 )
-from ....exceptions import PersonalizationError, HybridRoutingError
-from ....utils import calculate_hybrid_score, get_user_profile_data
+from offer_routing.exceptions import PersonalizationError, HybridRoutingError
+from offer_routing.utils import calculate_hybrid_score, get_user_profile_data
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -58,8 +58,8 @@ class HybridRoutingService:
         }
         
         # Import personalization services
-        from .CollaborativeFilterService import CollaborativeFilterService
-        from .ContentBasedService import ContentBasedService
+        from offer_routing.services.personalization.CollaborativeFilterService import CollaborativeFilterService
+        from offer_routing.services.personalization.ContentBasedService import ContentBasedService
         
         self.collaborative_service = CollaborativeFilterService()
         self.content_service = ContentBasedService()

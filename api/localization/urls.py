@@ -14,7 +14,6 @@ from .viewsets import (
     NumberFormatViewSet, TranslationRequestViewSet, LocalizationConfigViewSet,
     UserPreferenceViewSet,
     InsightViewSet, AdminLocalizationViewSet,
-    ScreenshotViewSet,
     GitWebhookViewSet,
     ContentRegionViewSet,
     WorkflowViewSet, QualityViewSet, NamespaceViewSet, CPALeadViewSet,
@@ -23,6 +22,8 @@ from .viewsets import (
     CountryViewSet, CurrencyViewSet, TimezoneViewSet, CityViewSet,
     ExchangeRateViewSet, TranslationMemoryViewSet, TranslationGlossaryViewSet,
     TranslationCoverageViewSet, GeoIPViewSet, AutoTranslateViewSet, PublicViewSet,
+    CountryCurrencyViewSet, TranslationGlossaryEntryViewSet, TranslationVersionViewSet,
+    WebhookRegistrationViewSet, WebhookDeliveryLogViewSet, TranslationScreenshotViewSet,
 )
 
 router = SimpleRouter()
@@ -51,13 +52,18 @@ router.register(r'localization-config', LocalizationConfigViewSet, basename='loc
 router.register(r'user-preferences', UserPreferenceViewSet, basename='user-preference')
 router.register(r'regions', ContentRegionViewSet, basename='region')
 router.register(r'git', GitWebhookViewSet, basename='git')
-router.register(r'screenshots', ScreenshotViewSet, basename='screenshot')
 router.register(r'insights', InsightViewSet, basename='insight')
 router.register(r'admin-localization', AdminLocalizationViewSet, basename='admin-localization')
 router.register(r'workflow', WorkflowViewSet, basename='workflow')
 router.register(r'quality', QualityViewSet, basename='quality')
 router.register(r'namespaces', NamespaceViewSet, basename='namespace')
 router.register(r'cpalead', CPALeadViewSet, basename='cpalead')
+router.register(r'country-currencies', CountryCurrencyViewSet, basename='country-currency')
+router.register(r'glossary-entries', TranslationGlossaryEntryViewSet, basename='glossary-entry')
+router.register(r'translation-versions', TranslationVersionViewSet, basename='translation-version')
+router.register(r'webhooks', WebhookRegistrationViewSet, basename='webhook')
+router.register(r'webhook-logs', WebhookDeliveryLogViewSet, basename='webhook-log')
+router.register(r'screenshots', TranslationScreenshotViewSet, basename='screenshot')
 
 
 @require_http_methods(["GET"])
@@ -82,6 +88,7 @@ def api_docs(request):
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def get_translations(request, language_code):
     from .models.core import Language, Translation
@@ -91,9 +98,6 @@ def get_translations(request, language_code):
     translations = Translation.objects.filter(language=language, is_approved=True).select_related('key')
     data = {t.key.key: t.value for t in translations}
     return Response({'language': language.name, 'code': language.code, 'translations': data, 'count': len(data)})
-
-
-@api_view(['POST'])
 @permission_classes([AllowAny])
 def report_missing_translation(request):
     from .models.translation import MissingTranslation

@@ -4,6 +4,7 @@ Core Routing Engine Service
 This module contains the main routing engine that orchestrates
 all routing decisions and coordinates between different services.
 """
+from django.db import models
 
 import logging
 import time
@@ -674,3 +675,8 @@ class OfferRoutingEngine:
 
 # Singleton instance
 routing_engine = OfferRoutingEngine()
+# Single owner: canonical implementations live in subpackage
+try:
+    from offer_routing.services.core import OfferRoutingEngine
+except ImportError:
+    pass

@@ -2,15 +2,15 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..models import ClickHeatmap, SmartLink
-from ..serializers.HeatmapSerializer import HeatmapSerializer
+from api.smartlink.models import ClickHeatmap, SmartLink
+from api.smartlink.serializers.MissingTargetingSerializers import ClickHeatmapSerializer
 from ..services.analytics.HeatmapService import HeatmapService
-from ..permissions import IsPublisher
+from api.smartlink.permissions import IsPublisher
 
 
 class HeatmapViewSet(viewsets.ReadOnlyModelViewSet):
     """Geo heatmap data for a SmartLink."""
-    serializer_class = HeatmapSerializer
+    serializer_class = ClickHeatmapSerializer
     permission_classes = [IsAuthenticated, IsPublisher]
 
     def __init__(self, **kwargs):

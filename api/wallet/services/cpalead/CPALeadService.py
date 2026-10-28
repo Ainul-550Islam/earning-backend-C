@@ -108,6 +108,7 @@ class CPALeadService:
                       "geo_mult":str(geo_mult),"tier_mult":str(tier_mult),"perf_bonus":str(perf_bonus)},
             ip_address=ip_address,
             country_code=country_code,
+            skip_multipliers=True,  # ← CPALeadService pre-computes geo+tier+perf; skip double-apply
         )
 
         conversion = OfferConversion.objects.create(
@@ -178,6 +179,7 @@ class CPALeadService:
             description=f"Referral L{level} ({int(rate*100)}%) from user {referred_user_id}",
             reference_id=str(referred_user_id),
             reference_type="referral",
+            skip_multipliers=True,  # ← commission already calculated from REFERRAL_RATES; skip tier double-apply
         )
 
         # Update referral program total

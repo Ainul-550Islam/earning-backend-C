@@ -223,7 +223,7 @@ class WebhooksIntegration:
                 return False
             
             # Validate URL
-            if not endpoint.url:
+            if not endpoint.target_url:
                 return False
             
             return True
@@ -310,14 +310,14 @@ class WebhooksIntegration:
     def _matches_subscription_filters(self, subscription: WebhookSubscription, data: Dict[str, Any]) -> bool:
         """Check if data matches subscription filters."""
         try:
-            if not subscription.filter_config:
+            if not subscription.filters:
                 return True
             
             # Apply filter logic
             from ..services.filtering import FilterService
             filter_service = FilterService()
             
-            return filter_service.evaluate_filter_config(subscription.filter_config, data)
+            return filter_service.evaluate_filter_config(subscription.filters, data)
             
         except Exception as e:
             self.logger.error(f"Error checking subscription filters: {str(e)}")
@@ -380,7 +380,7 @@ class WebhooksIntegration:
     def _default_handler(self, endpoint: WebhookEndpoint, subscription: WebhookSubscription, delivery_log: WebhookDeliveryLog, context: Dict[str, Any]) -> Dict[str, Any]:
         """Default webhook handler."""
         try:
-            from ..services.core.DispatchService
+            from ..services.core.DispatchService import DispatchService
             dispatch_service = DispatchService()
             
             success = dispatch_service.emit(
@@ -432,7 +432,7 @@ class WebhooksIntegration:
                 return {
                     'endpoint_id': endpoint_id,
                     'status': endpoint.status,
-                    'url': endpoint.url,
+                    'url': endpoint.target_url,
                     'subscriptions_count': endpoint.get_subscription_count(),
                     'last_triggered_at': endpoint.last_triggered_at,
                     'created_at': endpoint.created_at,
@@ -867,7 +867,7 @@ class WebhookDeliveryHandler:
         """Handle webhook delivery."""
         try:
             # Implement delivery logic
-            from ..services.core.DispatchService
+            from ..services.core.DispatchService import DispatchService
             dispatch_service = DispatchService()
             
             success = dispatch_service.emit(
@@ -978,7 +978,7 @@ class WebhookBatchHandler:
         """Handle webhook batch processing."""
         try:
             # Implement batch processing logic
-            from ..services.batch.BatchDispatchService
+            from ..services.batch.BatchDispatchService import BatchDispatchService
             batch_service = BatchDispatchService()
             
             # Create batch

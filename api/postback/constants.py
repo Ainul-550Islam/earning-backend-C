@@ -64,3 +64,30 @@ STANDARD_FIELD_TRANSACTION_ID = "transaction_id"
 TASK_PROCESS_POSTBACK = "postback.tasks.process_postback"
 TASK_CLEANUP_OLD_LOGS = "postback.tasks.cleanup_old_logs"
 TASK_RETRY_FAILED = "postback.tasks.retry_failed_postbacks"
+TASK_FIRE_S2S_POSTBACK = "postback.tasks.fire_s2s_postback_task"
+
+# ── Standard field names (extended) ───────────────────────────────────────────
+STANDARD_FIELD_GOAL_ID = "goal_id"
+STANDARD_FIELD_SUB_ID1 = "sub_id1"
+STANDARD_FIELD_SUB_ID2 = "sub_id2"
+STANDARD_FIELD_SUB_ID3 = "sub_id3"
+
+# ── S2S Outbound Postback ─────────────────────────────────────────────────────
+S2S_DEFAULT_METHOD = "GET"
+S2S_REQUEST_TIMEOUT = 10        # seconds
+S2S_MAX_RETRIES = 3
+S2S_BACKOFF_BASE = 2            # exponential backoff base (seconds)
+S2S_LOG_RETENTION_DAYS = 30
+
+# ── Sandbox / Test endpoint ───────────────────────────────────────────────────
+SANDBOX_NETWORK_KEY_PREFIX = "test_"   # network keys starting with test_ are sandboxed
+SANDBOX_FAKE_PAYOUT = "1.00"
+SANDBOX_FAKE_LEAD_ID = "SANDBOX_LEAD_001"
+
+# ── CPAlead specific ──────────────────────────────────────────────────────────
+CPALEAD_NETWORK_KEY = "cpalead"
+CPALEAD_STATUS_APPROVED = "approved"
+CPALEAD_STATUS_PENDING = "pending"
+CPALEAD_STATUS_REVERSED = "reversed"
+
+POSTBACK_CACHE_TIMEOUT = 300

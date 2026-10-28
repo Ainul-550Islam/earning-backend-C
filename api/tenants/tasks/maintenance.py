@@ -4,6 +4,7 @@ Maintenance Tasks
 This module contains Celery tasks for maintenance operations including
 cleanup tasks, SSL certificate management, data backups, and system maintenance.
 """
+from django.db import models
 
 from celery import shared_task
 from django.utils import timezone
@@ -286,15 +287,15 @@ def cleanup_soft_deleted_tenants():
 def optimize_database():
     """
     Optimize database tables for better performance.
-    
+
     This task runs weekly to optimize database tables
     and update statistics.
     """
     logger.info("Starting database optimization")
-    
+
     try:
         from django.db import connection
-        
+
         with connection.cursor() as cursor:
             # Optimize main tables
             tables = [
@@ -307,9 +308,9 @@ def optimize_database():
                 'tenants_tenantmetric',
                 'tenants_tenantauditlog',
             ]
-            
+
             optimized_tables = []
-            
+
             for table in tables:
                 try:
                     # Run OPTIMIZE TABLE (MySQL specific)
@@ -318,34 +319,30 @@ def optimize_database():
                     logger.info(f"Optimized table: {table}")
                 except Exception as e:
                     logger.warning(f"Failed to optimize table {table}: {str(e)}")
-            
+
             result = {
                 'optimized_tables': optimized_tables,
                 'total_tables': len(tables),
             }
-            
-        except Exception as e:
-            logger.error(f"Database optimization failed: {str(e)}")
-            result = {'error': str(e)}
-        
-        logger.info(f"Database optimization completed: {result}")
-        return result
-        
+
     except Exception as e:
         logger.error(f"Database optimization failed: {str(e)}")
-        return {'error': str(e)}
+        result = {'error': str(e)}
+
+    logger.info(f"Database optimization completed: {result}")
+    return result
 
 
 @shared_task(name='tenants.maintenance.update_system_statistics')
 def update_system_statistics():
     """
     Update system-wide statistics for monitoring.
-    
+
     This task runs hourly to update system statistics
     used for monitoring and reporting.
     """
     logger.info("Starting system statistics update")
-    
+
     try:
         stats = {
             'timestamp': timezone.now().isoformat(),
@@ -360,7 +357,7 @@ def update_system_statistics():
                 'by_type': dict(Tenant.objects.filter(is_deleted=False).values('plan__plan_type').annotate(count=models.Count('id'))),
             },
         }
-        
+
         # This would store statistics in a monitoring system
         # For now, just log the stats
         logger.info(f"System statistics updated: {stats}")

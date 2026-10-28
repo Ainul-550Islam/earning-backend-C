@@ -1,3 +1,4 @@
+from django.db.models import Max
 # admin.py
 
 from django.contrib import admin
@@ -3747,7 +3748,8 @@ print(f"[DOC] Registered {registered} CMS models in default admin")
 
 def _force_register_cms():
     try:
-        from api.admin_panel.admin import admin_site as modern_site
+        # admin_site is owned by api.admin_panel — use Django's default admin
+        from django.contrib import admin as admin_module
         if modern_site is None:
             return
         pairs = [(ContentCategory, ContentCategoryAdmin), (ContentPage, ContentPageAdmin), (Banner, BannerAdmin), (FAQCategory, FAQCategoryAdmin), (FAQ, FAQAdmin), (SiteSettings, SiteSettingsAdmin), (ImageGallery, ImageGalleryAdmin), (FileManager, FileManagerAdmin), (Comment, CommentAdmin), (SiteAnalytics, SiteAnalyticsAdmin), (ContentPermission, ContentPermissionAdmin), (BannerImpression, BannerImpressionAdmin), (BannerClick, BannerClickAdmin), (BannerReward, BannerRewardAdmin), (FAQFeedback, FAQFeedbackAdmin), (ContentViewLog, ContentViewLogAdmin), (ContentShare, ContentShareAdmin), (CommentLike, CommentLikeAdmin)]
@@ -3762,3 +3764,408 @@ def _force_register_cms():
         print(f"[OK] cms registered {registered} models")
     except Exception as e:
         print(f"[WARN] cms: {e}")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# NEW MODELS ADMIN — Comments, API Keys, Sessions, Landing Pages
+# ═══════════════════════════════════════════════════════════════════
+
+
+    from api.cms.models_new.comments import Comment, CommentReaction
+    from api.cms.models_new.api_keys import APIKey
+    from api.cms.models_new.sessions import UserSession
+    from api.cms.models_new.landing_pages import LandingPage
+
+    @admin.register(Comment)
+    class CommentAdmin(admin.ModelAdmin):
+        list_display   = ['id', 'author_display', 'content_type', 'object_id',
+                           'status', 'likes', 'is_pinned', 'created_at']
+        list_filter    = ['status', 'content_type', 'is_pinned', 'created_at']
+        search_fields  = ['body', 'author_name', 'author_email', 'user__username']
+        readonly_fields = ['uuid', 'created_at', 'updated_at', 'ip_address']
+        list_per_page  = 50
+        actions        = ['approve_comments', 'reject_comments', 'mark_as_spam']
+        date_hierarchy = 'created_at'
+        list_select_related = ['user', 'parent']
+
+        def author_display(self, obj):
+            return obj.author_display
+        author_display.short_description = 'Author'
+
+        def approve_comments(self, request, queryset):
+            updated = queryset.update(status='approved')
+            self.message_user(request, f'{updated} comments approved.')
+        approve_comments.short_description = 'Approve selected comments'
+
+        def reject_comments(self, request, queryset):
+            queryset.update(status='rejected')
+        reject_comments.short_description = 'Reject selected comments'
+
+        def mark_as_spam(self, request, queryset):
+            queryset.update(status='spam')
+        mark_as_spam.short_description = 'Mark as spam'
+
+    @admin.register(APIKey)
+    class APIKeyAdmin(admin.ModelAdmin):
+        list_display    = ['key_prefix', 'user', 'name', 'scope', 'is_active',
+                            'request_count', 'last_used_at', 'expires_at', 'created_at']
+        list_filter     = ['scope', 'is_active', 'created_at']
+        search_fields   = ['user__username', 'name', 'key_prefix']
+        readonly_fields = ['uuid', 'key_prefix', 'key_hash', 'request_count',
+                           'last_used_at', 'created_at']
+        list_per_page   = 50
+        list_select_related = ['user']
+        date_hierarchy  = 'created_at'
+        actions         = ['revoke_keys']
+
+        def revoke_keys(self, request, queryset):
+            queryset.update(is_active=False)
+            self.message_user(request, f'{queryset.count()} keys revoked.')
+        revoke_keys.short_description = 'Revoke selected API keys'
+
+        def has_add_permission(self, request):
+            return False  # Keys created programmatically only
+
+    @admin.register(UserSession)
+    class UserSessionAdmin(admin.ModelAdmin):
+        list_display    = ['user', 'ip_address', 'device_type', 'country',
+                           'is_active', 'last_activity', 'created_at']
+        list_filter     = ['is_active', 'device_type', 'created_at']
+        search_fields   = ['user__username', 'ip_address', 'country']
+        readonly_fields = ['uuid', 'session_key', 'created_at', 'revoked_at']
+        list_per_page   = 50
+        list_select_related = ['user']
+        date_hierarchy  = 'created_at'
+        actions         = ['revoke_sessions']
+
+        def revoke_sessions(self, request, queryset):
+            from django.utils import timezone
+            queryset.update(is_active=False, revoked_at=timezone.now())
+            self.message_user(request, f'{queryset.count()} sessions revoked.')
+        revoke_sessions.short_description = 'Revoke selected sessions'
+
+    @admin.register(LandingPage)
+    class LandingPageAdmin(admin.ModelAdmin):
+        list_display    = ['name', 'niche', 'is_active', 'is_featured',
+                           'views', 'clicks', 'conversions', 'created_at']
+        list_filter     = ['niche', 'is_active', 'is_featured', 'created_at']
+        search_fields   = ['name', 'headline', 'description']
+        readonly_fields = ['uuid', 'views', 'clicks', 'conversions', 'created_at', 'updated_at']
+        prepopulated_fields = {'slug': ('name',)}
+        list_per_page   = 30
+        list_select_related = ['created_by', 'locker', 'smartlink']
+        date_hierarchy  = 'created_at'
+
+        def conversion_rate_display(self, obj):
+            return f"{obj.conversion_rate}%"
+        conversion_rate_display.short_description = 'Conv. Rate'
+
+# ── New Models Admin Configurations ───────────────────────────────
+try:
+    from .models_new.withdrawal import UserProfile
+    from .models_new.survey_rewards import SurveyReward, RewardTransaction, RewardPool
+    from .models_new.task_management import TaskSchedule, TaskExecution, TaskQueue, TaskLock
+    from .models_new.profile_surveys import SurveyCompletion, SurveyTemplate
+    _new_models_loaded = True
+except ImportError as e:
+    import logging
+    logging.getLogger(__name__).warning(f"Admin import failed: {e}")
+    _new_models_loaded = False
+
+
+
+class UserSegmentAdmin(admin.ModelAdmin):
+    """Admin configuration for UserSegment model"""
+    list_display = [
+        'name', 'description', 'user_count', 'is_active', 'created_at'
+    ]
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['uuid', 'user_count', 'created_at', 'updated_at']
+    list_per_page = 25
+    ordering = ['-created_at']
+
+
+class UserProfileAdmin(admin.ModelAdmin):
+    """Admin configuration for UserProfile model"""
+    list_display = [
+        'user', 'age', 'gender', 'country', 'education',
+        'survey_participation_score', 'quality_score', 'profile_completeness',
+        'created_at'
+    ]
+    list_filter = [
+        'gender', 'country', 'education', 'income_level',
+        'survey_frequency_preference', 'created_at'
+    ]
+    search_fields = [
+        'user__username', 'user__email', 'country', 'interests'
+    ]
+    readonly_fields = [
+        'uuid', 'age', 'profile_completeness', 'created_at', 'updated_at'
+    ]
+    list_per_page = 25
+    ordering = ['-created_at']
+
+
+class SurveyRewardAdmin(admin.ModelAdmin):
+    """Admin configuration for SurveyReward model"""
+    list_display = [
+        'survey', 'name', 'reward_type', 'base_amount', 'bonus_amount',
+        'status', 'total_paid', 'times_paid', 'created_at'
+    ]
+    list_filter = [
+        'reward_type', 'status', 'currency', 'created_at'
+    ]
+    search_fields = [
+        'survey__title', 'name', 'description'
+    ]
+    readonly_fields = [
+        'uuid', 'total_paid', 'times_paid', 'created_at', 'updated_at'
+    ]
+    list_per_page = 25
+    ordering = ['-created_at']
+
+
+class RewardTransactionAdmin(admin.ModelAdmin):
+    """Admin configuration for RewardTransaction model"""
+    list_display = [
+        'user', 'survey_completion', 'reward_config', 'transaction_type',
+        'amount', 'currency', 'status', 'created_at'
+    ]
+    list_filter = [
+        'transaction_type', 'status', 'currency', 'created_at'
+    ]
+    search_fields = [
+        'user__username', 'survey_completion__survey__title',
+        'reward_config__name', 'description'
+    ]
+    readonly_fields = [
+        'uuid', 'created_at', 'updated_at'
+    ]
+    list_per_page = 25
+    ordering = ['-created_at']
+
+
+class RewardPoolAdmin(admin.ModelAdmin):
+    """Admin configuration for RewardPool model"""
+    list_display = [
+        'name', 'total_budget', 'allocated_amount', 'paid_amount',
+        'remaining_budget', 'auto_refill', 'is_active', 'created_at'
+    ]
+    list_filter = [
+        'is_active', 'auto_refill', 'currency', 'created_at'
+    ]
+    search_fields = ['name', 'description']
+    readonly_fields = [
+        'uuid', 'created_at', 'updated_at'
+    ]
+    list_per_page = 25
+    ordering = ['-created_at']
+
+
+class TaskScheduleAdmin(admin.ModelAdmin):
+    """Admin configuration for TaskSchedule model"""
+    list_display = [
+        'name', 'frequency', 'status', 'priority', 'next_run', 'last_run',
+        'total_runs', 'successful_runs', 'created_at'
+    ]
+    list_filter = [
+        'frequency', 'status', 'priority', 'created_at'
+    ]
+    search_fields = ['name', 'description', 'task_path']
+    readonly_fields = [
+        'uuid', 'total_runs', 'successful_runs', 'failed_runs',
+        'average_runtime', 'created_at', 'updated_at'
+    ]
+    list_per_page = 25
+    ordering = ['-created_at']
+
+
+class TaskExecutionAdmin(admin.ModelAdmin):
+    """Admin configuration for TaskExecution model"""
+    list_display = [
+        'schedule', 'status', 'started_at', 'completed_at', 'runtime_seconds',
+        'retry_count', 'worker_id'
+    ]
+    list_filter = [
+        'status', 'worker_id', 'started_at'
+    ]
+    search_fields = [
+        'schedule__name', 'worker_id', 'error_message'
+    ]
+    readonly_fields = [
+        'uuid', 'started_at', 'completed_at', 'runtime_seconds',
+        'error_message', 'error_traceback'
+    ]
+    list_per_page = 25
+    ordering = ['-started_at']
+
+
+class TaskQueueAdmin(admin.ModelAdmin):
+    """Admin configuration for TaskQueue model"""
+    list_display = [
+        'task_name', 'priority', 'status', 'queue_name',
+        'queued_at', 'started_at', 'retry_count'
+    ]
+    list_filter = [
+        'task_name', 'priority', 'status', 'queue_name'
+    ]
+    search_fields = ['task_name', 'task_path']
+    readonly_fields = [
+        'uuid', 'queued_at'
+    ]
+    list_per_page = 25
+    ordering = ['-queued_at']
+
+
+class TaskLockAdmin(admin.ModelAdmin):
+    """Admin configuration for TaskLock model"""
+    list_display = [
+        'lock_key', 'task_name', 'owner', 'acquired_at', 'expires_at'
+    ]
+    list_filter = [
+        'owner', 'expires_at'
+    ]
+    search_fields = ['lock_key', 'task_name', 'owner']
+    readonly_fields = [
+        'uuid', 'acquired_at'
+    ]
+    list_per_page = 25
+    ordering = ['-acquired_at']
+
+
+# ── Admin Classes for New Models ─────────────────────────────────────
+
+class UserProfileAdmin(admin.ModelAdmin):
+    """Admin configuration for UserProfile model"""
+    list_display = [
+        'user', 'bio', 'country', 'level', 'total_earned_usd',
+        'total_offers_completed', 'is_suspended', 'created_at'
+    ]
+    list_filter = [
+        'is_suspended', 'country', 'level', 'created_at'
+    ]
+    search_fields = [
+        'user__username', 'user__email', 'bio', 'country'
+    ]
+    readonly_fields = [
+        'created_at', 'updated_at'
+    ]
+    list_per_page = 25
+    ordering = ['-created_at']
+
+
+class UserSegmentAdmin(admin.ModelAdmin):
+    """Admin configuration for UserSegment model"""
+    list_display = [
+        'name', 'description', 'is_active', 'created_at', 'updated_at'
+    ]
+    list_filter = [
+        'is_active', 'created_at', 'updated_at'
+    ]
+    search_fields = [
+        'name', 'description'
+    ]
+    readonly_fields = [
+        'created_at', 'updated_at'
+    ]
+    list_per_page = 25
+    ordering = ['-created_at']
+
+
+class SurveyAdmin(admin.ModelAdmin):
+    """Admin configuration for Survey model"""
+    list_display = [
+        'title', 'category', 'reward_amount', 'estimated_minutes',
+        'is_active', 'current_participants', 'created_at'
+    ]
+    list_filter = [
+        'category', 'is_active', 'created_at'
+    ]
+    search_fields = [
+        'title', 'description'
+    ]
+    readonly_fields = [
+        'created_at', 'updated_at'
+    ]
+    list_per_page = 25
+    ordering = ['-created_at']
+
+    def current_participants(self, obj):
+        return obj.completions.count()
+    current_participants.short_description = "Participants"
+
+
+class SurveyCompletionAdmin(admin.ModelAdmin):
+    """Admin configuration for SurveyCompletion model"""
+    list_display = [
+        'user', 'survey', 'status', 'started_at', 'completed_at',
+        'time_spent_seconds'
+    ]
+    list_filter = [
+        'status', 'survey__category', 'started_at'
+    ]
+    search_fields = [
+        'user__username', 'survey__title'
+    ]
+    readonly_fields = [
+        'started_at'
+    ]
+    list_per_page = 25
+    ordering = ['-started_at']
+
+
+# ── Import models needed for the registration block below ─────────────────────
+# All imports are wrapped in try/except so a missing model never breaks the
+# whole admin module — it just skips that registration.
+try:
+    from .models_new.user_profile import UserSegment
+except ImportError:
+    UserSegment = None
+
+try:
+    from .models_new.withdrawal import UserProfile
+except ImportError:
+    UserProfile = None
+
+try:
+    from .models_new.survey_rewards import SurveyReward, RewardTransaction, RewardPool
+except ImportError:
+    SurveyReward = RewardTransaction = RewardPool = None
+
+try:
+    from .models_new.task_management import (
+        TaskSchedule, TaskExecution, TaskQueue, TaskLock
+    )
+except ImportError:
+    TaskSchedule = TaskExecution = TaskQueue = TaskLock = None
+
+try:
+    from .models_new.profile_surveys import SurveyTemplate as Survey, SurveyCompletion
+except ImportError:
+    Survey = SurveyCompletion = None
+
+
+# Register new admin models — skip any whose model or admin class is None
+def _safe_register(model, model_admin):
+    if model is None:
+        return
+    try:
+        if not admin.site.is_registered(model):
+            admin.site.register(model, model_admin)
+    except Exception as exc:
+        logging.getLogger(__name__).warning(f"Admin register skipped for {model}: {exc}")
+
+
+_safe_register(UserSegment,       UserSegmentAdmin)
+_safe_register(UserProfile,       UserProfileAdmin)
+_safe_register(SurveyReward,      SurveyRewardAdmin)
+_safe_register(RewardTransaction, RewardTransactionAdmin)
+_safe_register(RewardPool,        RewardPoolAdmin)
+_safe_register(TaskSchedule,      TaskScheduleAdmin)
+_safe_register(TaskExecution,     TaskExecutionAdmin)
+_safe_register(TaskQueue,         TaskQueueAdmin)
+_safe_register(TaskLock,          TaskLockAdmin)
+_safe_register(Survey,            SurveyAdmin)
+_safe_register(SurveyCompletion,  SurveyCompletionAdmin)
+

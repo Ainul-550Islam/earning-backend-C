@@ -115,6 +115,8 @@ def cache_health_view(request):
 # ═══════════════════════════════ NEW: KEYS LIST ════════════════════════════════
 
 @api_view(['GET'])
+@api_view(['DELETE'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def cache_keys_list(request):
     """
@@ -142,7 +144,6 @@ def cache_keys_list(request):
 
 # ═══════════════════════════════ NEW: DELETE SPECIFIC KEY ══════════════════════
 
-@api_view(['DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def cache_key_delete(request):
     """
@@ -183,7 +184,6 @@ def cache_key_delete(request):
 
 # ═══════════════════════════════ NEW: SET KEY (admin) ══════════════════════════
 
-@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def cache_key_set(request):
     """

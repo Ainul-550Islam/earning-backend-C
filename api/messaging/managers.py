@@ -63,20 +63,15 @@ class InternalChatManager(models.Manager):
     def get_direct_chat(self, user_id_a: Any, user_id_b: Any) -> Optional[Any]:
         """
         Return the existing direct (non-group) chat between two users, or None.
-        Uses annotation to find chats where both users are participants.
+        Uses set intersection approach to avoid COUNT annotation JOIN issues.
         """
         if user_id_a is None or user_id_b is None:
             raise ValueError("Both user_ids must be provided.")
-        return (
-            self.get_queryset()
-            .filter(is_group=False)
-            .not_deleted()
-            .filter(participants__user_id=user_id_a)
-            .filter(participants__user_id=user_id_b)
-            .annotate(participant_count=Count("participants"))
-            .filter(participant_count=2)
-            .first()
-        )
+
+        base_qs = self.get_queryset().filter(is_group=False).not_deleted()
+        chats_with_a = base_qs.filter(participants__user_id=user_id_a)
+        chats_with_b = base_qs.filter(participants__user_id=user_id_b)
+        return (chats_with_a & chats_with_b).first()
 
 
 # ---------------------------------------------------------------------------

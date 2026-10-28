@@ -7,7 +7,7 @@ logger = logging.getLogger('smartlink.tasks.ab_test')
 @shared_task(name='smartlink.evaluate_ab_tests', queue='analytics')
 def evaluate_ab_tests():
     """Every hour: evaluate running A/B tests for statistical significance."""
-    from ..models import ABTestResult
+    from api.smartlink.models import ABTestResult
     from ..choices import ABTestStatus
     from ..services.rotation.ABTestService import ABTestService
 

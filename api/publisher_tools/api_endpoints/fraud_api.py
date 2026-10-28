@@ -15,9 +15,9 @@ class FraudSummaryAPIView(APIView):
         except Exception:
             return Response({"success": False, "message": "No publisher profile."}, status=404)
         days = int(request.query_params.get("days", 30))
-        from api.publisher_tools.fraud_prevention.fraud_report import generate_fraud_report
-        from api.publisher_tools.fraud_prevention.quality_score import calculate_publisher_quality_score
-        from api.publisher_tools.fraud_prevention.fraud_alert import get_unresolved_alerts
+        from publisher_tools.fraud_prevention.fraud_report import generate_fraud_report
+        from publisher_tools.fraud_prevention.quality_score import calculate_publisher_quality_score
+        from publisher_tools.fraud_prevention.fraud_alert import get_unresolved_alerts
         report      = generate_fraud_report(publisher, days)
         quality     = calculate_publisher_quality_score(publisher)
         alerts      = get_unresolved_alerts(publisher)
@@ -35,7 +35,7 @@ class IPBlockAPIView(APIView):
 
     def get(self, request):
         """List blocked IPs。"""
-        from api.publisher_tools.fraud_prevention.ip_blacklist import BlockedIP
+        from publisher_tools.models import BlockedIP
         blocked = BlockedIP.objects.filter(is_active=True).order_by("-created_at")[:100]
         return Response({"success": True, "data": [
             {"ip": b.ip_address, "reason": b.reason, "score": b.fraud_score, "expires": str(b.expires_at) if b.expires_at else None}
@@ -49,7 +49,7 @@ class IPBlockAPIView(APIView):
         hours      = int(request.data.get("hours", 24))
         if not ip_address:
             return Response({"success": False, "message": "ip_address required."}, status=400)
-        from api.publisher_tools.fraud_prevention.ip_blacklist import block_ip
+        from publisher_tools.fraud_prevention.ip_blacklist import block_ip
         entry = block_ip(ip_address, reason, fraud_score=90, hours=hours)
         return Response({"success": True, "data": {"ip": entry.ip_address, "blocked": True, "hours": hours}}, status=201)
 
@@ -58,7 +58,7 @@ class IPBlockAPIView(APIView):
         ip_address = request.data.get("ip_address")
         if not ip_address:
             return Response({"success": False, "message": "ip_address required."}, status=400)
-        from api.publisher_tools.fraud_prevention.ip_blacklist import unblock_ip
+        from publisher_tools.fraud_prevention.ip_blacklist import unblock_ip
         success = unblock_ip(ip_address)
         return Response({"success": success, "data": {"ip": ip_address, "unblocked": success}})
 
@@ -70,6 +70,6 @@ class FraudDetectionAPIView(APIView):
     def post(self, request):
         """Request/event-এর fraud score calculate করে。"""
         request_data = request.data
-        from api.publisher_tools.fraud_prevention.invalid_traffic_detector import detect_invalid_traffic
+        from publisher_tools.fraud_prevention.invalid_traffic_detector import detect_invalid_traffic
         result = detect_invalid_traffic(request_data)
         return Response({"success": True, "data": result})

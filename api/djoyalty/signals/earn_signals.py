@@ -1,6 +1,6 @@
 # api/djoyalty/signals/earn_signals.py
 """
-Earn signals — EarnTransaction post_save এ tier evaluation trigger করে।
+Earn signals -- EarnTransaction post_save এ tier evaluation trigger করে।
 """
 import logging
 from django.db.models.signals import post_save

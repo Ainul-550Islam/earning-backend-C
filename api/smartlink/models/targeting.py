@@ -1,10 +1,15 @@
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from .smartlink import SmartLink
 from ..choices import (
     TargetingMode, DeviceType, OSType, BrowserType, DayOfWeek
 )
+
+# FIX (Bug 9): Replaced all ArrayField(postgres-only) with JSONField.
+# ArrayField requires psycopg2/psycopg + PostgreSQL at import time,
+# crashing Django setup on SQLite or any non-Postgres database.
+# JSONField is cross-database, stores lists identically, and every
+# .matches() method already treats the field as a Python list — no change needed there.
 
 
 class TargetingRule(models.Model):
@@ -53,20 +58,17 @@ class GeoTargeting(models.Model):
         choices=TargetingMode.choices,
         default=TargetingMode.WHITELIST,
     )
-    countries = ArrayField(
-        models.CharField(max_length=2),
+    countries = models.JSONField(
         default=list,
         blank=True,
         help_text=_('ISO 3166-1 alpha-2 country codes. e.g. ["BD","US","GB"]')
     )
-    regions = ArrayField(
-        models.CharField(max_length=100),
+    regions = models.JSONField(
         default=list,
         blank=True,
         help_text=_('Region/state names.')
     )
-    cities = ArrayField(
-        models.CharField(max_length=100),
+    cities = models.JSONField(
         default=list,
         blank=True,
     )
@@ -101,9 +103,10 @@ class DeviceTargeting(models.Model):
         TargetingRule, on_delete=models.CASCADE,
         related_name='device_targeting',
     )
-    mode = models.CharField(max_length=10, choices=TargetingMode.choices, default=TargetingMode.WHITELIST)
-    device_types = ArrayField(
-        models.CharField(max_length=10, choices=DeviceType.choices),
+    mode = models.CharField(
+        max_length=10, choices=TargetingMode.choices, default=TargetingMode.WHITELIST
+    )
+    device_types = models.JSONField(
         default=list,
         blank=True,
         help_text=_('e.g. ["mobile", "tablet"]')
@@ -130,9 +133,10 @@ class OSTargeting(models.Model):
         TargetingRule, on_delete=models.CASCADE,
         related_name='os_targeting',
     )
-    mode = models.CharField(max_length=10, choices=TargetingMode.choices, default=TargetingMode.WHITELIST)
-    os_types = ArrayField(
-        models.CharField(max_length=10, choices=OSType.choices),
+    mode = models.CharField(
+        max_length=10, choices=TargetingMode.choices, default=TargetingMode.WHITELIST
+    )
+    os_types = models.JSONField(
         default=list,
         blank=True,
     )
@@ -155,9 +159,10 @@ class BrowserTargeting(models.Model):
         TargetingRule, on_delete=models.CASCADE,
         related_name='browser_targeting',
     )
-    mode = models.CharField(max_length=10, choices=TargetingMode.choices, default=TargetingMode.WHITELIST)
-    browsers = ArrayField(
-        models.CharField(max_length=10, choices=BrowserType.choices),
+    mode = models.CharField(
+        max_length=10, choices=TargetingMode.choices, default=TargetingMode.WHITELIST
+    )
+    browsers = models.JSONField(
         default=list,
         blank=True,
     )
@@ -183,8 +188,7 @@ class TimeTargeting(models.Model):
         TargetingRule, on_delete=models.CASCADE,
         related_name='time_targeting',
     )
-    days_of_week = ArrayField(
-        models.IntegerField(choices=DayOfWeek.choices),
+    days_of_week = models.JSONField(
         default=list,
         blank=True,
         help_text=_('0=Monday, 6=Sunday. Empty = all days.')
@@ -223,15 +227,15 @@ class ISPTargeting(models.Model):
         TargetingRule, on_delete=models.CASCADE,
         related_name='isp_targeting',
     )
-    mode = models.CharField(max_length=10, choices=TargetingMode.choices, default=TargetingMode.WHITELIST)
-    isps = ArrayField(
-        models.CharField(max_length=100),
+    mode = models.CharField(
+        max_length=10, choices=TargetingMode.choices, default=TargetingMode.WHITELIST
+    )
+    isps = models.JSONField(
         default=list,
         blank=True,
         help_text=_('ISP/carrier names. e.g. ["Grameenphone","Robi","Banglalink"]')
     )
-    asns = ArrayField(
-        models.CharField(max_length=20),
+    asns = models.JSONField(
         default=list,
         blank=True,
         help_text=_('ASN numbers. e.g. ["AS24389", "AS17494"]')
@@ -258,9 +262,10 @@ class LanguageTargeting(models.Model):
         TargetingRule, on_delete=models.CASCADE,
         related_name='language_targeting',
     )
-    mode = models.CharField(max_length=10, choices=TargetingMode.choices, default=TargetingMode.WHITELIST)
-    languages = ArrayField(
-        models.CharField(max_length=10),
+    mode = models.CharField(
+        max_length=10, choices=TargetingMode.choices, default=TargetingMode.WHITELIST
+    )
+    languages = models.JSONField(
         default=list,
         blank=True,
         help_text=_('ISO 639-1 language codes. e.g. ["en","bn","ar"]')

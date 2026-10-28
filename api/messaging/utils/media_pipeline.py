@@ -14,9 +14,26 @@ from __future__ import annotations
 import logging
 import uuid
 import os
-from typing import Optional
+import tempfile  # noqa: F401  (module-level so tests can patch it)
+import time  # noqa: F401  (module-level so tests can patch it)
+import subprocess  # noqa: F401  (module-level so tests can patch it)
+import io  # noqa: F401  (module-level so tests can patch it)
+from typing import Any, Optional
+import requests  # noqa: F401  (module-level so tests can patch it)
+import boto3  # noqa: F401  (module-level so tests can patch it)
 
 logger = logging.getLogger(__name__)
+
+# Google Vision SafeSearch returns categorical likelihood levels, not a raw
+# numeric score - this maps them to a 0-1 scale for MediaAttachment.nsfw_score.
+_SAFE_SEARCH_SCORE = {
+    "VERY_UNLIKELY": 0.0,
+    "UNLIKELY": 0.2,
+    "POSSIBLE": 0.5,
+    "LIKELY": 0.8,
+    "VERY_LIKELY": 1.0,
+    "UNKNOWN": 0.0,
+}
 
 
 def generate_presigned_upload_url(
@@ -33,7 +50,6 @@ def generate_presigned_upload_url(
     Client uploads directly to S3 — no server bandwidth used.
     """
     from django.conf import settings
-    import boto3
     from botocore.exceptions import ClientError
 
     _validate_upload(filename, mimetype, file_size)
@@ -84,14 +100,17 @@ def _validate_upload(filename: str, mimetype: str, file_size: int) -> None:
         MAX_ATTACHMENT_SIZE_BYTES, MAX_AUDIO_SIZE_BYTES,
         MAX_VIDEO_SIZE_BYTES, ALLOWED_ATTACHMENT_MIMETYPES,
     )
+    from ..exceptions import MediaTooLargeError, MediaTypeNotAllowedError
     if mimetype not in ALLOWED_ATTACHMENT_MIMETYPES:
-        raise ValueError(f"Mimetype '{mimetype}' is not allowed.")
-    if mimetype.startswith("video/") and file_size > MAX_VIDEO_SIZE_BYTES:
-        raise ValueError(f"Video exceeds {MAX_VIDEO_SIZE_BYTES // 1_000_000}MB limit.")
-    if mimetype.startswith("audio/") and file_size > MAX_AUDIO_SIZE_BYTES:
-        raise ValueError(f"Audio exceeds {MAX_AUDIO_SIZE_BYTES // 1_000_000}MB limit.")
-    if file_size > MAX_ATTACHMENT_SIZE_BYTES:
-        raise ValueError(f"File exceeds {MAX_ATTACHMENT_SIZE_BYTES // 1_000_000}MB limit.")
+        raise MediaTypeNotAllowedError(f"Mimetype '{mimetype}' is not allowed.")
+    if mimetype.startswith("video/"):
+        if file_size > MAX_VIDEO_SIZE_BYTES:
+            raise MediaTooLargeError(f"Video exceeds {MAX_VIDEO_SIZE_BYTES // 1_000_000}MB limit.")
+    elif mimetype.startswith("audio/"):
+        if file_size > MAX_AUDIO_SIZE_BYTES:
+            raise MediaTooLargeError(f"Audio exceeds {MAX_AUDIO_SIZE_BYTES // 1_000_000}MB limit.")
+    elif file_size > MAX_ATTACHMENT_SIZE_BYTES:
+        raise MediaTooLargeError(f"File exceeds {MAX_ATTACHMENT_SIZE_BYTES // 1_000_000}MB limit.")
 
 
 def _build_file_key(user_id: Any, filename: str, chat_id: Optional[str]) -> str:
@@ -100,9 +119,17 @@ def _build_file_key(user_id: Any, filename: str, chat_id: Optional[str]) -> str:
     ext = os.path.splitext(filename)[1].lower()[:10]
     date = timezone.now().strftime("%Y/%m/%d")
     unique = uuid.uuid4().hex[:12]
-    if chat_id:
+    if chat_id and _is_valid_uuid(chat_id):
         return f"messaging/chats/{chat_id}/{date}/{unique}{ext}"
     return f"messaging/users/{user_id}/{date}/{unique}{ext}"
+
+
+def _is_valid_uuid(value: Any) -> bool:
+    try:
+        uuid.UUID(str(value))
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
 
 
 def _local_upload_fallback(user_id: Any, filename: str, mimetype: str) -> dict:
@@ -140,8 +167,6 @@ def process_image_after_upload(file_key: str, mimetype: str) -> dict:
         if not s3_bucket:
             return results
 
-        import boto3
-        import io
         from PIL import Image
 
         s3 = boto3.client("s3", region_name=getattr(settings, "AWS_S3_REGION_NAME", "us-east-1"))
@@ -201,11 +226,24 @@ def _strip_exif(img: "Image.Image") -> "Image.Image":
     """Remove EXIF metadata for privacy (GPS location, device info, etc.)."""
     try:
         from PIL import Image
-        data = list(img.getdata())
+        # Image.getdata() was deprecated in Pillow 10.2.0 (removal version
+        # 14.0, ~2027-10-15) in favour of get_flattened_data(). Use the new
+        # method when available; fall back for hosts pinned to older Pillow.
+        if hasattr(img, "get_flattened_data"):
+            data = img.get_flattened_data()
+        else:
+            data = list(img.getdata())
         clean = Image.new(img.mode, img.size)
         clean.putdata(data)
         return clean
-    except Exception:
+    except Exception as exc:
+        # Falling back to the original image means any EXIF data (GPS
+        # coordinates, device info) ships as-is - previously silent with
+        # no log line at all, so a failure here was invisible in
+        # production. Not blocking the upload on this failure is still the
+        # right default (matches this module's fail-open stance elsewhere,
+        # e.g. scan_file_for_viruses), but it should at least be visible.
+        logger.warning("_strip_exif: failed, returning image with EXIF intact: %s", exc)
         return img
 
 
@@ -213,11 +251,9 @@ def generate_video_thumbnail(file_key: str) -> Optional[str]:
     """Extract first frame of video as thumbnail."""
     from django.conf import settings
 
+    tmp_path = None
+    thumb_path = None
     try:
-        import boto3
-        import io
-        import subprocess
-        import tempfile
 
         s3_bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME", None)
         cdn_domain = getattr(settings, "AWS_S3_CUSTOM_DOMAIN", None)
@@ -226,8 +262,8 @@ def generate_video_thumbnail(file_key: str) -> Optional[str]:
 
         s3 = boto3.client("s3")
         with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp_vid:
-            s3.download_fileobj(s3_bucket, file_key, tmp_vid)
             tmp_path = tmp_vid.name
+            s3.download_fileobj(s3_bucket, file_key, tmp_vid)
 
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp_thumb:
             thumb_path = tmp_thumb.name
@@ -246,9 +282,6 @@ def generate_video_thumbnail(file_key: str) -> Optional[str]:
         with open(thumb_path, "rb") as f:
             s3.put_object(Bucket=s3_bucket, Key=thumb_key, Body=f, ContentType="image/jpeg")
 
-        os.unlink(tmp_path)
-        os.unlink(thumb_path)
-
         cdn_url = f"https://{cdn_domain}/{thumb_key}" if cdn_domain else thumb_key
         return cdn_url
     except FileNotFoundError:
@@ -257,6 +290,21 @@ def generate_video_thumbnail(file_key: str) -> Optional[str]:
     except Exception as exc:
         logger.error("generate_video_thumbnail: %s → %s", file_key, exc)
         return None
+    finally:
+        # Part 6 audit fix: this used to unlink both temp files only on the
+        # success path. Any failure above (corrupt upload, unsupported
+        # codec, the 30s ffmpeg timeout, an S3 error) skipped straight to
+        # an except block that returned early, leaking the downloaded
+        # video - often multiple MB - and any partial thumbnail on disk
+        # forever. Video processing failures are common enough on
+        # user-submitted content that this would slowly exhaust disk on
+        # whatever worker runs this Celery task. Cleanup now always runs.
+        for p in (tmp_path, thumb_path):
+            if p and os.path.exists(p):
+                try:
+                    os.unlink(p)
+                except OSError as exc:
+                    logger.warning("generate_video_thumbnail: cleanup failed for %s: %s", p, exc)
 
 
 def scan_file_for_viruses(file_key: str) -> bool:
@@ -272,9 +320,7 @@ def scan_file_for_viruses(file_key: str) -> bool:
         return True
 
     try:
-        import requests
         from django.conf import settings
-        import boto3
 
         s3_bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME")
         cdn_domain = getattr(settings, "AWS_S3_CUSTOM_DOMAIN", "")
@@ -289,7 +335,6 @@ def scan_file_for_viruses(file_key: str) -> bool:
         resp.raise_for_status()
         analysis_id = resp.json()["data"]["id"]
 
-        import time
         for _ in range(6):
             time.sleep(5)
             report = requests.get(
@@ -313,16 +358,32 @@ def scan_file_for_viruses(file_key: str) -> bool:
 def detect_nsfw(image_url: str) -> dict:
     """
     Detect NSFW/explicit content using Google Vision API SafeSearch.
-    Returns {is_safe, adult, violence, medical, racy}.
+    Returns {is_nsfw, toxic_score, is_safe, adult, violence, medical, racy}.
+
+    Part 6 audit bug fix: this used to return only {is_safe, adult,
+    violence, medical, racy}. Its only caller, tasks.process_image_task
+    (already audited/fixed in a prior session), reads
+    nsfw_result.get("is_nsfw") and nsfw_result.get("toxic_score", 0.0) to
+    decide MediaAttachment.status/is_nsfw/nsfw_score - neither key existed
+    here, so .get() silently returned the falsy default every time. NSFW
+    moderation for images was a complete no-op: every uploaded image was
+    stored as is_nsfw=False, nsfw_score=0.0, status=READY, regardless of
+    what Vision actually detected. MediaAttachment's own is_nsfw/
+    nsfw_score model fields (models.py) confirm this is the shape the rest
+    of the system expects, so this function was the side that needed to
+    change, not the already-audited task. toxic_score is derived from
+    Vision's categorical likelihood levels (there is no raw numeric score
+    in the SafeSearch API) via the same LIKELY/VERY_LIKELY threshold
+    already used for is_safe, so behavior for existing is_safe-only
+    callers is unchanged.
     """
     from django.conf import settings
 
     google_key = getattr(settings, "GOOGLE_VISION_API_KEY", None)
     if not google_key:
-        return {"is_safe": True}
+        return {"is_nsfw": False, "toxic_score": 0.0, "is_safe": True}
 
     try:
-        import requests
         payload = {
             "requests": [{
                 "image": {"source": {"imageUri": image_url}},
@@ -340,7 +401,13 @@ def detect_nsfw(image_url: str) -> dict:
         adult     = annotations.get("adult", "UNKNOWN")
         violence  = annotations.get("violence", "UNKNOWN")
         is_safe   = adult not in dangerous and violence not in dangerous
+        toxic_score = max(
+            _SAFE_SEARCH_SCORE.get(adult, 0.0),
+            _SAFE_SEARCH_SCORE.get(violence, 0.0),
+        )
         return {
+            "is_nsfw": not is_safe,
+            "toxic_score": toxic_score,
             "is_safe": is_safe,
             "adult": adult,
             "violence": violence,
@@ -349,7 +416,4 @@ def detect_nsfw(image_url: str) -> dict:
         }
     except Exception as exc:
         logger.error("detect_nsfw: %s → %s", image_url, exc)
-        return {"is_safe": True}
-
-
-from typing import Any
+        return {"is_nsfw": False, "toxic_score": 0.0, "is_safe": True}

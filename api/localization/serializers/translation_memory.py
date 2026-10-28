@@ -7,5 +7,13 @@ class TranslationMemorySerializer(serializers.ModelSerializer):
     class Meta:
         from ..models.translation import TranslationMemory
         model = TranslationMemory
-        fields = '__all__'
+        fields = [
+            'id', 'created_at', 'updated_at',
+            'source_language', 'target_language',
+            'source_text', 'target_text',
+            'domain', 'context',
+            'usage_count', 'is_approved', 'quality_rating',
+            'source_word_count', 'target_word_count',
+            'client', 'project', 'tags', 'last_used_at',
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'source_hash', 'usage_count', 'source_word_count', 'target_word_count']

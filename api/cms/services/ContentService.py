@@ -1,5 +1,6 @@
 import json
 import logging
+from django.db import transaction as Transaction
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple, Any
 from django.utils import timezone
@@ -17,8 +18,9 @@ from ..models import (
     ContentCategory, ContentPage, ContentViewLog, 
     ContentShare, Banner, FAQ
 )
-from api.users.models import User
-from api.wallet.models import Transaction
+from django.contrib.auth import get_user_model
+User = get_user_model()
+# Transaction is owned by api.wallet — use lazy import when needed
 # from api.tasks.models import TaskCompletion
 # from api.offerwall.models import OfferCompletion
 

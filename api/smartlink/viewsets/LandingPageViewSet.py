@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from ..models import LandingPage
-from ..serializers.LandingPageSerializer import LandingPageSerializer
-from ..permissions import IsPublisher
+from api.smartlink.models import LandingPage
+from api.smartlink.serializers.LandingPageSerializer import LandingPageSerializer
+from api.smartlink.permissions import IsPublisher
 
 
 class LandingPageViewSet(viewsets.ModelViewSet):

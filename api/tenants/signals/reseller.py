@@ -4,6 +4,7 @@ Reseller Signal Handlers
 This module contains signal handlers for reseller-related models including
 ResellerConfig and ResellerInvoice.
 """
+from django.db import models
 
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver

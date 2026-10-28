@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import LandingPage
+from api.smartlink.models import LandingPage
 
 
 class LandingPageSerializer(serializers.ModelSerializer):

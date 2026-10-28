@@ -26,6 +26,7 @@ class AdUnitTargetingRule(TimeStampedModel):
     ends_at         = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_ad_unit_targeting_rules"
         verbose_name = _("Targeting Rule")
         ordering = ["-priority", "-created_at"]

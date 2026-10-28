@@ -10,8 +10,13 @@ from datetime import timedelta
 from ..models import WebhookDeliveryLog
 from ..constants import DeliveryStatus
 
+import logging
 
-@shared_task
+logger = logging.getLogger('ainul.webhooks.tasks.reap.exhausted.logs')
+
+
+
+@shared_task(name="ainul.webhooks.reap_exhausted_logs")
 def reap_exhausted_logs(days=7):
     """
     Clean up exhausted webhook delivery logs older than specified days.
@@ -22,6 +27,7 @@ def reap_exhausted_logs(days=7):
     Returns:
         dict: Summary of cleanup operations
     """
+    logger.info('[Task] reap_exhausted_logs started')
     try:
         # Calculate cutoff date
         cutoff_date = timezone.now() - timedelta(days=days)
@@ -39,7 +45,7 @@ def reap_exhausted_logs(days=7):
                 log.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete exhausted log {log.id}: {e}")
+                logger.error("Failed to delete exhausted log %s: %s", log.id, e)
         
         return {
             'success': True,
@@ -67,6 +73,7 @@ def reap_failed_logs(days=30):
     Returns:
         dict: Summary of cleanup operations
     """
+    logger.info('[Task] reap_failed_logs started')
     try:
         # Calculate cutoff date
         cutoff_date = timezone.now() - timedelta(days=days)
@@ -84,7 +91,7 @@ def reap_failed_logs(days=30):
                 log.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete failed log {log.id}: {e}")
+                logger.error("Failed to delete failed log %s: %s", log.id, e)
         
         return {
             'success': True,
@@ -112,6 +119,7 @@ def reap_old_logs(days=90):
     Returns:
         dict: Summary of cleanup operations
     """
+    logger.info('[Task] reap_old_logs started')
     try:
         # Calculate cutoff date
         cutoff_date = timezone.now() - timedelta(days=days)
@@ -128,7 +136,7 @@ def reap_old_logs(days=90):
                 log.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete log {log.id}: {e}")
+                logger.error("Failed to delete log %s: %s", log.id, e)
         
         return {
             'success': True,
@@ -157,6 +165,7 @@ def reap_logs_by_status(status, days=30):
     Returns:
         dict: Summary of cleanup operations
     """
+    logger.info('[Task] reap_logs_by_status started')
     try:
         # Calculate cutoff date
         cutoff_date = timezone.now() - timedelta(days=days)
@@ -174,7 +183,7 @@ def reap_logs_by_status(status, days=30):
                 log.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete log {log.id}: {e}")
+                logger.error("Failed to delete log %s: %s", log.id, e)
         
         return {
             'success': True,
@@ -204,6 +213,7 @@ def archive_old_logs(days=180):
     Returns:
         dict: Summary of archive operations
     """
+    logger.info('[Task] archive_old_logs started')
     try:
         # Calculate cutoff date
         cutoff_date = timezone.now() - timedelta(days=days)
@@ -225,7 +235,7 @@ def archive_old_logs(days=180):
                 log.save()
                 archived_count += 1
             except Exception as e:
-                print(f"Failed to archive log {log.id}: {e}")
+                logger.error("Failed to archive log %s: %s", log.id, e)
         
         return {
             'success': True,
@@ -250,6 +260,7 @@ def cleanup_logs_summary():
     Returns:
         dict: Summary statistics
     """
+    logger.info('[Task] cleanup_logs_summary started')
     try:
         from django.db.models import Count
         

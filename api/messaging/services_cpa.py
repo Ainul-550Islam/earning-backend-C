@@ -5,7 +5,7 @@ This module connects business events (offer approved, payout processed,
 conversion received) to the messaging system automatically.
 
 Usage from other modules:
-    from messaging.services_cpa import (
+    from api.messaging.services_cpa import (
         notify_offer_approved,
         notify_conversion_received,
         notify_payout_processed,
@@ -689,6 +689,11 @@ def send_cpa_broadcast(
     Send a targeted broadcast to CPA platform affiliates.
     Audience can be filtered by offer, vertical, GEO, tier, etc.
     """
+    if not title or not title.strip():
+        raise ValueError("Broadcast title must not be empty.")
+    if not body or not body.strip():
+        raise ValueError("Broadcast body must not be empty.")
+
     broadcast = CPABroadcast.objects.create(
         title=title,
         body=body,
@@ -776,6 +781,17 @@ def create_template(
     created_by_id: Optional[Any] = None,
     tenant=None,
 ) -> MessageTemplate:
+    """Create a reusable CPA notification/message template. category must
+    be one of MessageTemplateCategory's values (offer, payout, account,
+    performance, system, custom)."""
+    if not name or not name.strip():
+        raise ValueError("Template name must not be empty.")
+    if not body or not body.strip():
+        raise ValueError("Template body must not be empty.")
+    if category not in MessageTemplateCategory.values:
+        raise ValueError(
+            f"Invalid category '{category}'. Valid choices: {MessageTemplateCategory.values}"
+        )
     return MessageTemplate.objects.create(
         name=name,
         body=body,
@@ -964,14 +980,18 @@ def track_broadcast_click(broadcast_id: Any, user_id: Any) -> bool:
     """Track CTA button click on a broadcast."""
     from .models import NotificationRead
     now = timezone.now()
-    updated = NotificationRead.objects.filter(
-        broadcast_id=broadcast_id, user_id=user_id, clicked_at__isnull=True
-    ).update(clicked_at=now)
-    if updated:
+    obj, created = NotificationRead.objects.get_or_create(
+        broadcast_id=broadcast_id, user_id=user_id,
+        defaults={"clicked_at": now},
+    )
+    is_first_click = created or obj.clicked_at is None
+    if not created and obj.clicked_at is None:
+        NotificationRead.objects.filter(pk=obj.pk).update(clicked_at=now)
+    if is_first_click:
         CPABroadcast.objects.filter(pk=broadcast_id).update(
             clicked_count=_F("clicked_count") + 1
         )
-    return bool(updated)
+    return is_first_click
 
 
 # ---------------------------------------------------------------------------
@@ -1007,16 +1027,23 @@ def _get_relevant_affiliates_for_offer(vertical: str, countries: list, audience:
 
 
 def _get_affiliates_by_vertical(vertical: str) -> list:
+    """STUB: returns every active user, ignoring vertical. Same
+    not-yet-integrated-with-a-real-affiliate-profile-model placeholder as
+    _get_relevant_affiliates_for_offer above - replace when that model exists."""
     logger.debug("_get_affiliates_by_vertical: vertical=%s (stub)", vertical)
     return list(User.objects.filter(is_active=True).values_list("pk", flat=True))
 
 
 def _get_affiliates_by_country(country: str) -> list:
+    """STUB: returns every active user, ignoring country. See
+    _get_affiliates_by_vertical's docstring."""
     logger.debug("_get_affiliates_by_country: country=%s (stub)", country)
     return list(User.objects.filter(is_active=True).values_list("pk", flat=True))
 
 
 def _get_affiliates_by_tier(tier: str) -> list:
+    """STUB: returns every active user, ignoring tier. See
+    _get_affiliates_by_vertical's docstring."""
     logger.debug("_get_affiliates_by_tier: tier=%s (stub)", tier)
     return list(User.objects.filter(is_active=True).values_list("pk", flat=True))
 
@@ -1038,9 +1065,280 @@ def _create_affiliate_manager_thread(affiliate_id: Any, manager_name: str, tenan
 
 
 def _ensure_affiliate_manager_thread(affiliate_id: Any, manager_id: Any, tenant=None) -> None:
+    """Same as _create_affiliate_manager_thread above, but for a specific
+    manager_id rather than picking any staff user - used when reassigning
+    an affiliate to a named manager. Swallows failures (best-effort)."""
     try:
         get_or_create_affiliate_thread(
             affiliate_id=affiliate_id, manager_id=manager_id, tenant=tenant
         )
     except Exception as exc:
         logger.warning("_ensure_affiliate_manager_thread: failed: %s", exc)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Service functions that were previously called as direct ORM in viewsets_cpa.py
+# (Fix: Service Layer Compliance — viewsets must not bypass the service layer)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def dismiss_notification(notification_id: str, user_id) -> bool:
+    """
+    Dismiss a single CPA notification for a user.
+
+    Previously viewsets_cpa.py called:
+        CPANotification.objects.filter(pk=pk, recipient=request.user).update(is_dismissed=True)
+    Now viewsets_cpa.py calls this function.
+
+    Args:
+        notification_id: UUID string of the CPANotification.
+        user_id:         ID of the recipient user (ownership check).
+
+    Returns:
+        True if the notification was found and dismissed. False if not found or
+        already dismissed.
+    """
+    from .models import CPANotification
+    updated = CPANotification.objects.filter(
+        pk=notification_id,
+        recipient_id=user_id,
+        is_dismissed=False,
+    ).update(is_dismissed=True)
+    return bool(updated)
+
+
+def dismiss_all_notifications(user_id) -> int:
+    """
+    Dismiss all read notifications for a user.
+
+    Previously viewsets_cpa.py called ORM directly:
+        CPANotification.objects.filter(recipient=user, is_read=True,
+                                       is_dismissed=False).update(is_dismissed=True)
+
+    Args:
+        user_id: ID of the recipient user.
+
+    Returns:
+        Number of notifications dismissed.
+    """
+    from .models import CPANotification
+    return CPANotification.objects.filter(
+        recipient_id=user_id,
+        is_read=True,
+        is_dismissed=False,
+    ).update(is_dismissed=True)
+
+
+def get_active_templates(category: str = None) -> list:
+    """
+    Return active MessageTemplate queryset, optionally filtered by category.
+
+    Previously viewsets_cpa.py called:
+        MessageTemplate.objects.filter(is_active=True).order_by("-usage_count")
+
+    Args:
+        category: Optional category string to filter by.
+
+    Returns:
+        QuerySet of MessageTemplate ordered by usage_count descending.
+    """
+    from .models import MessageTemplate
+    qs = MessageTemplate.objects.filter(is_active=True).order_by("-usage_count")
+    if category:
+        qs = qs.filter(category=category)
+    return qs
+
+
+def get_template_by_id(template_id: str):
+    """
+    Fetch a MessageTemplate by ID. Raises MessageTemplate.DoesNotExist if not found.
+
+    Previously viewsets_cpa.py called:
+        MessageTemplate.objects.get(pk=pk)
+
+    Args:
+        template_id: UUID string of the MessageTemplate.
+
+    Returns:
+        MessageTemplate instance.
+
+    Raises:
+        MessageTemplate.DoesNotExist: if the template is not found.
+    """
+    from .models import MessageTemplate
+    return MessageTemplate.objects.get(pk=template_id)
+
+
+def deactivate_template(template_id: str) -> bool:
+    """
+    Soft-delete a MessageTemplate by setting is_active=False.
+
+    Previously viewsets_cpa.py called:
+        MessageTemplate.objects.filter(pk=pk).update(is_active=False)
+
+    Args:
+        template_id: UUID string of the MessageTemplate.
+
+    Returns:
+        True if the template was found and deactivated. False if not found.
+    """
+    from .models import MessageTemplate
+    updated = MessageTemplate.objects.filter(pk=template_id).update(is_active=False)
+    return bool(updated)
+
+
+def increment_template_usage(template_id: str) -> bool:
+    """
+    Increment usage_count on a MessageTemplate atomically.
+
+    Previously viewsets_cpa.py used:
+        t = MessageTemplate.objects.get(pk=pk)
+        MessageTemplate.objects.filter(pk=pk).update(usage_count=t.usage_count)
+    which had a race condition: two concurrent requests could both read the same
+    usage_count and both write the same incremented value (classic read-modify-write race).
+
+    This implementation uses F() for atomic SQL increment:
+        UPDATE messaging_messagetemplate SET usage_count = usage_count + 1 WHERE id = ...
+
+    Args:
+        template_id: UUID string of the MessageTemplate.
+
+    Returns:
+        True if found and incremented. False if not found.
+    """
+    from django.db.models import F
+    from .models import MessageTemplate
+    updated = MessageTemplate.objects.filter(pk=template_id).update(
+        usage_count=F("usage_count") + 1
+    )
+    return bool(updated)
+
+
+def cancel_cpa_broadcast(broadcast_id: str) -> bool:
+    """
+    Cancel a CPABroadcast in DRAFT or SCHEDULED status.
+
+    Previously viewsets_cpa.py called ORM directly:
+        CPABroadcast.objects.filter(pk=pk, status__in=["DRAFT","SCHEDULED"]).update(status="CANCELLED")
+
+    Args:
+        broadcast_id: UUID string of the CPABroadcast.
+
+    Returns:
+        True if the broadcast was found and cancelled. False if not found or
+        already in a non-cancellable status.
+    """
+    from .models import CPABroadcast
+    updated = CPABroadcast.objects.filter(
+        pk=broadcast_id,
+        status__in=["DRAFT", "SCHEDULED"],
+    ).update(status="CANCELLED")
+    return bool(updated)
+
+
+def get_broadcast_by_id(broadcast_id: str):
+    """
+    Fetch a CPABroadcast by ID.
+
+    Previously viewsets_cpa.py called:
+        b = CPABroadcast.objects.get(pk=pk)
+
+    Args:
+        broadcast_id: UUID string.
+
+    Returns:
+        CPABroadcast instance.
+
+    Raises:
+        CPABroadcast.DoesNotExist: if not found.
+    """
+    from .models import CPABroadcast
+    return CPABroadcast.objects.get(pk=broadcast_id)
+
+
+def get_affiliate_thread_by_id(thread_id: str):
+    """
+    Fetch an AffiliateConversationThread by ID.
+
+    Previously viewsets_cpa.py called:
+        thread = AffiliateConversationThread.objects.get(pk=pk)
+
+    Args:
+        thread_id: UUID string.
+
+    Returns:
+        AffiliateConversationThread instance.
+
+    Raises:
+        AffiliateConversationThread.DoesNotExist: if not found.
+    """
+    from .models import AffiliateConversationThread
+    return AffiliateConversationThread.objects.get(pk=thread_id)
+
+
+def get_affiliate_thread_tags(thread_id: str) -> list:
+    """Get tags from an affiliate thread by ID."""
+    from .models import AffiliateConversationThread
+    try:
+        t = AffiliateConversationThread.objects.get(pk=thread_id)
+        return t.tags or []
+    except AffiliateConversationThread.DoesNotExist:
+        return []
+
+
+def add_affiliate_thread_tags(thread_id: str, tags: list) -> list:
+    """
+    Add tags to an affiliate thread atomically.
+    Returns the merged tag list.
+    """
+    from .models import AffiliateConversationThread
+    try:
+        thread = AffiliateConversationThread.objects.get(pk=thread_id)
+        new_tags = list(set((thread.tags or []) + tags))
+        AffiliateConversationThread.objects.filter(pk=thread_id).update(tags=new_tags)
+        return new_tags
+    except AffiliateConversationThread.DoesNotExist:
+        return tags
+
+
+def update_affiliate_thread_note(thread_id: str, note: str) -> bool:
+    """
+    Update the manager note on an affiliate thread.
+    Returns True if found and updated.
+    """
+    from .models import AffiliateConversationThread
+    updated = AffiliateConversationThread.objects.filter(pk=thread_id).update(notes=note)
+    return bool(updated)
+
+
+def get_affiliate_thread_queryset_for_user(user):
+    """
+    Return a queryset of AffiliateConversationThread scoped to the user's role.
+    Staff/managers see threads they manage. Others see their own thread.
+    """
+    from .models import AffiliateConversationThread
+    if user.is_staff:
+        return (
+            AffiliateConversationThread.objects
+            .filter(manager=user)
+            .select_related("affiliate", "manager")
+            .order_by("-last_message_at")
+        )
+    return (
+        AffiliateConversationThread.objects
+        .filter(affiliate=user)
+        .select_related("affiliate", "manager")
+    )
+
+
+def get_affiliate_thread_for_reassign(thread_id: str):
+    """
+    Fetch a thread for manager reassignment.
+    Raises AffiliateConversationThread.DoesNotExist if not found.
+    """
+    from .models import AffiliateConversationThread
+    return AffiliateConversationThread.objects.get(pk=thread_id)
+
+
+def get_cpa_broadcasts_queryset():
+    """Return all CPA broadcasts ordered by creation date (admin view)."""
+    from .models import CPABroadcast
+    return CPABroadcast.objects.all().order_by("-created_at")

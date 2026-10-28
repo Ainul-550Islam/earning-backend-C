@@ -29,7 +29,7 @@ class PerformanceTest(TestCase):
             'query_params': {}, 'is_bot': False,
         }
 
-    @patch('smartlink.services.core.SmartLinkResolverService.SmartLinkResolverService._track_click_async')
+    @patch('api.smartlink.services.core.SmartLinkResolverService.SmartLinkResolverService._track_click_async')
     def test_average_resolve_time(self, mock_track):
         """Average resolve time across 100 requests must be < 50ms in test env."""
         from ..services.core.SmartLinkResolverService import SmartLinkResolverService
@@ -67,7 +67,7 @@ class PerformanceTest(TestCase):
         # In test env with local cache backend: allow 10ms
         self.assertLess(avg_us, 10_000)
 
-    @patch('smartlink.services.core.SmartLinkResolverService.SmartLinkResolverService._track_click_async')
+    @patch('api.smartlink.services.core.SmartLinkResolverService.SmartLinkResolverService._track_click_async')
     def test_concurrent_resolve(self, mock_track):
         """Test concurrent resolves do not cause race conditions or errors."""
         from ..services.core.SmartLinkResolverService import SmartLinkResolverService

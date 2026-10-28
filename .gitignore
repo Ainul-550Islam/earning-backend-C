@@ -29,3 +29,27 @@ fix_*.py
 # Frontend build
 frontend/dist/
 frontend/node_modules/
+logs/*
+!logs/.gitkeep
+
+# local backups / code dumps
+.repair-backup-*/
+repomix-output.xml
+
+# root-level dumps, archives, backups
+/*.sql
+/*.dump
+/*.zip
+/*.bak
+
+.venv312/
+.*-backup-*/
+bk_*/
+.fix-backup-*/
+*.log
+
+# backups
+earning_db_backup_*.sql
+tenants_backup.json
+tenants_raw_backup.json
+*.dump

@@ -1,6 +1,6 @@
 # api/djoyalty/webhooks/webhook_registry.py
 """
-WebhookRegistry — outbound webhook endpoint registration।
+WebhookRegistry -- outbound webhook endpoint registration।
 In-memory registry; production এ database-backed implementation ব্যবহার করুন।
 """
 import logging
@@ -13,7 +13,7 @@ class WebhookRegistry:
     """
     Webhook endpoint registry।
     Stores URL, events, and secret for each endpoint।
-    Thread-safe নয় — production এ DB-backed ব্যবহার করুন।
+    Thread-safe নয় -- production এ DB-backed ব্যবহার করুন।
     """
     _endpoints: List[dict] = []
 
@@ -70,7 +70,7 @@ class WebhookRegistry:
 
     @classmethod
     def clear(cls) -> None:
-        """সব endpoints clear করো — testing এর জন্য।"""
+        """সব endpoints clear করো -- testing এর জন্য।"""
         cls._endpoints = []
         logger.debug('WebhookRegistry: All endpoints cleared')
 

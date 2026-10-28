@@ -87,7 +87,7 @@ class ClickFraudService:
 
     def create_fraud_flag(self, click, score: int, signals: list, action: str):
         """Persist a ClickFraudFlag record for a flagged/blocked click."""
-        from ...models import ClickFraudFlag
+        from api.smartlink.models import ClickFraudFlag
         try:
             ClickFraudFlag.objects.create(
                 click=click,

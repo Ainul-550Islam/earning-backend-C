@@ -8,7 +8,7 @@ class Command(BaseCommand):
         parser.add_argument('--fix', action='store_true', help='Auto-pause broken SmartLinks')
 
     def handle(self, *args, **options):
-        from ...models import SmartLink
+        from api.smartlink.models import SmartLink
         broken = SmartLink.objects.filter(
             is_active=True, is_archived=False
         ).exclude(offer_pool__entries__is_active=True).select_related('publisher')

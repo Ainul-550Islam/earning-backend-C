@@ -3,12 +3,14 @@ api/monetization_tools/signals.py
 ====================================
 Django signals for the monetization_tools app.
 """
+from decimal import Decimal
 
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from api.monetization_tools.models import RevenueDailySummary
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

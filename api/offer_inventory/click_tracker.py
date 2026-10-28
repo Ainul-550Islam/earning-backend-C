@@ -11,6 +11,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.core.cache import cache
 from django.utils import timezone
+from api.offer_inventory.models import Click
 
 logger = logging.getLogger(__name__)
 

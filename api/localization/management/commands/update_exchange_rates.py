@@ -10,8 +10,8 @@ class Command(BaseCommand):
         parser.add_argument('--base', default='USD', help='Base currency')
 
     def handle(self, *args, **options):
-        from localization.services.currency.CurrencyRateProvider import CurrencyRateProvider
-        from localization.services.currency.ExchangeRateService import ExchangeRateService
+        from api.localization.services.currency.CurrencyRateProvider import CurrencyRateProvider
+        from api.localization.services.currency.ExchangeRateService import ExchangeRateService
         provider_name = options.get('provider', 'exchangerate-api')
         base = options.get('base', 'USD')
         provider = CurrencyRateProvider()

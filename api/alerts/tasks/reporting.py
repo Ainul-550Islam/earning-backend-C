@@ -2,6 +2,7 @@
 Reporting Tasks
 """
 from celery import shared_task
+from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 import logging
@@ -263,15 +264,21 @@ def generate_trend_analysis_reports():
 
 
 @shared_task
-def distribute_reports():
-    """Distribute generated reports to recipients"""
+def distribute_reports(report_id=None):
+    """Distribute generated reports to recipients (all recent ones, or only `report_id`)"""
     try:
-        # Get completed reports that need distribution
-        reports = AlertReport.objects.filter(
-            status='completed',
-            auto_distribute=True,
-            generated_at__gte=timezone.now() - timedelta(hours=1)
-        )
+        if report_id is not None:
+            # the AlertReport post_save signal calls distribute_reports.delay(report.id)
+            reports = AlertReport.objects.filter(
+                pk=report_id, status='completed', auto_distribute=True
+            )
+        else:
+            # Get completed reports that need distribution
+            reports = AlertReport.objects.filter(
+                status='completed',
+                auto_distribute=True,
+                generated_at__gte=timezone.now() - timedelta(hours=1)
+            )
         
         distributed_count = 0
         for report in reports:
@@ -388,11 +395,26 @@ def export_report(report_id, format_type=None):
 
 
 @shared_task
-def create_scheduled_report(report_config):
+def create_scheduled_report(report_config=None):
     """Create and schedule a report based on configuration"""
     try:
+        config = dict(report_config or {})
+        if not config:
+            logger.warning("create_scheduled_report called without a configuration; nothing to do")
+            return None
+        # Accept legacy key names (the model fields are title/start_date/end_date)
+        if 'name' in config:
+            config.setdefault('title', config.pop('name'))
+        if 'period_start' in config:
+            config.setdefault('start_date', config.pop('period_start'))
+        if 'period_end' in config:
+            config.setdefault('end_date', config.pop('period_end'))
+        config.setdefault('title', 'Scheduled report')
+        config.setdefault('end_date', timezone.now())
+        config.setdefault('start_date', config['end_date'] - timedelta(days=7))
+
         # Create report from configuration
-        report = AlertReport.objects.create(**report_config)
+        report = AlertReport.objects.create(**config)
         
         # Generate the report
         report.generate_report()

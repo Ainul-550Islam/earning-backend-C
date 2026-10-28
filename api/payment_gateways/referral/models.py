@@ -28,7 +28,7 @@ class ReferralProgram(TimeStampedModel):
 class ReferralLink(TimeStampedModel):
     """Each user gets a unique referral link/code."""
     user       = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                                       related_name='referral_link')
+                                       related_name='referral_link_pg')
     code       = models.CharField(max_length=20, unique=True, default='')
     total_clicks    = models.IntegerField(default=0)
     total_signups   = models.IntegerField(default=0)
@@ -58,9 +58,9 @@ class ReferralLink(TimeStampedModel):
 class Referral(TimeStampedModel):
     """Records when a user signs up via referral."""
     referrer      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                                       related_name='referrals_made')
+                                       related_name='referrals_made_pg')
     referred_user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                                          related_name='referred_by')
+                                          related_name='pg_referred_by')
     referral_link = models.ForeignKey(ReferralLink, on_delete=models.SET_NULL, null=True)
     is_active     = models.BooleanField(default=True, help_text='Commission still being paid')
     commission_start = models.DateField(auto_now_add=True)
@@ -81,9 +81,9 @@ class ReferralCommission(TimeStampedModel):
 
     referral       = models.ForeignKey(Referral, on_delete=models.CASCADE, related_name='commissions')
     referrer       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                                        related_name='referral_commissions')
+                                        related_name='referral_commissions_pg')
     referred_user  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                                        related_name='generated_commissions')
+                                        related_name='generated_commissions_pg')
     original_amount = models.DecimalField(max_digits=10, decimal_places=2,
                       help_text='Referred user transaction amount')
     commission_amount = models.DecimalField(max_digits=10, decimal_places=2,

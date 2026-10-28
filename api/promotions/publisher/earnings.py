@@ -141,13 +141,13 @@ class PublisherEarnings:
 
 
 @api_view(['GET'])
+@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def publisher_balance_view(request):
     earnings = PublisherEarnings(user_id=request.user.id)
     return Response(earnings.get_balance())
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def request_payout_view(request):
     data = request.data
@@ -161,9 +161,6 @@ def request_payout_view(request):
         return Response(result, status=status.HTTP_201_CREATED)
     except (ValidationError, Exception) as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def payout_history_view(request):
     earnings = PublisherEarnings(user_id=request.user.id)

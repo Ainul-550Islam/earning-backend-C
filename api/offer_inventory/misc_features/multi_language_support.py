@@ -4,6 +4,7 @@ Misc Features Package — all 6 modules.
 Multi-language support, dark mode assets, documentation builder,
 legacy support, system recovery, analytics dashboard.
 """
+from datetime import timedelta
 import logging
 import json
 from django.core.cache import cache

@@ -83,7 +83,7 @@ class InboundWebhookAdmin(admin.ModelAdmin):
     toggle_active.short_description = 'Toggle active status'
 
     def rotate_secret(self, request, queryset):
-        from ..services.core import SecretRotationService
+        from ..services.core.SecretRotationService import SecretRotationService
         service = SecretRotationService()
         rotated_count = 0
         for inbound in queryset:

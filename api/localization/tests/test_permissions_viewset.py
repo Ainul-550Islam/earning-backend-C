@@ -34,7 +34,7 @@ class AnonymousPermissionTest(TestCase):
         self.assertIn(r.status_code, [401, 403])
 
     def test_admin_localization_requires_auth(self):
-        r = self.client.get('/api/localization/admin-localization/')
+        r = self.client.get('/api/localization/admin-localization/system_health/')
         self.assertIn(r.status_code, [401, 403])
 
     def test_exchange_rates_requires_auth(self):

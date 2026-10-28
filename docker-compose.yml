@@ -1,117 +1,125 @@
+# CMS Docker Compose — Production + Development
 version: '3.9'
 
 services:
-
-  # ─── PostgreSQL ───────────────────────────────
-  db:
-    image: postgres:15-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: earning_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ─── Redis ────────────────────────────────────
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ─── Django Backend ───────────────────────────
-  backend:
+  # ── Web Application ───────────────────────────────────────────
+  web:
     build: .
     restart: unless-stopped
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py seed_tenant &&
-             gunicorn config.wsgi:application
-             --bind 0.0.0.0:8000
-             --workers 2
-             --timeout 120
-             --reload"
-    volumes:
-      - .:/app
-      - static_files:/app/staticfiles
-      - media_files:/app/media
     ports:
       - "8000:8000"
-    env_file:
-      - .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/earning_db
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=settings_production
+      - DATABASE_URL=postgresql://cms_user:${DB_PASSWORD}@db:5432/cms_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=False
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+    volumes:
+      - media_files:/app/media
+      - static_files:/app/static
+      - logs:/app/logs
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - cms_net
 
-  # ─── Celery Worker ────────────────────────────
-  celery:
+  # ── Celery Worker ─────────────────────────────────────────────
+  celery_worker:
     build: .
     restart: unless-stopped
-    command: celery -A config worker --loglevel=info --concurrency=2
-    volumes:
-      - .:/app
-    env_file:
-      - .env
+    command: celery -A config worker --loglevel=info --concurrency=4
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/earning_db
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=settings_production
+      - DATABASE_URL=postgresql://cms_user:${DB_PASSWORD}@db:5432/cms_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - logs:/app/logs
     depends_on:
-      - backend
+      - db
       - redis
+    networks:
+      - cms_net
 
-  # ─── Celery Beat (Scheduler) ──────────────────
-  celery-beat:
+  # ── Celery Beat (Scheduler) ───────────────────────────────────
+  celery_beat:
     build: .
     restart: unless-stopped
     command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    volumes:
-      - .:/app
-    env_file:
-      - .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/earning_db
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=settings_production
+      - DATABASE_URL=postgresql://cms_user:${DB_PASSWORD}@db:5432/cms_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - SECRET_KEY=${SECRET_KEY}
     depends_on:
-      - backend
+      - db
       - redis
+    networks:
+      - cms_net
 
-  # ─── React Frontend ───────────────────────────
-  frontend:
-    image: node:18-alpine
+  # ── PostgreSQL ────────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
     restart: unless-stopped
-    working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
-    volumes:
-      - ./frontend:/app
-    ports:
-      - "5173:5173"
     environment:
-      VITE_API_URL: http://localhost:8000/api
+      POSTGRES_DB: cms_db
+      POSTGRES_USER: cms_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cms_user -d cms_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cms_net
+
+  # ── Redis ─────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - cms_net
+
+  # ── Nginx (reverse proxy) ─────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - static_files:/var/www/static:ro
+      - media_files:/var/www/media:ro
     depends_on:
-      - backend
+      - web
+    networks:
+      - cms_net
 
 volumes:
   postgres_data:
-  static_files:
+  redis_data:
   media_files:
+  static_files:
+  logs:
+
+networks:
+  cms_net:
+    driver: bridge

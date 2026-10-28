@@ -12,6 +12,10 @@ class OfferException(APIException):
     default_code = 'offer_error'
 
 
+# Alias for backward compatibility
+OfferwallException = OfferException
+
+
 class OfferNotFoundException(OfferException):
     """Raised when offer is not found"""
     status_code = status.HTTP_404_NOT_FOUND
@@ -56,7 +60,7 @@ class DailyLimitReachedException(OfferException):
 
 class OfferCapReachedException(OfferException):
     """Raised when offer's total cap is reached"""
-    status_code = status.HTTP_410_GONE
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
     default_detail = 'This offer has reached its maximum completions'
     default_code = 'offer_cap_reached'
 
@@ -187,7 +191,7 @@ class InvalidWebhookDataException(WebhookException):
     default_code = 'invalid_webhook_data'
 
 
-class FraudException(APIException):
+class FraudException(OfferException):
     """Base exception for fraud-related errors"""
     status_code = status.HTTP_403_FORBIDDEN
     default_detail = 'Fraudulent activity detected'
@@ -236,7 +240,7 @@ class AccountBannedException(FraudException):
     default_code = 'account_banned'
 
 
-class ValidationException(APIException):
+class ValidationException(OfferException):
     """Base exception for validation errors"""
     status_code = status.HTTP_400_BAD_REQUEST
     default_detail = 'Validation error'
@@ -264,7 +268,7 @@ class InvalidIPAddressException(ValidationException):
     default_code = 'invalid_ip_address'
 
 
-class RateLimitException(APIException):
+class RateLimitException(OfferException):
     """Raised when rate limit is exceeded"""
     status_code = status.HTTP_429_TOO_MANY_REQUESTS
     default_detail = 'Rate limit exceeded. Please try again later.'

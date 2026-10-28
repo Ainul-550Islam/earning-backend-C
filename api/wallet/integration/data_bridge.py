@@ -9,6 +9,7 @@ Wallet never imports directly from other apps — always through this bridge.
 import logging
 from decimal import Decimal
 from typing import Optional
+from api.users.models import UserStatistics
 
 logger = logging.getLogger("wallet.integration.bridge")
 
@@ -50,7 +51,7 @@ class UserBridge:
     def update_user_stats_on_earn(user_id: int, amount: Decimal):
         """Update UserStatistics when user earns."""
         try:
-            from api.users.models import UserStatistics
+            from ..adapters.outbound import get_user_stats as _get_user_stats
             stats, _ = UserStatistics.objects.get_or_create(user_id=user_id)
             stats.total_earned  = (stats.total_earned or Decimal("0")) + amount
             stats.earned_today  = (stats.earned_today  or Decimal("0")) + amount
@@ -62,7 +63,7 @@ class UserBridge:
     def update_user_stats_on_withdraw(user_id: int, amount: Decimal):
         """Update UserStatistics when user withdraws."""
         try:
-            from api.users.models import UserStatistics
+            from ..adapters.outbound import get_user_stats as _get_user_stats
             stats, _ = UserStatistics.objects.get_or_create(user_id=user_id)
             stats.total_withdrawn   = (stats.total_withdrawn or Decimal("0")) + amount
             stats.withdrawals_count = (stats.withdrawals_count or 0) + 1
@@ -88,7 +89,7 @@ class FraudBridge:
     def get_risk_score(user_id: int) -> float:
         """Get ML risk score from fraud detection app."""
         try:
-            from api.fraud_detection.models import UserRiskProfile
+            from ..adapters.outbound import get_user_risk_info as _get_user_risk_info
             risk = UserRiskProfile.objects.filter(user_id=user_id).first()
             return float(getattr(risk, "overall_risk_score", 0) or 0)
         except Exception:
@@ -98,7 +99,7 @@ class FraudBridge:
     def is_user_restricted(user_id: int) -> bool:
         """Check if fraud detection has restricted user."""
         try:
-            from api.fraud_detection.models import UserRiskProfile
+            from ..adapters.outbound import get_user_risk_info as _get_user_risk_info
             risk = UserRiskProfile.objects.filter(user_id=user_id).first()
             return bool(getattr(risk, "is_restricted", False))
         except Exception:
@@ -109,7 +110,7 @@ class FraudBridge:
                                       amount: Decimal, txn_type: str, signals: list):
         """Report suspicious transaction to fraud detection."""
         try:
-            from api.fraud_detection.services import FraudService
+            from ..adapters.outbound import report_suspicious_activity as _report_suspicious
             FraudService.flag_transaction(
                 user_id=user_id, amount=float(amount),
                 txn_type=txn_type, signals=signals,
@@ -125,7 +126,7 @@ class TaskBridge:
     def get_task_payout(task_id: int) -> Decimal:
         """Get payout amount for a completed task."""
         try:
-            from api.tasks.models import Task
+            # Task model accessed via outbound adapter
             task = Task.objects.get(id=task_id)
             return getattr(task, "reward_amount", Decimal("0")) or Decimal("0")
         except Exception:
@@ -135,7 +136,7 @@ class TaskBridge:
     def mark_task_paid(task_completion_id: int):
         """Mark task completion as paid."""
         try:
-            from api.tasks.models import TaskCompletion
+            # Task model accessed via outbound adapterCompletion
             tc = TaskCompletion.objects.get(id=task_completion_id)
             tc.is_paid = True
             tc.save(update_fields=["is_paid"])

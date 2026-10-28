@@ -36,6 +36,7 @@ class TapjoyConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_tapjoy_configs"
         verbose_name = _("Tapjoy Config")
         unique_together = [["publisher"]]

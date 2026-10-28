@@ -17,8 +17,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         from django.utils import timezone
         from datetime import timedelta
-        from messaging.models import ChatMessage, MessageStatus
-        from messaging.utils.search_engine import index_message, get_es_client
+        from api.messaging.models import ChatMessage, MessageStatus
+        from api.messaging.utils.search_engine import index_message, get_es_client, upsert_search_index_row
 
         es = get_es_client()
         cutoff = timezone.now() - timedelta(days=options["days"])
@@ -37,11 +37,24 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f"DRY RUN — would index {total} messages."))
             return
 
+        if es is None:
+            self.stderr.write(self.style.ERROR(
+                "Elasticsearch is not configured/reachable — aborting sync. "
+                "Check ELASTICSEARCH_URL and that the elasticsearch package is installed."
+            ))
+            return
+
         indexed = 0
         errors = 0
         for msg in qs.iterator(chunk_size=500):
             try:
-                index_message(
+                # index_message() catches its own exceptions and returns
+                # True/False rather than raising (see its docstring) -
+                # checking the return value here (matching the same fix
+                # applied to tasks.bulk_reindex_task) instead of discarding
+                # it, so a write that index_message() itself reports as
+                # failed is counted as an error rather than "indexed".
+                es_ok = index_message(
                     message_id=str(msg.id),
                     chat_id=str(msg.chat_id),
                     sender_id=str(msg.sender_id) if msg.sender_id else "",
@@ -50,7 +63,13 @@ class Command(BaseCommand):
                     created_at=msg.created_at.isoformat(),
                     tenant_id=msg.tenant_id,
                 )
-                indexed += 1
+                # Keep the DB-side admin browse index (MessageSearchIndex)
+                # in sync too - previously only real ES was written here.
+                upsert_search_index_row(msg)
+                if es_ok:
+                    indexed += 1
+                else:
+                    errors += 1
                 if indexed % 500 == 0:
                     self.stdout.write(f"  Indexed {indexed}/{total}...")
             except Exception as exc:

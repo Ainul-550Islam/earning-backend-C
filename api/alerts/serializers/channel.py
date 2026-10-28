@@ -1,15 +1,55 @@
 """
 Channel Serializers
 """
+import re
+
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
 from ..models.channel import (
-    AlertChannel, ChannelRoute, ChannelHealthLog, 
+    AlertChannel, ChannelRoute, ChannelHealthLog,
     ChannelRateLimit, AlertRecipient
+)
+from ..validators import (
+    validate_channel_config,
+    validate_webhook_url,
+    validate_time_window,
+    validate_json_schema,
 )
 
 User = get_user_model()
+
+# Channel ``config`` holds credentials (webhook URLs, tokens, SMTP passwords, API keys).
+# They are masked in API output and restored from the stored value when a client sends
+# the placeholder back, so a read-modify-write cycle never loses or exposes a secret.
+SECRET_CONFIG_KEY = re.compile(
+    r'secret|token|passw|pwd|api[_-]?key|auth|credential|private|signing|webhook_url|dsn|bearer',
+    re.IGNORECASE,
+)
+SECRET_MASK = '********'
+
+
+def redact_config(value, key=None):
+    """Return a copy of ``value`` with every secret-looking entry masked."""
+    if isinstance(value, dict):
+        return {k: redact_config(v, k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [redact_config(v, key) for v in value]
+    if key is not None and SECRET_CONFIG_KEY.search(str(key)) and value not in (None, '', False):
+        return SECRET_MASK
+    return value
+
+
+def _restore_masked(new, old, unresolved, path=''):
+    if isinstance(new, dict):
+        old = old if isinstance(old, dict) else {}
+        return {k: _restore_masked(v, old.get(k), unresolved, f'{path}{k}.') for k, v in new.items()}
+    if isinstance(new, str) and new == SECRET_MASK:
+        if old in (None, ''):
+            unresolved.append(path.rstrip('.'))
+            return new
+        return old
+    return new
 
 
 class AlertChannelSerializer(serializers.ModelSerializer):
@@ -32,6 +72,24 @@ class AlertChannelSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'last_success', 'last_failure', 
                           'consecutive_failures', 'total_sent', 'total_failed', 'success_rate']
     
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if isinstance(data.get('config'), dict):
+            data['config'] = redact_config(data['config'])
+        return data
+
+    def validate_config(self, value):
+        """Restore masked placeholders from the stored config (never persist the mask)."""
+        if not isinstance(value, dict):
+            return value
+        stored = self.instance.config if isinstance(self.instance, AlertChannel) else None
+        unresolved = []
+        restored = _restore_masked(value, stored, unresolved)
+        if unresolved:
+            raise serializers.ValidationError(
+                "No stored value to keep for masked field(s): " + ', '.join(sorted(unresolved)))
+        return restored
+
     def get_health_status(self, obj):
         return obj.get_health_status()
     
@@ -68,6 +126,27 @@ class AlertChannelSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Retry delay must be between 1 and 60 minutes")
         return value
 
+    def validate(self, attrs):
+        """
+        Cross-field validation:
+        - validate_webhook_url() for webhook/slack channels that supply a webhook_url
+        - Full validate_channel_config() is intentionally deferred to the service layer
+          so partial configs (e.g. only smtp_host supplied) remain serializer-valid.
+        """
+        channel_type = attrs.get('channel_type') or getattr(self.instance, 'channel_type', None)
+        config = attrs.get('config') or getattr(self.instance, 'config', {}) or {}
+
+        if channel_type in ('webhook', 'slack') and isinstance(config, dict):
+            webhook_url = config.get('webhook_url')
+            if webhook_url:
+                url_result = validate_webhook_url(webhook_url)
+                if not url_result['valid']:
+                    raise serializers.ValidationError(
+                        {'config': {'webhook_url': url_result['errors']}}
+                    )
+
+        return attrs
+
 
 class ChannelRouteSerializer(serializers.ModelSerializer):
     """ChannelRoute serializer"""
@@ -75,6 +154,20 @@ class ChannelRouteSerializer(serializers.ModelSerializer):
     source_rules_count = serializers.SerializerMethodField()
     source_channels_count = serializers.SerializerMethodField()
     destination_channels_count = serializers.SerializerMethodField()
+
+
+    source_rules = serializers.PrimaryKeyRelatedField(
+        many=True, required=False,
+        queryset=__import__('api.alerts.models.core', fromlist=['AlertRule']).AlertRule.objects.all()
+    )
+    source_channels = serializers.PrimaryKeyRelatedField(
+        many=True, required=False,
+        queryset=AlertChannel.objects.all()
+    )
+    destination_channels = serializers.PrimaryKeyRelatedField(
+        many=True, required=False,
+        queryset=AlertChannel.objects.all()
+    )
     
     class Meta:
         model = ChannelRoute
@@ -112,6 +205,38 @@ class ChannelRouteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Escalate after failures must be at least 1")
         return value
 
+    def validate(self, attrs):
+        """
+        Cross-field validation:
+        - time_based routes: start_time must be before end_time
+        - validate_time_window() on escalation_delay_minutes
+        - conditions dict run through validate_json_schema()
+        """
+        route_type = attrs.get('route_type') or getattr(self.instance, 'route_type', None)
+        if route_type == 'time_based':
+            start = attrs.get('start_time') or getattr(self.instance, 'start_time', None)
+            end = attrs.get('end_time') or getattr(self.instance, 'end_time', None)
+            if start and end and start >= end:
+                raise serializers.ValidationError(
+                    {'start_time': 'start_time must be before end_time for time_based routes.'}
+                )
+
+        escalation_delay = attrs.get('escalation_delay_minutes')
+        if escalation_delay is not None:
+            tw_result = validate_time_window(escalation_delay, unit='minutes')
+            if not tw_result['valid']:
+                raise serializers.ValidationError(
+                    {'escalation_delay_minutes': tw_result['errors']}
+                )
+
+        conditions = attrs.get('conditions')
+        if conditions and isinstance(conditions, dict):
+            schema_result = validate_json_schema(conditions)
+            if not schema_result['valid']:
+                raise serializers.ValidationError({'conditions': schema_result['errors']})
+
+        return attrs
+
 
 class ChannelHealthLogSerializer(serializers.ModelSerializer):
     """ChannelHealthLog serializer"""
@@ -121,7 +246,8 @@ class ChannelHealthLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChannelHealthLog
         fields = [
-            'id', 'channel', 'channel_name', 'channel_type', 'status',
+            'id', 'channel', 'channel_name', 'channel_type',
+            'check_name', 'status', 'status_message',
             'response_time_ms', 'error_message', 'check_type', 'details',
             'checked_at'
         ]

@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 
 from ..models import InboundWebhook, InboundWebhookLog, InboundWebhookRoute, InboundWebhookError
 from ..constants import InboundSource
+from ..validators import validate_ip_whitelist as _validate_ip_whitelist
 
 User = get_user_model()
 
@@ -41,7 +42,7 @@ class InboundWebhookSerializer(serializers.ModelSerializer):
     
     def validate_source(self, value):
         """Validate source."""
-        valid_sources = [source.value for source in InboundSource]
+        valid_sources = [choice[0] for choice in InboundSource.CHOICES]
         if value not in valid_sources:
             raise serializers.ValidationError(f"Source must be one of: {valid_sources}")
         return value
@@ -56,32 +57,11 @@ class InboundWebhookSerializer(serializers.ModelSerializer):
         
         return value
     
-    def validate_secret(self, value):
-        """Validate secret."""
-        if not value:
-            raise serializers.ValidationError("Secret is required.")
-        
-        if len(value) < 16:
-            raise serializers.ValidationError("Secret must be at least 16 characters long.")
-        
-        return value
-    
     def validate_ip_whitelist(self, value):
-        """Validate IP whitelist."""
+        """Validate IP whitelist (delegates to canonical validators.py)."""
         if value is None:
             return value
-        
-        if not isinstance(value, list):
-            raise serializers.ValidationError("IP whitelist must be a list.")
-        
-        import ipaddress
-        for ip in value:
-            try:
-                ipaddress.ip_address(ip)
-            except ValueError:
-                raise serializers.ValidationError(f"Invalid IP address: {ip}")
-        
-        return value
+        return _validate_ip_whitelist(value)
     
     def validate_allowed_origins(self, value):
         """Validate allowed origins."""
@@ -196,14 +176,6 @@ class InboundWebhookLogSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Raw payload is required.")
         return value
     
-    def validate_headers(self, value):
-        """Validate headers."""
-        if value is None:
-            return value
-        
-        if not isinstance(value, dict):
-            raise serializers.ValidationError("Headers must be a dictionary.")
-        return value
 
 
 class InboundWebhookRouteSerializer(serializers.ModelSerializer):
@@ -279,24 +251,16 @@ class InboundWebhookErrorSerializer(serializers.ModelSerializer):
             'log',
             'log_inbound_source',
             'error_type',
-            'error_code',
             'error_message',
-            'error_details',
+            'stack_trace',
             'created_at',
-            'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at']
     
     def validate_error_type(self, value):
         """Validate error type."""
         if not value:
             raise serializers.ValidationError("Error type is required.")
-        return value
-    
-    def validate_error_code(self, value):
-        """Validate error code."""
-        if not value:
-            raise serializers.ValidationError("Error code is required.")
         return value
 
 
@@ -314,11 +278,6 @@ class InboundWebhookProcessSerializer(serializers.Serializer):
             raise serializers.ValidationError("Raw payload is required.")
         return value
     
-    def validate_headers(self, value):
-        """Validate headers."""
-        if value is not None and not isinstance(value, dict):
-            raise serializers.ValidationError("Headers must be a dictionary.")
-        return value
 
 
 class InboundWebhookValidateSerializer(serializers.Serializer):
@@ -339,3 +298,16 @@ class InboundWebhookValidateSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("Payload is required.")
         return value
+
+class InboundWebhookListSerializer(serializers.ModelSerializer):
+    """Serializer for listing inbound webhooks (GET list)."""
+    
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+    
+    class Meta:
+        model = InboundWebhook
+        fields = [
+            'id', 'source', 'url_token', 'created_by_username',
+            'is_active', 'created_at',
+        ]
+        read_only_fields = ['id', 'url_token', 'created_at']

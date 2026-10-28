@@ -6,7 +6,13 @@ import logging
 
 from api.offerwall.exceptions import InvalidWebhookSignatureException
 from .OfferProcessor import OfferProcessor
-from ..constants import *
+from ..constants import (
+    PLATFORM_ALL,
+    STATUS_ACTIVE,
+    OFFER_TYPE_SURVEY,
+    PROVIDER_PERSONA,
+)
+from api.offerwall.exceptions import InvalidWebhookSignatureException, ProviderAPIException
 
 logger = logging.getLogger(__name__)
 

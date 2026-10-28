@@ -6,8 +6,16 @@ from django.utils import timezone
 from django.db.models import Count, Sum, Q
 from datetime import timedelta
 from decimal import Decimal
-from ..constants import *
-from ..exceptions import *
+from ..constants import (
+    FRAUD_THRESHOLD_HIGH,
+    FRAUD_THRESHOLD_MEDIUM,
+    FRAUD_THRESHOLD_LOW,
+    MAX_OFFER_CLICKS_PER_HOUR,
+    MAX_USER_COMPLETIONS_PER_DAY,
+    CONVERSION_APPROVED,
+    CONVERSION_REJECTED,
+    CONVERSION_PENDING,
+)
 
 logger = logging.getLogger(__name__)
 

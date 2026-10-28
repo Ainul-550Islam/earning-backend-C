@@ -4,6 +4,7 @@ Billing Tasks
 This module contains Celery tasks for billing operations including
 invoice generation, payment processing, dunning workflows, and commission calculations.
 """
+from django.db import models
 
 from celery import shared_task
 from django.utils import timezone

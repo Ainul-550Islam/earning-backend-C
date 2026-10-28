@@ -8,7 +8,7 @@ from .factories import make_customer, make_txn, make_loyalty_points, make_tier
 class FullLoyaltyJourneyTest(TestCase):
     """
     Complete customer loyalty journey:
-    Register → Earn → Tier Upgrade → Redeem → Badge
+    Register -> Earn -> Tier Upgrade -> Redeem -> Badge
     """
 
     def setUp(self):

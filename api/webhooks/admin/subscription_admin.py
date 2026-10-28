@@ -11,7 +11,7 @@ from django.db.models import Count
 from django.utils import timezone
 
 from ..models import WebhookSubscription, WebhookFilter
-from ..models.constants import WebhookStatus
+from ..constants import WebhookStatus
 
 
 @admin.register(WebhookSubscription)
@@ -95,7 +95,7 @@ class WebhookSubscriptionAdmin(admin.ModelAdmin):
         status = obj.endpoint.status
         color_map = {
             WebhookStatus.ACTIVE: 'green',
-            WebhookStatus.INACTIVE: 'gray',
+            WebhookStatus.DISABLED: 'gray',
             WebhookStatus.SUSPENDED: 'red',
             WebhookStatus.PAUSED: 'orange'
         }
@@ -163,7 +163,7 @@ class WebhookSubscriptionAdmin(admin.ModelAdmin):
             status = 'activated' if subscription.is_active else 'deactivated'
             self.message_user(
                 request,
-                f"{subscription.event_type} subscription for {subscription.endpoint.label or subscription.endpoint.url} {status}"
+                f"{subscription.event_type} subscription for {subscription.endpoint.label or subscription.endpoint.target_url} {status}"
             )
 
         self.message_user(request, f"Successfully updated {updated_count} subscriptions.")
@@ -171,7 +171,7 @@ class WebhookSubscriptionAdmin(admin.ModelAdmin):
 
     def test_subscription(self, request, queryset):
         """Test selected subscriptions."""
-        from ..services.core import DispatchService
+        from ..services.core.DispatchService import DispatchService
 
         service = DispatchService()
         results = []
@@ -188,9 +188,9 @@ class WebhookSubscriptionAdmin(admin.ModelAdmin):
                     }
                 )
                 status = 'Success' if result else 'Failed'
-                results.append(f"{subscription.event_type} for {subscription.endpoint.label or subscription.endpoint.url}: {status}")
+                results.append(f"{subscription.event_type} for {subscription.endpoint.label or subscription.endpoint.target_url}: {status}")
             except Exception as e:
-                results.append(f"{subscription.event_type} for {subscription.endpoint.label or subscription.endpoint.url}: Error - {str(e)}")
+                results.append(f"{subscription.event_type} for {subscription.endpoint.label or subscription.endpoint.target_url}: Error - {str(e)}")
 
         self.message_user(request, f"Test results: {'; '.join(results)}")
     test_subscription.short_description = 'Test selected subscriptions'
@@ -211,7 +211,7 @@ class WebhookSubscriptionAdmin(admin.ModelAdmin):
         """Override delete to handle cascade deletion."""
         self.message_user(
             request,
-            f"Deleted webhook subscription: {obj.event_type} for {obj.endpoint.label or obj.endpoint.url}",
+            f"Deleted webhook subscription: {obj.event_type} for {obj.endpoint.label or obj.endpoint.target_url}",
             level='warning'
         )
         super().delete_model(request, obj)

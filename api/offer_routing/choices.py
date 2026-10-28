@@ -186,7 +186,13 @@ class SignalType:
     BEHAVIOR = 'behavior'
     WEATHER = 'weather'
     CONTEXT = 'context'
-    
+    SESSION = 'session'
+    USER = 'user'
+    OFFER = 'offer'
+    ROUTE = 'route'
+    PREFERENCE = 'preference'
+    ENVIRONMENT = 'environment'
+
     CHOICES = [
         (TIME, 'Time-based'),
         (LOCATION, 'Location-based'),
@@ -394,3 +400,28 @@ class PermissionLevel:
         (ADMIN, 'Admin'),
         (PUBLIC, 'Public'),
     ]
+
+class GeoTargetingType:
+    """Types of geo targeting."""
+    COUNTRY = 'country'
+    REGION = 'region'
+    CITY = 'city'
+    POSTAL_CODE = 'postal_code'
+    COORDINATES = 'coordinates'
+    CONTINENT = 'continent'
+    DMA = 'dma'
+
+    CHOICES = [
+        (COUNTRY, 'Country'),
+        (REGION, 'Region'),
+        (CITY, 'City'),
+        (POSTAL_CODE, 'Postal Code'),
+        (COORDINATES, 'Coordinates'),
+        (CONTINENT, 'Continent'),
+        (DMA, 'DMA Region'),
+    ]
+    SESSION = 'session'
+    USER = 'user'
+    OFFER = 'offer'
+    PREFERENCE = 'preference'
+    ENVIRONMENT = 'environment'

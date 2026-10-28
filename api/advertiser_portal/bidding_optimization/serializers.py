@@ -256,13 +256,13 @@ class PerformanceBiddingConfigSerializer(serializers.Serializer):
         required=True
     )
     target_value = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
-    bid_adjustment_factor = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0.1, max_value=5.0, default=1.0)
+    bid_adjustment_factor = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal('0.1'), max_value=Decimal('5.0'), default=Decimal('1.0'))
     optimization_frequency = serializers.ChoiceField(
         choices=['hourly', 'daily', 'weekly'],
         default='daily'
     )
-    max_bid_adjustment = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=1.0, default=0.5)
-    min_bid_adjustment = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=1.0, default=0.1)
+    max_bid_adjustment = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=Decimal('1.0'), default=Decimal('0.5'))
+    min_bid_adjustment = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=Decimal('1.0'), default=Decimal('0.1'))
 
 
 class PerformanceBiddingRequestSerializer(serializers.Serializer):

@@ -8,7 +8,7 @@ from django.utils import timezone
 
 def get_unit_performance_report(ad_unit, days: int = 30) -> dict:
     """Ad unit comprehensive performance report।"""
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     agg = PublisherEarning.objects.filter(ad_unit=ad_unit, date__gte=start).aggregate(
         revenue=Sum("publisher_revenue"), impressions=Sum("impressions"),
@@ -38,7 +38,7 @@ def get_unit_performance_report(ad_unit, days: int = 30) -> dict:
 
 
 def get_unit_daily_trend(ad_unit, days: int = 30) -> list:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     return list(
         PublisherEarning.objects.filter(ad_unit=ad_unit, date__gte=start)

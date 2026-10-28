@@ -112,4 +112,3 @@ class StorageMonitor:
         hours = (datetime.utcnow() - latest.completed_at).total_seconds() / 3600
         return {"fresh": hours <= 24, "hours_since_last_backup": round(hours,1),
                 "last_backup_completed": latest.completed_at.isoformat()}
-

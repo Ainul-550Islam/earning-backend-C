@@ -1,6 +1,7 @@
 """
 Serializers for Audit Log models
 """
+import json
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
@@ -10,6 +11,7 @@ from .models import (
     AuditLog, AuditLogConfig, AuditLogArchive,
     AuditDashboard, AuditAlertRule, AuditLogLevel
 )
+from api.audit_logs.models import AuditLogAction
 
 User = get_user_model()
 

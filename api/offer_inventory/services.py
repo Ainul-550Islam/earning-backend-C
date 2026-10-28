@@ -31,6 +31,7 @@ from .constants import (
     CLICK_TOKEN_TTL_SECONDS, MAX_CLICKS_PER_HOUR,
     DEFAULT_PLATFORM_FEE_PCT, DEFAULT_REVENUE_SHARE,
 )
+from api.offer_inventory.models import WalletTransaction
 
 logger = logging.getLogger(__name__)
 

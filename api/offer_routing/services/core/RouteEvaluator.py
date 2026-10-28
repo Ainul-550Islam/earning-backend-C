@@ -10,14 +10,14 @@ from typing import Dict, List, Any, Optional, Set
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q
-from ...models import (
+from offer_routing.models import (
     OfferRoute, RouteCondition, RouteAction,
     GeoRouteRule, DeviceRouteRule, UserSegmentRule,
     TimeRouteRule, BehaviorRouteRule
 )
-from ...choices import RouteConditionType, RouteOperator, ActionType
-from ...exceptions import TargetingError, RouteEvaluationError
-from ...utils import extract_device_info, get_geo_location_from_ip
+from offer_routing.choices import RouteConditionType, RouteOperator, ActionType
+from offer_routing.exceptions import TargetingError, RouteEvaluationError
+from offer_routing.utils import extract_device_info, get_geo_location_from_ip
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -39,8 +39,8 @@ class RouteEvaluator:
             'avg_time_ms': 0
         }
     
-    def evaluate_route(self, route: OfferRoute, user: User, 
-                     context: Dict[str, Any]) -> bool:
+    def evaluate_route(self, route: OfferRoute, user: User = None,
+                     context: Dict[str, Any] = None) -> bool:
         """
         Evaluate if a route matches the user and context.
         
@@ -53,6 +53,7 @@ class RouteEvaluator:
             True if route matches, False otherwise
         """
         try:
+            context = context or {}
             # Check cache first
             cache_key = self._get_cache_key(route, user, context)
             if cache_key in self.condition_cache:
@@ -366,3 +367,38 @@ class RouteEvaluator:
                 'error': str(e),
                 'timestamp': timezone.now().isoformat()
             }
+
+    # Public wrappers for backward compatibility
+    def apply_operator(self, operator: str, field_value, condition_value) -> bool:
+        """Public wrapper for _apply_operator (backward compatibility)."""
+        return self._apply_operator(field_value, condition_value, operator)
+
+    def evaluate_conditions(self, conditions, user=None, context=None) -> dict:
+        """Public wrapper for _evaluate_conditions — returns result dict."""
+        context = context or {}
+        result = self._evaluate_conditions(conditions, user, context)
+        return {
+            'result': result,
+            'success': True,
+            'condition_ids': [c.id for c in conditions],
+        }
+
+    def evaluate_condition(self, condition, user=None, context=None) -> dict:
+        """Public wrapper for _evaluate_single_condition — returns result dict."""
+        context = context or {}
+        result = self._evaluate_single_condition(condition, user, context)
+        return {
+            'result': result,
+            'success': True,
+            'condition_id': condition.id,
+        }
+
+    def evaluate_logic_operators(self, logic: str, conditions_results: list) -> bool:
+        """Evaluate logic operator (AND/OR/NOT) across a list of boolean results."""
+        if logic == 'AND':
+            return all(conditions_results)
+        elif logic == 'OR':
+            return any(conditions_results)
+        elif logic == 'NOT':
+            return not any(conditions_results)
+        return all(conditions_results)

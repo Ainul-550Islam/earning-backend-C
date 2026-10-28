@@ -7,9 +7,9 @@ import json
 import csv
 import logging
 
-from alerts.models.core import AlertRule, AlertLog
-from alerts.models.channel import AlertChannel
-from alerts.models.incident import Incident
+from api.alerts.models.core import AlertRule, AlertLog
+from api.alerts.models.channel import AlertChannel
+from api.alerts.models.incident import Incident
 
 logger = logging.getLogger(__name__)
 
@@ -258,7 +258,7 @@ class Command(BaseCommand):
                 return self._import_channel_record(record, update_existing)
             elif model_name == 'incidents':
                 return self._import_incident_record(record, update_existing)
-        except Exception as e:
+        except Exception:
             if skip_invalid:
                 return 'failed'
             else:

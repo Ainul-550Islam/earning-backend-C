@@ -35,6 +35,7 @@ class AdUnitPositionData(TimeStampedModel):
     time_to_view_ms   = models.IntegerField(default=0, help_text="Avg time from page load to ad view")
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_ad_unit_position_data"
         verbose_name = _("Position Data")
         unique_together = [["ad_unit", "position", "date"]]

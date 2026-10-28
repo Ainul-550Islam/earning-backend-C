@@ -157,6 +157,7 @@ class SubscriptionPlan(TimeStampedModel):
     )
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_subscription_plans'
         verbose_name = _('Subscription Plan')
         verbose_name_plural = _('Subscription Plans')
@@ -324,6 +325,7 @@ class PublisherSubscription(TimeStampedModel):
     notes = models.TextField(blank=True, verbose_name=_("Admin Notes"))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_subscriptions'
         verbose_name = _('Publisher Subscription')
         verbose_name_plural = _('Publisher Subscriptions')
@@ -461,6 +463,7 @@ class SubscriptionPaymentHistory(TimeStampedModel):
     failure_reason  = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_subscription_payments'
         verbose_name = _('Subscription Payment')
         verbose_name_plural = _('Subscription Payments')

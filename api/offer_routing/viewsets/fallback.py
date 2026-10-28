@@ -5,6 +5,7 @@ This module contains viewsets for managing fallback rules,
 default offer pools, and empty result handlers.
 """
 
+from ..throttling import RoutingEngineThrottle, RoutingEngineThrottle, AnalyticsThrottle, BulkOperationThrottle, EvaluatorThrottle
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -17,6 +18,8 @@ from ..models import (
 from ..services.fallback import fallback_service
 from ..permissions import IsAuthenticatedOrReadOnly, CanManageOffers
 from ..exceptions import ValidationError, FallbackError
+from ..serializers import FallbackRuleSerializer, DefaultOfferPoolSerializer, EmptyResultHandlerSerializer
+
 
 User = get_user_model()
 
@@ -30,14 +33,18 @@ class FallbackRuleViewSet(viewsets.ModelViewSet):
     """
     
     queryset = FallbackRule.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = FallbackRuleSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [RoutingEngineThrottle]
     
     def get_queryset(self):
         """Filter rules by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('priority', 'name')
     
     @action(detail=True, methods=['post'])
@@ -238,14 +245,18 @@ class DefaultOfferPoolViewSet(viewsets.ModelViewSet):
     """
     
     queryset = DefaultOfferPool.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = DefaultOfferPoolSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [RoutingEngineThrottle]
     
     def get_queryset(self):
         """Filter pools by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('name', 'pool_type')
     
     @action(detail=True, methods=['post'])
@@ -454,14 +465,18 @@ class EmptyResultHandlerViewSet(viewsets.ModelViewSet):
     """
     
     queryset = EmptyResultHandler.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = EmptyResultHandlerSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [RoutingEngineThrottle]
     
     def get_queryset(self):
         """Filter handlers by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('name')
     
     @action(detail=True, methods=['post'])

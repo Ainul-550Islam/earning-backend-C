@@ -32,15 +32,32 @@ class Command(BaseCommand):
         )
     
     def handle(self, *args, **options):
-        """Execute the command."""
+        """Seed event types from EventType constants into the database (if EventType model exists)."""
+        logger.info("seed_event_types: starting")
+        # BUG FIX: this used to also do a separate, redundant pass first -
+        # importing WebhookEndpoint "as a connection check" (never used
+        # afterward) and printing "Event type available: X" for every
+        # EventType constant, entirely separate from the real seeding
+        # loop below it which iterates the same constants again. Harmless
+        # (didn't corrupt anything), but dead weight that just duplicated
+        # output ahead of the actual command logic. Removed.
         force = options['force']
         
         self.stdout.write("Starting event types seeding...")
         
         try:
             with transaction.atomic():
-                # Get all event type choices
-                event_choices = EventType.all_choices()
+                # BUG FIX: was EventType.all_choices() - EventType is a
+                # Django TextChoices class, which provides .choices (a
+                # property), not an all_choices() method. Confirmed this
+                # exact bug is already known and fixed elsewhere in the
+                # codebase (WebhookEndpointSerializer.py has a comment
+                # noting all_choices() "does not exist anywhere on
+                # EventType"), but that fix was never propagated here.
+                # Raised AttributeError every time, caught by this
+                # method's own except below - the real seeding logic
+                # never ran.
+                event_choices = EventType.choices
                 
                 created_count = 0
                 updated_count = 0
@@ -104,7 +121,7 @@ class Command(BaseCommand):
                 'display_name': display_name,
                 'category': self._get_event_category(event_type),
             }
-            for event_type, display_name in EventType.all_choices()
+            for event_type, display_name in EventType.choices
         ]
     
     def _get_event_category(self, event_type: str) -> str:

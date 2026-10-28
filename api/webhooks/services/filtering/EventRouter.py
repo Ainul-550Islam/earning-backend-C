@@ -6,10 +6,12 @@ This module provides event routing to matching webhook subscriptions.
 import logging
 from typing import Dict, Any, Optional, List
 from django.db import transaction
+from django.db.models import Count
 from django.utils import timezone
 
 from ...models import WebhookSubscription, WebhookEndpoint
 from ...choices import WebhookStatus
+from ...exceptions import WebhookFilterError
 
 logger = logging.getLogger(__name__)
 
@@ -113,14 +115,14 @@ class EventRouter:
         """
         try:
             # If no filter config, route to all
-            if not subscription.filter_config:
+            if not subscription.filters:
                 return True
             
             # Apply filters
             from .FilterService import FilterService
             filter_service = FilterService()
             
-            return filter_service.evaluate_filter_config(subscription.filter_config, payload)
+            return filter_service.evaluate_subscription_filters(subscription.filters, payload)
             
         except Exception as e:
             logger.error(f"Error evaluating subscription filter: {str(e)}")
@@ -220,10 +222,10 @@ class EventRouter:
                 endpoint_info = {
                     'endpoint_id': str(subscription.endpoint.id),
                     'endpoint_label': subscription.endpoint.label,
-                    'endpoint_url': subscription.endpoint.url,
+                    'endpoint_url': subscription.endpoint.target_url,
                     'subscription_id': str(subscription.id),
-                    'has_filters': bool(subscription.filter_config),
-                    'filter_config': subscription.filter_config if subscription.filter_config else None
+                    'has_filters': bool(subscription.filters),
+                    'filter_config': subscription.filters if subscription.filters else None
                 }
                 routing_map['endpoints'].append(endpoint_info)
             
@@ -318,7 +320,7 @@ class EventRouter:
                         'event_type': subscription.event_type,
                         'endpoint_id': str(subscription.endpoint.id),
                         'endpoint_label': subscription.endpoint.label,
-                        'endpoint_url': subscription.endpoint.url,
+                        'endpoint_url': subscription.endpoint.target_url,
                         'last_delivery': None
                     })
                 else:
@@ -336,7 +338,7 @@ class EventRouter:
                                 'event_type': subscription.event_type,
                                 'endpoint_id': str(subscription.endpoint.id),
                                 'endpoint_label': subscription.endpoint.label,
-                                'endpoint_url': subscription.endpoint.url,
+                                'endpoint_url': subscription.endpoint.target_url,
                                 'last_delivery': last_delivery.created_at.isoformat(),
                                 'days_since_last': days_since_last
                             })
@@ -386,8 +388,8 @@ class EventRouter:
                     validation_results['subscription_results'].append({
                         'subscription_id': str(subscription.id),
                         'endpoint_label': subscription.endpoint.label,
-                        'endpoint_url': subscription.endpoint.url,
-                        'has_filters': bool(subscription.filter_config),
+                        'endpoint_url': subscription.endpoint.target_url,
+                        'has_filters': bool(subscription.filters),
                         'would_route': should_route
                     })
                     
@@ -396,8 +398,8 @@ class EventRouter:
                     validation_results['subscription_results'].append({
                         'subscription_id': str(subscription.id),
                         'endpoint_label': subscription.endpoint.label,
-                        'endpoint_url': subscription.endpoint.url,
-                        'has_filters': bool(subscription.filter_config),
+                        'endpoint_url': subscription.endpoint.target_url,
+                        'has_filters': bool(subscription.filters),
                         'would_route': False,
                         'error': str(e)
                     })
@@ -439,9 +441,9 @@ class EventRouter:
                     'subscription_id': str(subscription.id),
                     'endpoint_id': str(subscription.endpoint.id),
                     'endpoint_label': subscription.endpoint.label,
-                    'endpoint_url': subscription.endpoint.url,
+                    'endpoint_url': subscription.endpoint.target_url,
                     'endpoint_owner': subscription.endpoint.owner.username if subscription.endpoint.owner else None,
-                    'has_filters': bool(subscription.filter_config),
+                    'has_filters': bool(subscription.filters),
                     'created_at': subscription.created_at.isoformat(),
                     'updated_at': subscription.updated_at.isoformat()
                 }
@@ -476,7 +478,7 @@ class EventRouter:
                 subscription_info = {
                     'subscription_id': str(subscription.id),
                     'event_type': subscription.event_type,
-                    'has_filters': bool(subscription.filter_config),
+                    'has_filters': bool(subscription.filters),
                     'created_at': subscription.created_at.isoformat(),
                     'updated_at': subscription.updated_at.isoformat()
                 }

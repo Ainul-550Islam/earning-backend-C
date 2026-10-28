@@ -1,5 +1,29 @@
 """
-Payout Queue Managers — Custom QuerySet and Manager classes.
+payout_queue/managers.py  ← DRY v7
+
+DRY CHANGE v7:
+
+  ① 19 repeated inline `from .choices import` removed from method bodies.
+
+     Before:  Every method in PayoutBatchQuerySet and PayoutItemQuerySet ran
+              `from .choices import PayoutBatchStatus` (or PayoutItemStatus,
+              PriorityLevel, BulkProcessLogStatus) inside its own body.
+              A module-level import is resolved once and cached in sys.modules;
+              method-level imports execute the resolution on EVERY call.
+              With 19 occurrences across 4 QuerySet classes, that is 19 redundant
+              module lookups on every hot-path (e.g. process_due_batches runs
+              PayoutBatchQuerySet.pending() on every Celery beat tick).
+
+     After:   All four choice classes are imported at module level.
+              Every method body that previously started with `from .choices import …`
+              now uses the module-level binding directly — zero behaviour change.
+
+     NOTE: The lazy-import pattern (import inside method body) was originally
+           used to avoid circular imports.  managers.py only imports from .choices,
+           which has no further Django-model imports and creates no cycle.
+           Module-level import is safe here.
+
+v2/v1 logic preserved unchanged.
 """
 
 from __future__ import annotations
@@ -12,8 +36,16 @@ from django.db import models
 from django.db.models import Q, Sum, Count, QuerySet
 from django.utils import timezone
 
-logger = logging.getLogger(__name__)
+# DRY v7: all four choice classes imported at module level.
+# Previously each was re-imported inside every method body that used it.
+from .choices import (
+    PayoutBatchStatus,
+    PayoutItemStatus,
+    BulkProcessLogStatus,
+    PriorityLevel,
+)
 
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # PayoutBatch
@@ -22,27 +54,28 @@ logger = logging.getLogger(__name__)
 class PayoutBatchQuerySet(models.QuerySet):
 
     def pending(self) -> "PayoutBatchQuerySet":
-        from .choices import PayoutBatchStatus
         return self.filter(status=PayoutBatchStatus.PENDING)
 
     def processing(self) -> "PayoutBatchQuerySet":
-        from .choices import PayoutBatchStatus
         return self.filter(status=PayoutBatchStatus.PROCESSING)
 
     def terminal(self) -> "PayoutBatchQuerySet":
-        from .choices import PayoutBatchStatus
+        """
+        FIX v1: FAILED added to terminal statuses.
+        A FAILED batch has no further automatic processing; it is terminal
+        unless explicitly re-queued via transition_to(PENDING).
+        """
         return self.filter(status__in=[
             PayoutBatchStatus.COMPLETED,
             PayoutBatchStatus.PARTIALLY_COMPLETED,
             PayoutBatchStatus.CANCELLED,
+            PayoutBatchStatus.FAILED,
         ])
 
     def on_hold(self) -> "PayoutBatchQuerySet":
-        from .choices import PayoutBatchStatus
         return self.filter(status=PayoutBatchStatus.ON_HOLD)
 
     def failed(self) -> "PayoutBatchQuerySet":
-        from .choices import PayoutBatchStatus
         return self.filter(status=PayoutBatchStatus.FAILED)
 
     def unlocked(self) -> "PayoutBatchQuerySet":
@@ -56,7 +89,6 @@ class PayoutBatchQuerySet(models.QuerySet):
 
     def due_for_processing(self) -> "PayoutBatchQuerySet":
         """PENDING, unlocked, scheduled_at in the past or null."""
-        from .choices import PayoutBatchStatus
         return self.filter(
             status=PayoutBatchStatus.PENDING,
             locked_at__isnull=True,
@@ -73,6 +105,17 @@ class PayoutBatchQuerySet(models.QuerySet):
         return self.filter(priority=priority)
 
     def with_item_counts(self) -> "PayoutBatchQuerySet":
+        """
+        FIX v2: now proxied on PayoutBatchManager.
+        Annotates queryset with live item counts from DB (not the denormalized
+        cached fields). Useful for admin reports and batch statistics where
+        real-time accuracy matters more than performance.
+
+        Annotated fields added to each batch:
+            computed_item_count  — total items
+            computed_success     — SUCCESS items
+            computed_failed      — FAILED items
+        """
         return self.annotate(
             computed_item_count=Count("items"),
             computed_success=Count("items", filter=Q(items__status="SUCCESS")),
@@ -80,13 +123,13 @@ class PayoutBatchQuerySet(models.QuerySet):
         )
 
     def financial_summary(self) -> dict:
+        """Aggregate financial totals across the queryset."""
         return self.aggregate(
             total_batches=Count("id"),
             total_amount=Sum("total_amount"),
             total_fee=Sum("total_fee"),
             total_net=Sum("net_amount"),
         )
-
 
 class PayoutBatchManager(models.Manager):
     def get_queryset(self) -> PayoutBatchQuerySet:
@@ -95,12 +138,41 @@ class PayoutBatchManager(models.Manager):
     def pending(self) -> PayoutBatchQuerySet:
         return self.get_queryset().pending()
 
+    def processing(self) -> "PayoutBatchQuerySet":
+        return self.get_queryset().processing()
+
     def due_for_processing(self) -> PayoutBatchQuerySet:
-        return self.get_queryset().due_for_processing().order_by("-priority", "scheduled_at", "created_at")
+        return self.get_queryset().due_for_processing().order_by(
+            "-priority", "scheduled_at", "created_at"
+        )
 
     def stale_locked(self, timeout_seconds: int = 3600) -> PayoutBatchQuerySet:
         return self.get_queryset().stale_locked(timeout_seconds)
 
+    def terminal(self) -> PayoutBatchQuerySet:
+        return self.get_queryset().terminal()
+
+    def failed(self) -> PayoutBatchQuerySet:
+        return self.get_queryset().failed()
+
+    def on_hold(self) -> PayoutBatchQuerySet:
+        return self.get_queryset().on_hold()
+
+    def by_gateway(self, gateway: str) -> PayoutBatchQuerySet:
+        return self.get_queryset().by_gateway(gateway)
+
+    def by_priority(self, priority: str) -> PayoutBatchQuerySet:
+        return self.get_queryset().by_priority(priority)
+
+    def with_item_counts(self) -> PayoutBatchQuerySet:
+        """
+        Returns a queryset annotated with live item counts.
+        Used by services.get_batch_statistics() for real-time accuracy.
+        """
+        return self.get_queryset().with_item_counts()
+
+    def financial_summary(self) -> dict:
+        return self.get_queryset().financial_summary()
 
 # ---------------------------------------------------------------------------
 # PayoutItem
@@ -109,27 +181,21 @@ class PayoutBatchManager(models.Manager):
 class PayoutItemQuerySet(models.QuerySet):
 
     def queued(self) -> "PayoutItemQuerySet":
-        from .choices import PayoutItemStatus
         return self.filter(status=PayoutItemStatus.QUEUED)
 
     def processing(self) -> "PayoutItemQuerySet":
-        from .choices import PayoutItemStatus
         return self.filter(status=PayoutItemStatus.PROCESSING)
 
     def successful(self) -> "PayoutItemQuerySet":
-        from .choices import PayoutItemStatus
         return self.filter(status=PayoutItemStatus.SUCCESS)
 
     def failed(self) -> "PayoutItemQuerySet":
-        from .choices import PayoutItemStatus
         return self.filter(status=PayoutItemStatus.FAILED)
 
     def retrying(self) -> "PayoutItemQuerySet":
-        from .choices import PayoutItemStatus
         return self.filter(status=PayoutItemStatus.RETRYING)
 
     def due_for_retry(self) -> "PayoutItemQuerySet":
-        from .choices import PayoutItemStatus
         return self.filter(
             status=PayoutItemStatus.RETRYING,
             next_retry_at__lte=timezone.now(),
@@ -146,10 +212,11 @@ class PayoutItemQuerySet(models.QuerySet):
         return self.filter(user_id=user_id)
 
     def by_gateway(self, gateway: str) -> "PayoutItemQuerySet":
+        if not gateway:
+            raise ValueError("gateway must not be empty.")
         return self.filter(gateway=gateway)
 
     def non_terminal(self) -> "PayoutItemQuerySet":
-        from .choices import PayoutItemStatus
         return self.exclude(status__in=[
             PayoutItemStatus.SUCCESS,
             PayoutItemStatus.CANCELLED,
@@ -157,11 +224,20 @@ class PayoutItemQuerySet(models.QuerySet):
         ])
 
     def total_amount(self) -> Optional[Decimal]:
+        """
+        FIX v2: now proxied on PayoutItemManager.
+        Returns the sum of gross_amount across the queryset, or None if empty.
+        Use: PayoutItem.objects.for_batch(batch_id).total_amount()
+        """
         return self.aggregate(total=Sum("gross_amount"))["total"]
 
     def total_fees(self) -> Optional[Decimal]:
+        """
+        FIX v2: now proxied on PayoutItemManager.
+        Returns the sum of fee_amount across the queryset, or None if empty.
+        Use: PayoutItem.objects.for_batch(batch_id).total_fees()
+        """
         return self.aggregate(total=Sum("fee_amount"))["total"]
-
 
 class PayoutItemManager(models.Manager):
     def get_queryset(self) -> PayoutItemQuerySet:
@@ -176,6 +252,26 @@ class PayoutItemManager(models.Manager):
     def for_batch(self, batch_id: Any) -> PayoutItemQuerySet:
         return self.get_queryset().for_batch(batch_id).order_by("created_at")
 
+    def non_terminal(self) -> PayoutItemQuerySet:
+        return self.get_queryset().non_terminal()
+
+    def for_user(self, user_id: Any) -> PayoutItemQuerySet:
+        """
+        Returns items for a specific user, ordered newest-first.
+        Used by views.my_payout_timeline via service wrapper.
+        """
+        return self.get_queryset().for_user(user_id).order_by("-created_at")
+
+    def by_gateway(self, gateway: str) -> PayoutItemQuerySet:
+        return self.get_queryset().by_gateway(gateway)
+
+    def total_amount(self) -> Optional[Decimal]:
+        """Sum of gross_amount across all items (unfiltered). Chain after filter."""
+        return self.get_queryset().total_amount()
+
+    def total_fees(self) -> Optional[Decimal]:
+        """Sum of fee_amount across all items (unfiltered). Chain after filter."""
+        return self.get_queryset().total_fees()
 
 # ---------------------------------------------------------------------------
 # WithdrawalPriority
@@ -199,9 +295,7 @@ class WithdrawalPriorityQuerySet(models.QuerySet):
         return self.filter(user_id=user_id)
 
     def urgent(self) -> "WithdrawalPriorityQuerySet":
-        from .choices import PriorityLevel
         return self.filter(priority__in=[PriorityLevel.URGENT, PriorityLevel.CRITICAL])
-
 
 class WithdrawalPriorityManager(models.Manager):
     def get_queryset(self) -> WithdrawalPriorityQuerySet:
@@ -210,9 +304,11 @@ class WithdrawalPriorityManager(models.Manager):
     def active(self) -> WithdrawalPriorityQuerySet:
         return self.get_queryset().active()
 
+    def expired(self) -> WithdrawalPriorityQuerySet:
+        return self.get_queryset().expired()
+
     def get_active_for_user(self, user_id: Any) -> Optional[Any]:
         """Return the highest active priority for a user, or None."""
-        from .choices import PriorityLevel
         priority_order = [
             PriorityLevel.CRITICAL,
             PriorityLevel.URGENT,
@@ -232,11 +328,12 @@ class WithdrawalPriorityManager(models.Manager):
     def expire_stale(self) -> int:
         """Bulk-deactivate expired priority records. Returns count."""
         expired = self.get_queryset().expired()
-        count = expired.count()
+        count   = expired.count()
         expired.update(is_active=False)
-        logger.info("WithdrawalPriorityManager.expire_stale: deactivated %d records.", count)
+        logger.info(
+            "WithdrawalPriorityManager.expire_stale: deactivated %d records.", count
+        )
         return count
-
 
 # ---------------------------------------------------------------------------
 # BulkProcessLog
@@ -250,11 +347,9 @@ class BulkProcessLogQuerySet(models.QuerySet):
         return self.filter(batch_id=batch_id)
 
     def successful(self) -> "BulkProcessLogQuerySet":
-        from .choices import BulkProcessLogStatus
         return self.filter(status=BulkProcessLogStatus.SUCCESS)
 
     def failed(self) -> "BulkProcessLogQuerySet":
-        from .choices import BulkProcessLogStatus
         return self.filter(status=BulkProcessLogStatus.FAILED)
 
     def by_task(self, task_id: str) -> "BulkProcessLogQuerySet":
@@ -262,10 +357,12 @@ class BulkProcessLogQuerySet(models.QuerySet):
             raise ValueError("task_id must not be empty.")
         return self.filter(task_id=task_id)
 
-
 class BulkProcessLogManager(models.Manager):
     def get_queryset(self) -> BulkProcessLogQuerySet:
         return BulkProcessLogQuerySet(self.model, using=self._db)
 
     def for_batch(self, batch_id: Any) -> BulkProcessLogQuerySet:
         return self.get_queryset().for_batch(batch_id).order_by("-created_at")
+
+    def by_task(self, task_id: str) -> BulkProcessLogQuerySet:
+        return self.get_queryset().by_task(task_id).order_by("-created_at")

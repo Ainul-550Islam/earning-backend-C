@@ -265,7 +265,7 @@ result = replay_service.create_replay_batch(
 - `python manage.py replay_events --event-type user.created --date-from 2024-01-01` - Replay events
 - `python manage.py check_endpoint_health` - Check all endpoint health
 - `python manage.py rotate_all_secrets` - Rotate all webhook secrets
-- `python manage.py cleanup_old_logs --days 90` - Archive old logs
+- `python manage.py webhooks_cleanup_old_logs --days 90` - Archive old logs
 
 ## Configuration
 

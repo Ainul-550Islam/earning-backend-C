@@ -52,7 +52,7 @@ class WebhookReplaySerializer(serializers.ModelSerializer):
     
     def validate_status(self, value):
         """Validate replay status."""
-        valid_statuses = [status.value for status in ReplayStatus]
+        valid_statuses = [choice[0] for choice in ReplayStatus.CHOICES]
         if value not in valid_statuses:
             raise serializers.ValidationError(f"Status must be one of: {valid_statuses}")
         return value
@@ -165,15 +165,12 @@ class WebhookReplayBatchSerializer(serializers.ModelSerializer):
         model = WebhookReplayBatch
         fields = [
             'id',
-            'batch_id',
             'event_type',
             'reason',
             'count',
             'status',
             'date_from',
             'date_to',
-            'endpoint_filter',
-            'status_filter',
             'completed_at',
             'created_by',
             'created_by_username',
@@ -181,7 +178,7 @@ class WebhookReplayBatchSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = [
-            'id', 'batch_id', 'created_at', 'updated_at',
+            'id', 'created_at', 'updated_at',
             'created_by', 'completed_at'
         ]
     
@@ -197,7 +194,7 @@ class WebhookReplayBatchSerializer(serializers.ModelSerializer):
     
     def validate_status(self, value):
         """Validate batch status."""
-        valid_statuses = [status.value for status in ReplayStatus]
+        valid_statuses = [choice[0] for choice in ReplayStatus.CHOICES]
         if value not in valid_statuses:
             raise serializers.ValidationError(f"Status must be one of: {valid_statuses}")
         return value
@@ -334,7 +331,7 @@ class WebhookReplayFilterSerializer(serializers.Serializer):
         if value is None:
             return value
         
-        valid_statuses = [status.value for status in ReplayStatus]
+        valid_statuses = [choice[0] for choice in ReplayStatus.CHOICES]
         if value not in valid_statuses:
             raise serializers.ValidationError(f"Status must be one of: {valid_statuses}")
         return value

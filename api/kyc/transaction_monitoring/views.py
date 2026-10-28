@@ -6,6 +6,9 @@ from .models import TransactionMonitoringRule, TransactionMonitoringAlert
 
 
 @api_view(['GET', 'POST'])
+@api_view(['PATCH', 'DELETE'])
+@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def tm_rules(request):
     """Admin — Transaction monitoring rules"""
@@ -38,8 +41,6 @@ def tm_rules(request):
     )
     return Response({'id': rule.id, 'name': rule.name, 'message': 'Rule created'}, status=201)
 
-
-@api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def tm_rule_detail(request, rule_id):
     try:
@@ -55,8 +56,6 @@ def tm_rule_detail(request, rule_id):
     rule.save()
     return Response({'id': rule.id, 'is_active': rule.is_active})
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def tm_alerts(request):
     """Admin — Transaction monitoring alerts"""
@@ -74,9 +73,6 @@ def tm_alerts(request):
         'sar_filed':        a.sar_filed,
         'created_at':       a.created_at,
     } for a in qs[:limit]])
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def tm_alert_action(request, alert_id):
     """Resolve or escalate a TM alert"""

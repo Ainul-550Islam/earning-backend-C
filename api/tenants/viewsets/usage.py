@@ -4,6 +4,8 @@ Usage ViewSets
 This module contains viewsets for usage tracking operations including
 plan usage, quota monitoring, and analytics.
 """
+from django.db.models import Avg
+from django.db.models import Max
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action

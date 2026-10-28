@@ -1,0 +1,11 @@
+{% extends "cms/email/base_email.html" %}
+{% block subject %}You earned {{ coins }} coins!{% endblock %}
+{% block content %}
+<p>Hi {{ username }},</p>
+<div class="highlight">
+  <div class="amount">+{{ coins }} Coins</div>
+  <p style="margin:4px 0 0;color:#555">≈ ${{ usd_value }} USD · Source: {{ source }}</p>
+</div>
+<p>Your coins have been added to your balance. Keep earning!</p>
+<a href="{{ site_url }}/offerwall/" class="btn">Complete More Offers</a>
+{% endblock %}

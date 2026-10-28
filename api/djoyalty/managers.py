@@ -1,337 +1,185 @@
 # api/djoyalty/managers.py
 """
-Custom Django Model Managers for Djoyalty।
-Query logic models থেকে আলাদা রাখা হয়েছে।
+Djoyalty -- custom Django model managers।
+
+FIXED: querysets.py was an orphan (0 imports anywhere)।
+Custom QuerySet methods are now exposed via manager classes here
+so they work on model instances: Customer.objects.at_risk_of_churn()
+
+Pattern: LoyaltyManager.from_queryset(LoyaltyQuerySet) -- standard Django
+pattern that combines Manager and QuerySet into one class।
 """
-
-import logging
-from decimal import Decimal
 from django.db import models
-from django.db.models import Sum, Count, Q, F, ExpressionWrapper, DecimalField
 from django.utils import timezone
-from datetime import timedelta
 
-logger = logging.getLogger(__name__)
+# ─── Import custom QuerySets from querysets.py ────────────────────────────────
+# FIXED: querysets.py had CustomerQuerySet, PointsLedgerQuerySet etc.
+# but they were never imported, so .active(), .at_risk_of_churn() etc.
+# were unavailable on model managers. Importing here wires them in।
+try:
+    from .querysets import (
+        CustomerQuerySet, PointsLedgerQuerySet,
+        RedemptionQuerySet, EarnRuleQuerySet,
+        CampaignQuerySet, FraudQuerySet,
+    )
+    _querysets_loaded = True
+except ImportError:
+    _querysets_loaded = False
+    CustomerQuerySet      = None
+    PointsLedgerQuerySet  = None
+    RedemptionQuerySet    = None
+    EarnRuleQuerySet      = None
+    CampaignQuerySet      = None
+    FraudQuerySet         = None
 
 
-# ==================== CUSTOMER MANAGERS ====================
+# ─── Customer Manager ─────────────────────────────────────────────────────────
+if _querysets_loaded and CustomerQuerySet is not None:
+    class CustomerManager(models.Manager.from_queryset(CustomerQuerySet)):
+        """
+        Full customer manager with custom queryset methods।
+        Usage: Customer.objects.active().at_risk_of_churn()
+        """
+        def get_queryset(self):
+            return super().get_queryset()
+else:
+    class CustomerManager(models.Manager):
+        def get_queryset(self):
+            return super().get_queryset().filter(is_active=True)
 
-class ActiveCustomerManager(models.Manager):
-    """শুধু active customers।"""
+
+# ─── Points Ledger Manager ────────────────────────────────────────────────────
+if _querysets_loaded and PointsLedgerQuerySet is not None:
+    class PointsLedgerManager(models.Manager.from_queryset(PointsLedgerQuerySet)):
+        """
+        PointsLedger manager with credits(), debits(), for_source() etc।
+        """
+        pass
+else:
+    class PointsLedgerManager(models.Manager):
+        pass
+
+
+# ─── Redemption Manager ───────────────────────────────────────────────────────
+if _querysets_loaded and RedemptionQuerySet is not None:
+    class RedemptionManager(models.Manager.from_queryset(RedemptionQuerySet)):
+        """RedemptionRequest manager with pending(), approved() etc।"""
+        pass
+else:
+    class RedemptionManager(models.Manager):
+        pass
+
+
+# ─── Earn Rule Manager ────────────────────────────────────────────────────────
+if _querysets_loaded and EarnRuleQuerySet is not None:
+    class EarnRuleManager(models.Manager.from_queryset(EarnRuleQuerySet)):
+        """EarnRule manager with active(), by_trigger() etc।"""
+        pass
+else:
+    class EarnRuleManager(models.Manager):
+        pass
+
+
+# ─── Campaign Manager ─────────────────────────────────────────────────────────
+if _querysets_loaded and CampaignQuerySet is not None:
+    class CampaignManager(models.Manager.from_queryset(CampaignQuerySet)):
+        """LoyaltyCampaign manager with live(), upcoming() etc।"""
+        pass
+else:
+    class CampaignManager(models.Manager):
+        pass
+
+
+# ─── Fraud Manager ────────────────────────────────────────────────────────────
+if _querysets_loaded and FraudQuerySet is not None:
+    class FraudManager(models.Manager.from_queryset(FraudQuerySet)):
+        """PointsAbuseLog manager with critical(), recent() etc।"""
+        pass
+else:
+    class FraudManager(models.Manager):
+        pass
+
+
+# ─── Simple managers (no custom queryset needed) ─────────────────────────────
+
+class ActiveManager(models.Manager):
+    """Only active records।"""
     def get_queryset(self):
         return super().get_queryset().filter(is_active=True)
 
 
-class NewsletterCustomerManager(models.Manager):
-    """Newsletter subscribers।"""
+class InactiveManager(models.Manager):
+    """Only inactive records।"""
     def get_queryset(self):
-        return super().get_queryset().filter(newsletter=True)
+        return super().get_queryset().filter(is_active=False)
 
 
-class CustomerWithStatsManager(models.Manager):
-    """Customer + aggregated stats সহ।"""
-    def get_queryset(self):
-        return super().get_queryset().annotate(
-            _total_spent=Sum('djoyalty_txn_tenant__value'),
-            _txn_count=Count('djoyalty_txn_tenant', distinct=True),
-        )
-
-    def with_balance(self):
-        """Points balance সহ।"""
-        return self.get_queryset().annotate(
-            _points_balance=Sum('djoyalty_loyaltypoints_tenant__balance'),
-        )
-
-
-# ==================== TXN MANAGERS ====================
-
-class FullPriceTxnManager(models.Manager):
-    """Full price (non-discount) transactions।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(is_discount=False)
-
-
-class DiscountedTxnManager(models.Manager):
-    """Discounted transactions।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(is_discount=True)
-
-
-class SpendingTxnManager(models.Manager):
-    """Negative value transactions (spending/deductions)।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(value__lt=0)
-
-
-class RecentTxnManager(models.Manager):
-    """শেষ ৩০ দিনের transactions।"""
-    def get_queryset(self):
-        cutoff = timezone.now() - timedelta(days=30)
-        return super().get_queryset().filter(timestamp__gte=cutoff)
-
-
-# ==================== POINTS LEDGER MANAGERS ====================
-
-class CreditLedgerManager(models.Manager):
-    """Credit entries — পয়েন্ট যোগ।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(txn_type='credit')
-
-
-class DebitLedgerManager(models.Manager):
-    """Debit entries — পয়েন্ট কমানো।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(txn_type='debit')
-
-
-class ActiveLedgerManager(models.Manager):
-    """Expired নয় এমন ledger entries।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
-        )
-
-
-class ExpiringLedgerManager(models.Manager):
-    """Soon-to-expire পয়েন্ট (৩০ দিনের মধ্যে)।"""
-    def get_queryset(self):
-        from .constants import POINTS_EXPIRY_WARNING_DAYS
-        warning_date = timezone.now() + timedelta(days=POINTS_EXPIRY_WARNING_DAYS)
-        return super().get_queryset().filter(
-            expires_at__isnull=False,
-            expires_at__lte=warning_date,
-            expires_at__gt=timezone.now(),
-            txn_type='credit',
-            remaining_points__gt=0,
-        )
-
-
-class ExpiredLedgerManager(models.Manager):
-    """Expired হয়ে যাওয়া ledger entries।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            expires_at__isnull=False,
-            expires_at__lte=timezone.now(),
-        )
-
-
-# ==================== EARN RULE MANAGERS ====================
-
-class ActiveEarnRuleManager(models.Manager):
-    """Currently active earn rules।"""
-    def get_queryset(self):
-        now = timezone.now()
-        return super().get_queryset().filter(
-            is_active=True,
-        ).filter(
-            Q(valid_from__isnull=True) | Q(valid_from__lte=now)
-        ).filter(
-            Q(valid_until__isnull=True) | Q(valid_until__gte=now)
-        )
-
-
-class TierSpecificEarnRuleManager(models.Manager):
-    """Tier-specific earn rules।"""
-    def for_tier(self, tier_name):
-        return self.get_queryset().filter(
-            Q(applicable_tiers__isnull=True) | Q(applicable_tiers__contains=tier_name)
-        )
-
-
-# ==================== REDEMPTION MANAGERS ====================
-
-class PendingRedemptionManager(models.Manager):
-    """Pending redemption requests।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(status='pending')
-
-
-class ApprovedRedemptionManager(models.Manager):
-    """Approved redemptions।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(status='approved')
-
-
-class CompletedRedemptionManager(models.Manager):
-    """Completed redemptions।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(status='completed')
-
-
-# ==================== VOUCHER MANAGERS ====================
-
-class ActiveVoucherManager(models.Manager):
-    """Active (unused, non-expired) vouchers।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            status='active',
-        ).filter(
-            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
-        )
-
-
-class ExpiredVoucherManager(models.Manager):
-    """Expired vouchers।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            Q(status='expired') | Q(expires_at__lte=timezone.now())
-        )
-
-
-class UsedVoucherManager(models.Manager):
-    """Used vouchers।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(status='used')
-
-
-# ==================== CAMPAIGN MANAGERS ====================
-
-class ActiveCampaignManager(models.Manager):
-    """Currently running campaigns।"""
-    def get_queryset(self):
-        now = timezone.now()
-        return super().get_queryset().filter(
-            status='active',
-            start_date__lte=now,
-        ).filter(
-            Q(end_date__isnull=True) | Q(end_date__gte=now)
-        )
-
-
-class UpcomingCampaignManager(models.Manager):
-    """Future campaigns।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            status__in=['draft', 'active'],
-            start_date__gt=timezone.now(),
-        )
-
-
-class EndedCampaignManager(models.Manager):
-    """Ended campaigns।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            Q(status='ended') | Q(end_date__lt=timezone.now())
-        )
-
-
-# ==================== TIER MANAGERS ====================
-
-class CurrentTierManager(models.Manager):
-    """Customer এর current active tier।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(is_current=True)
-
-
-# ==================== STREAK MANAGERS ====================
-
-class ActiveStreakManager(models.Manager):
-    """Active (not broken) streaks।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(is_active=True)
-
-
-class LongStreakManager(models.Manager):
-    """৭+ দিনের streaks।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            current_streak__gte=7,
-            is_active=True,
-        )
-
-
-# ==================== CHALLENGE MANAGERS ====================
-
-class ActiveChallengeManager(models.Manager):
-    """Active challenges।"""
-    def get_queryset(self):
-        now = timezone.now()
-        return super().get_queryset().filter(
-            status='active',
-            start_date__lte=now,
-        ).filter(
-            Q(end_date__isnull=True) | Q(end_date__gte=now)
-        )
-
-
-class CompletedChallengeParticipantManager(models.Manager):
-    """Completed challenge participants।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(status='completed')
-
-
-# ==================== EVENT MANAGERS ====================
-
-class CustomerRelatedEvtManager(models.Manager):
-    """Customer-linked events (anonymous নয়)।"""
+class CustomerRelatedManager(models.Manager):
+    """Events/records linked to a customer।"""
     def get_queryset(self):
         return super().get_queryset().filter(customer__isnull=False)
 
 
-class AnonymousEvtManager(models.Manager):
-    """Anonymous events।"""
+class AnonymousManager(models.Manager):
+    """Anonymous records (no customer)।"""
     def get_queryset(self):
         return super().get_queryset().filter(customer__isnull=True)
 
 
-class RecentEvtManager(models.Manager):
-    """শেষ ৭ দিনের events।"""
+class FullPriceTxnManager(models.Manager):
+    """Non-discount transactions।"""
     def get_queryset(self):
-        cutoff = timezone.now() - timedelta(days=7)
-        return super().get_queryset().filter(timestamp__gte=cutoff)
+        return super().get_queryset().filter(is_discount=False)
 
 
-# ==================== FRAUD MANAGERS ====================
-
-class HighRiskFraudManager(models.Manager):
-    """High/critical risk fraud logs।"""
+class DiscountTxnManager(models.Manager):
+    """Discount transactions।"""
     def get_queryset(self):
-        return super().get_queryset().filter(
-            risk_level__in=['high', 'critical']
-        )
+        return super().get_queryset().filter(is_discount=True)
 
 
-class UnresolvedFraudManager(models.Manager):
-    """Unresolved fraud cases।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(is_resolved=False)
-
-
-# ==================== NOTIFICATION MANAGERS ====================
-
-class UnreadNotificationManager(models.Manager):
-    """Unread notifications।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(is_read=False)
-
-
-class PendingNotificationManager(models.Manager):
-    """Pending (not yet sent) notifications।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(is_sent=False)
-
-
-# ==================== GIFT CARD MANAGERS ====================
-
-class ActiveGiftCardManager(models.Manager):
-    """Active gift cards।"""
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            status='active',
-        ).filter(
-            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
-        )
-
-
-# ==================== TRANSFER MANAGERS ====================
-
-class PendingTransferManager(models.Manager):
-    """Pending point transfers।"""
+class PendingManager(models.Manager):
+    """Pending status records।"""
     def get_queryset(self):
         return super().get_queryset().filter(status='pending')
 
 
-class CompletedTransferManager(models.Manager):
-    """Completed transfers।"""
+class ActiveCampaignManager(models.Manager):
+    """Active campaigns within date range।"""
     def get_queryset(self):
-        return super().get_queryset().filter(status='completed')
+        now = timezone.now()
+        return super().get_queryset().filter(
+            status='active',
+        ).filter(
+            models.Q(start_date__isnull=True) | models.Q(start_date__lte=now)
+        ).filter(
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=now)
+        )
+
+
+class ActiveEarnRuleManager(models.Manager):
+    """Active earn rules within validity period।"""
+    def get_queryset(self):
+        now = timezone.now()
+        return super().get_queryset().filter(
+            is_active=True,
+        ).filter(
+            models.Q(valid_from__isnull=True) | models.Q(valid_from__lte=now)
+        ).filter(
+            models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=now)
+        )
+
+
+class UnprocessedExpiryManager(models.Manager):
+    """Unprocessed expiry records that are due।"""
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            is_processed=False,
+            expires_at__lte=timezone.now(),
+        )
+
+
+class CurrentTierManager(models.Manager):
+    """Only current UserTier records।"""
+    def get_queryset(self):
+        return super().get_queryset().filter(is_current=True)

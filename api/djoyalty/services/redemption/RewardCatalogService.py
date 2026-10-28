@@ -1,6 +1,6 @@
 # api/djoyalty/services/redemption/RewardCatalogService.py
 """
-RewardCatalogService — Customer এর জন্য available rewards দেখায়।
+RewardCatalogService -- Customer এর জন্য available rewards দেখায়।
 """
 import logging
 from decimal import Decimal
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class RewardCatalogService:
-    """Reward catalog service — available redemptions for a customer।"""
+    """Reward catalog service -- available redemptions for a customer।"""
 
     @staticmethod
     def get_available_rewards(customer, tenant=None):
@@ -61,7 +61,7 @@ class RewardCatalogService:
     @staticmethod
     def get_all_rewards(tenant=None):
         """
-        Tenant এর সব active rewards — admin catalog view।
+        Tenant এর সব active rewards -- admin catalog view।
         """
         try:
             from ...models.redemption import RedemptionRule

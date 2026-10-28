@@ -5,6 +5,7 @@ Handles advertiser billing cycles, invoice generation,
 payment tracking, credit management, and dunning (overdue collection).
 All financial calculations use Decimal exclusively.
 """
+from datetime import date
 import logging
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import timedelta

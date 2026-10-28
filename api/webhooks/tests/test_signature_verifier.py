@@ -11,6 +11,7 @@ import hashlib
 from unittest.mock import Mock, patch
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from ..services.inbound import SignatureVerifier
 from ..models import InboundWebhook
@@ -57,7 +58,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': f'sha256={signature}'}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -76,7 +77,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': 'invalid-signature'}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -95,7 +96,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -114,7 +115,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': 'invalid-format'}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -147,7 +148,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': f'sha256={signature1},sha256={signature2}'}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -174,10 +175,10 @@ class SignatureVerifierTest(TestCase):
         
         headers = {
             'X-Stripe-Signature': f'sha256={signature}',
-            'X-Stripe-Timestamp': '2024-01-01T00:00:00Z'
+            'X-Stripe-Timestamp': timezone.now().isoformat()
         }
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret,
@@ -208,7 +209,7 @@ class SignatureVerifierTest(TestCase):
             'X-Stripe-Timestamp': '2023-01-01T00:00:00Z'  # Old timestamp
         }
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret,
@@ -234,7 +235,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'PAYPAL-AUTH-SHA256': signature}
         
-        is_valid = self.signature_verifier.verify_paypal_signature(
+        is_valid = self.signature_verifier._verify_paypal_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -251,7 +252,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'PAYPAL-AUTH-SHA256': 'invalid-signature'}
         
-        is_valid = self.signature_verifier.verify_paypal_signature(
+        is_valid = self.signature_verifier._verify_paypal_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -268,7 +269,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {}
         
-        is_valid = self.signature_verifier.verify_paypal_signature(
+        is_valid = self.signature_verifier._verify_paypal_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -298,7 +299,7 @@ class SignatureVerifierTest(TestCase):
             'PAYPAL-CERT-ID': 'cert-12345'
         }
         
-        is_valid = self.signature_verifier.verify_paypal_signature(
+        is_valid = self.signature_verifier._verify_paypal_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -323,7 +324,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-BKash-Signature': signature}
         
-        is_valid = self.signature_verifier.verify_bkash_signature(
+        is_valid = self.signature_verifier._verify_bkash_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -340,7 +341,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-BKash-Signature': 'invalid-signature'}
         
-        is_valid = self.signature_verifier.verify_bkash_signature(
+        is_valid = self.signature_verifier._verify_bkash_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -368,7 +369,7 @@ class SignatureVerifierTest(TestCase):
             'X-BKash-Timestamp': '2024-01-01T00:00:00Z'
         }
         
-        is_valid = self.signature_verifier.verify_bkash_signature(
+        is_valid = self.signature_verifier._verify_bkash_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -393,7 +394,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Nagad-Signature': signature}
         
-        is_valid = self.signature_verifier.verify_nagad_signature(
+        is_valid = self.signature_verifier._verify_nagad_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -410,7 +411,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Nagad-Signature': 'invalid-signature'}
         
-        is_valid = self.signature_verifier.verify_nagad_signature(
+        is_valid = self.signature_verifier._verify_nagad_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -488,7 +489,7 @@ class SignatureVerifierTest(TestCase):
         with patch('hmac.compare_digest') as mock_compare:
             mock_compare.return_value = True
             
-            is_valid = self.signature_verifier.verify_stripe_signature(
+            is_valid = self.signature_verifier._verify_stripe_signature(
                 payload=payload,
                 headers=headers,
                 secret=self.inbound_webhook.secret
@@ -520,7 +521,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': f'sha256={signature}'}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=large_payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -551,7 +552,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': f'sha256={signature}'}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -573,7 +574,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': f'sha256={signature}'}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -584,7 +585,7 @@ class SignatureVerifierTest(TestCase):
     def test_verify_signature_with_none_payload(self):
         """Test signature verification with None payload."""
         with self.assertRaises(ValueError):
-            self.signature_verifier.verify_stripe_signature(
+            self.signature_verifier._verify_stripe_signature(
                 payload=None,
                 headers={'X-Stripe-Signature': 'some-signature'},
                 secret=self.inbound_webhook.secret
@@ -595,7 +596,7 @@ class SignatureVerifierTest(TestCase):
         payload = {'event': {'type': 'payment_intent.succeeded'}}
         
         with self.assertRaises(ValueError):
-            self.signature_verifier.verify_stripe_signature(
+            self.signature_verifier._verify_stripe_signature(
                 payload=payload,
                 headers=None,
                 secret=self.inbound_webhook.secret
@@ -607,7 +608,7 @@ class SignatureVerifierTest(TestCase):
         headers = {'X-Stripe-Signature': 'some-signature'}
         
         with self.assertRaises(ValueError):
-            self.signature_verifier.verify_stripe_signature(
+            self.signature_verifier._verify_stripe_signature(
                 payload=payload,
                 headers=headers,
                 secret=None
@@ -638,7 +639,7 @@ class SignatureVerifierTest(TestCase):
         
         # Verify 1000 signatures
         for _ in range(1000):
-            is_valid = self.signature_verifier.verify_stripe_signature(
+            is_valid = self.signature_verifier._verify_stripe_signature(
                 payload=payload,
                 headers=headers,
                 secret=self.inbound_webhook.secret
@@ -674,7 +675,7 @@ class SignatureVerifierTest(TestCase):
         results = []
         
         def verify_signature():
-            is_valid = self.signature_verifier.verify_stripe_signature(
+            is_valid = self.signature_verifier._verify_stripe_signature(
                 payload=payload,
                 headers=headers,
                 secret=self.inbound_webhook.secret
@@ -727,7 +728,7 @@ class SignatureVerifierTest(TestCase):
         # Get memory usage before verification
         initial_memory = sys.getsizeof(large_payload) + sys.getsizeof(headers)
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=large_payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -759,7 +760,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': f'sha256={sha256_signature}'}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -776,7 +777,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': f'sha1={sha1_signature}'}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -804,7 +805,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'x-stripe-signature': f'sha256={signature}'}  # Lowercase
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -831,7 +832,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': f'  sha256={signature}  '}  # With whitespace
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret
@@ -862,7 +863,7 @@ class SignatureVerifierTest(TestCase):
         
         headers = {'X-Stripe-Signature': f'sha256={signature}'}
         
-        is_valid = self.signature_verifier.verify_stripe_signature(
+        is_valid = self.signature_verifier._verify_stripe_signature(
             payload=payload,
             headers=headers,
             secret=self.inbound_webhook.secret

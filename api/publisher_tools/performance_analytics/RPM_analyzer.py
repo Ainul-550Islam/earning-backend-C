@@ -8,8 +8,8 @@ from django.utils import timezone
 
 def calculate_site_rpm(site, days: int = 30) -> Dict:
     """Site-এর RPM calculate করে।"""
-    from api.publisher_tools.models import PublisherEarning
-    from api.publisher_tools.site_management.site_analytics import SiteTrafficData
+    from publisher_tools.models import PublisherEarning
+    from publisher_tools.site_management.site_analytics import SiteTrafficData
     start = timezone.now().date() - timedelta(days=days)
     revenue = float(
         PublisherEarning.objects.filter(site=site, date__gte=start)
@@ -25,7 +25,7 @@ def calculate_site_rpm(site, days: int = 30) -> Dict:
 
 
 def get_rpm_by_publisher(publisher, days: int = 30) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning, Site
+    from publisher_tools.models import PublisherEarning, Site
     start = timezone.now().date() - timedelta(days=days)
     results = []
     for site in Site.objects.filter(publisher=publisher, status="active"):

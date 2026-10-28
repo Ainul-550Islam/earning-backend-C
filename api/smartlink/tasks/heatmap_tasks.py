@@ -11,7 +11,7 @@ def build_heatmaps():
     """
     Every 30 minutes: aggregate click data into ClickHeatmap geo records.
     """
-    from ..models import SmartLink
+    from api.smartlink.models import SmartLink
     from ..services.analytics.HeatmapService import HeatmapService
 
     svc = HeatmapService()
@@ -35,7 +35,7 @@ def build_heatmaps():
 @shared_task(name='smartlink.build_heatmap_for_smartlink', queue='analytics')
 def build_heatmap_for_smartlink(smartlink_id: int, date_str: str = None):
     """Build heatmap for a single SmartLink on a specific date."""
-    from ..models import SmartLink
+    from api.smartlink.models import SmartLink
     from ..services.analytics.HeatmapService import HeatmapService
 
     svc = HeatmapService()

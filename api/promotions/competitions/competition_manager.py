@@ -93,20 +93,16 @@ class CompetitionManager:
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def active_competitions_view(request):
     mgr = CompetitionManager()
     return Response({'competitions': mgr.get_active_competitions()})
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def competition_leaderboard_view(request, comp_id):
     mgr = CompetitionManager()
     return Response(mgr.get_leaderboard(comp_id, limit=int(request.query_params.get('limit', 20))))
-
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def create_competition_view(request):
     mgr = CompetitionManager()

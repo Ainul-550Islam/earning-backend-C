@@ -159,6 +159,7 @@ class VirtualCurrencyPostback:
 # ── API Views ────────────────────────────────────────────────────────────────
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def create_vc_config_view(request):
     """POST /api/promotions/virtual-currency/config/"""
@@ -177,16 +178,11 @@ def create_vc_config_view(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_vc_config_view(request):
     """GET /api/promotions/virtual-currency/config/"""
     manager = VirtualCurrencyManager()
     return Response(manager.get_vc_config(request.user.id))
-
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def offerwall_with_vc_view(request):
     """GET /api/promotions/offerwall/vc/?pub=123"""

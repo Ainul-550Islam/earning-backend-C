@@ -3,6 +3,7 @@ api/ad_networks/services/ConversionService.py
 Service for processing, verifying, and approving conversions
 SaaS-ready with tenant support
 """
+from django.db.models import Q
 
 import logging
 import json

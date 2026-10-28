@@ -733,3 +733,6 @@ class IntegrationRegistry:
 
 # Global registry instance
 integration_registry = IntegrationRegistry()
+
+# Module-level singleton
+integ_registry = IntegrationRegistry()

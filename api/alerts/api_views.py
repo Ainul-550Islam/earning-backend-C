@@ -31,8 +31,8 @@ def alerts_overview(request):
             'critical_active':   unresolved.filter(rule__severity='critical').count(),
             'high_active':       unresolved.filter(rule__severity='high').count(),
         })
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+    except Exception:
+        return Response({'error': 'Internal server error'}, status=500)
 
 
 # ═══════════════════════════════ ALERT RULES ═══════════════════════════════════
@@ -58,8 +58,8 @@ def alert_rules_list(request):
             'webhook_url', 'email_recipients', 'cooldown_minutes',
             'trigger_count', 'last_triggered', 'created_at', 'updated_at',
         )))
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+    except Exception:
+        return Response({'error': 'Internal server error'}, status=500)
 
 
 @api_view(['GET'])
@@ -83,8 +83,8 @@ def alert_rules_stats(request):
             'by_type':          by_type,
             'high_trigger_count': list(qs.order_by('-trigger_count')[:5].values('id', 'name', 'trigger_count')),
         })
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+    except Exception:
+        return Response({'error': 'Internal server error'}, status=500)
 
 
 @api_view(['POST'])
@@ -115,8 +115,8 @@ def alert_rule_create(request):
         return Response({'id': rule.id, 'name': rule.name, 'success': True}, status=201)
     except KeyError as e:
         return Response({'error': f'Missing field: {e}'}, status=400)
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+    except Exception:
+        return Response({'error': 'Internal server error'}, status=500)
 
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
@@ -245,8 +245,8 @@ def alert_logs_list(request):
                 'triggered_at', 'processing_time_ms',
             ))
         })
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+    except Exception:
+        return Response({'error': 'Internal server error'}, status=500)
 
 
 @api_view(['GET'])
@@ -267,8 +267,8 @@ def alert_logs_stats(request):
             'this_week':           qs.filter(triggered_at__gte=week_ago).count(),
             'avg_resolution_time': None,  # Can compute if needed
         })
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+    except Exception:
+        return Response({'error': 'Internal server error'}, status=500)
 
 
 @api_view(['GET'])
@@ -369,5 +369,5 @@ def system_health(request):
             'component', 'status', 'response_time_ms', 'message', 'checked_at'
         ))
         return Response({'overall_status': overall, 'checks': checks})
-    except Exception as e:
-        return Response({'overall_status': 'unknown', 'checks': [], 'error': str(e)})
+    except Exception:
+        return Response({'overall_status': 'unknown', 'checks': [], 'error': 'Internal server error'})

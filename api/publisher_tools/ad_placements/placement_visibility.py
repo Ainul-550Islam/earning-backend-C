@@ -22,6 +22,7 @@ class PlacementViewabilityLog(TimeStampedModel):
     avg_scroll_depth = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_placement_viewability_logs"
         verbose_name = _("Viewability Log")
         unique_together = [["placement", "date"]]

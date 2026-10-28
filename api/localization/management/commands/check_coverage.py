@@ -6,7 +6,7 @@ class Command(BaseCommand):
     help = 'Translation coverage report print করে'
 
     def handle(self, *args, **options):
-        from localization.services.translation.TranslationCoverageService import TranslationCoverageService
+        from api.localization.services.translation.TranslationCoverageService import TranslationCoverageService
         service = TranslationCoverageService()
         results = service.calculate_all()
         self.stdout.write("=" * 60)

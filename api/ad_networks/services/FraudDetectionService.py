@@ -3,6 +3,7 @@ api/ad_networks/services/FraudDetectionService.py
 Service for scoring conversions for fraud
 SaaS-ready with tenant support
 """
+from django.db.models import Max
 
 import logging
 import json

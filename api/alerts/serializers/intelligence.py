@@ -5,8 +5,13 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
 from ..models.intelligence import (
-    AlertCorrelation, AlertPrediction, AnomalyDetectionModel, 
+    AlertCorrelation, AlertPrediction, AnomalyDetectionModel,
     AlertNoise, RootCauseAnalysis
+)
+from ..validators import (
+    validate_json_schema,
+    validate_time_window,
+    validate_alert_rule_condition,
 )
 
 User = get_user_model()
@@ -30,7 +35,7 @@ class AlertCorrelationSerializer(serializers.ModelSerializer):
             'last_analyzed', 'primary_rules_count', 'secondary_rules_count'
         ]
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'correlation_coefficient',
-                          'p_value', 'confidence_level', 'correlation_strength', 'prediction_accuracy',
+                          'p_value', 'confidence_level', 'prediction_accuracy',
                           'last_analyzed']
     
     def get_primary_rules_count(self, obj):
@@ -53,6 +58,25 @@ class AlertCorrelationSerializer(serializers.ModelSerializer):
         if not 2 <= value <= 100:
             raise serializers.ValidationError("Minimum occurrences must be between 2 and 100")
         return value
+
+    def validate(self, attrs):
+        """
+        Cross-field: validate_time_window() on time_window_minutes;
+        validate_alert_rule_condition() on filter_conditions.
+        """
+        time_window = attrs.get('time_window_minutes')
+        if time_window is not None:
+            tw_result = validate_time_window(time_window, unit='minutes')
+            if not tw_result['valid']:
+                raise serializers.ValidationError({'time_window_minutes': tw_result['errors']})
+
+        filter_conditions = attrs.get('filter_conditions')
+        if filter_conditions and isinstance(filter_conditions, dict):
+            cond_result = validate_alert_rule_condition(filter_conditions)
+            if not cond_result['valid']:
+                raise serializers.ValidationError({'filter_conditions': cond_result['errors']})
+
+        return attrs
 
 
 class AlertPredictionSerializer(serializers.ModelSerializer):
@@ -188,28 +212,50 @@ class AlertNoiseSerializer(serializers.ModelSerializer):
         if not 2 <= value <= 50:
             raise serializers.ValidationError("Max group size must be between 2 and 50")
         return value
-    
+
     def validate_delay_minutes(self, value):
         if not 1 <= value <= 60:
             raise serializers.ValidationError("Delay minutes must be between 1 and 60")
         return value
-    
+
     def validate_noise_type(self, value):
         valid_types = ['repeated', 'low_priority', 'known_issue', 'maintenance', 'test_environment', 'configuration_error']
         if value not in valid_types:
             raise serializers.ValidationError(f"Noise type must be one of: {valid_types}")
         return value
-    
+
     def validate_action(self, value):
         valid_actions = ['suppress', 'group', 'delay', 'escalate', 'filter']
         if value not in valid_actions:
             raise serializers.ValidationError(f"Action must be one of: {valid_actions}")
         return value
 
+    def validate(self, attrs):
+        """
+        Cross-field: validate_time_window() on suppression_duration_minutes
+        and group_window_minutes.
+        """
+        suppression_mins = attrs.get('suppression_duration_minutes')
+        if suppression_mins is not None:
+            tw_result = validate_time_window(suppression_mins, unit='minutes')
+            if not tw_result['valid']:
+                raise serializers.ValidationError(
+                    {'suppression_duration_minutes': tw_result['errors']}
+                )
+
+        group_window = attrs.get('group_window_minutes')
+        if group_window is not None:
+            tw_result = validate_time_window(group_window, unit='minutes')
+            if not tw_result['valid']:
+                raise serializers.ValidationError(
+                    {'group_window_minutes': tw_result['errors']}
+                )
+
+        return attrs
+
 
 class RootCauseAnalysisSerializer(serializers.ModelSerializer):
     """RootCauseAnalysis serializer"""
-    incident_title = serializers.CharField(source='incident.title', read_only=True)
     reviewed_by_name = serializers.CharField(source='reviewed_by.get_full_name', read_only=True)
     approved_by_name = serializers.CharField(source='approved_by.get_full_name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
@@ -220,17 +266,15 @@ class RootCauseAnalysisSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'analysis_method', 'confidence_level',
             'related_alerts', 'related_incidents', 'timeline_events', 'causal_chain',
-            'root_causes', 'contributing_factors', 'evidence', 'timeline_summary',
-            'key_events', 'impact_assessment', 'affected_systems', 'business_impact',
-            'technical_impact', 'customer_impact', 'financial_impact',
-            'lessons_learned', 'action_items', 'preventive_measures',
-            'process_improvements', 'tool_improvements', 'training_needs',
+            'root_causes', 'contributing_factors', 'evidence',
+'impact_assessment', 'affected_systems', 'business_impact',
+            'lessons_learned', 'preventive_measures',
             'verification_method', 'verification_results', 'status', 'reviewed_by',
-            'reviewed_by_name', 'approved_by', 'approved_by_name', 'published_at',
-            'internal_only', 'external_summary', 'created_by', 'created_by_name',
-            'created_at', 'updated_at', 'completed_at', 'analysis_score'
+            'reviewed_by_name', 'approved_by', 'approved_by_name',
+'created_by', 'created_by_name',
+            'created_at', 'updated_at', 'analysis_score'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'created_by', 'completed_at']
+        read_only_fields = ['created_at', 'updated_at', 'created_by']
     
     def get_analysis_score(self, obj):
         return obj.get_analysis_score()
@@ -295,13 +339,11 @@ class AlertNoiseListSerializer(serializers.ModelSerializer):
 
 class RootCauseAnalysisListSerializer(serializers.ModelSerializer):
     """Simplified RootCauseAnalysis serializer for list views"""
-    incident_title = serializers.CharField(source='incident.title', read_only=True)
     
     class Meta:
         model = RootCauseAnalysis
         fields = [
-            'id', 'title', 'incident', 'incident_title', 'analysis_method',
-            'status', 'created_at', 'completed_at'
+            'id', 'title', 'analysis_method', 'status', 'created_at'
         ]
 
 

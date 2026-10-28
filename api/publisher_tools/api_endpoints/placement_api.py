@@ -14,7 +14,7 @@ class PlacementBulkAPIView(APIView):
         placement_ids = request.data.get("placement_ids", [])
         if not placement_ids or not action:
             return Response({"success": False, "message": "placement_ids and action required."}, status=400)
-        from api.publisher_tools.models import AdPlacement
+        from publisher_tools.models import AdPlacement
         from django.db import transaction
         try:
             publisher = request.user.publisher_profile
@@ -37,7 +37,7 @@ class PlacementBulkAPIView(APIView):
             elif action == "disable_mobile":
                 count = qs.update(show_on_mobile=False)
             elif action == "auto_optimize":
-                from api.publisher_tools.optimization_tools.placement_optimizer import auto_optimize_placement
+                from publisher_tools.ad_placements.placement_optimizer import auto_optimize_placement
                 for p in qs:
                     auto_optimize_placement(p)
                     count += 1
@@ -55,8 +55,8 @@ class PlacementPerformanceView(APIView):
             publisher = request.user.publisher_profile
         except Exception:
             return Response({"success": False, "message": "No publisher profile."}, status=404)
-        from api.publisher_tools.ad_placements.placement_reporting import generate_placement_report
-        from api.publisher_tools.utils import get_date_range
+        from publisher_tools.ad_placements.placement_reporting import generate_placement_report
+        from publisher_tools.utils import get_date_range
         period = request.query_params.get("period", "last_30_days")
         start_date, end_date = get_date_range(period)
         report = generate_placement_report(publisher, start_date, end_date)

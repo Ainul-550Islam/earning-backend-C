@@ -8,8 +8,8 @@ import logging
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
-from ..constants import MIN_POINTS_VALUE, MAX_POINTS_VALUE
-from ..exceptions import InvalidPointsError
+from api.gamification.constants import MIN_POINTS_VALUE, MAX_POINTS_VALUE
+from api.gamification.exceptions import InvalidPointsError
 
 logger = logging.getLogger(__name__)
 

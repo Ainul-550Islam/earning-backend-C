@@ -216,7 +216,7 @@ class SmartLinkRouter:
                             country: str, device: str) -> str:
         """Generate unique click ID for tracking."""
         data = f"{pub_id}:{offer_id}:{sub_id}:{country}:{device}:{uuid.uuid4().hex}"
-        return hashlib.md5(data.encode()).hexdigest()
+        return hashlib.sha256(data.encode()).hexdigest()  # FIXED: SHA-256 for better collision resistance
 
     @staticmethod
     def _build_tracking_url(offer, click_id: str, pub_id: int, sub_id: str) -> str:

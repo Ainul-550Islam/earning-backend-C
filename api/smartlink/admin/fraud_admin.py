@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from ..models import ClickFraudFlag
+from api.smartlink.models import ClickFraudFlag
 
 
 @admin.register(ClickFraudFlag)

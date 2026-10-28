@@ -11,14 +11,14 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from ..choices import (
+from api.gamification.choices import (
     ContestCycleStatus,
     RewardType,
     AchievementType,
     SnapshotStatus,
     LeaderboardScope,
 )
-from ..models import ContestCycle, LeaderboardSnapshot, ContestReward, UserAchievement
+from api.gamification.models import ContestCycle, LeaderboardSnapshot, ContestReward, UserAchievement, UserAchievement as Achievement
 
 User = get_user_model()
 

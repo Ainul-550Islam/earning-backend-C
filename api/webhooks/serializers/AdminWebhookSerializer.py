@@ -23,22 +23,34 @@ class AdminWebhookEndpointSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = WebhookEndpoint
+        # FIX: this Meta.fields list referenced url, headers,
+        # timeout_seconds, rate_limit_per_min, ip_whitelist - none of
+        # which exist on WebhookEndpoint (real names are target_url and
+        # custom_headers; the other three don't correspond to any field
+        # on this model at all - rate limiting lives on the separate
+        # WebhookRateLimit model, and there's no per-endpoint request
+        # timeout or IP allowlist field anywhere in this app). Confirmed
+        # via direct instantiation: AdminWebhookEndpointSerializer()
+        # raised ImproperlyConfigured immediately, so every real
+        # list/retrieve/create through AdminWebhookViewSet ("all admin
+        # CRUD paths use this serializer") would have crashed - nothing
+        # in the test suite happens to exercise a successful response
+        # from this viewset, so it went uncaught. Corrected the two
+        # renames and dropped the three fields with no real backing
+        # rather than inventing new model fields to match them.
         fields = [
             'id',
             'label',
-            'url',
+            'target_url',
             'description',
             'owner',
             'owner_username',
             'status',
             'http_method',
-            'timeout_seconds',
             'max_retries',
             'verify_ssl',
-            'rate_limit_per_min',
             'secret_key',
-            'ip_whitelist',
-            'headers',
+            'custom_headers',
             'payload_template',
             'version',
             'subscription_count',
@@ -50,6 +62,23 @@ class AdminWebhookEndpointSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'last_triggered_at']
+
+    # Note: no validate_target_url() here - confirmed via a real HTTP
+    # test that target_url already carries validate_webhook_url (SSRF
+    # protection) and URLValidator(schemes=["https","http"]) at the
+    # model-field level (models/core.py), which DRF's ModelSerializer
+    # auto-applies to this field with zero extra code. Adding a weaker
+    # duplicate check here would just be redundant dead weight.
+
+    def validate_max_retries(self, value):
+        # max_retries has no such field-level validator (plain
+        # PositiveSmallIntegerField) - only WebhookEndpoint.clean()'s
+        # upper bound, which DRF does not auto-apply. Mirroring that
+        # already-decided rule here since this admin path had nothing.
+        if value is not None and value > 10:
+            raise serializers.ValidationError("max_retries must be between 0 and 10.")
+        return value
+
     
     def get_subscription_count(self, obj):
         """Get subscription count."""
@@ -95,7 +124,7 @@ class AdminWebhookSubscriptionSerializer(serializers.ModelSerializer):
     """Admin serializer for WebhookSubscription model."""
     
     endpoint_label = serializers.CharField(source='endpoint.label', read_only=True)
-    endpoint_url = serializers.URLField(source='endpoint.url', read_only=True)
+    endpoint_url = serializers.URLField(source='endpoint.target_url', read_only=True)
     endpoint_status = serializers.CharField(source='endpoint.status', read_only=True)
     delivery_count = serializers.SerializerMethodField()
     success_rate = serializers.SerializerMethodField()
@@ -146,7 +175,7 @@ class AdminWebhookDeliveryLogSerializer(serializers.ModelSerializer):
     """Admin serializer for WebhookDeliveryLog model."""
     
     endpoint_label = serializers.CharField(source='endpoint.label', read_only=True)
-    endpoint_url = serializers.URLField(source='endpoint.url', read_only=True)
+    endpoint_url = serializers.URLField(source='endpoint.target_url', read_only=True)
     endpoint_status = serializers.CharField(source='endpoint.status', read_only=True)
     payload_preview = serializers.SerializerMethodField()
     headers_preview = serializers.SerializerMethodField()
@@ -169,7 +198,7 @@ class AdminWebhookDeliveryLogSerializer(serializers.ModelSerializer):
             'http_status_code',
             'response_body',
             'response_preview',
-            'duration_ms',
+            'response_time_ms',
             'error_message',
             'status',
             'attempt_number',

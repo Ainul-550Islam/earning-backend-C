@@ -3,6 +3,7 @@ api/ad_networks/management/commands/sync_ad_networks.py
 Manual full sync command for ad networks
 SaaS-ready with tenant support
 """
+from django.db import models
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone

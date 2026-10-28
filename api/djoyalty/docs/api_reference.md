@@ -1,247 +1,172 @@
-# API Reference — Djoyalty
+# API Reference
 
-Base URL: `/api/djoyalty/`
-Authentication: Bearer token / Session auth required for all endpoints.
+Base URL: `/api/loyalty/`
+Authentication: `Authorization: Bearer <token>` or Session
 
----
-
-## 👥 Customers
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/customers/` | List customers (search, filter, paginate) |
-| POST | `/customers/` | Create customer |
-| GET | `/customers/{id}/` | Customer detail (with transactions + events) |
-| PUT/PATCH | `/customers/{id}/` | Update customer |
-| DELETE | `/customers/{id}/` | Delete customer |
-| GET | `/customers/{id}/stats/` | Transaction + points stats |
-| GET | `/customers/{id}/ledger/` | Points ledger history |
-| GET | `/customers/newsletter_subscribers/` | Newsletter list |
-
-**Query params:** `?search=`, `?city=`, `?newsletter=true`, `?page=`, `?page_size=`
+## Authentication Levels
+- **Public**: `GET` read-only endpoints
+- **Authenticated**: Standard user
+- **Admin**: `IsLoyaltyAdmin` (staff/superuser)
+- **Partner API**: `X-Loyalty-API-Key: <key>` header
 
 ---
 
-## 💳 Transactions
+## Customers
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/transactions/` | List transactions |
-| POST | `/transactions/` | Create transaction |
-| GET | `/transactions/{id}/` | Transaction detail |
-| GET | `/transactions/summary/` | Total stats |
-
-**Query params:** `?customer=`, `?type=full|discount|spending`, `?ordering=-timestamp`
-
----
-
-## 📅 Events
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/events/` | List events |
-| POST | `/events/` | Create event |
-| GET | `/events/{id}/` | Event detail |
-| GET | `/events/by_action/` | Grouped by action |
-
-**Query params:** `?customer=`, `?action=`, `?anonymous=true`
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/customers/` | Auth | List customers |
+| POST | `/customers/` | Auth | Create customer |
+| GET | `/customers/{id}/` | Auth | Customer detail |
+| GET | `/customers/{id}/stats/` | Auth | Full stats |
+| GET | `/customers/{id}/ledger/` | Auth | Points history |
+| POST | `/customers/{id}/deactivate/` | Admin | Soft delete |
+| POST | `/customers/{id}/reactivate/` | Admin | Reactivate |
 
 ---
 
-## ⭐ Points
+## Points
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/points/` | List all customer point balances |
-| GET | `/points/balance/?customer_id=1` | Single customer balance |
-| POST | `/points/earn/` | Earn points `{customer_id, spend_amount}` |
-| POST | `/points/adjust/` | Admin adjust `{customer_id, points, reason}` (Admin only) |
-
----
-
-## 📒 Ledger
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/ledger/` | All ledger entries |
-| GET | `/ledger/{id}/` | Single entry |
-
-**Query params:** `?customer=`, `?txn_type=credit|debit`, `?source=purchase`
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/points/?customer_id=X` | Auth | Balance |
+| GET | `/points/balance/?customer_id=X` | Auth | Quick balance |
+| POST | `/points/earn/` | Auth | Earn points |
+| POST | `/points/adjust/` | Admin | Manual adjust |
+| GET | `/ledger/?customer=X` | Auth | Ledger history |
+| POST | `/transfers/transfer/` | Auth | P2P transfer |
+| GET | `/conversions/calculate/` | Auth | Rate calculator |
 
 ---
 
-## 🔄 Transfers
+## Tiers
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/transfers/` | Transfer history |
-| POST | `/transfers/transfer/` | Transfer points `{from_customer_id, to_customer_id, points}` |
-
----
-
-## 💹 Conversions
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/conversions/calculate/?points=100` | Points → currency |
-| GET | `/conversions/calculate/?amount=50` | Currency → points |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/tiers/` | Auth | All tiers |
+| GET | `/user-tiers/my_tier/?customer_id=X` | Auth | My tier info |
+| POST | `/user-tiers/evaluate/` | Auth | Re-evaluate |
+| GET | `/user-tiers/history/?customer_id=X` | Auth | Tier history |
+| GET | `/user-tiers/progress/?customer_id=X` | Auth | Upgrade progress |
+| POST | `/user-tiers/force_upgrade/` | Admin | Force upgrade |
+| POST | `/user-tiers/force_downgrade/` | Admin | Force downgrade |
 
 ---
 
-## 🏆 Tiers
+## Earn Rules
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/tiers/` | All tier definitions |
-| GET | `/tiers/{id}/` | Tier detail with benefits |
-| GET | `/user-tiers/?customer=1` | Customer's current tier |
-| POST | `/user-tiers/evaluate/` | Re-evaluate tier `{customer_id}` |
-
----
-
-## 📋 Earn Rules
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/earn-rules/` | All earn rules |
-| POST | `/earn-rules/` | Create rule (Admin) |
-| GET | `/earn-rules/active/` | Currently active rules |
-| GET | `/bonus-events/?customer=1` | Bonus event history |
-| POST | `/bonus-events/award/` | Award bonus `{customer_id, points, reason}` (Admin) |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/earn-rules/` | Auth | All rules |
+| GET | `/earn-rules/active/` | Auth | Active rules |
+| POST | `/earn-rules/` | Admin | Create rule |
+| POST | `/bonus-events/award/` | Admin | Manual bonus |
 
 ---
 
-## 🎁 Redemptions
+## Redemption
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/redemptions/` | All redemption requests |
-| POST | `/redemptions/redeem/` | Create request `{customer_id, points, redemption_type}` |
-| POST | `/redemptions/{id}/approve/` | Approve (Admin) |
-| POST | `/redemptions/{id}/reject/` | Reject `{reason}` (Admin) |
-
----
-
-## 🎫 Vouchers
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/vouchers/` | All vouchers |
-| POST | `/vouchers/generate/` | Generate `{customer_id, voucher_type, discount_value}` (Admin) |
-| POST | `/vouchers/use/` | Use voucher `{code, customer_id, order_reference}` |
-| GET | `/vouchers/validate/?code=ABC` | Validate code |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/redemptions/redeem/` | Auth | Redeem points |
+| GET | `/redemptions/?customer=X` | Auth | History |
+| POST | `/redemptions/{id}/approve/` | Admin | Approve |
+| POST | `/redemptions/{id}/reject/` | Admin | Reject |
+| POST | `/vouchers/generate/` | Admin | Issue voucher |
+| POST | `/vouchers/use/` | Auth | Use voucher |
+| GET | `/vouchers/validate/?code=X` | Auth | Validate |
+| POST | `/gift-cards/issue/` | Admin | Issue card |
+| POST | `/gift-cards/redeem/` | Auth | Redeem card |
 
 ---
 
-## 🎁 Gift Cards
+## Engagement
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/gift-cards/` | All gift cards |
-| POST | `/gift-cards/issue/` | Issue `{value, customer_id, validity_days}` (Admin) |
-| POST | `/gift-cards/redeem/` | Redeem `{code, amount}` |
-
----
-
-## 🔥 Streaks
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/streaks/` | All streaks (leaderboard style) |
-| POST | `/streaks/record_activity/` | Record activity `{customer_id}` |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/streaks/record_activity/` | Auth | Record activity |
+| GET | `/badges/` | Auth | All badges |
+| GET | `/badges/my_badges/?customer_id=X` | Auth | My badges |
+| POST | `/challenges/{id}/join/` | Auth | Join challenge |
+| POST | `/challenges/{id}/update_progress/` | Auth | Update progress |
+| GET | `/leaderboard/top/` | Auth | Top customers |
+| GET | `/milestones/my_milestones/?customer_id=X` | Auth | My milestones |
 
 ---
 
-## 🏅 Badges
+## Campaigns
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/badges/` | All badge definitions |
-| GET | `/badges/my_badges/?customer_id=1` | Customer's earned badges |
-
----
-
-## ⚡ Challenges
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/challenges/` | All challenges |
-| POST | `/challenges/{id}/join/` | Join `{customer_id}` |
-| POST | `/challenges/{id}/update_progress/` | Update `{customer_id, value}` |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/campaigns/active/` | Auth | Active campaigns |
+| POST | `/campaigns/{id}/join/` | Auth | Join campaign |
 
 ---
 
-## 🏆 Leaderboard
+## Partners (Coalition)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/leaderboard/top/?limit=10&period=all` | Top customers |
-
----
-
-## 📣 Campaigns
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/campaigns/` | All campaigns |
-| GET | `/campaigns/active/` | Currently running |
-| POST | `/campaigns/{id}/join/` | Join `{customer_id}` |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/partners/` | Auth | All partners |
+| POST | `/partners/{id}/earn/` | Partner API Key | Earn at partner |
+| GET | `/partners/coalition_history/` | Auth | Coalition history |
+| POST | `/partners/reverse_earn/` | Admin | Reverse earn |
+| GET | `/partners/{id}/stats/` | Admin | Partner stats |
 
 ---
 
-## 📊 Insights (Admin)
+## Admin
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/insights/` | All insight reports |
-| POST | `/insights/generate/` | Generate today's report |
-
----
-
-## 🔐 Admin Loyalty (Admin Only)
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/admin-loyalty/customer_overview/?customer_id=1` | Full customer overview |
-| POST | `/admin-loyalty/recalculate_tier/` | Force tier recalculate |
-| GET | `/admin-loyalty/fraud_logs/` | Fraud logs |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/admin/customer_overview/` | Admin | Customer detail |
+| POST | `/admin/recalculate_tier/` | Admin | Force tier recalc |
+| GET | `/admin/fraud_logs/` | Admin | Fraud log list |
+| POST | `/insights/generate/` | Admin | Generate report |
 
 ---
 
-## 🌐 Public API (Partner Merchants)
+## Public API (Partner Integration)
 
-Header required: `X-Loyalty-API-Key: <partner_api_key>`
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/public/balance/?customer_code=ABC` | Check balance |
-| POST | `/public/earn/` | Earn via partner `{customer_code, spend_amount}` |
-
----
-
-## Pagination
-All list endpoints support:
-- `?page=1&page_size=20` (default)
-- `?limit=20&offset=0` (some endpoints)
-
-## Response Format
-```json
-{
-  "count": 100,
-  "total_pages": 5,
-  "current_page": 1,
-  "next": "https://...",
-  "previous": null,
-  "results": [...]
-}
+```
+Header: X-Loyalty-API-Key: <partner_api_key>
 ```
 
-## Error Format
-```json
-{
-  "error": "insufficient_points",
-  "message": "Insufficient loyalty points.",
-  "available": "50",
-  "required": "100"
-}
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/public/balance/?customer_code=X` | Get balance |
+| POST | `/public/earn/` | Earn points |
+
+---
+
+## Error Codes
+
+| Code | Meaning |
+|---|---|
+| `INSUFFICIENT_POINTS` | Not enough points |
+| `REDEMPTION_MINIMUM_NOT_MET` | Below minimum |
+| `VOUCHER_EXPIRED` | Voucher expired |
+| `VOUCHER_ALREADY_USED` | Already redeemed |
+| `CAMPAIGN_INACTIVE` | Campaign not active |
+| `PARTNER_NOT_FOUND` | Invalid API key |
+| `FRAUD_DETECTED` | Transaction blocked |
+| `TIER_NOT_FOUND` | Invalid tier name |
+
+---
+
+## Webhook Events
+
+Subscribe via `WebhookRegistry.register()`:
+
+```python
+from djoyalty.webhooks.webhook_registry import WebhookRegistry
+WebhookRegistry.register(
+    url='https://yoursite.com/webhooks/loyalty',
+    events=['points.earned', 'tier.upgraded', 'badge.unlocked'],
+    secret='your_signing_secret',
+)
 ```
+
+Events: `points.earned`, `points.burned`, `points.expired`, `tier.changed`,
+`badge.unlocked`, `streak.milestone`, `redemption.status_changed`,
+`campaign.joined`, `challenge.completed`, `voucher.used`, `fraud.detected`

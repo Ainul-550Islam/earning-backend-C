@@ -1,3 +1,4 @@
+from django.utils.text import slugify
 # forms.py - সম্পূর্ণ ফিক্সড ভার্সন
 
 import json

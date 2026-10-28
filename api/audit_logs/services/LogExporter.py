@@ -1,6 +1,13 @@
 """
 Service for exporting audit logs in various formats
 """
+from django.db import models
+from django.db.models import Avg
+from django.db.models import Count
+from django.db.models import Max
+from django.db.models import Min
+from django.db.models.functions import TruncDate
+from django.db.models.functions import TruncHour
 
 import json
 import csv

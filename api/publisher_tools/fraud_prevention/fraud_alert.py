@@ -63,7 +63,7 @@ def create_fraud_alert(publisher, alert_type: str, severity: str, title: str, de
     if severity in ("high", "critical"):
         # Send notification
         try:
-            from api.publisher_tools.webhooks.webhook_manager import send_webhook_event
+            from publisher_tools.webhooks.webhook_manager import send_webhook_event
             send_webhook_event(publisher, "fraud.high_risk_detected", {"alert_type": alert_type, "severity": severity})
         except Exception:
             pass
@@ -72,3 +72,14 @@ def create_fraud_alert(publisher, alert_type: str, severity: str, title: str, de
 
 def get_unresolved_alerts(publisher) -> list:
     return list(FraudAlert.objects.filter(publisher=publisher, is_resolved=False).order_by("-created_at")[:20])
+
+def resolve_fraud_alert(alert_id, resolution: str = "resolved", resolved_by=None) -> FraudAlert:
+    """Resolve a FraudAlert by id. resolved_by is accepted but not persisted (no model field)."""
+    alert = FraudAlert.objects.get(pk=alert_id)
+    alert.resolve(resolution)
+    return alert
+
+
+def get_active_fraud_alerts(publisher) -> list:
+    """Alias of get_unresolved_alerts() (the package __init__ imports this name)."""
+    return get_unresolved_alerts(publisher)

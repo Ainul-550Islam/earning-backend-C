@@ -35,7 +35,7 @@ def recommend_formats_for_site(site) -> List[Dict]:
 
 
 def compare_formats(publisher, days: int = 30) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.db.models import Sum, Avg
     from django.utils import timezone
     from datetime import timedelta

@@ -4,11 +4,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from ..models import SmartLink
-from ..serializers.AdminSerializer import AdminSmartLinkSerializer
-from ..services.core.SmartLinkCacheService import SmartLinkCacheService
-from ..filters import SmartLinkFilter
-from ..pagination import StandardResultsPagination
+from api.smartlink.models import SmartLink
+from api.smartlink.serializers.AdminSerializer import AdminSmartLinkSerializer
+from api.smartlink.services.core.SmartLinkCacheService import SmartLinkCacheService
+from api.smartlink.filters import SmartLinkFilter
+from api.smartlink.pagination import StandardResultsPagination
 
 
 class AdminSmartLinkViewSet(viewsets.ModelViewSet):
@@ -47,7 +47,7 @@ class AdminSmartLinkViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='health-check')
     def health_check(self, request):
         """GET all SmartLinks with 0 active offers in their pool."""
-        from ..models import OfferPool
+        from api.smartlink.models import OfferPool
         broken = SmartLink.objects.filter(
             is_active=True, is_archived=False
         ).exclude(

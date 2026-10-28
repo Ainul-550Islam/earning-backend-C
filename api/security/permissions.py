@@ -1,11 +1,39 @@
 # api/security/permissions.py
+"""
+Optimized Security Permissions with consolidated classes
+Author: System Security Team
+Version: 3.0.0 - Cleaned & Optimized
+"""
+
 from rest_framework import permissions
 from django.contrib.auth.models import Group
-from typing import List, Optional
+from django.core.cache import cache
+from django.utils import timezone
+from typing import List, Optional, Union
 import logging
 import functools
+# DeviceInfo stub — replace with real import if available
+try:
+    from api.security.models import DeviceInfo
+except ImportError:
+    class DeviceInfo:
+        pass
+
+
 
 logger = logging.getLogger(__name__)
+
+# Import security models for enhanced permission checking
+try:
+    from .models import (
+        DeviceInfo, SecurityLog, UserBan, IPBlacklist, 
+        ThreatIntelligence, SecurityIncident, TrustedDevice,
+        PasswordHistory, SecurityPolicy, SecurityInsight
+    )
+    SECURITY_MODELS_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Security models import failed: {e}")
+    SECURITY_MODELS_AVAILABLE = False
 
 
 class BaseSecurityPermission(permissions.BasePermission):
@@ -43,6 +71,7 @@ class IsStaffUser(BaseSecurityPermission):
 class IsSuperUser(BaseSecurityPermission):
     """
     Allows access only to superusers.
+    Consolidated from duplicate implementations.
     """
     
     def has_permission(self, request, view) -> bool:
@@ -58,6 +87,7 @@ class IsSuperUser(BaseSecurityPermission):
 class IsAdminOrSecurityTeam(BaseSecurityPermission):
     """
     Allows access to admin users or security team members.
+    Consolidated from duplicate implementations.
     """
     
     def has_permission(self, request, view) -> bool:
@@ -102,6 +132,7 @@ class IsAdminOrSecurityTeam(BaseSecurityPermission):
 class IsSecurityAdmin(BaseSecurityPermission):
     """
     Allows access only to security administrators.
+    Consolidated from duplicate implementations.
     More restrictive than IsAdminOrSecurityTeam.
     """
     
@@ -132,115 +163,133 @@ class IsSecurityAdmin(BaseSecurityPermission):
             return False
 
 
-class IsOwnerOrAdmin(BaseSecurityPermission):
+class IsOwnerOrStaff(BaseSecurityPermission):
     """
-    Allows access to object owners or admin users.
+    Allows access if user is owner of object or staff.
     """
     
     def has_object_permission(self, request, view, obj) -> bool:
         try:
-            # Admin users always have access
-            if request.user.is_superuser or request.user.is_staff:
+            # Staff users can access any object
+            if request.user and request.user.is_staff:
                 return True
             
-            # Check if user owns the object
-            # Try different common field names for ownership
-            owner_fields = ['user', 'owner', 'created_by', 'user_id', 'owner_id']
-            
-            for field in owner_fields:
-                try:
-                    owner = getattr(obj, field, None)
-                    if owner and owner == request.user:
-                        return True
-                except Exception:
-                    continue
+            # Check if user is owner
+            if hasattr(obj, 'user') and obj.user == request.user:
+                return True
             
             return False
             
         except Exception as e:
-            logger.error(f"Owner/Admin permission check error: {e}")
+            logger.error(f"Owner/Staff permission check error: {e}")
             return False
 
 
-class IsReadOnlyOrAdmin(BaseSecurityPermission):
+class IsOwnerOrReadOnly(BaseSecurityPermission):
     """
-    Allows read-only access to anyone, but write access only to admin users.
+    Allows read-only access to any user, but write access only to owner.
     """
     
-    def has_permission(self, request, view) -> bool:
+    def has_object_permission(self, request, view, obj) -> bool:
         try:
-            # Allow all read-only requests
+            # Read permissions are allowed for any authenticated user
             if request.method in permissions.SAFE_METHODS:
                 return True
             
-            # Write operations require admin access
-            return bool(
-                request.user and 
-                (request.user.is_superuser or request.user.is_staff)
-            )
+            # Write permissions require ownership
+            if hasattr(obj, 'user') and obj.user == request.user:
+                return True
+            
+            # Staff users can write to any object
+            if request.user and request.user.is_staff:
+                return True
+            
+            return False
             
         except Exception as e:
-            logger.error(f"ReadOnly/Admin permission check error: {e}")
+            logger.error(f"Owner/ReadOnly permission check error: {e}")
             return False
 
 
-class HasSecurityPermission(BaseSecurityPermission):
+class CanManageDevices(BaseSecurityPermission):
     """
-    Checks for specific security permissions.
+    Allows access to users who can manage devices.
+    Consolidated from duplicate implementations.
     """
-    
-    def __init__(self, required_permissions: List[str] = None):
-        self.required_permissions = required_permissions or []
-        super().__init__()
     
     def has_permission(self, request, view) -> bool:
         try:
             if not request.user or not request.user.is_authenticated:
                 return False
             
-            # Superusers bypass all permission checks
-            if request.user.is_superuser:
+            # Staff and superusers can manage devices
+            if request.user.is_superuser or request.user.is_staff:
                 return True
             
-            # Check each required permission
-            for perm in self.required_permissions:
-                if not request.user.has_perm(perm):
-                    logger.warning(
-                        f"User {request.user.username} missing permission: {perm}"
-                    )
-                    return False
+            # Check for device management permission
+            if request.user.has_perm('security.manage_devices'):
+                return True
             
-            return True
+            # Check for device management groups
+            device_groups = ['Device Manager', 'Security Admin', 'Security Team']
+            
+            user_groups = getattr(request.user, 'groups', None)
+            if user_groups:
+                group_names = user_groups.values_list('name', flat=True)
+                for group_name in group_names:
+                    if group_name in device_groups:
+                        return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Device management permission check error: {e}")
+            return False
+
+
+class HasSecurityPermission(BaseSecurityPermission):
+    """
+    Generic permission checker for security permissions.
+    """
+    
+    def __init__(self, permission: str):
+        self.permission = permission
+    
+    def has_permission(self, request, view) -> bool:
+        try:
+            if not request.user or not request.user.is_authenticated:
+                return False
+            
+            return request.user.has_perm(self.permission)
             
         except Exception as e:
             logger.error(f"Security permission check error: {e}")
             return False
 
 
-class RateLimitPermission(BaseSecurityPermission):
+class TimeRestrictedPermission(BaseSecurityPermission):
     """
-    Implements rate limiting at the permission level.
+    Allows access only during specific time periods.
     """
     
-    def __init__(self, max_requests: int = 100, time_window: int = 3600):
-        self.max_requests = max_requests
-        self.time_window = time_window
-        super().__init__()
+    def __init__(self, allowed_hours: List[int] = None):
+        self.allowed_hours = allowed_hours or list(range(9, 18))  # 9 AM to 6 PM default
     
     def has_permission(self, request, view) -> bool:
         try:
-            # Skip rate limiting for admin users
-            if request.user and (request.user.is_superuser or request.user.is_staff):
+            if not request.user or not request.user.is_authenticated:
+                return False
+            
+            # Superusers bypass time restrictions
+            if request.user.is_superuser:
                 return True
             
-            # Implement rate limiting logic here
-            # You would typically use Django's cache framework
-            
-            return True  # Placeholder
+            current_hour = timezone.now().hour
+            return current_hour in self.allowed_hours
             
         except Exception as e:
-            logger.error(f"Rate limit permission check error: {e}")
-            return True  # Allow on error
+            logger.error(f"Time restriction permission check error: {e}")
+            return False
 
 
 class IPWhitelistPermission(BaseSecurityPermission):
@@ -248,84 +297,38 @@ class IPWhitelistPermission(BaseSecurityPermission):
     Allows access only from whitelisted IP addresses.
     """
     
-    def __init__(self, whitelisted_ips: List[str] = None):
-        self.whitelisted_ips = whitelisted_ips or []
-        super().__init__()
-    
-    def get_client_ip(self, request) -> str:
-        """Get client IP address safely"""
-        try:
-            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-            if x_forwarded_for:
-                ip = x_forwarded_for.split(',')[0].strip()
-            else:
-                ip = request.META.get('REMOTE_ADDR', '')
-            return ip
-        except Exception:
-            return ''
+    def __init__(self, allowed_ips: List[str] = None):
+        self.allowed_ips = allowed_ips or []
     
     def has_permission(self, request, view) -> bool:
         try:
-            client_ip = self.get_client_ip(request)
+            if not request.user or not request.user.is_authenticated:
+                return False
             
-            # Allow localhost for development
-            if client_ip in ['127.0.0.1', 'localhost', '::1']:
+            # Superusers bypass IP restrictions
+            if request.user.is_superuser:
                 return True
             
-            # Check if IP is whitelisted
-            if client_ip in self.whitelisted_ips:
-                return True
-            
-            # Admin users can bypass IP restriction
-            if request.user and (request.user.is_superuser or request.user.is_staff):
-                logger.info(f"Admin user {request.user.username} bypassing IP restriction from {client_ip}")
-                return True
-            
-            logger.warning(f"IP {client_ip} not in whitelist")
-            return False
+            client_ip = self._get_client_ip(request)
+            return client_ip in self.allowed_ips
             
         except Exception as e:
             logger.error(f"IP whitelist permission check error: {e}")
-            return False  # Deny on error for security
-
-
-class TimeRestrictedPermission(BaseSecurityPermission):
-    """
-    Allows access only during specific hours.
-    """
-    
-    def __init__(self, start_hour: int = 0, end_hour: int = 24):
-        self.start_hour = start_hour
-        self.end_hour = end_hour
-        super().__init__()
-    
-    def has_permission(self, request, view) -> bool:
-        try:
-            from django.utils import timezone
-            current_hour = timezone.now().hour
-            
-            # Admin users can bypass time restriction
-            if request.user and (request.user.is_superuser or request.user.is_staff):
-                return True
-            
-            # Check if current hour is within allowed range
-            if self.start_hour <= current_hour < self.end_hour:
-                return True
-            
-            logger.warning(
-                f"Access denied outside allowed hours ({self.start_hour}-{self.end_hour}). "
-                f"Current hour: {current_hour}"
-            )
             return False
-            
-        except Exception as e:
-            logger.error(f"Time restricted permission check error: {e}")
-            return False
+    
+    def _get_client_ip(self, request) -> str:
+        """Get client IP address"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
 
 
 class CombinedPermission(BaseSecurityPermission):
     """
-    Combines multiple permissions (all must pass).
+    Combines multiple permission classes.
     """
     
     def __init__(self, *permission_classes):
@@ -338,122 +341,127 @@ class CombinedPermission(BaseSecurityPermission):
                 if not permission.has_permission(request, view):
                     return False
             return True
+            
         except Exception as e:
             logger.error(f"Combined permission check error: {e}")
             return False
 
 
-# ============ PERMISSION FACTORY FUNCTIONS ============
-
-def create_security_permission(min_level: str = 'staff') -> BaseSecurityPermission:
-    """
-    Factory function to create security permissions based on level.
-    
-    Args:
-        min_level: Minimum security level required.
-                   Options: 'staff', 'admin', 'security_team', 'security_admin', 'superuser'
-    """
-    
-    permission_map = {
-        'staff': IsStaffUser,
-        'admin': IsAdminOrSecurityTeam,
-        'security_team': IsAdminOrSecurityTeam,
-        'security_admin': IsSecurityAdmin,
-        'superuser': IsSuperUser,
-    }
-    
-    permission_class = permission_map.get(min_level, IsStaffUser)
-    return permission_class()
+# Utility functions for creating permissions
+def create_security_permission(permission: str) -> HasSecurityPermission:
+    """Create a security permission instance."""
+    return HasSecurityPermission(permission)
 
 
-def create_custom_permission(**kwargs) -> BaseSecurityPermission:
-    """
-    Create custom permission based on parameters.
-    """
+def create_custom_permission(check_func, message: str = "Custom permission check failed"):
+    """Create a custom permission with a check function."""
+    class CustomPermission(BaseSecurityPermission):
+        def has_permission(self, request, view):
+            try:
+                return check_func(request, view)
+            except Exception as e:
+                logger.error(f"Custom permission check error: {e}")
+                return False
     
-    permissions = []
-    
-    # Add IP restriction if specified
-    whitelisted_ips = kwargs.get('whitelisted_ips')
-    if whitelisted_ips:
-        permissions.append(IPWhitelistPermission(whitelisted_ips=whitelisted_ips))
-    
-    # Add time restriction if specified
-    time_window = kwargs.get('time_window')
-    if time_window:
-        start_hour, end_hour = time_window
-        permissions.append(TimeRestrictedPermission(start_hour=start_hour, end_hour=end_hour))
-    
-    # Add security level permission
-    security_level = kwargs.get('security_level', 'staff')
-    permissions.append(create_security_permission(security_level))
-    
-    # Add specific permissions if specified
-    required_permissions = kwargs.get('required_permissions')
-    if required_permissions:
-        permissions.append(HasSecurityPermission(required_permissions=required_permissions))
-    
-    # Add rate limiting if specified
-    rate_limit_params = kwargs.get('rate_limit')
-    if rate_limit_params:
-        permissions.append(RateLimitPermission(**rate_limit_params))
-    
-    # Return combined permission
-    if len(permissions) == 1:
-        return permissions[0]
-    else:
-        return CombinedPermission(*permissions)
+    return CustomPermission()
 
 
-# ============ PERMISSION DECORATORS ============
-
-def require_permission(permission_class):
-    """
-    Decorator to apply permission check to function-based views.
-    """
+def create_enhanced_security_permission(
+    required_permissions: List[str],
+    require_all: bool = False
+) -> BaseSecurityPermission:
+    """Create an enhanced security permission."""
     
+    class EnhancedSecurityPermission(BaseSecurityPermission):
+        def has_permission(self, request, view):
+            try:
+                if not request.user or not request.user.is_authenticated:
+                    return False
+                
+                if require_all:
+                    return all(request.user.has_perm(perm) for perm in required_permissions)
+                else:
+                    return any(request.user.has_perm(perm) for perm in required_permissions)
+                    
+            except Exception as e:
+                logger.error(f"Enhanced security permission check error: {e}")
+                return False
+    
+    return EnhancedSecurityPermission()
+
+
+def create_security_context_permission(context: str):
+    """Create a context-based security permission."""
+    
+    class SecurityContextPermission(BaseSecurityPermission):
+        def has_permission(self, request, view):
+            try:
+                if not request.user or not request.user.is_authenticated:
+                    return False
+                
+                # Check if user has context-specific permission
+                context_permission = f"security.{context}"
+                return request.user.has_perm(context_permission)
+                
+            except Exception as e:
+                logger.error(f"Security context permission check error: {e}")
+                return False
+    
+    return SecurityContextPermission()
+
+
+# Decorators for permission checking
+def require_permission(permission: str):
+    """Decorator to require a specific permission."""
     def decorator(view_func):
         @functools.wraps(view_func)
-        def wrapped_view(request, *args, **kwargs):
-            permission = permission_class()
-            if permission.has_permission(request, None):
-                return view_func(request, *args, **kwargs)
-            else:
-                from rest_framework.response import Response
-                from rest_framework import status
-                return Response(
-                    {'error': 'Permission denied'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        return wrapped_view
+        def wrapper(request, *args, **kwargs):
+            permission_obj = HasSecurityPermission(permission)
+            if not permission_obj.has_permission(request, view_func):
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied(f"Permission '{permission}' required")
+            return view_func(request, *args, **kwargs)
+        return wrapper
     return decorator
 
 
-# ============ EXPORTS ============
+def require_enhanced_permission(
+    required_permissions: List[str],
+    require_all: bool = False
+):
+    """Decorator to require enhanced permissions."""
+    def decorator(view_func):
+        @functools.wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            permission_obj = create_enhanced_security_permission(
+                required_permissions, require_all
+            )
+            if not permission_obj.has_permission(request, view_func):
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("Enhanced permission required")
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
 
+
+# Export all permission classes and utility functions
 __all__ = [
     'BaseSecurityPermission',
     'IsStaffUser',
     'IsSuperUser',
     'IsAdminOrSecurityTeam',
     'IsSecurityAdmin',
-    'IsOwnerOrAdmin',
-    'IsReadOnlyOrAdmin',
+    'IsOwnerOrStaff',
+    'IsOwnerOrReadOnly',
+    'CanManageDevices',
     'HasSecurityPermission',
-    'RateLimitPermission',
-    'IPWhitelistPermission',
     'TimeRestrictedPermission',
+    'IPWhitelistPermission',
     'CombinedPermission',
     'create_security_permission',
     'create_custom_permission',
-    'require_permission'
+    'create_enhanced_security_permission',
+    'create_security_context_permission',
+    'require_permission',
+    'require_enhanced_permission'
 ]
-
-
-# permissions.py ফাইলে এটি যোগ করুন
-class IsSuperUser(permissions.BasePermission):
-    """
-    Allows access only to superusers.
-    """
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_superuser)

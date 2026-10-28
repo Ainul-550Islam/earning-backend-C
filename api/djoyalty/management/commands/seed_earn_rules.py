@@ -1,85 +1,98 @@
 # api/djoyalty/management/commands/seed_earn_rules.py
-"""Seed default earn rules।"""
 from django.core.management.base import BaseCommand
 from decimal import Decimal
 
-EARN_RULE_DEFAULTS = [
+
+DEFAULT_EARN_RULES = [
     {
-        'name': 'Standard Purchase Rule',
+        'name': 'Standard Purchase Earn',
         'rule_type': 'percentage',
         'trigger': 'purchase',
         'points_value': Decimal('1'),
         'multiplier': Decimal('1'),
         'min_spend': Decimal('0'),
-        'is_active': True,
         'priority': 10,
-        'description': 'Earn 1 point per 1 unit spent on all purchases.',
+        'description': 'Earn 1 point per 1 currency unit spent.',
     },
     {
-        'name': 'Sign Up Bonus',
+        'name': 'First Purchase Bonus',
         'rule_type': 'fixed',
-        'trigger': 'signup',
+        'trigger': 'purchase',
         'points_value': Decimal('100'),
         'multiplier': Decimal('1'),
         'min_spend': Decimal('0'),
-        'is_active': True,
-        'priority': 100,
-        'description': 'One-time sign up bonus of 100 points.',
+        'max_per_day': Decimal('100'),
+        'priority': 20,
+        'description': 'Bonus 100 points on first purchase.',
+    },
+    {
+        'name': 'Referral Signup Bonus',
+        'rule_type': 'fixed',
+        'trigger': 'referral',
+        'points_value': Decimal('200'),
+        'multiplier': Decimal('1'),
+        'min_spend': Decimal('0'),
+        'priority': 15,
+        'description': 'Earn 200 points when a referral signs up.',
+    },
+    {
+        'name': 'Login Bonus',
+        'rule_type': 'fixed',
+        'trigger': 'login',
+        'points_value': Decimal('5'),
+        'multiplier': Decimal('1'),
+        'max_per_day': Decimal('5'),
+        'min_spend': Decimal('0'),
+        'priority': 5,
+        'description': 'Earn 5 points per daily login.',
     },
     {
         'name': 'Birthday Bonus',
         'rule_type': 'fixed',
         'trigger': 'birthday',
-        'points_value': Decimal('200'),
+        'points_value': Decimal('500'),
         'multiplier': Decimal('1'),
         'min_spend': Decimal('0'),
-        'is_active': True,
-        'priority': 90,
-        'description': 'Birthday bonus of 200 points.',
+        'priority': 30,
+        'description': 'Birthday bonus: 500 points.',
     },
     {
-        'name': 'Referral Bonus (Referrer)',
+        'name': 'Signup Welcome Bonus',
         'rule_type': 'fixed',
-        'trigger': 'referral',
-        'points_value': Decimal('150'),
+        'trigger': 'signup',
+        'points_value': Decimal('50'),
         'multiplier': Decimal('1'),
         'min_spend': Decimal('0'),
-        'is_active': True,
-        'priority': 80,
-        'description': 'Earn 150 points for each successful referral.',
-    },
-    {
-        'name': 'Review Reward',
-        'rule_type': 'fixed',
-        'trigger': 'review',
-        'points_value': Decimal('25'),
-        'multiplier': Decimal('1'),
-        'min_spend': Decimal('0'),
-        'is_active': True,
-        'priority': 50,
-        'description': 'Earn 25 points for writing a review.',
+        'max_per_day': Decimal('50'),
+        'priority': 25,
+        'description': '50 welcome points on account creation.',
     },
 ]
 
 
 class Command(BaseCommand):
-    help = 'Seed default earn rules'
+    help = 'Seed default earn rules.'
+
+    def add_arguments(self, parser):
+        parser.add_argument('--reset', action='store_true', help='Delete all existing earn rules first.')
 
     def handle(self, *args, **options):
         from djoyalty.models.earn_rules import EarnRule
-        created = 0
-        updated = 0
-        for rule_data in EARN_RULE_DEFAULTS:
-            obj, was_created = EarnRule.objects.update_or_create(
+
+        if options['reset']:
+            deleted = EarnRule.objects.all().delete()
+            self.stdout.write(self.style.WARNING(f'Deleted existing earn rules: {deleted}'))
+
+        created_count = 0
+        for rule_data in DEFAULT_EARN_RULES:
+            _, created = EarnRule.objects.get_or_create(
                 name=rule_data['name'],
-                defaults=rule_data,
+                defaults={k: v for k, v in rule_data.items() if k != 'name'},
             )
-            if was_created:
-                created += 1
-                self.stdout.write(f'  ✅ Created: {obj.name}')
+            if created:
+                created_count += 1
+                self.stdout.write(self.style.SUCCESS(f'  Created: {rule_data["name"]}'))
             else:
-                updated += 1
-                self.stdout.write(f'  🔄 Updated: {obj.name}')
-        self.stdout.write(self.style.SUCCESS(
-            f'Seeded {len(EARN_RULE_DEFAULTS)} earn rules ({created} new, {updated} updated).'
-        ))
+                self.stdout.write(f'  Exists: {rule_data["name"]}')
+
+        self.stdout.write(self.style.SUCCESS(f'\nSeeded {created_count} new earn rules.'))

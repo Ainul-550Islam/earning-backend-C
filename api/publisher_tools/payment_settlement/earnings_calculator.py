@@ -9,7 +9,7 @@ from django.db.models import Sum
 
 def calculate_monthly_earnings(publisher, year: int, month: int) -> Dict:
     """Publisher-এর monthly earnings calculate করে।"""
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     last_day = monthrange(year, month)[1]
     start = date(year, month, 1)
     end   = date(year, month, last_day)
@@ -35,7 +35,7 @@ def calculate_monthly_earnings(publisher, year: int, month: int) -> Dict:
 
 
 def calculate_daily_earnings(publisher, report_date: date) -> Dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     agg = PublisherEarning.objects.filter(publisher=publisher, date=report_date).aggregate(
         gross=Sum("gross_revenue"), publisher=Sum("publisher_revenue"),
         impressions=Sum("impressions"), ivt=Sum("invalid_traffic_deduction"),
@@ -52,7 +52,7 @@ def calculate_daily_earnings(publisher, report_date: date) -> Dict:
 
 def apply_revenue_adjustment(publisher, amount: Decimal, reason: str, adjusted_by=None) -> None:
     """Revenue adjustment apply করে।"""
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.utils import timezone
     PublisherEarning.objects.create(
         publisher=publisher, granularity="daily", date=timezone.now().date(),

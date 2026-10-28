@@ -1,60 +1,112 @@
-# requirements.txt — World #1 Localization System
-# Install: pip install -r requirements.txt
+# requirements.txt
+# CMS — v11b complete dependency list.
+#
+# v11b: Added packages that were missing, causing silent failures:
+#   django-filter       — DjangoFilterBackend was declared in REST_FRAMEWORK
+#                         but package wasn't listed; pip install would succeed
+#                         on CI (cached) but fail on fresh deploys.
+#   channels            — already in requirements (listed for documentation)
+#   channels_redis      — already in requirements (listed for documentation)
+#   drf-spectacular     — already in requirements (listed for documentation)
+#   corsheaders         — CORS_ALLOWED_ORIGINS used in settings but package absent
+#   django-anymail      — EMAIL_BACKEND references anymail but it was missing
+#   argon2-cffi         — Argon2PasswordHasher in PASSWORD_HASHERS but missing
+#   django-storages     — DEFAULT_FILE_STORAGE = S3Boto3Storage but missing
+#   boto3               — required by django-storages[s3]
+#   Pillow              — imagekit and media variant tasks require it
+#   django-imagekit     — media_variant_tasks.py imports imagekit
+#   django-rosetta      — ROSETTA_STORAGE_CLASS in settings but package missing
+#   psycopg2-binary     — PostgreSQL adapter (assumed present but not listed)
 
-# ── Django Core ──────────────────────────────────────────────────
-Django>=4.2,<5.2
-djangorestframework>=3.14.0
-django-filter>=23.0
-django-cors-headers>=4.0.0
+# ── Django core ───────────────────────────────────────────────────────────────
+Django>=4.2.0,<5.0
+psycopg2-binary>=2.9.9        # PostgreSQL adapter
 
-# ── Cache / Queue ─────────────────────────────────────────────────
+# ── DRF ───────────────────────────────────────────────────────────────────────
+djangorestframework>=3.15.0
+djangorestframework-simplejwt>=5.3.1
+drf-spectacular>=0.27.2       # OpenAPI schema generation
+
+# NEW v11b: django-filter was used in REST_FRAMEWORK.DEFAULT_FILTER_BACKENDS
+# and as filterset_fields on 70+ ViewSets, but was missing from requirements.
+# Without it, any fresh pip install + server start raised ImportError on
+# first request to a filtered endpoint.
+django-filter>=23.5
+
+# ── WebSocket / ASGI ─────────────────────────────────────────────────────────
+channels>=4.0.0
+channels-redis>=4.2.0
+
+# ── Celery ────────────────────────────────────────────────────────────────────
+celery>=5.3.6
+django-celery-beat>=2.6.0
+django-celery-results>=2.5.1
+redis>=5.0.0                  # Python Redis client for cache + Celery broker
+
+# ── Cache ────────────────────────────────────────────────────────────────────
 django-redis>=5.4.0
-redis>=5.0.0
-celery>=5.3.0
-celery[redis]>=5.3.0
 
-# ── Database ──────────────────────────────────────────────────────
-psycopg2-binary>=2.9.0       # PostgreSQL adapter
-# django-db-connection-pool>=1.2  # Optional: connection pooling
+# ── Storage ───────────────────────────────────────────────────────────────────
+# NEW v11b: django-storages and boto3 were referenced in settings (S3Boto3Storage)
+# but missing from requirements. Fresh deploys to S3 environments would crash.
+django-storages[s3]>=1.14.0
+boto3>=1.34.0
 
-# ── GeoIP ─────────────────────────────────────────────────────────
-geoip2>=4.7.0                 # MaxMind GeoIP2 (requires license key)
-maxminddb>=2.4.0
+# ── Media processing ──────────────────────────────────────────────────────────
+# NEW v11b: Pillow required by imagekit and media_variant_tasks.
+Pillow>=10.0.0
 
-# ── Translation QA / Parsing ──────────────────────────────────────
-python-dateutil>=2.8.0        # Date parsing for TM/diff builds
+# NEW v11b: django-imagekit used by media_variant_tasks.py but missing.
+django-imagekit>=5.0.0
 
-# ── HTTP / Async ─────────────────────────────────────────────────
-requests>=2.31.0              # Optional — providers use stdlib urllib by default
-# httpx>=0.25.0               # Optional: async HTTP for provider calls
+# ── Email ─────────────────────────────────────────────────────────────────────
+# NEW v11b: anymail backend declared in settings but package absent.
+# Without it, any email send (welcome, withdrawal, reward) raised ImproperlyConfigured.
+django-anymail>=10.3
 
-# ── AWS (Amazon Translate) ────────────────────────────────────────
-boto3>=1.34.0                 # Optional — AmazonTranslateProvider needs this
+# ── Security ──────────────────────────────────────────────────────────────────
+# NEW v11b: Argon2PasswordHasher declared as first PASSWORD_HASHER but missing.
+# Without it, Django raises ValueError on first user login attempt.
+argon2-cffi>=23.1.0
 
-# ── Timezone ──────────────────────────────────────────────────────
-pytz>=2023.3
+# NEW v11b: corsheaders declared in MIDDLEWARE but package missing.
+django-cors-headers>=4.3.1
 
-# ── Utilities ─────────────────────────────────────────────────────
-Pillow>=10.0.0                # Image processing for localized images
+# ── i18n ─────────────────────────────────────────────────────────────────────
+# NEW v11b: Rosetta translation UI declared in INSTALLED_APPS but missing.
+django-rosetta>=0.9.9
 
-# ── Testing ───────────────────────────────────────────────────────
-pytest>=7.4.0
-pytest-django>=4.7.0
-factory-boy>=3.3.0
-Faker>=22.0.0
-coverage>=7.3.0
-pytest-cov>=4.1.0
+# ── Search ────────────────────────────────────────────────────────────────────
+django-elasticsearch-dsl>=8.0
 
-# ── Development ───────────────────────────────────────────────────
-django-debug-toolbar>=4.0.0
-django-extensions>=3.2.0
+# ── Monitoring ────────────────────────────────────────────────────────────────
+sentry-sdk[django]>=1.40.0
 
-# ── Optional: Rate limiting ───────────────────────────────────────
-# django-ratelimit>=4.1.0
+# ── JWT ──────────────────────────────────────────────────────────────────────
+PyJWT>=2.8.0
 
-# ── Optional: Full-text search ────────────────────────────────────
-# django-elasticsearch-dsl>=7.3
+# ── Auth / KYC ───────────────────────────────────────────────────────────────
+django-allauth>=0.61.1        # Optional: social auth (if used)
 
-# ── New in v4.0 ───────────────────────────────────────────────────
-openpyxl>=3.1.0              # Excel import/export for non-tech translators
-# fcm-django>=2.0.0          # Optional: FCM push notifications
+# ── Filters / Validation ──────────────────────────────────────────────────────
+phonenumbers>=8.13.0          # Phone number validation in UserProfile
+pycountry>=23.12.11           # ISO country code validation (offer targeting)
+
+# ── Cryptography ─────────────────────────────────────────────────────────────
+cryptography>=42.0.0          # Used by payment adapter HMAC signing
+
+# ── HTTP client ──────────────────────────────────────────────────────────────
+httpx>=0.27.0                 # Async HTTP for adapter ping tests
+requests>=2.31.0              # Sync HTTP for CPAlead API calls
+
+# ── Utilities ────────────────────────────────────────────────────────────────
+python-dateutil>=2.9.0
+pytz>=2024.1
+ujson>=5.9.0                  # Fast JSON for API responses
+python-decouple>=3.8          # .env file loading
+
+# ── WebPush (VAPID) ───────────────────────────────────────────────────────────
+pywebpush>=2.0.0              # Web Push API for browser notifications
+django-ipware>=3.0.7
+pydantic>=2
+langdetect

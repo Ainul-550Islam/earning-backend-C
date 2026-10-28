@@ -97,9 +97,6 @@ def clone_campaign_view(request, campaign_id):
     if 'error' in result:
         return Response(result, status=status.HTTP_404_NOT_FOUND)
     return Response(result, status=status.HTTP_201_CREATED)
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bulk_update_view(request):
     updater = BulkCampaignUpdater()

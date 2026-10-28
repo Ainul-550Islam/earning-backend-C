@@ -10,6 +10,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
+from api.users.models import DeviceFingerprint
 
 logger = logging.getLogger(__name__)
 

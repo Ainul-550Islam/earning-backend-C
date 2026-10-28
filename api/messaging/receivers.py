@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 from django.dispatch import receiver
+from .utils.http import safe_receiver_error_handler
 from .signals import (
     chat_message_sent,
     broadcast_sent,
@@ -51,7 +52,7 @@ def on_chat_message_sent(sender: Any, **kwargs: Any) -> None:
         from .tasks import notify_new_chat_message
         notify_new_chat_message.delay(str(message.id))
     except Exception as exc:
-        logger.error("on_chat_message_sent: failed to queue notification: %s", exc)
+        safe_receiver_error_handler("chat_message_sent", exc)
 
     try:
         from .services import dispatch_webhook_event
@@ -63,7 +64,7 @@ def on_chat_message_sent(sender: Any, **kwargs: Any) -> None:
             "preview": message.content[:50] if message.content else "",
         })
     except Exception as exc:
-        logger.error("on_chat_message_sent: webhook dispatch failed: %s", exc)
+        safe_receiver_error_handler("chat_message_sent", exc)
 
 
 @receiver(broadcast_sent)
@@ -75,7 +76,7 @@ def on_broadcast_sent(sender: Any, **kwargs: Any) -> None:
         from .utils.notifier import notify_broadcast_sent
         notify_broadcast_sent(broadcast_id=str(broadcast.id), title=broadcast.title)
     except Exception as exc:
-        logger.error("on_broadcast_sent: failed: %s", exc)
+        safe_receiver_error_handler("broadcast_sent", exc)
 
     try:
         from .services import dispatch_webhook_event
@@ -85,7 +86,7 @@ def on_broadcast_sent(sender: Any, **kwargs: Any) -> None:
             "recipient_count": broadcast.recipient_count,
         })
     except Exception as exc:
-        logger.error("on_broadcast_sent: webhook failed: %s", exc)
+        safe_receiver_error_handler("broadcast_sent", exc)
 
 
 @receiver(support_reply_posted)
@@ -98,7 +99,7 @@ def on_support_reply_posted(sender: Any, **kwargs: Any) -> None:
         from .tasks import notify_support_reply
         notify_support_reply.delay(str(support_message.id))
     except Exception as exc:
-        logger.error("on_support_reply_posted: failed: %s", exc)
+        safe_receiver_error_handler("support_reply_posted", exc)
 
 
 @receiver(support_thread_status_changed)
@@ -121,14 +122,14 @@ def on_support_thread_status_changed(sender: Any, **kwargs: Any) -> None:
             "new_status": new_status,
         })
     except Exception as exc:
-        logger.error("on_support_thread_status_changed: webhook failed: %s", exc)
+        safe_receiver_error_handler("support_thread_status_changed", exc)
 
 
 # ── New Receivers ─────────────────────────────────────────────────────────────
 
 @receiver(message_reaction_added)
 def on_message_reaction_added(sender: Any, **kwargs: Any) -> None:
-    """Notify message sender about a new reaction via WebSocket."""
+    """Notify message sender about a new reaction via WebSocket + push."""
     reaction = kwargs.get("reaction")
     message = kwargs.get("message")
     if not reaction or not message:
@@ -146,7 +147,33 @@ def on_message_reaction_added(sender: Any, **kwargs: Any) -> None:
             },
         )
     except Exception as exc:
-        logger.error("on_message_reaction_added: websocket notify failed: %s", exc)
+        safe_receiver_error_handler("message_reaction_added", exc)
+
+    # Push notification (Part 6 audit fix): notify_reaction() already
+    # existed in utils/notifier.py, fully built and tested, for exactly
+    # this case - nothing ever called it, so only the WS event above was
+    # wired. A message sender who wasn't actively WS-connected got no
+    # notification at all that their message was reacted to. Matches the
+    # "send push regardless of WS status" rationale already used for
+    # notify_user_new_message in tasks.py (WS-connected isn't the same as
+    # foregrounded). Kept in its own try/except so a push failure here can
+    # never suppress the WS event above, or vice versa.
+    try:
+        if reaction.user_id == message.sender_id:
+            return  # don't notify a user about their own reaction
+        from .utils.notifier import notify_reaction
+        reactor_name = (
+            getattr(reaction.user, "get_full_name", lambda: "")() or
+            getattr(reaction.user, "username", "Someone")
+        )
+        notify_reaction(
+            user_id=message.sender_id,
+            reactor_name=reactor_name,
+            emoji=reaction.emoji,
+            message_preview=message.content[:60] if message.content else "",
+        )
+    except Exception as exc:
+        safe_receiver_error_handler("message_reaction_added_push", exc)
 
 
 @receiver(message_reaction_removed)
@@ -167,7 +194,7 @@ def on_message_reaction_removed(sender: Any, **kwargs: Any) -> None:
             data={"message_id": str(message_id), "user_id": str(user_id), "emoji": emoji},
         )
     except Exception as exc:
-        logger.error("on_message_reaction_removed: failed: %s", exc)
+        safe_receiver_error_handler("message_reaction_removed", exc)
 
 
 @receiver(call_started)
@@ -181,7 +208,7 @@ def on_call_started(sender: Any, **kwargs: Any) -> None:
         from .tasks import notify_call_incoming
         notify_call_incoming.delay(str(call.id))
     except Exception as exc:
-        logger.error("on_call_started: failed to queue call notification: %s", exc)
+        safe_receiver_error_handler("call_started", exc)
 
     try:
         from .services import dispatch_webhook_event
@@ -192,7 +219,7 @@ def on_call_started(sender: Any, **kwargs: Any) -> None:
             "caller_id": str(call.initiated_by_id),
         })
     except Exception as exc:
-        logger.error("on_call_started: webhook failed: %s", exc)
+        safe_receiver_error_handler("call_started", exc)
 
 
 @receiver(call_ended)
@@ -224,7 +251,7 @@ def on_call_ended(sender: Any, **kwargs: Any) -> None:
                 tenant=call.tenant,
             )
     except Exception as exc:
-        logger.error("on_call_ended: failed to write call log message: %s", exc)
+        safe_receiver_error_handler("call_ended", exc)
 
     try:
         from .services import dispatch_webhook_event
@@ -235,7 +262,7 @@ def on_call_ended(sender: Any, **kwargs: Any) -> None:
             "duration_seconds": duration,
         })
     except Exception as exc:
-        logger.error("on_call_ended: webhook failed: %s", exc)
+        safe_receiver_error_handler("call_ended", exc)
 
 
 @receiver(presence_changed)
@@ -259,7 +286,7 @@ def on_presence_changed(sender: Any, **kwargs: Any) -> None:
                 data={"user_id": str(user_id), "status": new_status},
             )
     except Exception as exc:
-        logger.error("on_presence_changed: failed: %s", exc)
+        safe_receiver_error_handler("presence_changed", exc)
 
 
 @receiver(message_pinned)
@@ -280,7 +307,7 @@ def on_message_pinned(sender: Any, **kwargs: Any) -> None:
             },
         )
     except Exception as exc:
-        logger.error("on_message_pinned: failed: %s", exc)
+        safe_receiver_error_handler("message_pinned", exc)
 
 
 @receiver(message_unpinned)
@@ -297,12 +324,12 @@ def on_message_unpinned(sender: Any, **kwargs: Any) -> None:
             data={"message_id": str(message_id), "chat_id": str(chat_id)},
         )
     except Exception as exc:
-        logger.error("on_message_unpinned: failed: %s", exc)
+        safe_receiver_error_handler("message_unpinned", exc)
 
 
 @receiver(users_mentioned)
 def on_users_mentioned(sender: Any, **kwargs: Any) -> None:
-    """Create inbox MENTION items for mentioned users."""
+    """Create inbox MENTION items for mentioned users + push notify them."""
     message = kwargs.get("message")
     mentioned_user_ids = kwargs.get("mentioned_user_ids", [])
     if not message or not mentioned_user_ids:
@@ -323,7 +350,32 @@ def on_users_mentioned(sender: Any, **kwargs: Any) -> None:
         ]
         UserInbox.objects.bulk_create(items, ignore_conflicts=True)
     except Exception as exc:
-        logger.error("on_users_mentioned: failed: %s", exc)
+        safe_receiver_error_handler("users_mentioned", exc)
+
+    # Push notification (Part 6 audit fix): notify_mention() already
+    # existed in utils/notifier.py, fully built and tested - nothing ever
+    # called it, so a mentioned user previously only got a silent
+    # UserInbox row with no push alerting them to go check it. Separate
+    # try/except so a push failure can't affect the inbox items created
+    # above (and vice versa).
+    try:
+        from .utils.notifier import notify_mention
+        mentioner_name = (
+            getattr(message.sender, "get_full_name", lambda: "")() or
+            getattr(message.sender, "username", "Someone")
+        )
+        preview = message.content[:80] if message.content else ""
+        for uid in mentioned_user_ids:
+            if uid == message.sender_id:
+                continue  # don't notify a user who mentioned themselves
+            notify_mention(
+                user_id=uid,
+                mentioner_name=mentioner_name,
+                chat_id=str(message.chat_id),
+                preview=preview,
+            )
+    except Exception as exc:
+        safe_receiver_error_handler("users_mentioned_push", exc)
 
 
 @receiver(user_blocked)
@@ -409,7 +461,7 @@ def on_story_created(sender: Any, **kwargs: Any) -> None:
             data={"user_id": str(story.user_id), "story_id": str(story.id), "story_type": story.story_type},
         )
     except Exception as exc:
-        logger.error("on_story_created: websocket notify failed: %s", exc)
+        safe_receiver_error_handler("story_created", exc)
 
 
 @receiver(story_viewed)
@@ -429,7 +481,7 @@ def on_story_viewed(sender: Any, **kwargs: Any) -> None:
             countdown=30,
         )
     except Exception as exc:
-        logger.error("on_story_viewed: failed to queue digest: %s", exc)
+        safe_receiver_error_handler("story_viewed", exc)
 
 
 @receiver(story_replied)
@@ -448,19 +500,37 @@ def on_message_edited_with_history(sender: Any, **kwargs: Any) -> None:
     if not message:
         return
     try:
-        from .utils.notifier import send_websocket_event
-        send_websocket_event(
-            group_name=f"chat_{str(message.chat_id).replace('-', '')}",
-            event_type="message.edited",
-            data={
-                "message_id": str(message.id),
-                "chat_id": str(message.chat_id),
-                "content": message.content,
-                "edit_number": edit_history.edit_number if edit_history else 1,
-            },
-        )
+        # Audit fix (Part 19): originally routed through send_websocket_event
+        # (event_type="message.edited"), which (a) mapped to a Channels
+        # handler name, "message_edited", that doesn't exist on
+        # ChatConsumer - only chat_message_edited does, already used by
+        # the WS-native edit path in consumers.py:_handle_edit - a hard
+        # ValueError for every connected client, dormant until this
+        # session wired the signal up; and (b) even pointed at the right
+        # handler, send_websocket_event nests the payload under a "data"
+        # key while chat_message_edited spreads the event flat
+        # ({**event, ...}), matching how _handle_edit's direct
+        # group_send() already sends it - so the REST-edit and WS-edit
+        # paths would still have produced two different-shaped
+        # "message edited" events for the same client to handle. Calling
+        # group_send directly here, flat, keeps both paths identical.
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        channel_layer = get_channel_layer()
+        if channel_layer is not None:
+            async_to_sync(channel_layer.group_send)(
+                f"chat_{str(message.chat_id).replace('-', '')}",
+                {
+                    "type": "chat_message_edited",
+                    "message_id": str(message.id),
+                    "content": message.content,
+                    "edited_by": str(edit_history.edited_by_id) if edit_history and edit_history.edited_by_id else None,
+                    "edit_number": edit_history.edit_number if edit_history else 1,
+                    "edited_at": message.edited_at.isoformat() if getattr(message, "edited_at", None) else None,
+                },
+            )
     except Exception as exc:
-        logger.error("on_message_edited_with_history: websocket failed: %s", exc)
+        safe_receiver_error_handler("message_edited_with_history", exc)
 
 
 @receiver(disappearing_config_changed)
@@ -482,7 +552,7 @@ def on_disappearing_config_changed(sender: Any, **kwargs: Any) -> None:
             },
         )
     except Exception as exc:
-        logger.error("on_disappearing_config_changed: failed: %s", exc)
+        safe_receiver_error_handler("disappearing_config_changed", exc)
 
 
 @receiver(voice_message_transcribed)
@@ -506,7 +576,7 @@ def on_voice_message_transcribed(sender: Any, **kwargs: Any) -> None:
             },
         )
     except Exception as exc:
-        logger.error("on_voice_message_transcribed: failed: %s", exc)
+        safe_receiver_error_handler("voice_message_transcribed", exc)
 
 
 # ── Auto-trigger post-processing after message sent ───────────────────────────
@@ -532,7 +602,7 @@ def on_chat_message_sent_postprocess(sender: Any, **kwargs: Any) -> None:
                 args=[str(message.id)], countdown=2
             )
         except Exception as exc:
-            logger.warning("on_chat_message_sent_postprocess: link preview queue failed: %s", exc)
+            safe_receiver_error_handler("chat_message_sent", exc)
 
     # Voice transcription
     if message.message_type == "AUDIO":
@@ -542,4 +612,130 @@ def on_chat_message_sent_postprocess(sender: Any, **kwargs: Any) -> None:
                 args=[str(message.id)], countdown=1
             )
         except Exception as exc:
-            logger.warning("on_chat_message_sent_postprocess: voice queue failed: %s", exc)
+            safe_receiver_error_handler("chat_message_sent", exc)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fix 7: message_forwarded receiver (was imported but had no @receiver)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@receiver(message_forwarded)
+def on_message_forwarded(sender: Any, **kwargs: Any) -> None:
+    """
+    When a message is forwarded to another chat:
+      1. Notify the target chat group via WebSocket
+      2. Update the original message's forward_count metadata
+    """
+    original_message   = kwargs.get("original_message")
+    forwarded_message  = kwargs.get("forwarded_message")
+    forwarded_by_id    = kwargs.get("forwarded_by_id")
+    target_chat_id     = kwargs.get("target_chat_id")
+
+    if not original_message or not forwarded_message:
+        return
+
+    # ── Notify target chat via WebSocket ─────────────────────────────────────
+    try:
+        from .utils.notifier import send_websocket_event
+        send_websocket_event(
+            group_name=f"chat_{str(target_chat_id).replace('-', '')}",
+            event_type="message.forwarded",
+            data={
+                "message_id":          str(forwarded_message.id),
+                "original_message_id": str(original_message.id),
+                "forwarded_by_id":     str(forwarded_by_id) if forwarded_by_id else None,
+                "chat_id":             str(target_chat_id),
+                "content":             forwarded_message.content,
+                "message_type":        forwarded_message.message_type,
+            },
+        )
+    except Exception as exc:
+        safe_receiver_error_handler("message_forwarded", exc)
+
+    # ── Increment forward_count on original message ───────────────────────────
+    try:
+        from .models import ChatMessage
+        ChatMessage.objects.filter(pk=original_message.pk).update(
+            metadata={
+                **(original_message.metadata or {}),
+                "forward_count": (
+                    (original_message.metadata or {}).get("forward_count", 0) + 1
+                ),
+            }
+        )
+    except Exception as exc:
+        safe_receiver_error_handler("message_forwarded", exc)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fix 7: link_previews_fetched receiver (was imported but had no @receiver)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@receiver(link_previews_fetched)
+def on_link_previews_fetched(sender: Any, **kwargs: Any) -> None:
+    """
+    After link preview data is fetched for a message:
+      1. Broadcast an update event to the chat so clients append the preview
+    """
+    message   = kwargs.get("message")
+    previews  = kwargs.get("previews", [])
+
+    if not message or not previews:
+        return
+
+    try:
+        from .utils.notifier import send_websocket_event
+        send_websocket_event(
+            group_name=f"chat_{str(message.chat_id).replace('-', '')}",
+            event_type="message.link_previews",
+            data={
+                "message_id": str(message.id),
+                "chat_id":    str(message.chat_id),
+                "previews":   [
+                    {
+                        "url":         p.get("url", ""),
+                        "title":       p.get("title", ""),
+                        "description": p.get("description", ""),
+                        "image_url":   p.get("image_url"),
+                        "site_name":   p.get("site_name", ""),
+                    }
+                    for p in previews[:4]  # max 4 previews per message
+                ],
+            },
+        )
+    except Exception as exc:
+        safe_receiver_error_handler("link_previews_fetched", exc)
+
+
+# ── Part 20 (world-system audit: interactive bot components) ───────────────
+
+from .signals import bot_interaction_processed
+
+
+@receiver(bot_interaction_processed)
+def on_bot_interaction_processed(sender: Any, **kwargs: Any) -> None:
+    """Broadcast an interactive-component click to the chat in real time,
+    so every connected client sees the result - not just whoever clicked -
+    matching how Slack/Discord update a button's state for the whole
+    channel, not only the clicker's own view.
+    """
+    interaction = kwargs.get("interaction")
+    if not interaction:
+        return
+    try:
+        from .utils.notifier import send_websocket_event
+        send_websocket_event(
+            group_name=f"chat_{str(interaction.source_message.chat_id).replace('-', '')}",
+            event_type="bot.interaction",
+            data={
+                "message_id": str(interaction.source_message_id),
+                "action_id": interaction.action_id,
+                "value": interaction.value,
+                "user_id": interaction.user_id,
+                "resulting_message_id": (
+                    str(interaction.resulting_message_id)
+                    if interaction.resulting_message_id else None
+                ),
+            },
+        )
+    except Exception as exc:
+        safe_receiver_error_handler("bot_interaction_processed", exc)

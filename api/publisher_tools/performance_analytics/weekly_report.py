@@ -8,7 +8,7 @@ from django.utils import timezone
 
 
 def generate_weekly_report(publisher, week_start: date = None) -> Dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     if not week_start:
         today = timezone.now().date()
         week_start = today - timedelta(days=today.weekday())

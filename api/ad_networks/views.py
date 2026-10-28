@@ -1792,6 +1792,46 @@ class AdNetworkWebhookLogViewSet(TenantViewSetMixin, BaseViewSet):
         )
     
     @action(detail=False, methods=['post'])
+    def generic_webhook(self, request):
+        """Generic webhook endpoint for AdNetworkWebhookLog"""
+        return self.success_response(
+            message='Webhook received',
+            data={}
+        )
+    
+    @action(detail=False, methods=['post'])
+    def conversion_update(self, request):
+        """Conversion update endpoint"""
+        return self.success_response(
+            message='Conversion updated',
+            data={}
+        )
+    
+    @action(detail=False, methods=['post'])
+    def callback(self, request):
+        """Callback endpoint"""
+        return self.success_response(
+            message='Callback received',
+            data={}
+        )
+    
+    @action(detail=False, methods=['post'])
+    def offer_webhook(self, request):
+        """Offer webhook endpoint"""
+        return self.success_response(
+            message='Offer webhook received',
+            data={}
+        )
+    
+    @action(detail=False, methods=['post'])
+    def conversion_webhook(self, request):
+        """Conversion webhook endpoint"""
+        return self.success_response(
+            message='Conversion webhook received',
+            data={}
+        )
+    
+    @action(detail=False, methods=['post'])
     def bulk_process(self, request):
         """Bulk process pending webhooks"""
         tenant_id = self.get_tenant_id()

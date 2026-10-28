@@ -11,6 +11,7 @@ from django.db.models import Count, Q
 
 from ...models import WebhookBatch, WebhookBatchItem
 from ...constants import BatchStatus
+from ...exceptions import WebhookBatchError
 
 logger = logging.getLogger(__name__)
 

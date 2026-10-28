@@ -405,6 +405,67 @@ class AppService:
         app.save(update_fields=['updated_at'])
         return app
 
+    @staticmethod
+    def get_app_performance(app: App, days: int = 30) -> dict:
+        """
+        App performance summary — app_management/ subfolder থেকে।
+        views_app_management.AppManagementViewSet.performance() এটা call করে।
+        """
+        try:
+            from .app_management import get_app_performance_summary
+            return get_app_performance_summary(app, days=days)
+        except ImportError:
+            # Fallback: basic stats from App model
+            return {
+                'app_id':        app.app_id,
+                'name':          app.name,
+                'platform':      app.platform,
+                'status':        app.status,
+                'total_earnings': str(app.total_earnings),
+                'days':          days,
+            }
+
+    @staticmethod
+    def get_app_revenue_by_format(app: App, days: int = 30) -> list:
+        """
+        Ad format별 revenue breakdown — app_management/ subfolder থেকে।
+        views_app_management.AppManagementViewSet.by_format() এটা call করে।
+        """
+        try:
+            from .app_management import get_app_revenue_by_format
+            return get_app_revenue_by_format(app, days=days)
+        except ImportError:
+            return []
+
+    @staticmethod
+    def get_app_top_countries(app: App, days: int = 30, limit: int = 10) -> list:
+        """
+        Revenue-এর top countries — app_management/ subfolder থেকে।
+        views_app_management.AppManagementViewSet.top_countries() এটা call করে।
+        """
+        try:
+            from .app_management import get_app_top_countries
+            return get_app_top_countries(app, days=days, limit=limit)
+        except ImportError:
+            return []
+
+    @staticmethod
+    def get_app_quality_score(app: App) -> dict:
+        """
+        App quality score calculate করে।
+        app_management/app_quality_score.py থেকে।
+        """
+        try:
+            from .app_management.app_quality_score import AppQualityScorer
+            scorer = AppQualityScorer(app)
+            return scorer.recalculate()
+        except (ImportError, AttributeError):
+            return {
+                'app_id': app.app_id,
+                'quality_score': 0,
+                'details': 'Quality scoring unavailable',
+            }
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # AD UNIT SERVICE

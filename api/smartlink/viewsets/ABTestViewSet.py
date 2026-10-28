@@ -2,11 +2,11 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..models import ABTestResult, SmartLink
-from ..serializers.ABTestSerializer import ABTestSerializer
-from ..serializers.ABTestResultSerializer import ABTestResultSerializer
+from api.smartlink.models import ABTestResult, SmartLink
+from api.smartlink.serializers.ABTestSerializer import ABTestSerializer
+from api.smartlink.serializers.ABTestResultSerializer import ABTestResultSerializer
 from ..services.rotation.ABTestService import ABTestService
-from ..permissions import IsPublisher
+from api.smartlink.permissions import IsPublisher
 
 
 class ABTestViewSet(viewsets.ModelViewSet):

@@ -3,6 +3,7 @@ api/ad_networks/notifications_push.py
 Push notification system for ad networks module
 SaaS-ready with tenant support
 """
+from django.db.models import Sum
 
 import logging
 import json

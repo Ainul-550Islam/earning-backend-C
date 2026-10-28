@@ -58,6 +58,7 @@ class PublisherBusiness(TimeStampedModel):
     metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_business'
         verbose_name = _('Publisher Business Info')
         verbose_name_plural = _('Publisher Business Info')

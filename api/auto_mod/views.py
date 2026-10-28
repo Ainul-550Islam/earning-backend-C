@@ -138,3 +138,103 @@ class BulkModerationActionView(APIView):
                 results["errors"].append({"id": str(pk), "error": str(exc)})
 
         return Response(results, status=status.HTTP_200_OK)
+
+# =============================================================================
+# Real-time Dashboard Metrics Endpoint
+# =============================================================================
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from django.utils import timezone
+from django.db.models import Count, Avg
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def moderation_dashboard_metrics(request):
+    """
+    Real-time moderation dashboard metrics.
+    GET /api/auto_mod/dashboard/metrics/
+
+    Returns live KPIs:
+      - pending_count, processing_count, approved_today, rejected_today
+      - avg_confidence, fraud_rate, sla_compliance, bot_health
+      - queue_depth by priority, top_risk_submissions
+    """
+    from .models import (
+        SuspiciousSubmission, ModerationQueue, TaskBot, ProofScanner
+    )
+    from .choices import ModerationStatus, BotStatus
+    from django.utils import timezone
+    from datetime import timedelta
+
+    now   = timezone.now()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Submission stats
+    sub_qs = SuspiciousSubmission.objects.all()
+    pending   = sub_qs.filter(status=ModerationStatus.PENDING).count()
+    scanning  = sub_qs.filter(status=ModerationStatus.SCANNING).count()
+    hr_queue  = sub_qs.filter(status=ModerationStatus.HUMAN_REVIEW).count()
+    escalated = sub_qs.filter(status=ModerationStatus.ESCALATED).count()
+
+    today_qs      = sub_qs.filter(updated_at__gte=today)
+    approved_today = today_qs.filter(
+        status__in=[ModerationStatus.AUTO_APPROVED, ModerationStatus.HUMAN_APPROVED]
+    ).count()
+    rejected_today = today_qs.filter(
+        status__in=[ModerationStatus.AUTO_REJECTED, ModerationStatus.HUMAN_REJECTED]
+    ).count()
+
+    # AI confidence
+    conf_avg = sub_qs.filter(
+        ai_confidence__isnull=False, updated_at__gte=now - timedelta(hours=24)
+    ).aggregate(avg=Avg('ai_confidence'))['avg'] or 0.0
+
+    # Queue depth by priority
+    queue_depth = dict(
+        ModerationQueue.objects.filter(completed_at__isnull=True)
+        .values('priority')
+        .annotate(c=Count('id'))
+        .values_list('priority', 'c')
+    )
+
+    # Bot health
+    total_bots   = TaskBot.objects.count()
+    healthy_bots = TaskBot.objects.filter(status=BotStatus.RUNNING).count()
+    failed_bots  = TaskBot.objects.filter(
+        status__in=[BotStatus.FAILED, BotStatus.ERROR]
+    ).count()
+
+    # Top risk submissions (for human review widget)
+    top_risk = list(
+        sub_qs.filter(status=ModerationStatus.HUMAN_REVIEW)
+        .order_by('-risk_score')[:5]
+        .values('id', 'content_id', 'submission_type', 'risk_score', 'risk_level')
+    )
+
+    return Response({
+        "generated_at":    now.isoformat(),
+        "submissions": {
+            "pending":         pending,
+            "scanning":        scanning,
+            "human_review":    hr_queue,
+            "escalated":       escalated,
+            "approved_today":  approved_today,
+            "rejected_today":  rejected_today,
+            "avg_ai_confidence_24h": round(float(conf_avg), 4),
+        },
+        "queue": {
+            "depth_by_priority": queue_depth,
+            "total_unassigned":  ModerationQueue.objects.filter(
+                assigned_to__isnull=True, completed_at__isnull=True
+            ).count(),
+        },
+        "bots": {
+            "total":   total_bots,
+            "healthy": healthy_bots,
+            "failed":  failed_bots,
+            "health_pct": round(100 * healthy_bots / total_bots, 1) if total_bots else 0,
+        },
+        "top_risk_submissions": top_risk,
+    })

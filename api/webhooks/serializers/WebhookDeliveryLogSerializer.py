@@ -16,7 +16,7 @@ class WebhookDeliveryLogSerializer(serializers.ModelSerializer):
     """Serializer for WebhookDeliveryLog model."""
     
     endpoint_label = serializers.CharField(source='endpoint.label', read_only=True)
-    endpoint_url = serializers.URLField(source='endpoint.url', read_only=True)
+    endpoint_url = serializers.URLField(source='endpoint.target_url', read_only=True)
     
     class Meta:
         model = WebhookDeliveryLog
@@ -31,7 +31,7 @@ class WebhookDeliveryLogSerializer(serializers.ModelSerializer):
             'signature',
             'http_status_code',
             'response_body',
-            'duration_ms',
+            'response_time_ms',
             'error_message',
             'status',
             'attempt_number',
@@ -47,9 +47,15 @@ class WebhookDeliveryLogSerializer(serializers.ModelSerializer):
             'completed_at', 'next_retry_at', 'signature'
         ]
     
+    def validate_payload(self, value):
+        """Payload must be a JSON object, not a bare scalar."""
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Payload must be a JSON object.")
+        return value
+    
     def validate_status(self, value):
         """Validate delivery status."""
-        valid_statuses = [status.value for status in DeliveryStatus]
+        valid_statuses = [choice[0] for choice in DeliveryStatus.CHOICES]
         if value not in valid_statuses:
             raise serializers.ValidationError(f"Status must be one of: {valid_statuses}")
         return value
@@ -90,7 +96,7 @@ class WebhookDeliveryLogCreateSerializer(WebhookDeliveryLogSerializer):
             'request_headers',
             'http_status_code',
             'response_body',
-            'duration_ms',
+            'response_time_ms',
             'error_message',
             'status',
             'attempt_number',
@@ -106,7 +112,7 @@ class WebhookDeliveryLogUpdateSerializer(WebhookDeliveryLogSerializer):
         fields = [
             'http_status_code',
             'response_body',
-            'duration_ms',
+            'response_time_ms',
             'error_message',
             'status',
             'attempt_number',
@@ -132,7 +138,7 @@ class WebhookDeliveryLogListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing webhook delivery logs."""
     
     endpoint_label = serializers.CharField(source='endpoint.label', read_only=True)
-    endpoint_url = serializers.URLField(source='endpoint.url', read_only=True)
+    endpoint_url = serializers.URLField(source='endpoint.target_url', read_only=True)
     
     class Meta:
         model = WebhookDeliveryLog
@@ -143,7 +149,7 @@ class WebhookDeliveryLogListSerializer(serializers.ModelSerializer):
             'event_type',
             'status',
             'http_status_code',
-            'duration_ms',
+            'response_time_ms',
             'attempt_number',
             'created_at'
         ]

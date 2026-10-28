@@ -1,5 +1,6 @@
+from typing import Optional
 import logging
-from ...models import LandingPage, PreLander, SmartLink
+from api.smartlink.models import LandingPage, PreLander, SmartLink
 from ...utils import build_tracking_url, sanitize_sub_id
 
 logger = logging.getLogger('smartlink.landing_page')

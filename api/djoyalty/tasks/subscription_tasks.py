@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 @shared_task(name='djoyalty.process_subscription_renewals', bind=True, max_retries=3)
 def process_subscription_renewals_task(self):
     """
-    Due loyalty subscriptions process করো — bonus points দাও এবং next renewal set করো।
+    Due loyalty subscriptions process করো -- bonus points দাও এবং next renewal set করো।
     Returns: count of processed renewals
     """
     try:

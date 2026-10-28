@@ -1,0 +1,106 @@
+[
+  {
+    "model": "support.kbcategory",
+    "pk": 1,
+    "fields": {
+      "name": "Getting Started",
+      "slug": "getting-started",
+      "icon": "\ud83d\ude80",
+      "sort_order": 1,
+      "is_active": true,
+      "parent": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.kbcategory",
+    "pk": 2,
+    "fields": {
+      "name": "Payments & Earnings",
+      "slug": "payments",
+      "icon": "\ud83d\udcb0",
+      "sort_order": 2,
+      "is_active": true,
+      "parent": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.kbcategory",
+    "pk": 3,
+    "fields": {
+      "name": "Withdrawal",
+      "slug": "withdrawal",
+      "icon": "\ud83d\udcb8",
+      "sort_order": 3,
+      "is_active": true,
+      "parent": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.kbcategory",
+    "pk": 4,
+    "fields": {
+      "name": "Account & Profile",
+      "slug": "account",
+      "icon": "\ud83d\udc64",
+      "sort_order": 4,
+      "is_active": true,
+      "parent": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.kbcategory",
+    "pk": 5,
+    "fields": {
+      "name": "Offers & Tasks",
+      "slug": "offers",
+      "icon": "\ud83c\udfaf",
+      "sort_order": 5,
+      "is_active": true,
+      "parent": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.kbcategory",
+    "pk": 6,
+    "fields": {
+      "name": "KYC Verification",
+      "slug": "kyc",
+      "icon": "\ud83e\udeaa",
+      "sort_order": 6,
+      "is_active": true,
+      "parent": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.kbcategory",
+    "pk": 7,
+    "fields": {
+      "name": "Security",
+      "slug": "security",
+      "icon": "\ud83d\udd12",
+      "sort_order": 9,
+      "is_active": true,
+      "parent": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.kbcategory",
+    "pk": 8,
+    "fields": {
+      "name": "Troubleshooting",
+      "slug": "troubleshooting",
+      "icon": "\ud83d\udee0\ufe0f",
+      "sort_order": 10,
+      "is_active": true,
+      "parent": null,
+      "tenant": null
+    }
+  }
+]

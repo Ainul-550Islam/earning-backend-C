@@ -97,3 +97,20 @@ __all__ = [
 # Django will discover models through the app registry
 # The models will be available for makemigrations and migrate commands
 # when Django apps are loaded properly.
+
+# --- Deterministic model registry -------------------------------------------
+# These 28 models were registered only as a side effect of URL/system-check imports
+# (advertiser_management services). A process without those imports (makemigrations
+# --skip-checks, scripts, some workers) saw a smaller registry and `makemigrations`
+# wanted to DELETE their tables. Import them here so every process sees the same set.
+from ..database_models import (  # noqa: E402,F401
+    blacklist_model,
+    budget_model,
+    business_model,
+    compliance_model,
+    performance_model,
+    roi_model,
+    spend_model,
+    subscription_model,
+    whitelist_model,
+)

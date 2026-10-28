@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from ..models import OfferBlacklist
-from ..serializers.SmartLinkSerializer import SmartLinkSerializer
-from ..permissions import IsPublisher
+from api.smartlink.models import OfferBlacklist
+from api.smartlink.serializers.SmartLinkSerializer import SmartLinkSerializer
+from api.smartlink.permissions import IsPublisher
 from rest_framework import serializers as drf_serializers
 
 

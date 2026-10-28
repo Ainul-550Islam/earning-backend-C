@@ -4,6 +4,8 @@ Campaign Optimizer Tasks
 Hourly bid and targeting optimization
 for improved campaign performance.
 """
+from django.db.models import Case
+from django.db.models import When
 
 from celery import shared_task
 from django.utils import timezone

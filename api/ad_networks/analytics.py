@@ -1011,3 +1011,10 @@ __all__ = [
     'ConversionAnalytics',
     'ComprehensiveAnalytics',
 ]
+
+class NetworkAnalytics:
+    """Stub for NetworkAnalytics — extend as needed."""
+
+    @classmethod
+    def get_summary(cls):
+        return {}

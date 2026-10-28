@@ -4,6 +4,7 @@ Tenant Filters - Django Filter Classes
 This module contains comprehensive filter classes for tenant-related models
 with advanced filtering, searching, and sorting capabilities.
 """
+from django.utils.translation import gettext_lazy as _
 
 import django_filters
 from django.db.models import Q, Count, Avg, Sum

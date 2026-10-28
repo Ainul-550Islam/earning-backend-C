@@ -127,7 +127,7 @@ class LockerSession(TimeStampedModel):
 
     locker           = models.ForeignKey(ContentLocker, on_delete=models.CASCADE,
                         related_name='sessions')
-    session_id       = models.CharField(max_length=64, default=uuid.uuid4().hex, db_index=True)
+    session_id       = models.CharField(max_length=64, default=uuid.uuid4, db_index=True)
     visitor_ip       = models.GenericIPAddressField(null=True, blank=True)
     country_code     = models.CharField(max_length=2, blank=True)
     device_type      = models.CharField(max_length=20, blank=True)

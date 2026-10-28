@@ -24,13 +24,22 @@ def alert_rule_pre_save(sender, instance, **kwargs):
             instance.name = f"Alert Rule for {instance.alert_type}"
         
         # Validate severity
-        valid_severities = ['low', 'medium', 'high', 'critical']
+        valid_severities = [c[0] for c in AlertRule._meta.get_field('severity').choices]
         if instance.severity not in valid_severities:
             logger.warning(f"Invalid severity '{instance.severity}' for AlertRule {instance.id}")
         
         # Set default cooldown if not provided
         if instance.cooldown_minutes is None:
             instance.cooldown_minutes = 30
+
+        # Stash prior is_active so post_save can detect a real enable/disable transition
+        if instance.pk:
+            try:
+                instance._prev_is_active = AlertRule.objects.filter(pk=instance.pk).values_list('is_active', flat=True).first()
+            except Exception:
+                instance._prev_is_active = None
+        else:
+            instance._prev_is_active = None
             
     except Exception as e:
         logger.error(f"Error in alert_rule_pre_save: {e}")
@@ -46,20 +55,48 @@ def alert_rule_post_save(sender, instance, created, **kwargs):
             # Create initial history record
             AlertRuleHistory.objects.create(
                 rule=instance,
-                change_type='created',
-                old_values={},
-                new_values={
+                action='created',
+                old_data={},
+                new_data={
                     'name': instance.name,
                     'alert_type': instance.alert_type,
                     'severity': instance.severity,
                     'threshold_value': instance.threshold_value,
                     'is_active': instance.is_active
                 },
-                change_reason="Initial creation"
+                changed_fields=['all']
             )
         else:
             logger.debug(f"Updated AlertRule: {instance.name} (ID: {instance.id})")
-            
+            prev = getattr(instance, '_prev_is_active', None)
+            if prev is not None and prev != instance.is_active:
+                from api.alerts.signals.core import alert_rule_enabled, alert_rule_disabled
+                (alert_rule_enabled if instance.is_active else alert_rule_disabled).send(
+                    sender=sender, instance=instance)
+
+        # Always clear the active-rules cache on any save
+        try:
+            from django.core.cache import cache
+            cache.delete('active_alert_rules')
+            cache.delete(f'alert_rule_{instance.pk}')
+        except Exception:
+            pass
+
+        # Audit log the save event
+        try:
+            from api.alerts.integration import get_audit_logger
+            from api.alerts.integration.integ_audit_logs import AuditEventType, AuditSeverity
+            al = get_audit_logger()
+            if al:
+                al.log_event(
+                    event_type=AuditEventType.RULE_CREATED if created else AuditEventType.RULE_UPDATED,
+                    severity=AuditSeverity.INFO,
+                    description=f"AlertRule {'created' if created else 'updated'}: {instance.name}",
+                    details={'rule_id': instance.pk, 'is_active': instance.is_active}
+                )
+        except Exception:
+            pass
+
     except Exception as e:
         logger.error(f"Error in alert_rule_post_save: {e}")
 
@@ -72,6 +109,8 @@ def alert_rule_post_delete(sender, instance, **kwargs):
         
         # Clean up related objects
         AlertRuleHistory.objects.filter(rule=instance).delete()
+        from api.alerts.signals.core import alert_rule_deleted
+        alert_rule_deleted.send(sender=sender, instance=instance)
         
     except Exception as e:
         logger.error(f"Error in alert_rule_post_delete: {e}")
@@ -110,12 +149,41 @@ def alert_log_post_save(sender, instance, created, **kwargs):
             
             # Create notifications if rule is active
             if instance.rule.is_active:
-                # This would trigger notification creation
+                from api.alerts.tasks.notification import send_pending_notifications
+                try:
+                    send_pending_notifications.delay()
+                except Exception:
+                    pass
+
+            # Auto-create incident for critical/high severity alerts
+            try:
+                from api.alerts.tasks.incident import create_incident_from_alert
+                if hasattr(instance.rule, 'severity') and instance.rule.severity in ('critical', 'high'):
+                    try:
+                        create_incident_from_alert.delay(instance.pk)
+                    except Exception:
+                        pass
+            except Exception as exc:
+                logger.warning(f"Could not trigger create_incident_from_alert for log {instance.pk}: {exc}")
+
+            # Audit log alert creation
+            try:
+                from api.alerts.integration import get_audit_logger
+                from api.alerts.integration.integ_audit_logs import AuditEventType, AuditSeverity
+                al = get_audit_logger()
+                if al:
+                    al.log_event(
+                        event_type=AuditEventType.ALERT_CREATED,
+                        severity=AuditSeverity.WARNING if instance.rule.severity in ('critical','high') else AuditSeverity.INFO,
+                        description=f"Alert fired: {instance.rule.name}",
+                        details={'alert_log_id': instance.pk, 'rule_id': instance.rule_id, 'severity': getattr(instance.rule, 'severity', 'unknown')}
+                    )
+            except Exception:
                 pass
-                
+
         else:
             logger.debug(f"Updated AlertLog: {instance.id}")
-            
+
     except Exception as e:
         logger.error(f"Error in alert_log_post_save: {e}")
 
@@ -148,7 +216,10 @@ def notification_post_save(sender, instance, created, **kwargs):
             
             # Trigger notification sending task
             from ..tasks.notification import send_pending_notifications
-            send_pending_notifications.delay()
+            try:
+                send_pending_notifications.delay()
+            except Exception:
+                pass
             
         else:
             logger.debug(f"Updated Notification: {instance.id}")
@@ -162,11 +233,8 @@ def alert_escalation_pre_save(sender, instance, **kwargs):
     """Signal handler before saving AlertEscalation"""
     try:
         # Set default values if not provided
-        if not instance.escalation_delay_minutes:
-            instance.escalation_delay_minutes = 60  # 1 hour default
-        
-        if not instance.escalate_after_failures:
-            instance.escalate_after_failures = 3  # After 3 failed notifications
+        if not instance.delay_minutes:
+            instance.delay_minutes = 60  # 1 hour default
             
     except Exception as e:
         logger.error(f"Error in alert_escalation_pre_save: {e}")
@@ -178,6 +246,8 @@ def alert_escalation_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created new AlertEscalation: Level {instance.level} for rule {instance.rule.name}")
+            from api.alerts.signals.core import escalation_created
+            escalation_created.send(sender=sender, instance=instance)
         else:
             logger.debug(f"Updated AlertEscalation: {instance.id}")
             
@@ -190,9 +260,6 @@ def alert_template_pre_save(sender, instance, **kwargs):
     """Signal handler before saving AlertTemplate"""
     try:
         # Set default values if not provided
-        if not instance.template_type:
-            instance.template_type = 'email'
-        
         if not instance.is_default:
             instance.is_default = False
             
@@ -205,7 +272,9 @@ def alert_template_post_save(sender, instance, created, **kwargs):
     """Signal handler after saving AlertTemplate"""
     try:
         if created:
-            logger.info(f"Created new AlertTemplate: {instance.name} ({instance.template_type})")
+            logger.info(f"Created new AlertTemplate: {instance.name} ({instance.alert_type})")
+            from api.alerts.signals.core import template_created
+            template_created.send(sender=sender, instance=instance)
         else:
             logger.debug(f"Updated AlertTemplate: {instance.name}")
             
@@ -218,11 +287,11 @@ def alert_group_pre_save(sender, instance, **kwargs):
     """Signal handler before saving AlertGroup"""
     try:
         # Set default values if not provided
-        if not instance.notification_threshold:
-            instance.notification_threshold = 5  # Default: 5 alerts before group notification
+        if not instance.group_threshold:
+            instance.group_threshold = 3  # Default: 3 alerts before group notification
         
-        if not instance.notification_cooldown_minutes:
-            instance.notification_cooldown_minutes = 60  # 1 hour default
+        if not instance.cooldown_minutes:
+            instance.cooldown_minutes = 60  # 1 hour default
             
     except Exception as e:
         logger.error(f"Error in alert_group_pre_save: {e}")
@@ -234,6 +303,8 @@ def alert_group_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created new AlertGroup: {instance.name}")
+            from api.alerts.signals.core import group_created
+            group_created.send(sender=sender, instance=instance)
         else:
             logger.debug(f"Updated AlertGroup: {instance.name}")
             
@@ -258,6 +329,8 @@ def alert_suppression_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created new AlertSuppression: {instance.name} ({instance.suppression_type})")
+            from api.alerts.signals.core import suppression_created
+            suppression_created.send(sender=sender, instance=instance)
         else:
             logger.debug(f"Updated AlertSuppression: {instance.name}")
             
@@ -286,13 +359,18 @@ def system_health_check_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created new SystemHealthCheck: {instance.check_name}")
+            from api.alerts.signals.core import health_check_created
+            health_check_created.send(sender=sender, instance=instance)
         else:
             logger.debug(f"Updated SystemHealthCheck: {instance.check_name}")
             
         # Trigger alert if health check failed
         if instance.status == 'critical':
             from ..tasks.core import check_system_health
-            check_system_health.delay()
+            try:
+                check_system_health.delay()
+            except Exception:
+                pass
             
     except Exception as e:
         logger.error(f"Error in system_health_check_post_save: {e}")
@@ -315,7 +393,10 @@ def alert_rule_history_post_save(sender, instance, created, **kwargs):
     """Signal handler after saving AlertRuleHistory"""
     try:
         if created:
-            logger.info(f"Created AlertRuleHistory: {instance.change_type} for rule {instance.rule.name}")
+            rule_name = instance.rule.name if instance.rule else '(no rule)'
+            logger.info(f"Created AlertRuleHistory: {instance.action} for rule {rule_name}")
+            from api.alerts.signals.core import rule_history_created
+            rule_history_created.send(sender=sender, instance=instance)
         else:
             logger.debug(f"Updated AlertRuleHistory: {instance.id}")
             
@@ -341,6 +422,8 @@ def alert_dashboard_config_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created AlertDashboardConfig for user {instance.user.username}")
+            from api.alerts.signals.core import dashboard_config_created
+            dashboard_config_created.send(sender=sender, instance=instance)
         else:
             logger.debug(f"Updated AlertDashboardConfig for user {instance.user.username}")
             
@@ -369,6 +452,8 @@ def system_metrics_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created SystemMetrics: CPU {instance.cpu_usage_percent}%, Memory {instance.memory_usage_percent}%")
+            from api.alerts.signals.core import metrics_created
+            metrics_created.send(sender=sender, instance=instance)
         else:
             logger.debug(f"Updated SystemMetrics: {instance.id}")
             
@@ -378,6 +463,20 @@ def system_metrics_post_save(sender, instance, created, **kwargs):
             
     except Exception as e:
         logger.error(f"Error in system_metrics_post_save: {e}")
+
+
+@receiver(post_save, sender=AlertAnalytics)
+def alert_analytics_post_save(sender, instance, created, **kwargs):
+    """Signal handler after saving AlertAnalytics"""
+    try:
+        if created:
+            logger.info(f"Created AlertAnalytics for {instance.date}: {instance.total_alerts} total alerts")
+            from api.alerts.signals.core import analytics_created
+            analytics_created.send(sender=sender, instance=instance)
+        else:
+            logger.debug(f"Updated AlertAnalytics for {instance.date}")
+    except Exception as e:
+        logger.error(f"Error in alert_analytics_post_save: {e}")
 
 
 # Custom signal handlers for business logic
@@ -447,7 +546,10 @@ def trigger_escalation_check(alert_log):
             
             # Trigger escalation task
             from ..tasks.core import escalate_alerts
-            escalate_alerts.delay()
+            try:
+                escalate_alerts.delay()
+            except Exception:
+                pass
             
     except Exception as e:
         logger.error(f"Error in trigger_escalation_check: {e}")
@@ -477,3 +579,56 @@ def register_core_signals():
 
 # Auto-register signals when module is imported
 register_core_signals()
+
+
+# ── Custom Signal objects (were missing — imported in __init__.py but undefined) ─
+from django.dispatch import Signal
+
+alert_rule_created       = Signal()
+alert_rule_updated       = Signal()
+alert_rule_deleted       = Signal()
+alert_rule_enabled       = Signal()
+alert_rule_disabled      = Signal()
+alert_log_created        = Signal()
+alert_log_updated        = Signal()
+notification_created     = Signal()
+notification_updated     = Signal()
+escalation_created       = Signal()
+template_created         = Signal()
+analytics_created        = Signal()
+group_created            = Signal()
+suppression_created      = Signal()
+health_check_created     = Signal()
+rule_history_created     = Signal()
+dashboard_config_created = Signal()
+metrics_created          = Signal()
+
+
+# ── Connect handlers to Django model signals so custom signals fire ────────────
+from django.db.models.signals import post_save as _post_save
+
+def _fire_rule_created(sender, instance, created, **kwargs):
+    if created:
+        alert_rule_created.send(sender=sender, instance=instance)
+    else:
+        alert_rule_updated.send(sender=sender, instance=instance)
+
+def _fire_log_created(sender, instance, created, **kwargs):
+    if created:
+        alert_log_created.send(sender=sender, instance=instance)
+    else:
+        alert_log_updated.send(sender=sender, instance=instance)
+
+def _fire_notification_created(sender, instance, created, **kwargs):
+    if created:
+        notification_created.send(sender=sender, instance=instance)
+    else:
+        notification_updated.send(sender=sender, instance=instance)
+
+try:
+    from ..models.core import AlertRule as _AR, AlertLog as _AL, Notification as _N
+    _post_save.connect(_fire_rule_created, sender=_AR, weak=False)
+    _post_save.connect(_fire_log_created,  sender=_AL, weak=False)
+    _post_save.connect(_fire_notification_created, sender=_N, weak=False)
+except Exception:
+    pass

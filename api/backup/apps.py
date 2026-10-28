@@ -11,7 +11,7 @@ class BackupConfig(AppConfig):
         """Initialize backup app"""
         # Import signals
         try:
-            import api.backup.signals
+            from . import signals  # noqa
             print("[OK] Backup signals loaded")
         except ImportError:
             pass
@@ -94,7 +94,7 @@ class BackupConfig(AppConfig):
         except Exception as e:
             print(f"[WARN] Backup admin registration error: {e}")
         try:
-            from api.backup.admin import _force_register_backup
+            from .admin import _force_register_backup
             _force_register_backup()
         except Exception as e:
             pass

@@ -4,6 +4,7 @@ api/monetization_tools/repository.py
 Data-access layer — wraps ORM queries so views and services
 stay free of complex queryset logic.
 """
+from django.db import models
 
 import logging
 from datetime import date

@@ -229,3 +229,185 @@ class TaskBotCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model  = TaskBot
         fields = ["name", "description", "submission_type", "config", "assigned_to"]
+
+
+# =============================================================================
+# Additional serializers for enhanced moderation system
+# =============================================================================
+
+from .models import (
+    ContentSignal,
+    MLModelVersion,
+    ModerationAppeal,
+    ModerationDecision,
+    ModerationQueue,
+)
+
+
+class ModerationQueueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModerationQueue
+        fields = "__all__"
+        read_only_fields = ("id", "created_at", "updated_at")
+
+
+class ModerationDecisionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModerationDecision
+        fields = "__all__"
+        read_only_fields = ("id", "created_at", "updated_at")
+
+
+class ModerationAppealSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModerationAppeal
+        fields = "__all__"
+        read_only_fields = ("id", "created_at", "updated_at")
+
+
+class MLModelVersionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MLModelVersion
+        fields = "__all__"
+        read_only_fields = ("id", "created_at", "updated_at")
+
+
+class ContentSignalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContentSignal
+        fields = "__all__"
+        read_only_fields = ("id", "created_at", "updated_at")
+
+
+# =============================================================================
+# Compliance model serializers
+# =============================================================================
+
+from .models import (
+    ModerationRule, ModerationAction, ModerationLog,
+    ContentFlag, AutoModerationQueue, ModerationStats,
+)
+
+
+class ModerationRuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = ModerationRule
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at', 'updated_at')
+
+
+class ModerationActionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = ModerationAction
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at', 'updated_at')
+
+
+class ModerationLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = ModerationLog
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at')
+
+
+class ContentFlagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = ContentFlag
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at', 'updated_at')
+
+
+class AutoModerationQueueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = AutoModerationQueue
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at', 'updated_at')
+
+
+class ModerationStatsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = ModerationStats
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at')
+
+
+# =============================================================================
+# Offerwall / Monlix serializers
+# =============================================================================
+from .offerwall import (
+    VirtualCurrencyConfig, OfferwallOfferType, OfferwallConfig,
+    PostbackLog, SiteApproval, PerformanceReport,
+    PaymentSchedule, OfferwallPromotion,
+)
+
+
+class VirtualCurrencyConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = VirtualCurrencyConfig
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at', 'updated_at')
+
+
+class OfferwallOfferTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = OfferwallOfferType
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at', 'updated_at')
+
+
+class OfferwallConfigSerializer(serializers.ModelSerializer):
+    embed_html = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = OfferwallConfig
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at', 'updated_at', 'approved_at', 'approved_by')
+        extra_kwargs = {'postback_secret': {'write_only': True}}
+
+    def get_embed_html(self, obj):
+        user_id = self.context.get('user_id', '{{USER_ID}}')
+        return obj.get_embed_html(user_id)
+
+
+class PostbackLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = PostbackLog
+        fields = '__all__'
+        read_only_fields = ('id', 'received_at', 'processed_at')
+
+
+class SiteApprovalSerializer(serializers.ModelSerializer):
+    is_approved = serializers.BooleanField(read_only=True)
+    is_overdue  = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = SiteApproval
+        fields = '__all__'
+        read_only_fields = ('id', 'submitted_at', 'reviewed_at', 'reviewed_by')
+
+    def get_is_overdue(self, obj):
+        from .offerwall import SiteApprovalService
+        return SiteApprovalService.is_overdue(obj)
+
+
+class PerformanceReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = PerformanceReport
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at')
+
+
+class PaymentScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = PaymentSchedule
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at', 'updated_at')
+
+
+class OfferwallPromotionSerializer(serializers.ModelSerializer):
+    is_currently_active = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model  = OfferwallPromotion
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at')

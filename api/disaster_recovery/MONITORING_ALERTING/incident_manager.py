@@ -130,4 +130,3 @@ class IncidentManager:
         self.db.commit()
         self.add_timeline_event(incident_id, "reassigned", f"Assigned to {assignee}", assigned_by)
         return {"assigned": True, "to": assignee, "by": assigned_by}
-

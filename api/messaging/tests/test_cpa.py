@@ -13,7 +13,7 @@ class TestCPAOfferNotifications(TestCase):
     def setUp(self):
         self.affiliate = UserFactory()
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_notify_offer_approved(self, mock_task):
         mock_task.delay = MagicMock()
         notif = services_cpa.notify_offer_approved(
@@ -28,7 +28,7 @@ class TestCPAOfferNotifications(TestCase):
         self.assertEqual(notif.priority, "HIGH")
         mock_task.delay.assert_called_once()
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_notify_offer_rejected(self, mock_task):
         mock_task.delay = MagicMock()
         notif = services_cpa.notify_offer_rejected(
@@ -45,7 +45,7 @@ class TestCPAConversionNotifications(TestCase):
     def setUp(self):
         self.affiliate = UserFactory()
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_notify_conversion_received(self, mock_task):
         mock_task.delay = MagicMock()
         notif = services_cpa.notify_conversion_received(
@@ -58,7 +58,7 @@ class TestCPAConversionNotifications(TestCase):
         self.assertEqual(notif.priority, "HIGH")
         self.assertIn("$5.00", notif.body)
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_notify_postback_failed(self, mock_task):
         mock_task.delay = MagicMock()
         notif = services_cpa.notify_postback_failed(
@@ -75,7 +75,7 @@ class TestCPAPayoutNotifications(TestCase):
     def setUp(self):
         self.affiliate = UserFactory()
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_notify_payout_processed(self, mock_task):
         mock_task.delay = MagicMock()
         notif = services_cpa.notify_payout_processed(
@@ -89,7 +89,7 @@ class TestCPAPayoutNotifications(TestCase):
         self.assertIn("$150.00", notif.title)
         self.assertIn("PayPal", notif.body)
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_notify_payout_on_hold(self, mock_task):
         mock_task.delay = MagicMock()
         notif = services_cpa.notify_payout_on_hold(
@@ -107,7 +107,7 @@ class TestCPAAccountNotifications(TestCase):
     def setUp(self):
         self.affiliate = UserFactory()
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     @patch("messaging.services_cpa.get_or_create_affiliate_thread")
     def test_notify_affiliate_approved(self, mock_thread, mock_task):
         mock_task.delay = MagicMock()
@@ -120,7 +120,7 @@ class TestCPAAccountNotifications(TestCase):
         self.assertEqual(notif.notification_type, "affiliate.approved")
         self.assertIn("John Doe", notif.body)
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_notify_fraud_alert(self, mock_task):
         mock_task.delay = MagicMock()
         notif = services_cpa.notify_fraud_alert(
@@ -163,7 +163,7 @@ class TestMessageTemplate(TestCase):
         self.assertIn("John", body)
         self.assertIn("$100", body)
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_send_from_template(self, mock_task):
         mock_task.delay = MagicMock()
         affiliate = UserFactory()
@@ -184,7 +184,7 @@ class TestNotificationReadTracking(TestCase):
     def setUp(self):
         self.affiliate = UserFactory()
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_mark_notification_read(self, mock_task):
         mock_task.delay = MagicMock()
         notif = services_cpa.notify_milestone_reached(
@@ -199,7 +199,7 @@ class TestNotificationReadTracking(TestCase):
         self.assertTrue(notif.is_read)
         self.assertIsNotNone(notif.read_at)
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_mark_all_notifications_read(self, mock_task):
         mock_task.delay = MagicMock()
         for _ in range(3):
@@ -215,7 +215,7 @@ class TestNotificationReadTracking(TestCase):
         ).count()
         self.assertEqual(unread, 0)
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_get_unread_counts_by_category(self, mock_task):
         mock_task.delay = MagicMock()
         services_cpa.notify_offer_approved(
@@ -254,7 +254,7 @@ class TestAffiliateThread(TestCase):
         )
         self.assertEqual(str(t1.id), str(t2.id))
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_reassign_manager(self, mock_task):
         mock_task.delay = MagicMock()
         new_manager = UserFactory(is_staff=True)
@@ -320,7 +320,7 @@ class TestCPASignals(TestCase):
     def setUp(self):
         self.affiliate = UserFactory()
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_offer_status_changed_signal_approved(self, mock_task):
         mock_task.delay = MagicMock()
         from ..signals_cpa import offer_status_changed
@@ -337,7 +337,7 @@ class TestCPASignals(TestCase):
         ).first()
         self.assertIsNotNone(notif)
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_payout_processed_signal(self, mock_task):
         mock_task.delay = MagicMock()
         from ..signals_cpa import payout_processed

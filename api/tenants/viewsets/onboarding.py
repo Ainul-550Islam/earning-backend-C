@@ -4,6 +4,7 @@ Onboarding Viewsets
 This module contains viewsets for onboarding-related models including
 TenantOnboarding, TenantOnboardingStep, and TenantTrialExtension.
 """
+from django.db import models
 
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action

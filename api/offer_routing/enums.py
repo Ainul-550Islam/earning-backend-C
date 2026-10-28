@@ -105,6 +105,13 @@ class SignalType(str, Enum):
     BEHAVIOR = "behavior"
     WEATHER = "weather"
     CONTEXT = "context"
+    SESSION = "session"
+    USER = "user"
+    OFFER = "offer"
+    ROUTE = "route"
+    CHOICES = "choices"
+    ENVIRONMENT = "environment"
+    PREFERENCE = "preference"
 
 
 class PersonalizationAlgorithm(str, Enum):

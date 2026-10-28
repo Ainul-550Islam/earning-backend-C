@@ -17,7 +17,7 @@ def calculate_network_priority_score(waterfall_item) -> float:
 
 def get_optimal_priorities(group) -> List[Dict]:
     """Mediation group-এর optimal network priorities।"""
-    from api.publisher_tools.models import WaterfallItem
+    from publisher_tools.models import WaterfallItem
     items = list(group.waterfall_items.filter(status="active"))
     scored = [(item, calculate_network_priority_score(item)) for item in items]
     scored.sort(key=lambda x: x[1], reverse=True)
@@ -33,7 +33,7 @@ def apply_optimal_priorities(group) -> int:
     optimal = get_optimal_priorities(group)
     count = 0
     with transaction.atomic():
-        from api.publisher_tools.models import WaterfallItem
+        from publisher_tools.models import WaterfallItem
         for item_data in optimal:
             if item_data["needs_reorder"]:
                 WaterfallItem.objects.filter(
@@ -45,7 +45,7 @@ def apply_optimal_priorities(group) -> int:
 
 def detect_underperforming_networks(group, min_impressions: int = 1000) -> List[Dict]:
     """Underperforming networks identify করে।"""
-    from api.publisher_tools.models import WaterfallItem
+    from publisher_tools.models import WaterfallItem
     issues = []
     for item in group.waterfall_items.filter(status="active"):
         if item.total_ad_requests < min_impressions:

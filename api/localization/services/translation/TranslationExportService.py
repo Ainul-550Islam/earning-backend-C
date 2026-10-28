@@ -12,7 +12,7 @@ class TranslationExportService:
     def export_json(self, language_code: str, approved_only: bool = True) -> Dict:
         """Export translations as JSON dict"""
         try:
-            from ...models.core import Language, Translation
+            from api.localization.models.core import Language, Translation
             lang = Language.objects.filter(code=language_code).first()
             if not lang:
                 return {'success': False, 'error': f'Language {language_code} not found'}
@@ -30,7 +30,7 @@ class TranslationExportService:
     def export_po(self, language_code: str, approved_only: bool = True) -> str:
         """Export translations as Gettext PO format"""
         try:
-            from ...models.core import Language, Translation
+            from api.localization.models.core import Language, Translation
             lang = Language.objects.filter(code=language_code).first()
             if not lang:
                 return ''
@@ -62,7 +62,7 @@ class TranslationExportService:
                      approved_only: bool = True) -> str:
         """Export translations as XLIFF 1.2 format"""
         try:
-            from ...models.core import Language, Translation
+            from api.localization.models.core import Language, Translation
             lang = Language.objects.filter(code=language_code).first()
             if not lang:
                 return ''
@@ -94,7 +94,7 @@ class TranslationExportService:
     def export_csv(self, language_code: str, approved_only: bool = True) -> str:
         """Export translations as CSV"""
         try:
-            from ...models.core import Language, Translation
+            from api.localization.models.core import Language, Translation
             import csv
             import io
             lang = Language.objects.filter(code=language_code).first()

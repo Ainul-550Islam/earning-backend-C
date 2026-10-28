@@ -24,7 +24,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        from messaging.utils.search_engine import get_es_client, ensure_index_exists, ES_INDEX_MESSAGES
+        from api.messaging.utils.search_engine import get_es_client, ensure_index_exists, ES_INDEX_MESSAGES
 
         es = get_es_client()
         if not es:
@@ -53,7 +53,7 @@ class Command(BaseCommand):
 
         if options["bulk_index"]:
             self.stdout.write(f"Starting bulk index (last {options['days']} days)...")
-            from messaging.tasks import bulk_reindex_task
+            from api.messaging.tasks import bulk_reindex_task
             result = bulk_reindex_task(days=options["days"])
             self.stdout.write(self.style.SUCCESS(
                 f"Bulk index complete: indexed={result['indexed']} errors={result['errors']}"

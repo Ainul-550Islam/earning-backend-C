@@ -3,6 +3,7 @@
 Atomic transaction creation with idempotency, fraud scoring, and AML checks.
 Every financial event flows through TransactionService.create().
 """
+from django.db.models import QuerySet
 import logging
 from decimal import Decimal
 from django.db import transaction
@@ -76,7 +77,7 @@ class TransactionService:
         # ── AML check ────────────────────────────────────────────────
         if run_aml_check:
             try:
-                from ..services_extra import AMLService
+                from ...services_extra import AMLService
                 AMLService.check(wallet.user, wallet, abs(amount), txn_type)
             except Exception:
                 pass

@@ -1,170 +1,95 @@
 # api/djoyalty/metrics.py
 """
-Metrics collection for Djoyalty।
-Prometheus / StatsD integration।
-Celery task এ ব্যবহার করুন।
+Djoyalty -- metrics & instrumentation।
+Prometheus/StatsD বা simple logging-based metrics।
+Production এ prometheus_client বা statsd দিয়ে replace করুন।
 """
 import logging
 import time
 from contextlib import contextmanager
-from functools import wraps
+from decimal import Decimal
 
-logger = logging.getLogger('djoyalty.metrics')
-
-# Try to import prometheus_client — optional dependency
-try:
-    from prometheus_client import Counter, Histogram, Gauge, Summary
-    PROMETHEUS_AVAILABLE = True
-except ImportError:
-    PROMETHEUS_AVAILABLE = False
-
-
-if PROMETHEUS_AVAILABLE:
-    # ==================== COUNTERS ====================
-    POINTS_EARNED_TOTAL = Counter(
-        'djoyalty_points_earned_total',
-        'Total points earned',
-        ['tenant_id', 'source', 'tier'],
-    )
-    POINTS_REDEEMED_TOTAL = Counter(
-        'djoyalty_points_redeemed_total',
-        'Total points redeemed',
-        ['tenant_id', 'redemption_type'],
-    )
-    POINTS_EXPIRED_TOTAL = Counter(
-        'djoyalty_points_expired_total',
-        'Total points expired',
-        ['tenant_id'],
-    )
-    TIER_CHANGES_TOTAL = Counter(
-        'djoyalty_tier_changes_total',
-        'Total tier changes',
-        ['tenant_id', 'change_type', 'from_tier', 'to_tier'],
-    )
-    BADGES_AWARDED_TOTAL = Counter(
-        'djoyalty_badges_awarded_total',
-        'Total badges awarded',
-        ['tenant_id', 'trigger'],
-    )
-    VOUCHERS_GENERATED_TOTAL = Counter(
-        'djoyalty_vouchers_generated_total',
-        'Total vouchers generated',
-        ['tenant_id', 'voucher_type'],
-    )
-    FRAUD_FLAGS_TOTAL = Counter(
-        'djoyalty_fraud_flags_total',
-        'Total fraud flags raised',
-        ['tenant_id', 'risk_level'],
-    )
-    API_REQUESTS_TOTAL = Counter(
-        'djoyalty_api_requests_total',
-        'Total API requests',
-        ['endpoint', 'method', 'status'],
-    )
-
-    # ==================== GAUGES ====================
-    ACTIVE_CUSTOMERS = Gauge(
-        'djoyalty_active_customers',
-        'Number of active customers',
-        ['tenant_id'],
-    )
-    TOTAL_POINTS_OUTSTANDING = Gauge(
-        'djoyalty_points_outstanding',
-        'Total points balance across all customers',
-        ['tenant_id'],
-    )
-    PENDING_REDEMPTIONS = Gauge(
-        'djoyalty_pending_redemptions',
-        'Number of pending redemption requests',
-        ['tenant_id'],
-    )
-
-    # ==================== HISTOGRAMS ====================
-    POINTS_EARN_DURATION = Histogram(
-        'djoyalty_points_earn_duration_seconds',
-        'Time to process a points earn',
-        buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0],
-    )
-    API_RESPONSE_TIME = Histogram(
-        'djoyalty_api_response_time_seconds',
-        'API response time',
-        ['endpoint'],
-        buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5],
-    )
+logger = logging.getLogger(__name__)
 
 
 class DjoyaltyMetrics:
-    """Metrics facade — Prometheus বা fallback logging।"""
-
-    @staticmethod
-    def record_points_earned(points, tenant_id=None, source='purchase', tier='bronze'):
-        if PROMETHEUS_AVAILABLE:
-            POINTS_EARNED_TOTAL.labels(
-                tenant_id=str(tenant_id or 0), source=source, tier=tier
-            ).inc(float(points))
-        logger.debug('METRIC points_earned amount=%s source=%s tier=%s', points, source, tier)
-
-    @staticmethod
-    def record_points_redeemed(points, tenant_id=None, redemption_type='cashback'):
-        if PROMETHEUS_AVAILABLE:
-            POINTS_REDEEMED_TOTAL.labels(
-                tenant_id=str(tenant_id or 0), redemption_type=redemption_type
-            ).inc(float(points))
-        logger.debug('METRIC points_redeemed amount=%s type=%s', points, redemption_type)
-
-    @staticmethod
-    def record_tier_change(tenant_id=None, change_type='upgrade', from_tier='bronze', to_tier='silver'):
-        if PROMETHEUS_AVAILABLE:
-            TIER_CHANGES_TOTAL.labels(
-                tenant_id=str(tenant_id or 0),
-                change_type=change_type,
-                from_tier=from_tier,
-                to_tier=to_tier,
-            ).inc()
-        logger.info('METRIC tier_change %s → %s (%s)', from_tier, to_tier, change_type)
-
-    @staticmethod
-    def record_fraud_flag(risk_level='medium', tenant_id=None):
-        if PROMETHEUS_AVAILABLE:
-            FRAUD_FLAGS_TOTAL.labels(
-                tenant_id=str(tenant_id or 0), risk_level=risk_level
-            ).inc()
-        logger.warning('METRIC fraud_flag risk=%s', risk_level)
-
-    @staticmethod
-    def record_badge_awarded(trigger='transaction_count', tenant_id=None):
-        if PROMETHEUS_AVAILABLE:
-            BADGES_AWARDED_TOTAL.labels(
-                tenant_id=str(tenant_id or 0), trigger=trigger
-            ).inc()
+    """
+    Simple metrics recorder।
+    In production -- replace with Prometheus/StatsD।
+    """
 
     @staticmethod
     @contextmanager
     def time_earn():
-        """Context manager for timing earn operations।"""
+        """
+        Points earn operation timing।
+        Usage: with DjoyaltyMetrics.time_earn(): ...
+        """
         start = time.monotonic()
-        yield
-        duration = time.monotonic() - start
-        if PROMETHEUS_AVAILABLE:
-            POINTS_EARN_DURATION.observe(duration)
-        if duration > 0.5:
-            logger.warning('METRIC slow_earn duration=%.3fs', duration)
+        try:
+            yield
+        finally:
+            elapsed = time.monotonic() - start
+            if elapsed > 1.0:
+                logger.warning('[djoyalty_metrics] slow_earn duration=%.3fs', elapsed)
+            else:
+                logger.debug('[djoyalty_metrics] earn duration=%.3fs', elapsed)
 
+    @staticmethod
+    def record_points_earned(
+        points: Decimal,
+        tenant_id=None,
+        source: str = 'purchase',
+        tier: str = 'bronze',
+    ):
+        """
+        Points earn event record করো।
+        """
+        logger.debug(
+            '[djoyalty_metrics] points_earned points=%s tenant=%s source=%s tier=%s',
+            points, tenant_id, source, tier,
+        )
 
-def track_metric(metric_name: str):
-    """Decorator for tracking function call metrics।"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            start = time.monotonic()
-            try:
-                result = func(*args, **kwargs)
-                duration = time.monotonic() - start
-                logger.debug('METRIC %s duration=%.3fs status=ok', metric_name, duration)
-                return result
-            except Exception as e:
-                duration = time.monotonic() - start
-                logger.warning('METRIC %s duration=%.3fs status=error error=%s', metric_name, duration, type(e).__name__)
-                raise
-        return wrapper
-    return decorator
+    @staticmethod
+    def record_redemption(points: Decimal, tenant_id=None, redemption_type: str = 'cashback'):
+        """Redemption event record করো।"""
+        logger.debug(
+            '[djoyalty_metrics] redemption points=%s tenant=%s type=%s',
+            points, tenant_id, redemption_type,
+        )
+
+    @staticmethod
+    def record_tier_change(from_tier: str, to_tier: str, change_type: str, tenant_id=None):
+        """Tier change event record করো।"""
+        logger.info(
+            '[djoyalty_metrics] tier_change from=%s to=%s type=%s tenant=%s',
+            from_tier, to_tier, change_type, tenant_id,
+        )
+
+    @staticmethod
+    def record_fraud_detected(risk_level: str, action: str, tenant_id=None):
+        """Fraud detection event record করো।"""
+        logger.warning(
+            '[djoyalty_metrics] fraud_detected risk=%s action=%s tenant=%s',
+            risk_level, action, tenant_id,
+        )
+
+    @staticmethod
+    def record_api_error(endpoint: str, error_type: str):
+        """API error record করো।"""
+        logger.error(
+            '[djoyalty_metrics] api_error endpoint=%s error=%s',
+            endpoint, error_type,
+        )
+
+    @staticmethod
+    def increment_counter(name: str, value: int = 1, labels: dict = None):
+        """Generic counter increment।"""
+        label_str = ', '.join(f'{k}={v}' for k, v in (labels or {}).items())
+        logger.debug('[djoyalty_metrics] counter %s +%d {%s}', name, value, label_str)
+
+    @staticmethod
+    def record_gauge(name: str, value, labels: dict = None):
+        """Generic gauge record।"""
+        label_str = ', '.join(f'{k}={v}' for k, v in (labels or {}).items())
+        logger.debug('[djoyalty_metrics] gauge %s = %s {%s}', name, value, label_str)

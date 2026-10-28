@@ -20,7 +20,7 @@ def build_custom_report(
     filters: Dict = None,
     limit: int = 1000,
 ) -> Dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     if not dimensions:
         dimensions = ["date"]
     if not metrics:

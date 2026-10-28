@@ -10,10 +10,14 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from ..services.core import DispatchService
+import logging
+
+from ..services.core.DispatchService import DispatchService
 from ..models import WebhookSubscription
 
 User = get_user_model()
+
+logger = logging.getLogger("ainul.webhooks.signals")
 
 
 # Signal definitions
@@ -25,6 +29,9 @@ user_login = Signal()
 user_logout = Signal()
 
 
+from ._isolation import isolated_receiver
+
+@isolated_receiver
 def on_user_created(sender, instance, created, **kwargs):
     """
     Signal handler for user creation.
@@ -61,11 +68,11 @@ def on_user_created(sender, instance, created, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -79,9 +86,10 @@ def on_user_created(sender, instance, created, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending user created webhook: {e}")
+            logger.error("sending user created webhook: %s", e)
 
 
+@isolated_receiver
 def on_user_updated(sender, instance, **kwargs):
     """
     Signal handler for user updates.
@@ -142,11 +150,11 @@ def on_user_updated(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -160,9 +168,10 @@ def on_user_updated(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending user updated webhook: {e}")
+            logger.error("sending user updated webhook: %s", e)
 
 
+@isolated_receiver
 def on_user_profile_updated(sender, instance, **kwargs):
     """
     Signal handler for user profile updates.
@@ -204,11 +213,11 @@ def on_user_profile_updated(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -222,9 +231,10 @@ def on_user_profile_updated(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending user profile updated webhook: {e}")
+            logger.error("sending user profile updated webhook: %s", e)
 
 
+@isolated_receiver
 def on_user_status_changed(sender, instance, **kwargs):
     """
     Signal handler for user status changes.
@@ -269,11 +279,11 @@ def on_user_status_changed(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -287,9 +297,10 @@ def on_user_status_changed(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending user status changed webhook: {e}")
+            logger.error("sending user status changed webhook: %s", e)
 
 
+@isolated_receiver
 def on_user_login(sender, request, user, **kwargs):
     """
     Signal handler for user login.
@@ -322,11 +333,11 @@ def on_user_login(sender, request, user, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -340,9 +351,10 @@ def on_user_login(sender, request, user, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending user login webhook: {e}")
+            logger.error("sending user login webhook: %s", e)
 
 
+@isolated_receiver
 def on_user_logout(sender, request, user, **kwargs):
     """
     Signal handler for user logout.
@@ -376,11 +388,11 @@ def on_user_logout(sender, request, user, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -394,7 +406,7 @@ def on_user_logout(sender, request, user, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending user logout webhook: {e}")
+            logger.error("sending user logout webhook: %s", e)
 
 
 # Connect signal handlers
@@ -408,9 +420,9 @@ def connect_user_signals():
         user_logged_in.connect(on_user_login)
         user_logged_out.connect(on_user_logout)
         
-        print("User signals connected successfully")
+        logger.info("[Webhooks] %s", "User signals connected successfully")
     except Exception as e:
-        print(f"Error connecting user signals: {e}")
+        logger.error("connecting user signals: %s", e)
 
 
 def disconnect_user_signals():
@@ -423,6 +435,6 @@ def disconnect_user_signals():
         user_logged_in.disconnect(on_user_login)
         user_logged_out.disconnect(on_user_logout)
         
-        print("User signals disconnected successfully")
+        logger.info("[Webhooks] %s", "User signals disconnected successfully")
     except Exception as e:
-        print(f"Error disconnecting user signals: {e}")
+        logger.error("disconnecting user signals: %s", e)

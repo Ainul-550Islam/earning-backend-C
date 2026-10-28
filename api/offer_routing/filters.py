@@ -1,6 +1,8 @@
 """
 Custom Filters for Offer Routing System
 """
+from django.db.models import Count
+from django.db.models import F
 
 import django_filters
 from django.db.models import Q
@@ -9,7 +11,7 @@ from .models import (
     OfferRoute, RouteCondition, GeoRouteRule, DeviceRouteRule,
     UserSegmentRule, TimeRouteRule, BehaviorRouteRule,
     OfferScore, RoutingABTest, FallbackRule,
-    UserOfferCap, RoutingDecisionLog
+    UserOfferCap, RoutingDecisionLog, RoutePerformanceStat
 )
 from .choices import (
     RouteConditionType, RouteOperator, ActionType,
@@ -381,7 +383,7 @@ class TenantRouteFilter(django_filters.FilterSet):
     
     class Meta:
         model = OfferRoute
-        fields = ['tenant', 'is_active', 'has_conditions', 'has_actions', 'offer_count']
+        fields = ['tenant', 'is_active', 'has_conditions', 'has_actions']
         ordering = ['priority', 'name']
     
     def filter_has_conditions(self, queryset, name, value):

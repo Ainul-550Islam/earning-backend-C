@@ -2,7 +2,7 @@ import logging
 import time
 from django.core.cache import cache
 from django.utils import timezone
-from ...models import SmartLink
+from api.smartlink.models import SmartLink
 from ...exceptions import SmartLinkNotFound, SmartLinkInactive, NoOfferAvailable
 from ...constants import CACHE_TTL_SMARTLINK
 from ...utils import timing_decorator
@@ -25,18 +25,24 @@ class SmartLinkResolverService:
     2. DB lookup + SmartLink validation — if cache miss
     3. Fraud/bot check
     4. Targeting engine evaluation
-    5. Offer rotation / selection
+    5. Offer rotation / selection (with cap auto-rotate)
     6. URL build + return
     7. Async click record (Celery)
+
+    Cap auto-rotate (FIX):
+    When all pool entries are capped, the resolver now calls
+    FallbackService to return a fallback URL rather than raising
+    NoOfferAvailable. If a fallback is configured it redirects
+    there silently; otherwise it raises so the view returns 410.
     """
 
     def __init__(self):
-        self.cache_service = SmartLinkCacheService()
+        self.cache_service    = SmartLinkCacheService()
         self.targeting_engine = TargetingEngine()
         self.rotation_service = OfferRotationService()
         self.fallback_service = FallbackService()
-        self.fraud_service = ClickFraudService()
-        self.bot_service = BotDetectionService()
+        self.fraud_service    = ClickFraudService()
+        self.bot_service      = BotDetectionService()
 
     @timing_decorator
     def resolve(self, slug: str, request_context: dict) -> dict:
@@ -63,19 +69,21 @@ class SmartLinkResolverService:
 
         Returns:
             {
-                'url': str,            # final redirect URL
-                'offer_id': int,
+                'url': str,             # final redirect URL
+                'offer_id': int | None,
                 'click_id': int | None,
                 'was_cached': bool,
                 'was_fallback': bool,
                 'redirect_type': str,
                 'response_time_ms': float,
+                '_smartlink': SmartLink, # for expiry/password check in view
             }
         """
         start = time.perf_counter()
 
-        # ── Step 1: Load SmartLink (cache-first) ─────────────────────
+        # ── Step 1: Load SmartLink (cache-first) ─────────────────────────────
         smartlink = self.cache_service.get_smartlink(slug)
+        was_cached = smartlink is not None
         if smartlink is None:
             try:
                 smartlink = SmartLink.objects.select_related(
@@ -88,53 +96,63 @@ class SmartLinkResolverService:
         if not smartlink.is_active:
             raise SmartLinkInactive()
 
-        ip = request_context.get('ip', '0.0.0.0')
+        ip         = request_context.get('ip', '0.0.0.0')
         user_agent = request_context.get('user_agent', '')
 
-        # ── Step 2: Bot detection ─────────────────────────────────────
+        # ── Step 2: Bot detection ─────────────────────────────────────────────
         if smartlink.enable_bot_filter:
             is_bot, bot_type = self.bot_service.detect(ip, user_agent)
             if is_bot:
                 self._log_bot_async(smartlink, request_context, bot_type)
-                # Bots go to fallback, not to offer
                 fallback_url = self.fallback_service.get_url(smartlink)
                 return self._build_result(
                     url=fallback_url, offer_id=None,
-                    was_fallback=True, redirect_type=smartlink.redirect_type,
-                    start=start, was_cached=False,
+                    was_fallback=True,
+                    redirect_type=smartlink.redirect_type,
+                    start=start, was_cached=was_cached,
+                    smartlink=smartlink,
                 )
 
-        # ── Step 3: Fraud check ───────────────────────────────────────
+        # ── Step 3: Fraud check ───────────────────────────────────────────────
         if smartlink.enable_fraud_filter:
-            fraud_score, fraud_signals = self.fraud_service.score(ip, user_agent, request_context)
+            fraud_score, fraud_signals = self.fraud_service.score(
+                ip, user_agent, request_context
+            )
             if fraud_score >= 85:
                 from ...exceptions import ClickBlocked
                 raise ClickBlocked()
 
-        # ── Step 4: Targeting engine ──────────────────────────────────
+        # ── Step 4: Targeting engine ──────────────────────────────────────────
         matched = self.targeting_engine.evaluate(smartlink, request_context)
 
-        # ── Step 5: Offer rotation ────────────────────────────────────
+        # ── Step 5: Offer rotation with cap auto-rotate ───────────────────────
+        offer_entry = None
         if matched:
             offer_entry = self.rotation_service.select(
                 smartlink=smartlink,
                 eligible_entries=matched,
                 request_context=request_context,
             )
-        else:
-            offer_entry = None
 
         if offer_entry is None:
+            # FIX: Cap auto-rotate — try fallback URL instead of immediately
+            # raising NoOfferAvailable. This handles the case where every offer
+            # in the pool is capped for today.
             fallback_url = self.fallback_service.get_url(smartlink)
-            if not fallback_url:
-                raise NoOfferAvailable()
-            return self._build_result(
-                url=fallback_url, offer_id=None,
-                was_fallback=True, redirect_type=smartlink.redirect_type,
-                start=start, was_cached=False,
-            )
+            if fallback_url:
+                logger.info(
+                    f"[{slug}] All offers capped/unavailable → fallback: {fallback_url[:60]}"
+                )
+                return self._build_result(
+                    url=fallback_url, offer_id=None,
+                    was_fallback=True,
+                    redirect_type=smartlink.redirect_type,
+                    start=start, was_cached=was_cached,
+                    smartlink=smartlink,
+                )
+            raise NoOfferAvailable()
 
-        # ── Step 6: Build redirect URL ────────────────────────────────
+        # ── Step 6: Build redirect URL ────────────────────────────────────────
         from ..redirect.URLBuilderService import URLBuilderService
         url_builder = URLBuilderService()
         final_url = url_builder.build(
@@ -143,11 +161,14 @@ class SmartLinkResolverService:
             request_context=request_context,
         )
 
-        # ── Step 7: Async click tracking ──────────────────────────────
+        # ── Step 7: Async click tracking ──────────────────────────────────────
         self._track_click_async(smartlink, offer_entry.offer, request_context)
 
         elapsed_ms = (time.perf_counter() - start) * 1000
-        logger.debug(f"Resolved [{slug}] → offer#{offer_entry.offer_id} in {elapsed_ms:.2f}ms")
+        logger.debug(
+            f"Resolved [{slug}] → offer#{offer_entry.offer_id} "
+            f"in {elapsed_ms:.2f}ms cached={was_cached}"
+        )
 
         return self._build_result(
             url=final_url,
@@ -155,18 +176,24 @@ class SmartLinkResolverService:
             was_fallback=False,
             redirect_type=smartlink.redirect_type,
             start=start,
-            was_cached=False,
+            was_cached=was_cached,
+            smartlink=smartlink,
         )
 
-    def _build_result(self, url, offer_id, was_fallback, redirect_type, start, was_cached, click_id=None):
+    def _build_result(self, url, offer_id, was_fallback, redirect_type,
+                      start, was_cached, click_id=None, smartlink=None):
         return {
-            'url': url,
-            'offer_id': offer_id,
-            'click_id': click_id,
-            'was_cached': was_cached,
-            'was_fallback': was_fallback,
-            'redirect_type': redirect_type,
+            'url':              url,
+            'offer_id':         offer_id,
+            'click_id':         click_id,
+            'was_cached':       was_cached,
+            'was_fallback':     was_fallback,
+            'redirect_type':    redirect_type,
             'response_time_ms': (time.perf_counter() - start) * 1000,
+            # FIX: Pass smartlink object to view for expiry/password gate checks.
+            # Previously the view had no reference to the SmartLink, so is_expired
+            # and check_access_password could never be called.
+            '_smartlink':       smartlink,
         }
 
     def _track_click_async(self, smartlink, offer, request_context):

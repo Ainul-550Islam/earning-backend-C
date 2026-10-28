@@ -1,25 +1,40 @@
 # api/djoyalty/services.py
 """
-Business logic for djoyalty (loyalty). Move complex logic out of views.
+Djoyalty Services -- root-level convenience import।
+All services defined in djoyalty/services/ package।
+"এক কাজের জন্য একটাই মালিক" -- each service owns its domain।
 """
-import logging
-from typing import Optional, Dict, Any
-from decimal import Decimal
 
-logger = logging.getLogger(__name__)
+# Core Services
+from .services.earn.EarnRuleEngine import EarnRuleEngine as EarnService  # EarnService alias
+from .services.redemption.RedemptionService import RedemptionService
+# TierService -> use TierEvaluationService (actual class)
+from .services.tiers.TierEvaluationService import TierEvaluationService as TierService
+# PointsService -> use PointsEngine (actual class)
+from .services.points.PointsEngine import PointsEngine as PointsService
 
+# Engagement Services
+from .services.engagement.BadgeService import BadgeService
+from .services.engagement.StreakService import StreakService
+from .services.engagement.ChallengeService import ChallengeService
+from .services.engagement.MilestoneService import MilestoneService
 
-class DjoyaltyService:
-    """Service for loyalty/points operations."""
+# Gamification
+from .services.gamification.SpinWheelService import SpinWheelService
+from .services.gamification.ScratchCardService import ScratchCardService
+from .services.gamification.LotteryService import LotteryService
 
-    @staticmethod
-    def get_customer_balance(customer) -> Decimal:
-        """Return effective balance for a customer. Override with your Txn/points model."""
-        try:
-            from .models import Txn
-            from django.db.models import Sum
-            result = Txn.objects.filter(customer=customer).aggregate(s=Sum('value'))
-            return result.get('s') or Decimal('0')
-        except Exception as e:
-            logger.debug("Djoyalty balance: %s", e)
-            return Decimal('0')
+# Advanced / World-class
+from .services.AIPersonalizationService import AIPersonalizationService
+from .services.NotificationService import NotificationService
+from .services.RewardCatalogService import RewardCatalogService
+from .services.SmartLinkService import SmartLinkService
+from .services.OfferWallService import OfferWallService
+
+__all__ = [
+    'EarnService', 'RedemptionService', 'TierService', 'PointsService',
+    'BadgeService', 'StreakService', 'ChallengeService', 'MilestoneService',
+    'SpinWheelService', 'ScratchCardService', 'LotteryService',
+    'AIPersonalizationService', 'NotificationService',
+    'RewardCatalogService', 'SmartLinkService', 'OfferWallService',
+]

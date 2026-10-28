@@ -6,6 +6,7 @@ their profiles, verification, and agreements.
 """
 
 import logging
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -27,7 +28,7 @@ class Advertiser(models.Model):
     
     # Core fields
     user = models.OneToOneField(
-        'auth.User',
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='advertiser_profile',
         verbose_name=_('User'),

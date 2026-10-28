@@ -149,15 +149,10 @@ def advertiser_dashboard_view(request):
     reporting = AdvertiserReporting(advertiser_id=request.user.id)
     return Response(reporting.get_advertiser_dashboard())
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def campaign_roi_view(request, campaign_id):
     reporting = AdvertiserReporting(advertiser_id=request.user.id)
     return Response(reporting.get_campaign_roi_report(campaign_id=campaign_id))
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def publisher_performance_view(request, campaign_id):
     reporting = AdvertiserReporting(advertiser_id=request.user.id)

@@ -115,6 +115,7 @@ class CommissionTier(TimeStampedModel):
     is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_commission_tiers'
         verbose_name = _('Commission Tier')
         verbose_name_plural = _('Commission Tiers')
@@ -234,6 +235,7 @@ class PublisherCommission(TimeStampedModel):
     metadata    = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_commissions'
         verbose_name = _('Publisher Commission')
         verbose_name_plural = _('Publisher Commissions')
@@ -401,6 +403,7 @@ class PublisherReferral(TimeStampedModel):
     )
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_referrals'
         verbose_name = _('Publisher Referral')
         verbose_name_plural = _('Publisher Referrals')

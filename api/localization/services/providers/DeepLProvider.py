@@ -19,6 +19,10 @@ class DeepLProvider(BaseTranslationProvider):
     max_requests_per_minute = 60
 
     # DeepL uses uppercase codes with regional variants
+    LANG_MAP = {  # alias for backward compatibility with tests
+        'en': 'EN', 'de': 'DE', 'fr': 'FR', 'es': 'ES', 'pt': 'PT',
+        'it': 'IT', 'nl': 'NL', 'pl': 'PL', 'ru': 'RU', 'ja': 'JA', 'zh': 'ZH',
+    }
     LANG_MAP_SRC = {
         'en': 'EN', 'de': 'DE', 'fr': 'FR', 'es': 'ES', 'pt': 'PT',
         'it': 'IT', 'nl': 'NL', 'pl': 'PL', 'ru': 'RU', 'ja': 'JA',

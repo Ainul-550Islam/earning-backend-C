@@ -55,7 +55,14 @@ from .models import (
     TwoFactorMethod,
     TwoFactorAttempt,
     TwoFactorRecoveryCode,
-    SecurityConfig
+    SecurityConfiguration,
+    ThreatIntelligence,
+    SecurityIncident,
+    TrustedDevice,
+    SecurityPolicy,
+    SecurityInsight,
+    EnhancedUserBan,
+    EnhancedClickTracker
 )
 
 
@@ -311,7 +318,7 @@ class DeviceInfoAdmin(admin.ModelAdmin):
     @safe_admin_method(default_return='<span style="color: #6c757d;">—</span>')
     def activity_time(self, obj):
         """Display last activity"""
-        last_activity = getattr(obj, 'last_activity', None)
+        last_activity = getattr(obj,  None)
         if not last_activity:
             return format_html('<span style="color: #6c757d;">—</span>')
         
@@ -549,7 +556,7 @@ class DeviceInfoAdmin(admin.ModelAdmin):
         timeline = [
             ('Created', getattr(obj, 'created_at', None), '#17a2b8'),
             ('Last Updated', getattr(obj, 'updated_at', None), '#6c757d'),
-            ('Last Activity', getattr(obj, 'last_activity', None), '#28a745'),
+            ('Last Activity', getattr(obj,  None), '#28a745'),
         ]
         
         for label, timestamp, color in timeline:
@@ -1185,7 +1192,7 @@ class UserBanAdmin(admin.ModelAdmin):
     list_filter = [
         'reason',
         'is_permanent',
-        # 'is_active',
+        # 
         # 'can_appeal',
         # 'created_at',
     ]
@@ -1229,7 +1236,7 @@ class UserBanAdmin(admin.ModelAdmin):
         
         ('⚙️ Settings', {
             'fields': (
-                ('is_active', 'can_appeal'),
+                ( 'can_appeal'),
                 'banned_by',
             )
         }),
@@ -1951,7 +1958,7 @@ class MaintenanceModeAdmin(admin.ModelAdmin):
     ]
     
     list_filter = [
-        'is_active',
+        
         # 'allow_admin_access',
         'created_at',
     ]
@@ -1977,7 +1984,7 @@ class MaintenanceModeAdmin(admin.ModelAdmin):
         
         ('⚙️ Settings', {
             'fields': (
-                'is_active',
+                
                 'allow_admin_access',
             )
         }),
@@ -2297,16 +2304,16 @@ class AppVersionAdmin(admin.ModelAdmin):
         'supported_platforms',
         'current_indicator',
         'version_info',
-        'is_mandatory',
+        
         'release_date_display',
         'release_type',
     ]
     
     list_filter = [
         'supported_platforms',
-        'is_active',
-        'is_mandatory',
-        'is_active',
+        
+        
+        
         'release_date',
     ]
     
@@ -2717,7 +2724,7 @@ class IPBlacklistAdmin(admin.ModelAdmin):
     
     list_filter = [
         'reason',
-        # 'is_active',
+        # 
         # 'created_at',
     ]
     
@@ -2751,8 +2758,8 @@ class IPBlacklistAdmin(admin.ModelAdmin):
         
         ('⚙️ Settings', {
             'fields': (
-                'is_active',
-                'created_by',
+                
+                
             )
         }),
         
@@ -3936,13 +3943,13 @@ class RiskScoreAdmin(admin.ModelAdmin):
 
 @admin.register(PasswordPolicy)
 class PasswordPolicyAdmin(admin.ModelAdmin):
-    list_display = ['name', 'min_length', 'is_active', 'applies_to_all_users']
-    list_filter = ['is_active', 'applies_to_all_users']
+    list_display = ['name', 'min_length',  'applies_to_all_users']
+    list_filter = [ 'applies_to_all_users']
     search_fields = ['name']
     
     fieldsets = (
         ('Policy Information', {
-            'fields': ('name', 'is_active', 'applies_to_all_users')
+            'fields': ('name',  'applies_to_all_users')
         }),
         ('Length Requirements', {
             'fields': (('min_length', 'max_length'),)
@@ -3971,17 +3978,6 @@ class PasswordPolicyAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(PasswordHistory)
-class PasswordHistoryAdmin(admin.ModelAdmin):
-    list_display = ['user', 'created_at', 'changed_by']
-    list_filter = ['created_at']
-    search_fields = ['user__username']
-    readonly_fields = ['password_hash', 'created_at']
-    
-    def has_add_permission(self, request):
-        return False
-
-
 @admin.register(PasswordAttempt)
 class PasswordAttemptAdmin(admin.ModelAdmin):
     list_display = ['user', 'ip_address', 'successful', 'attempted_at']
@@ -4004,9 +4000,9 @@ class UserSessionAdmin(admin.ModelAdmin):
         'activity_display',
     ]
     
-    list_filter = ['is_active', 'is_compromised', 'created_at']
+    list_filter = [ 'is_compromised', 'created_at']
     search_fields = ['user__username', 'session_key', 'ip_address']
-    readonly_fields = ['created_at', 'last_activity', 'expires_at']
+    readonly_fields = ['created_at',  'expires_at']
     
     def session_badge(self, obj):
         return format_html(
@@ -4129,23 +4125,23 @@ class SecurityNotificationAdmin(admin.ModelAdmin):
 
 @admin.register(AlertRule)
 class AlertRuleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'user', 'is_active', 'cooldown_minutes', 'trigger_count', 'last_triggered_at']
-    list_filter = ['is_active', 'created_at']
+    list_display = ['name', 'user',  'cooldown_minutes', 'trigger_count', 'last_triggered_at']
+    list_filter = [ 'created_at']
     search_fields = ['name', 'user__username']
     readonly_fields = ['last_triggered_at', 'created_at', 'updated_at']
 
 
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'code', 'risk_level', 'is_blocked', 'total_users', 'fraud_cases']
-    list_filter = ['risk_level', 'is_blocked']
+    list_display = ['name', 'code',  'is_blocked', 'total_users', 'fraud_cases']
+    list_filter = [ 'is_blocked']
     search_fields = ['name', 'code']
     readonly_fields = ['last_updated', 'created_at']
 
 
 @admin.register(GeolocationLog)
 class GeolocationLogAdmin(admin.ModelAdmin):
-    list_display = ['ip_address', 'country_name', 'city', 'is_vpn', 'is_proxy', 'threat_score', 'queried_at']
+    list_display = ['ip_address', 'country_name', 'city', 'is_vpn', 'is_proxy',  'queried_at']
     list_filter = ['is_vpn', 'is_proxy', 'is_tor', 'queried_at']
     search_fields = ['ip_address', 'country_name', 'city']
     readonly_fields = ['queried_at', 'updated_at']
@@ -4153,7 +4149,7 @@ class GeolocationLogAdmin(admin.ModelAdmin):
 
 @admin.register(APIRateLimit)
 class APIRateLimitAdmin(admin.ModelAdmin):
-    list_display = ['name', 'limit_type', 'limit_period', 'request_limit', 'is_active', 'total_blocks']
+    list_display = ['name', 'limit_type', 'limit_period', 'request_limit',  'total_blocks']
     list_filter = ['limit_type', 'limit_period', 'is_active']
     search_fields = ['name', 'endpoint_pattern']
     readonly_fields = ['last_blocked_at', 'created_at', 'updated_at']
@@ -4172,7 +4168,7 @@ class RateLimitLogAdmin(admin.ModelAdmin):
 
 @admin.register(FraudPattern)
 class FraudPatternAdmin(admin.ModelAdmin):
-    list_display = ['name', 'pattern_type', 'weight', 'confidence_threshold', 'auto_block', 'is_active', 'match_count']
+    list_display = ['name', 'pattern_type', 'weight', 'confidence_threshold', 'auto_block',  'match_count']
     list_filter = ['pattern_type', 'auto_block', 'is_active']
     search_fields = ['name', 'description']
     readonly_fields = ['last_match_at', 'created_at', 'updated_at']
@@ -4180,7 +4176,7 @@ class FraudPatternAdmin(admin.ModelAdmin):
 
 @admin.register(AutoBlockRule)
 class AutoBlockRuleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'rule_type', 'action_type', 'threshold_value', 'is_active', 'priority']
+    list_display = ['name', 'rule_type', 'action_type', 'threshold_value',  'priority']
     list_filter = ['rule_type', 'action_type', 'is_active']
     search_fields = ['name', 'description']
     readonly_fields = ['created_at', 'updated_at']
@@ -4210,62 +4206,692 @@ admin.site.site_title = "Security Admin"
 admin.site.index_title = "Welcome to Security Management"
 
 
-# ==================== Admin Panel CSS Customization ====================
+# ==================== Threat Intelligence Admin ====================
 
-class SecurityAdminSite(admin.AdminSite):
-    """Custom admin site for security"""
-    
-    def each_context(self, request):
-        context = super().each_context(request)
+@admin.register(ThreatIntelligence)
+class ThreatIntelligenceAdmin(admin.ModelAdmin):
+    list_display = [
+        'ioc_badge',
+        'indicator',
+        'threat_type_display',
+        'confidence',
         
-        # Add custom CSS
-        context['custom_css'] = """
-        <style>
-            /* Modern gradient header */
-            #header {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-            }
-            
-            /* Smooth transitions */
-            .button, input[type=submit], .submit-row input {
-                transition: all 0.3s ease;
-            }
-            
-            .button:hover, input[type=submit]:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-            }
-            
-            /* Better table styling */
-            #result_list tbody tr:hover {
-                background: #f8f9fa;
-                cursor: pointer;
-            }
-            
-            /* Modern cards */
-            .module {
-                border-radius: 8px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            
-            /* Colored badges */
-            .badge-success { background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; }
-            .badge-danger { background: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; }
-            .badge-warning { background: #ffc107; color: #333; padding: 4px 8px; border-radius: 12px; }
-            .badge-info { background: #17a2b8; color: white; padding: 4px 8px; border-radius: 12px; }
-        </style>
-        """
+        'source_display',
+        'risk_level_badge',
         
-        return context
+        'expires_at',
+        'created_at'
+    ]
+    list_filter = [
+        'threat_type', 'source', 'is_active'
+    ]
+    search_fields = [
+        'indicator', 'description',  'tags'
+    ]
+    ordering = ['-created_at']
+    readonly_fields = [
+        'id',    
+         'created_at', 'updated_at'
+    ]
     
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('threat_type', 'indicator', 'description', 'source')
+        }),
+        ('Scoring', {
+            'fields': ('confidence',)
+        }),
+        ('Metadata', {
+            'fields': ('tags', 'metadata', 'expires_at')
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('System', {
+            'fields': ('id',),
+            'classes': ('collapse',)
+        }),
+    )
     
+    def ioc_badge(self, obj):
+        """Display IOC type as colored badge"""
+        colors = {
+            'ip_address': '#007bff',
+            'domain': '#28a745', 
+            'url': '#ffc107',
+            'email': '#dc3545',
+            'hash': '#6f42c1',
+            'filename': '#fd7e14'
+        }
+        color = colors.get(obj.ioc_type, '#6c757d')
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; '
+            'border-radius: 3px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, obj.get_ioc_type_display()
+        )
+    ioc_badge.short_description = 'IOC Type'
     
-    # security/admin.py - Add these registrations
+    def threat_type_display(self, obj):
+        """Display threat type with icon"""
+        icons = {
+            'malware': '🦠',
+            'phishing': '🎣', 
+            'botnet': '🤖',
+            'c2': '🎮',
+            'malicious_domain': '🌐',
+            'suspicious_ip': '🔍',
+            'compromised_account': '👤'
+        }
+        icon = icons.get(obj.threat_type, '⚠️')
+        return f"{icon} {obj.get_threat_type_display()}"
+    threat_type_display.short_description = 'Threat Type'
+    
+    def source_display(self, obj):
+        """Display source with icon"""
+        icons = {
+            'internal': '🏠',
+            'external_feed': '📡',
+            'user_report': '👥',
+            'honeypot': '🍯',
+            'third_party': '🤝'
+        }
+        icon = icons.get(obj.source, '❓')
+        return f"{icon} {obj.get_source_display()}"
+    source_display.short_description = 'Source'
+    
+    def risk_level_badge(self, obj):
+        """Display risk level as colored badge"""
+        colors = {
+            'low': '#28a745',
+            'medium': '#ffc107',
+            'high': '#fd7e14',
+            'critical': '#dc3545'
+        }
+        risk_level = obj.get_risk_level()
+        color = colors.get(risk_level, '#6c757d')
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; '
+            'border-radius: 3px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, risk_level.upper()
+        )
+    risk_level_badge.short_description = 'Risk Level'
 
-# ==================== Security Config Admin ====================
 
-@admin.register(SecurityConfig)
+# ==================== Security Incident Admin ====================
+
+@admin.register(SecurityIncident)
+class SecurityIncidentAdmin(admin.ModelAdmin):
+    list_display = [
+        'incident_badge',
+        'title',
+        'severity_badge',
+        'status_badge',
+        'user_display',
+        'assigned_to_display',
+        
+        'duration_display',
+        'opened_at'
+    ]
+    list_filter = [
+        'incident_type', 'severity', 'status', 
+        'assigned_to',  'opened_at'
+    ]
+    search_fields = [
+        'title', 'description',  'notes', 'assigned_team'
+    ]
+    ordering = ['-opened_at']
+    readonly_fields = [
+        'id', 'opened_at'
+    ]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': (
+                 'title', 'description', 'incident_type',
+                 'severity', 'status'
+            )
+        }),
+        ('Scoring & Impact', {
+            'fields': (
+                'confidence_level',  'priority_score'
+            )
+        }),
+        ('Assignment', {
+            'fields': (
+                'user', 'assigned_to', 'assigned_team'
+            )
+        }),
+        ('Timeline', {
+            'fields': (
+                'opened_at', 'created_at', 'resolved_at', 'last_activity'
+            )
+        }),
+        ('Resolution', {
+            'fields': (
+                'resolution_summary', 'resolution_actions', 'lessons_learned'
+            )
+        }),
+        ('Evidence & Data', {
+            'fields': (
+                'evidence', 'indicators', 'affected_systems', 'data_affected',
+                'related_logs', 'affected_users'
+            )
+        }),
+        ('Additional Info', {
+            'fields': (
+                'notes', 'external_tickets', 'references'
+            )
+        }),
+        ('System', {
+            'fields': ('id',),
+            'classes': ('collapse',)
+        })
+    )
+    
+    # Inlines for related data
+    inlines = [
+        # You can add inlines for related models here if needed
+    ]
+    
+    def incident_badge(self, obj):
+        """Display incident type with icon"""
+        icons = {
+            'security_breach': '🚨',
+            'fraud_detection': '💰',
+            'account_compromise': '👤',
+            'malware_detection': '🦠',
+            'data_breach': '📊',
+            'ddos_attack': '⚡',
+            'phishing_attempt': '🎣',
+            'unauthorized_access': '🔓',
+            'suspicious_activity': '🔍',
+            'system_anomaly': '⚠️'
+        }
+        icon = icons.get(obj.incident_type, '❓')
+        return format_html(
+            '<span title="{}">{} {}</span>',
+            obj.get_incident_type_display(), icon, obj.incident_id
+        )
+    incident_badge.short_description = 'Incident'
+    
+    def severity_badge(self, obj):
+        """Display severity as colored badge"""
+        colors = {
+            'critical': '#dc3545',
+            'high': '#fd7e14',
+            'medium': '#ffc107',
+            'low': '#28a745'
+        }
+        color = colors.get(obj.severity, '#6c757d')
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; '
+            'border-radius: 3px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, obj.get_severity_display()
+        )
+    severity_badge.short_description = 'Severity'
+    
+    def status_badge(self, obj):
+        """Display status as colored badge"""
+        colors = {
+            'open': '#dc3545',
+            'investigating': '#ffc107',
+            'monitoring': '#17a2b8',
+            'containing': '#fd7e14',
+            'mitigating': '#fd7e14',
+            'resolved': '#28a745',
+            'closed': '#6c757d',
+            'escalated': '#dc3545',
+            'false_positive': '#6c757d',
+            'awaiting_action': '#ffc107'
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; '
+            'border-radius: 3px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+    
+    def user_display(self, obj):
+        """Display user with link"""
+        if obj.user:
+            return format_html(
+                '<a href="/admin/auth/user/{}/">{}</a>',
+                obj.user.id, obj.user.username
+            )
+        return '—'
+    user_display.short_description = 'User'
+    
+    def assigned_to_display(self, obj):
+        """Display assigned user with link"""
+        if obj.assigned_to:
+            return format_html(
+                '<a href="/admin/auth/user/{}/">{}</a>',
+                obj.assigned_to.id, obj.assigned_to.username
+            )
+        return '—'
+    assigned_to_display.short_description = 'Assigned To'
+    
+    def duration_display(self, obj):
+        """Display incident duration"""
+        try:
+            duration = obj.get_duration()
+            hours = duration.total_seconds() / 3600
+            if hours < 1:
+                minutes = duration.total_seconds() / 60
+                return f"{minutes:.0f}m"
+            elif hours < 24:
+                return f"{hours:.1f}h"
+            else:
+                days = hours / 24
+                return f"{days:.1f}d"
+        except Exception:
+            return '—'
+    duration_display.short_description = 'Duration'
+
+
+# ==================== Trusted Device Admin ====================
+
+@admin.register(TrustedDevice)
+class TrustedDeviceAdmin(admin.ModelAdmin):
+    list_display = [
+        'device_badge',
+        'device_name',
+        'user_display',
+        'trust_score_badge',
+        'is_trusted',
+        
+        
+        'created_at'
+    ]
+    list_filter = [
+        'device_type', 'is_trusted',  'created_at'
+    ]
+    search_fields = [
+        'device_name', 'device_fingerprint', 'platform', 'browser',
+        'user__username', 'ip_address'
+    ]
+    ordering = ['-last_seen']
+    readonly_fields = [
+        'id',   'created_at', 'updated_at'
+    ]
+    
+    fieldsets = (
+        ('Device Information', {
+            'fields': (
+                'device_name', 'device_type', 'platform', 'browser',
+                'device_fingerprint'
+            )
+        }),
+        ('Trust & Security', {
+            'fields': (
+                'trust_score', 'is_trusted',  'expires_at'
+            )
+        }),
+        ('Network & Location', {
+            'fields': (
+                'ip_address', 'user_agent', 'location'
+            )
+        }),
+        ('Security Flags', {
+            'fields': ('security_flags',)
+        }),
+        ('System', {
+            'fields': (
+                  'created_at', 'updated_at'
+            ),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def device_badge(self, obj):
+        """Display device type with icon"""
+        icons = {
+            'desktop': '🖥️',
+            'mobile': '📱',
+            'tablet': '📱',
+            'tv': '📺',
+            'unknown': '❓'
+        }
+        icon = icons.get(obj.device_type, '❓')
+        return format_html(
+            '<span title="{}">{} {}</span>',
+            obj.get_device_type_display(), icon, obj.device_name
+        )
+    device_badge.short_description = 'Device'
+    
+    def user_display(self, obj):
+        """Display user with link"""
+        if obj.user:
+            return format_html(
+                '<a href="/admin/auth/user/{}/">{}</a>',
+                obj.user.id, obj.user.username
+            )
+        return '—'
+    user_display.short_description = 'User'
+    
+    def trust_score_badge(self, obj):
+        """Display trust score as colored badge"""
+        score = float(obj.trust_score)
+        if score >= 80:
+            color = '#28a745'
+            text = 'HIGH'
+        elif score >= 50:
+            color = '#ffc107'
+            text = 'MEDIUM'
+        else:
+            color = '#dc3545'
+            text = 'LOW'
+        
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; '
+            'border-radius: 3px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, f"{text} ({score:.0f})"
+        )
+    trust_score_badge.short_description = 'Trust Score'
+
+
+# ==================== Password History Admin ====================
+
+@admin.register(PasswordHistory)
+class PasswordHistoryAdmin(admin.ModelAdmin):
+    list_display = [
+        'user_display',
+        'is_compromised',
+        'created_at',
+    ]
+    list_filter = ['is_compromised', 'created_at']
+    search_fields = ['user__username', 'ip_address']
+    ordering = ['-id']
+    readonly_fields = ['id', 'created_at']
+    fieldsets = (
+        ('Password Information', {
+            'fields': ('is_compromised',)
+        }),
+        ('Change Details', {
+            'fields': ('changed_by', 'ip_address', 'user_agent')
+        }),
+        ('System', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def user_display(self, obj):
+        """Display user with link"""
+        if obj.user:
+            return format_html(
+                '<a href="/admin/auth/user/{}/">{}</a>',
+                obj.user.id, obj.user.username
+            )
+        return '—'
+    user_display.short_description = 'User'
+    
+    def password_strength_badge(self, obj):
+        """Display password strength as colored badge"""
+        colors = {
+            1: '#dc3545',
+            2: '#fd7e14',
+            3: '#ffc107',
+            4: '#28a745',
+            5: '#20c997',
+            6: '#17a2b8'
+        }
+        labels = {
+            1: 'Very Weak',
+            2: 'Weak',
+            3: 'Fair',
+            4: 'Good',
+            5: 'Strong',
+            6: 'Very Strong'
+        }
+        color = colors.get(obj.password_strength, '#6c757d')
+        label = labels.get(obj.password_strength, 'Unknown')
+        
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; '
+            'border-radius: 3px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, label
+        )
+    password_strength_badge.short_description = 'Strength'
+    
+    def algorithm_display(self, obj):
+        """Display password algorithm with icon"""
+        icons = {
+            'pbkdf2_sha256': '🔐',
+            'bcrypt': '🔒',
+            'argon2': '🛡️',
+            'sha256': '🔑'
+        }
+        icon = icons.get(obj.password_algorithm, '❓')
+        return f"{icon} {obj.get_password_algorithm_display()}"
+    algorithm_display.short_description = 'Algorithm'
+    
+    def change_reason_display(self, obj):
+        """Display change reason with icon"""
+        icons = {
+            'user_request': '👤',
+            'admin_reset': '👮',
+            'security_reset': '🚨',
+            'expired': '⏰',
+            'compromise': '🔓',
+            'initial_setup': '🆕'
+        }
+        icon = icons.get(obj.change_reason, '❓')
+        return f"{icon} {obj.get_change_reason_display()}"
+    change_reason_display.short_description = 'Reason'
+    
+    def changed_by_display(self, obj):
+        """Display who changed the password"""
+        if obj.changed_by:
+            return format_html(
+                '<a href="/admin/auth/user/{}/">{}</a>',
+                obj.changed_by.id, obj.changed_by.username
+            )
+        return '—'
+    changed_by_display.short_description = 'Changed By'
+
+
+# ==================== Security Policy Admin ====================
+
+@admin.register(SecurityPolicy)
+class SecurityPolicyAdmin(admin.ModelAdmin):
+    list_display = [
+        'policy_badge',
+        'policy_type_display',
+        'priority',
+        'tenant_display',
+        'updated_at'
+    ]
+    list_filter = [
+        'policy_type',   'priority', 'tenant'
+    ]
+    search_fields = [
+        'policy_key', 'name', 'description'
+    ]
+    ordering = ['-priority', '-updated_at']
+    readonly_fields = [
+        'id',   'created_at', 'updated_at'
+    ]
+    
+    fieldsets = (
+        ('Policy Information', {
+            'fields': (
+                'policy_key', 'name', 'policy_type', 'description'
+            )
+        }),
+        ('Configuration', {
+            'fields': (
+                'value', 'validation_rules', 'applies_to'
+            )
+        }),
+        ('Settings', {
+            'fields': ('priority',)
+        }),
+        ('Assignment', {
+            'fields': (
+                'tenant',  'updated_by'
+            )
+        }),
+        ('System', {
+            'fields': (
+                  'created_at', 'updated_at'
+            ),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def policy_badge(self, obj):
+        """Display policy type with icon"""
+        icons = {
+            'password': '🔐',
+            'session': '🔑',
+            'authentication': '🛡️',
+            'authorization': '🔓',
+            'encryption': '🔒',
+            'logging': '📝',
+            'backup': '💾',
+            'compliance': '✅',
+            'custom': '⚙️'
+        }
+        icon = icons.get(obj.policy_type, '❓')
+        return format_html(
+            '<span title="{}">{} {}</span>',
+            obj.get_policy_type_display(), icon, obj.policy_name
+        )
+    policy_badge.short_description = 'Policy'
+    
+    def policy_type_display(self, obj):
+        """Display policy type with color"""
+        return format_html(
+            '<span style="color: #007bff; font-weight: bold;">{}</span>',
+            obj.get_policy_type_display()
+        )
+    policy_type_display.short_description = 'Type'
+    
+    def tenant_display(self, obj):
+        """Display tenant with link"""
+        if obj.tenant:
+            return format_html(
+                '<a href="/admin/tenants/tenant/{}/">{}</a>',
+                obj.tenant.id, obj.tenant.name
+            )
+        return '—'
+    tenant_display.short_description = 'Tenant'
+
+
+# ==================== Security Insight Admin ====================
+
+@admin.register(SecurityInsight)
+class SecurityInsightAdmin(admin.ModelAdmin):
+    list_display = [
+        'date',
+        'total_events_badge',
+        'risk_score_badge',
+        'critical_count',
+        'high_count',
+        'medium_count',
+        'low_count',
+        'created_at'
+    ]
+    list_filter = [
+        'date', 'created_at'
+    ]
+    search_fields = [
+        'date', 'blocked_ips', 'locked_accounts'
+    ]
+    ordering = ['-date']
+    readonly_fields = [
+        'id',   'created_at', 'updated_at'
+    ]
+    
+    fieldsets = (
+        ('Overview', {
+            'fields': (
+                'date', 'total_events', 'risk_score_badge'
+            )
+        }),
+        ('Event Breakdown', {
+            'fields': (
+                'critical_count', 'high_count', 'medium_count', 'low_count'
+            )
+        }),
+        ('Security Actions', {
+            'fields': (
+                'blocked_ips', 'locked_accounts', 'failed_logins', 'successful_logins'
+            )
+        }),
+        ('Threat Analysis', {
+            'fields': (
+                'suspicious_activities', 'fraud_attempts', 'malware_detections',
+                'phishing_attempts', 'ddos_attacks', 'data_breaches'
+            )
+        }),
+        ('Analytics', {
+            'fields': (
+                'response_times', 'system_load', 'threat_intelligence',
+                'compliance_status', 'recommendations'
+            )
+        }),
+        ('System', {
+            'fields': (
+                  'created_at', 'updated_at'
+            ),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def total_events_badge(self, obj):
+        """Display total events with color coding"""
+        if obj.total_events == 0:
+            color = '#28a745'
+            text = 'None'
+        elif obj.total_events < 10:
+            color = '#ffc107'
+            text = 'Low'
+        elif obj.total_events < 50:
+            color = '#fd7e14'
+            text = 'Medium'
+        else:
+            color = '#dc3545'
+            text = 'High'
+        
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; '
+            'border-radius: 3px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, f"{text} ({obj.total_events})"
+        )
+    total_events_badge.short_description = 'Total Events'
+    
+    def risk_score_badge(self, obj):
+        """Display risk score as colored badge"""
+        try:
+            score = obj.get_risk_score()
+            if score >= 75:
+                color = '#dc3545'
+                text = 'CRITICAL'
+            elif score >= 50:
+                color = '#fd7e14'
+                text = 'HIGH'
+            elif score >= 25:
+                color = '#ffc107'
+                text = 'MEDIUM'
+            else:
+                color = '#28a745'
+                text = 'LOW'
+            
+            return format_html(
+                '<span style="background: {}; color: white; padding: 2px 6px; '
+                'border-radius: 3px; font-size: 11px; font-weight: bold;">{}</span>',
+                color, f"{text} ({score:.1f})"
+            )
+        except Exception:
+            return format_html(
+                '<span style="background: #6c757d; color: white;">Error</span>'
+            )
+    risk_score_badge.short_description = 'Risk Score'
+
+@admin.register(SecurityConfiguration)
 class SecurityConfigAdmin(admin.ModelAdmin):
     list_display = [
         'config_badge',
@@ -4278,7 +4904,7 @@ class SecurityConfigAdmin(admin.ModelAdmin):
     
     list_filter = [
         'config_type',
-        'is_active',
+        
         'is_default',
         'created_at',
     ]
@@ -4319,7 +4945,7 @@ class SecurityConfigAdmin(admin.ModelAdmin):
         
         ('[OK] Status & Activation', {
             'fields': (
-                ('is_active', 'is_default'),
+                ( 'is_default'),
                 ('effective_from', 'effective_until'),
             )
         }),
@@ -4335,7 +4961,7 @@ class SecurityConfigAdmin(admin.ModelAdmin):
         
         ('👤 User Info', {
             'fields': (
-                ('created_by', 'updated_by'),
+                ( 'updated_by'),
             ),
             'classes': ('collapse',)
         }),
@@ -4496,7 +5122,7 @@ class SecurityConfigAdmin(admin.ModelAdmin):
     
     def set_as_default(self, request, queryset):
         for config in queryset:
-            SecurityConfig.objects.filter(
+            SecurityConfiguration.objects.filter(
                 config_type=config.config_type,
                 is_default=True
             ).exclude(pk=config.pk).update(is_default=False)
@@ -5418,7 +6044,7 @@ class CountryBlockRuleAdmin(admin.ModelAdmin):
     
     list_filter = [
         'block_type',
-        'is_active',
+        
         'require_phone_verification',
         'require_id_verification',
         'created_at',
@@ -5481,7 +6107,7 @@ class CountryBlockRuleAdmin(admin.ModelAdmin):
         
         ('👤 Metadata', {
             'fields': (
-                'created_by',
+                
                 'created_at',
                 'updated_at',
             ),
@@ -6042,57 +6668,6 @@ def cache_result(timeout: int = 300) -> Callable:
         
         return wrapper
     return decorator
-
-# ==================== 4. ڈیٹا ویلڈیشن کلاسز ====================
-class DataValidator:
-    """Data validation utilities"""
-    
-    @staticmethod
-    def validate_date_range(start_date: Optional[datetime], 
-                           end_date: Optional[datetime]) -> Tuple[datetime, datetime]:
-        """Validate and fix date range"""
-        now = timezone.now()
-        
-        if start_date is None:
-            start_date = now - timedelta(days=30)
-        
-        if end_date is None:
-            end_date = now
-        
-        if start_date > end_date:
-            start_date, end_date = end_date, start_date
-        
-        if end_date > now:
-            end_date = now
-        
-        return start_date, end_date
-    
-    @staticmethod
-    def validate_int(value: Any, default: int = 0, min_val: Optional[int] = None, 
-                     max_val: Optional[int] = None) -> int:
-        """Validate integer values"""
-        try:
-            result = int(value) if value is not None else default
-            if min_val is not None:
-                result = max(result, min_val)
-            if max_val is not None:
-                result = min(result, max_val)
-            return result
-        except (TypeError, ValueError):
-            return default
-    
-    @staticmethod
-    def validate_string(value: Any, default: str = "", 
-                        max_length: Optional[int] = None) -> str:
-        """Validate string values"""
-        try:
-            result = str(value) if value is not None else default
-            if max_length and len(result) > max_length:
-                result = result[:max_length]
-            return result
-        except Exception:
-            return default
-
 class SafeQuerySet:
     """Ultimate safe queryset wrapper"""
     
@@ -6343,18 +6918,6 @@ class DataRetriever:
 
 # ==================== সমস্যার কারণ ====================
 # [ERROR] WRONG - এভাবে করলে request argument missing হয়
-def _safe_admin_view(self, view):
-    @wraps(view)
-    @never_cache
-    @csrf_protect
-    @login_required                    # ← এটা request miss করে
-    @permission_required('is_staff')   # ← এটাও
-    @safe_view
-    def wrapper(request, *args, **kwargs):
-        return view(request, *args, **kwargs)
-    return wrapper
-
-# [OK] CORRECT - এভাবে করুন
 def _safe_admin_view(self, view):
     """Create safe admin view - FIXED VERSION"""
     @wraps(view)
@@ -6936,69 +7499,4 @@ def safe_register(admin_site, model, admin_class=None):
 
 from django.contrib.admin import AdminSite
 
-# ১. প্রথমে ক্লাস তৈরি করুন
-class SecurityAdminSite(AdminSite):
-    site_header = "Security Admin Portal"
-    site_title = "Security Admin"
-    index_title = "Welcome to Security Portal"
-
-# ২. ভেরিয়েবলটি ডিফাইন করুন (এটি না থাকলে NameError দেয়)
 security_admin_site = SecurityAdminSite(name='security_admin')
-
-
-# ==================== REGISTER MODELS ====================
-from .models import (
-    DeviceInfo, SecurityLog, RiskScore, SecurityDashboard, AutoBlockRule,
-    AuditTrail, DataExport, DataImport, SecurityNotification, AlertRule,
-    FraudPattern, RealTimeDetection, Country, GeolocationLog, CountryBlockRule,
-    APIRateLimit, RateLimitLog, PasswordPolicy, PasswordHistory, PasswordAttempt,
-    UserSession, SessionActivity, TwoFactorMethod, TwoFactorAttempt,
-    TwoFactorRecoveryCode, UserBan, ClickTracker, MaintenanceMode,
-    SecurityConfig, AppVersion, IPBlacklist, WithdrawalProtection
-)
-
-security_models_list = [
-    DeviceInfo, SecurityLog, RiskScore, SecurityDashboard, AutoBlockRule,
-    AuditTrail, DataExport, DataImport, SecurityNotification, AlertRule,
-    FraudPattern, RealTimeDetection, Country, GeolocationLog, CountryBlockRule,
-    APIRateLimit, RateLimitLog, PasswordPolicy, PasswordHistory, PasswordAttempt,
-    UserSession, SessionActivity, TwoFactorMethod, TwoFactorAttempt,
-    TwoFactorRecoveryCode, UserBan, ClickTracker, MaintenanceMode,
-    SecurityConfig, AppVersion, IPBlacklist, WithdrawalProtection
-]
-
-print("\n[SECURE] Registering Security models in BOTH admin sites...")
-
-for model in security_models_list:
-    # ডিফল্ট অ্যাডমিনে রেজিস্ট্রেশন
-    if not admin.site.is_registered(model):
-        try:
-            admin.site.register(model)
-        except Exception:
-            pass
-        
-    # আপনার কাস্টম সিকিউরিটি পোর্টালে রেজিস্ট্রেশন
-    try:
-        security_admin_site.register(model)
-    except Exception:
-        pass
-
-print(f"[SECURE] Registration Complete!")
-
-def _force_register_security():
-    try:
-        from api.admin_panel.admin import admin_site as modern_site
-        if modern_site is None:
-            return
-        pairs = [(DeviceInfo, DeviceInfoAdmin), (SecurityLog, SecurityLogAdmin), (UserBan, UserBanAdmin), (ClickTracker, ClickTrackerAdmin), (MaintenanceMode, MaintenanceModeAdmin), (AppVersion, AppVersionAdmin), (IPBlacklist, IPBlacklistAdmin), (WithdrawalProtection, WithdrawalProtectionAdmin), (RiskScore, RiskScoreAdmin), (PasswordPolicy, PasswordPolicyAdmin), (PasswordHistory, PasswordHistoryAdmin), (PasswordAttempt, PasswordAttemptAdmin), (UserSession, UserSessionAdmin), (SessionActivity, SessionActivityAdmin), (TwoFactorMethod, TwoFactorMethodAdmin), (TwoFactorAttempt, TwoFactorAttemptAdmin), (TwoFactorRecoveryCode, TwoFactorRecoveryCodeAdmin), (AuditTrail, AuditTrailAdmin), (SecurityNotification, SecurityNotificationAdmin), (AlertRule, AlertRuleAdmin), (Country, CountryAdmin), (GeolocationLog, GeolocationLogAdmin), (APIRateLimit, APIRateLimitAdmin), (RateLimitLog, RateLimitLogAdmin), (FraudPattern, FraudPatternAdmin), (AutoBlockRule, AutoBlockRuleAdmin), (SecurityDashboard, SecurityDashboardAdmin), (SecurityConfig, SecurityConfigAdmin), (DataExport, DataExportAdmin), (DataImport, DataImportAdmin), (RealTimeDetection, RealTimeDetectionAdmin), (CountryBlockRule, CountryBlockRuleAdmin)]
-        registered = 0
-        for model, model_admin in pairs:
-            try:
-                if model not in modern_site._registry:
-                    modern_site.register(model, model_admin)
-                    registered += 1
-            except Exception as ex:
-                pass
-        print(f"[OK] security registered {registered} models")
-    except Exception as e:
-        print(f"[WARN] security: {e}")

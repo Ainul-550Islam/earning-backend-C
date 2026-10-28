@@ -8,7 +8,7 @@ class ImportServiceTest(TestCase):
         self.lang = make_language(code='ti-ie', name='Import Export Test', is_default=False)
 
     def test_import_json_creates_translations(self):
-        from localization.services.translation.TranslationImportService import TranslationImportService
+        from api.localization.services.translation.TranslationImportService import TranslationImportService
         data = {
             'import.test.hello': 'হ্যালো',
             'import.test.bye': 'বিদায়',
@@ -19,12 +19,12 @@ class ImportServiceTest(TestCase):
         self.assertEqual(result['created'] + result['updated'], 3)
 
     def test_import_json_invalid_language(self):
-        from localization.services.translation.TranslationImportService import TranslationImportService
+        from api.localization.services.translation.TranslationImportService import TranslationImportService
         result = TranslationImportService().import_json({'key': 'val'}, 'xx-invalid')
         self.assertFalse(result['success'])
 
     def test_import_json_duplicate_updates(self):
-        from localization.services.translation.TranslationImportService import TranslationImportService
+        from api.localization.services.translation.TranslationImportService import TranslationImportService
         data = {'dup.key': 'First Value'}
         TranslationImportService().import_json(data, 'ti-ie')
         data2 = {'dup.key': 'Second Value'}
@@ -33,7 +33,7 @@ class ImportServiceTest(TestCase):
         self.assertGreaterEqual(result['updated'], 1)
 
     def test_import_po_basic(self):
-        from localization.services.translation.TranslationImportService import TranslationImportService
+        from api.localization.services.translation.TranslationImportService import TranslationImportService
         po_content = (
             'msgid ""\nmsgstr ""\n'
             '"Language: ti-ie\\n"\n\n'
@@ -43,7 +43,7 @@ class ImportServiceTest(TestCase):
         self.assertTrue(result['success'])
 
     def test_import_xliff_basic(self):
-        from localization.services.translation.TranslationImportService import TranslationImportService
+        from api.localization.services.translation.TranslationImportService import TranslationImportService
         xliff = (
             '<?xml version="1.0" encoding="UTF-8"?>'
             '<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">'
@@ -66,26 +66,26 @@ class ExportServiceTest(TestCase):
         make_translation(key=key, language=self.lang, value='Export Test Value')
 
     def test_export_json_returns_dict(self):
-        from localization.services.translation.TranslationExportService import TranslationExportService
+        from api.localization.services.translation.TranslationExportService import TranslationExportService
         result = TranslationExportService().export_json('te-exp')
         self.assertTrue(result['success'])
         self.assertIsInstance(result['data'], dict)
         self.assertIn('export.test.key', result['data'])
 
     def test_export_json_invalid_language(self):
-        from localization.services.translation.TranslationExportService import TranslationExportService
+        from api.localization.services.translation.TranslationExportService import TranslationExportService
         result = TranslationExportService().export_json('xx-invalid')
         self.assertFalse(result['success'])
 
     def test_export_po_contains_msgid(self):
-        from localization.services.translation.TranslationExportService import TranslationExportService
+        from api.localization.services.translation.TranslationExportService import TranslationExportService
         po = TranslationExportService().export_po('te-exp')
         self.assertIn('msgid', po)
         self.assertIn('msgstr', po)
         self.assertIn('export.test.key', po)
 
     def test_export_xliff_valid_xml(self):
-        from localization.services.translation.TranslationExportService import TranslationExportService
+        from api.localization.services.translation.TranslationExportService import TranslationExportService
         import xml.etree.ElementTree as ET
         xliff = TranslationExportService().export_xliff('te-exp')
         self.assertIn('trans-unit', xliff)
@@ -96,8 +96,8 @@ class ExportServiceTest(TestCase):
             self.fail("XLIFF output is not valid XML")
 
     def test_export_approved_only(self):
-        from localization.services.translation.TranslationExportService import TranslationExportService
-        from localization.models.core import Translation
+        from api.localization.services.translation.TranslationExportService import TranslationExportService
+        from api.localization.models.core import Translation
         lang = make_language(code='te-ap', name='Approved Only', is_default=False)
         approved_key = make_translation_key(key='approved.key')
         unapproved_key = make_translation_key(key='unapproved.key')

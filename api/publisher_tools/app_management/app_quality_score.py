@@ -30,6 +30,7 @@ class AppQualityScore(TimeStampedModel):
     score_change     = models.IntegerField(default=0)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_app_quality_scores"
         verbose_name = _("App Quality Score")
         unique_together = [["app", "month"]]

@@ -4,6 +4,7 @@ Tracking Pixel Service
 Service for managing tracking pixels,
 including pixel code generation and firing.
 """
+from django.db import models
 
 import logging
 import secrets

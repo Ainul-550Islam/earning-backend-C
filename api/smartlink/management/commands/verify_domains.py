@@ -5,7 +5,7 @@ class Command(BaseCommand):
     help = 'Verify all pending custom domains via DNS TXT check'
 
     def handle(self, *args, **options):
-        from ...models.publisher import PublisherDomain
+        from api.smartlink.models.publisher import PublisherDomain
         from ...choices import DomainVerificationStatus
         from ...services.core.DomainService import DomainService
 

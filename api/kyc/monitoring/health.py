@@ -116,8 +116,6 @@ def health_basic(request):
     """Basic liveness probe — just returns 200 if service is up."""
     return Response({'status': 'ok', 'service': 'kyc', 'version': '2.0.0', 'timestamp': timezone.now().isoformat()})
 
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def health_deep(request):
     """Full system health check — DB, cache, storage, workers."""
@@ -135,9 +133,6 @@ def health_deep(request):
         'checks':    checks,
         'stats':     get_system_stats(),
     }, status=status_code)
-
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def health_providers(request):
     """External provider health — OCR, face match, AML."""

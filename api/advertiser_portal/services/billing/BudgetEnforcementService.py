@@ -4,6 +4,7 @@ Budget Enforcement Service
 Service for enforcing budget limits,
 including automatic campaign pausing when budgets are exhausted.
 """
+from django.db import models
 
 import logging
 from typing import Dict, List, Optional, Any

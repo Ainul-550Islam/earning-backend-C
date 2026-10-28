@@ -19,7 +19,7 @@ class WebhookEndpointAdmin(admin.ModelAdmin):
     """Admin configuration for WebhookEndpoint model."""
 
     list_display = [
-        'label', 'url', 'status', 'http_method',
+        'label', 'target_url', 'status', 'http_method',
         'success_rate', 'last_triggered_at', 'owner'
     ]
 
@@ -28,7 +28,7 @@ class WebhookEndpointAdmin(admin.ModelAdmin):
     ]
 
     search_fields = [
-        'label', 'url', 'description',
+        'label', 'target_url', 'description',
         'owner__username', 'owner__email'
     ]
 
@@ -62,7 +62,7 @@ class WebhookEndpointAdmin(admin.ModelAdmin):
         })
     )
 
-    raw_id_fields = ('owner', 'payload_template')
+    raw_id_fields = ('owner',)
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -134,7 +134,7 @@ class WebhookEndpointAdmin(admin.ModelAdmin):
 
     def test_webhook(self, request, queryset):
         """Test webhook endpoints."""
-        from ..services.core import DispatchService
+        from ..services.core.DispatchService import DispatchService
 
         service = DispatchService()
         results = []
@@ -146,16 +146,16 @@ class WebhookEndpointAdmin(admin.ModelAdmin):
                     event_type='webhook.test',
                     payload={'test': True, 'timestamp': str(timezone.now())}
                 )
-                results.append(f"{endpoint.url}: {'Success' if result else 'Failed'}")
+                results.append(f"{endpoint.target_url}: {'Success' if result else 'Failed'}")
             except Exception as e:
-                results.append(f"{endpoint.url}: Error - {str(e)}")
+                results.append(f"{endpoint.target_url}: Error - {str(e)}")
 
         self.message_user(request, f"Test results: {'; '.join(results)}")
     test_webhook.short_description = 'Test selected webhook endpoints'
 
     def rotate_secret(self, request, queryset):
         """Rotate secrets for selected endpoints."""
-        from ..services.core import SecretRotationService
+        from ..services.core.SecretRotationService import SecretRotationService
 
         service = SecretRotationService()
         rotated_count = 0
@@ -166,12 +166,12 @@ class WebhookEndpointAdmin(admin.ModelAdmin):
                 rotated_count += 1
                 self.message_user(
                     request,
-                    f"Rotated secret for {endpoint.url}: {new_secret[:8]}..."
+                    f"Rotated secret for {endpoint.target_url}: {new_secret[:8]}..."
                 )
             except Exception as e:
                 self.message_user(
                     request,
-                    f"Failed to rotate secret for {endpoint.url}: {str(e)}",
+                    f"Failed to rotate secret for {endpoint.target_url}: {str(e)}",
                     level='error'
                 )
 
@@ -189,9 +189,9 @@ class WebhookEndpointAdmin(admin.ModelAdmin):
             try:
                 health = service.check_endpoint_health(endpoint)
                 status = 'Healthy' if health['is_healthy'] else 'Unhealthy'
-                results.append(f"{endpoint.url}: {status}")
+                results.append(f"{endpoint.target_url}: {status}")
             except Exception as e:
-                results.append(f"{endpoint.url}: Error - {str(e)}")
+                results.append(f"{endpoint.target_url}: Error - {str(e)}")
 
         self.message_user(request, f"Health check results: {'; '.join(results)}")
     check_health.short_description = 'Check health of selected endpoints'
@@ -241,7 +241,7 @@ class WebhookDeliveryLogInline(admin.TabularInline):
     ]
     fields = (
         'event_type', 'status', 'http_status_code',
-        'duration_ms', 'attempt_number'
+        'response_time_ms', 'attempt_number'
     )
 
     def has_add_permission(self, request, obj=None):

@@ -40,7 +40,7 @@ def estimate_audience_targeting_revenue_lift(publisher, current_ecpm: float) -> 
 
 
 def analyze_audience_demographics(site) -> Dict:
-    from api.publisher_tools.site_management.site_analytics import SiteAudienceProfile
+    from publisher_tools.site_management.site_analytics import SiteAudienceProfile
     from django.utils import timezone
     today = timezone.now().date().replace(day=1)
     profile = SiteAudienceProfile.objects.filter(site=site, month=today).first()

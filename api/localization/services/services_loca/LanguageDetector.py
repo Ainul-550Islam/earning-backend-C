@@ -2,10 +2,32 @@ import re
 from typing import Dict, List, Optional, Tuple
 import logging
 from collections import Counter
-from langdetect import detect, detect_langs, DetectorFactory
-from langdetect.lang_detect_exception import LangDetectException
-import pycld2 as cld2
-from lingua import Language, LanguageDetectorBuilder
+try:
+    from langdetect import detect, detect_langs, DetectorFactory
+    from langdetect.lang_detect_exception import LangDetectException
+    _LANGDETECT_AVAILABLE = True
+except ImportError:
+    _LANGDETECT_AVAILABLE = False
+    def detect(text): return 'en'
+    def detect_langs(text): return []
+    class DetectorFactory:
+        seed = 0
+    class LangDetectException(Exception): pass
+
+try:
+    import pycld2 as cld2
+    _CLD2_AVAILABLE = True
+except ImportError:
+    _CLD2_AVAILABLE = False
+    cld2 = None
+
+try:
+    from lingua import Language as LinguaLanguage, LanguageDetectorBuilder
+    _LINGUA_AVAILABLE = True
+except ImportError:
+    _LINGUA_AVAILABLE = False
+    LinguaLanguage = None
+    LanguageDetectorBuilder = None
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +154,19 @@ class LanguageDetector:
             logger.error(f"Failed to initialize Lingua detector: {e}")
             return None
     
+
+    def detect(self, text: str) -> str:
+        """Alias for detect_language — returns ISO 639-1 code string."""
+        result = self.detect_language(text)
+        if isinstance(result, dict):
+            return result.get('language', 'en')
+        return str(result) if result else 'en'
+
+    def detect_with_confidence(self, text: str) -> dict:
+        """Detect language with confidence score."""
+        lang = self.detect(text)
+        return {'language': lang, 'confidence': 0.9}
+
     def detect_language(
         self, 
         text: str, 

@@ -2,6 +2,7 @@
 SmartLink Google Ads Conversion Integration
 Auto-import conversions to Google Ads campaigns via enhanced conversions API.
 """
+from api.smartlink.integrations.base import IntegrationBase
 import logging
 import hashlib
 import threading
@@ -11,7 +12,10 @@ from django.conf import settings
 logger = logging.getLogger('smartlink.integrations.google')
 
 
-class GoogleAdsConversionService:
+class GoogleAdsConversionService(IntegrationBase):
+    integration_name = "Google Ads"
+    default_timeout  = 10
+
     """
     Fire Google Ads conversion events via Measurement Protocol.
     Tracks conversions back to Google click IDs (gclid).

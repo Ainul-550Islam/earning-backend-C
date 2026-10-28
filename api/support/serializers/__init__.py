@@ -1,0 +1,24 @@
+# api/support/serializers/__init__.py
+from .SupportSettingsSerializer import SupportSettingsSerializer
+from .SupportTicketSerializer import SupportTicketSerializer, SupportTicketListSerializer, SupportTicketCreateSerializer
+from .FAQSerializer import FAQSerializer
+from .TicketMessageSerializer import TicketMessageSerializer
+from .TicketAttachmentSerializer import TicketAttachmentSerializer
+from .TicketTagSerializer import TicketTagSerializer
+from .TicketRatingSerializer import TicketRatingSerializer
+from .TicketSLASerializer import TicketSLASerializer
+from .TicketMergeSerializer import TicketMergeSerializer
+from .ChatSessionSerializer import ChatSessionSerializer
+from .ChatMessageSerializer import ChatMessageSerializer
+from .ChatQueueSerializer import ChatQueueSerializer
+from .ChatTranscriptSerializer import ChatTranscriptSerializer
+from .AgentSerializer import AgentSerializer
+from .AgentStatusSerializer import AgentStatusSerializer
+from .AgentPerformanceSerializer import AgentPerformanceSerializer
+from .DepartmentSerializer import DepartmentSerializer
+from .KBCategorySerializer import KBCategorySerializer
+from .KBArticleSerializer import KBArticleSerializer
+from .AutomationRuleSerializer import AutomationRuleSerializer
+from .CannedResponseSerializer import CannedResponseSerializer
+from .SLAPolicySerializer import SLAPolicySerializer
+from .InsightSerializer import InsightSerializer

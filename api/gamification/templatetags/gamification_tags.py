@@ -61,7 +61,7 @@ def gamif_user_points(context: dict, user: Any, cycle: Optional[Any] = None) -> 
     if user is None or not getattr(user, "is_authenticated", False):
         return 0
     try:
-        from ..services import get_user_total_points
+        from api.gamification.services import get_user_total_points
         return get_user_total_points(
             user_id=user.pk,
             cycle_id=getattr(cycle, "pk", None) if cycle else None,
@@ -83,7 +83,7 @@ def gamif_leaderboard_widget(context: dict, cycle: Optional[Any] = None, top_n: 
     entries = []
     if cycle is not None:
         try:
-            from ..services import get_latest_snapshot
+            from api.gamification.services import get_latest_snapshot
             snapshot = get_latest_snapshot(cycle_id=cycle.pk)
             if snapshot and snapshot.snapshot_data:
                 entries = snapshot.snapshot_data[:max(1, int(top_n))]

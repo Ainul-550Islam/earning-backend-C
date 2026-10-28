@@ -32,7 +32,7 @@ class CacheWarmupOrchestrator:
         Returns stats on what was warmed.
         """
         from ...services.core.SmartLinkCacheService import SmartLinkCacheService
-        from ...models import SmartLink, Click
+        from api.smartlink.models import SmartLink, Click
 
         cache_svc = SmartLinkCacheService()
         now  = timezone.now()
@@ -95,7 +95,7 @@ class CacheWarmupOrchestrator:
         offer pool, targeting rules, and EPC scores all at once.
         """
         from ...services.core.SmartLinkCacheService import SmartLinkCacheService
-        from ...models import SmartLink
+        from api.smartlink.models import SmartLink
 
         try:
             sl = SmartLink.objects.select_related(

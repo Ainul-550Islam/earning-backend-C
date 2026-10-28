@@ -4,8 +4,13 @@ AdGate Media offer processor
 import hashlib
 import hmac
 import logging
+from api.offerwall.exceptions import InvalidWebhookSignatureException, ProviderAPIException
 from .OfferProcessor import OfferProcessor
-from ..constants import *
+from ..constants import (
+    PROVIDER_ADGATE,
+    STATUS_ACTIVE,
+    ADGATE_API_BASE,
+)
 
 logger = logging.getLogger(__name__)
 

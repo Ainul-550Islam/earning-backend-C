@@ -1,3 +1,4 @@
+from django.db import models
 # =============================================================================
 # api/promotions/optimization/cache_warmer.py
 # Cache Warmer — App startup ও scheduled intervals এ cache pre-populate করে

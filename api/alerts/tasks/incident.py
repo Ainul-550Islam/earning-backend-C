@@ -29,14 +29,12 @@ def check_incident_escalations():
             escalation_needed = incident.should_escalate()
             
             if escalation_needed:
-                # Get escalation chain
-                escalation_chain = incident.get_escalation_chain()
+                # Find who's currently on call to escalate to
+                current_on_call = OnCallSchedule.get_current_on_call_all()
                 
-                # Escalate to next level
-                if escalation_chain:
-                    next_level = escalation_chain[0]
-                    incident.escalate(next_level['user'], "Automatic escalation due to time threshold")
-                    escalated_count += 1
+                next_user = current_on_call[0]['user'] if current_on_call else None
+                incident.escalate(reason="Automatic escalation due to time threshold", user=next_user)
+                escalated_count += 1
         
         logger.info(f"Escalated {escalated_count} incidents")
         return escalated_count
@@ -194,7 +192,7 @@ def check_post_mortem_deadlines():
             status='resolved',
             resolved_at__gte=timezone.now() - timedelta(days=7)
         ).exclude(
-            postmortem__isnull=False
+            alerts_incidentpostmortem_tenant__isnull=False
         )
         
         notified_count = 0
@@ -229,6 +227,8 @@ def auto_resolve_low_priority_incidents():
         resolved_count = 0
         for incident in low_priority_incidents:
             incident.resolve(None, "Auto-resolved: Low priority incident timeout")
+            from api.alerts.signals.incident import auto_resolution_triggered
+            auto_resolution_triggered.send(sender=Incident, instance=incident, reason='low_priority_timeout')
             resolved_count += 1
         
         logger.info(f"Auto-resolved {resolved_count} low priority incidents")
@@ -314,10 +314,11 @@ def cleanup_old_incident_data():
 def notify_on_call_changes():
     """Notify on-call personnel of schedule changes"""
     try:
-        # Get upcoming on-call changes
+        # Get active rotating schedules (only rotation schedules have
+        # upcoming on-call handoffs; fixed/on_demand/backup schedules don't).
         upcoming_changes = OnCallSchedule.objects.filter(
             is_active=True,
-            next_run__lte=timezone.now() + timedelta(hours=24)
+            schedule_type='rotation',
         )
         
         notified_count = 0
@@ -394,7 +395,7 @@ def escalate_unacknowledged_incidents():
         escalated_count = 0
         for incident in unacknowledged:
             # Escalate to manager or next level
-            incident.escalate(None, "Auto-escalated: Unacknowledged incident")
+            incident.escalate(reason="Auto-escalated: Unacknowledged incident")
             escalated_count += 1
         
         logger.info(f"Escalated {escalated_count} unacknowledged incidents")

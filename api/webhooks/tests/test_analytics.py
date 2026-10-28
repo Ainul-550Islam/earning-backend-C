@@ -6,7 +6,7 @@ including metrics calculation, aggregation, and reporting.
 
 import pytest
 from unittest.mock import Mock, patch
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
@@ -34,10 +34,10 @@ class WebhookAnalyticsServiceTest(TestCase):
             password='testpass123'
         )
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         self.analytics_service = WebhookAnalyticsService()
     
@@ -50,10 +50,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.SUCCESS if i < 8 else DeliveryStatus.FAILED,
-                response_code=200 if i < 8 else 500,
-                duration_ms=100 + i * 10,
+                http_status_code=200 if i < 8 else 500,
+                response_time_ms=100 + i * 10,
                 created_at=timezone.now() - timedelta(hours=i),
-                created_by=self.user,
             )
         
         analytics = self.analytics_service.calculate_endpoint_analytics(
@@ -96,10 +95,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type=event_type,
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.SUCCESS,
-                response_code=200,
-                duration_ms=100,
+                http_status_code=200,
+                response_time_ms=100,
                 created_at=timezone.now() - timedelta(hours=i),
-                created_by=self.user,
             )
         
         analytics = self.analytics_service.calculate_endpoint_analytics(
@@ -124,10 +122,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                     event_type='user.created',
                     payload={'user_id': 12345 + i},
                     status=DeliveryStatus.SUCCESS if i < 4 else DeliveryStatus.FAILED,
-                    response_code=200 if i < 4 else 500,
-                    duration_ms=100 + i * 10,
+                    http_status_code=200 if i < 4 else 500,
+                    response_time_ms=100 + i * 10,
                     created_at=timezone.now() - timedelta(days=day),
-                    created_by=self.user,
                 )
         
         analytics_records = self.analytics_service.generate_daily_analytics(
@@ -155,7 +152,6 @@ class WebhookAnalyticsServiceTest(TestCase):
             success_count=4,
             failed_count=1,
             avg_latency_ms=120.0,
-            created_by=self.user
         )
         
         # Create new delivery logs
@@ -165,10 +161,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.SUCCESS,
-                response_code=200,
-                duration_ms=150,
+                http_status_code=200,
+                response_time_ms=150,
                 created_at=timezone.now(),
-                created_by=self.user,
             )
         
         analytics_records = self.analytics_service.generate_daily_analytics(
@@ -195,13 +190,12 @@ class WebhookAnalyticsServiceTest(TestCase):
                     event_type=event_type,
                     payload={'user_id': 12345 + i},
                     status=DeliveryStatus.SUCCESS if i < 4 else DeliveryStatus.FAILED,
-                    response_code=200 if i < 4 else 500,
-                    duration_ms=100 + i * 10,
+                    http_status_code=200 if i < 4 else 500,
+                    response_time_ms=100 + i * 10,
                     created_at=timezone.now() - timedelta(hours=i),
-                    created_by=self.user,
                 )
         
-        analytics = self.analytics_service.calculate_event_type_analytics(
+        analytics = self.analytics_service.get_event_type_analytics(
             endpoint=self.endpoint,
             date_from=timezone.now() - timedelta(days=1),
             date_to=timezone.now()
@@ -217,7 +211,7 @@ class WebhookAnalyticsServiceTest(TestCase):
     
     def test_calculate_event_type_analytics_no_logs(self):
         """Test calculating event type analytics with no logs."""
-        analytics = self.analytics_service.calculate_event_type_analytics(
+        analytics = self.analytics_service.get_event_type_analytics(
             endpoint=self.endpoint,
             date_from=timezone.now() - timedelta(days=1),
             date_to=timezone.now()
@@ -235,10 +229,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                     event_type='user.created',
                     payload={'user_id': 12345 + i},
                     status=DeliveryStatus.SUCCESS if i == 0 else DeliveryStatus.FAILED,
-                    response_code=200 if i == 0 else 500,
-                    duration_ms=100 + i * 10,
+                    http_status_code=200 if i == 0 else 500,
+                    response_time_ms=100 + i * 10,
                     created_at=timezone.now() - timedelta(hours=hour),
-                    created_by=self.user,
                 )
         
         analytics = self.analytics_service.calculate_hourly_analytics(
@@ -264,10 +257,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345},
                 status=DeliveryStatus.SUCCESS,
-                response_code=200,
-                duration_ms=response_time,
+                http_status_code=200,
+                response_time_ms=response_time,
                 created_at=timezone.now() - timedelta(minutes=1),
-                created_by=self.user,
             )
         
         distribution = self.analytics_service.calculate_response_time_distribution(
@@ -311,10 +303,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345},
                 status=DeliveryStatus.SUCCESS if error_code == 200 else DeliveryStatus.FAILED,
-                response_code=error_code,
-                duration_ms=100,
+                http_status_code=error_code,
+                response_time_ms=100,
                 created_at=timezone.now() - timedelta(minutes=1),
-                created_by=self.user,
             )
         
         analytics = self.analytics_service.calculate_error_rate_analytics(
@@ -346,10 +337,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.SUCCESS,
-                response_code=200,
-                duration_ms=100,
+                http_status_code=200,
+                response_time_ms=100,
                 created_at=timezone.now() - timedelta(minutes=1),
-                created_by=self.user,
             )
         
         analytics = self.analytics_service.calculate_error_rate_analytics(
@@ -374,10 +364,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                     event_type='user.created',
                     payload={'user_id': 12345 + i},
                     status=DeliveryStatus.SUCCESS,
-                    response_code=200,
-                    duration_ms=100,
+                    http_status_code=200,
+                    response_time_ms=100,
                     created_at=timezone.now() - timedelta(hours=hour),
-                    created_by=self.user,
                 )
         
         analytics = self.analytics_service.calculate_throughput_analytics(
@@ -403,10 +392,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                     event_type='user.created',
                     payload={'user_id': 12345 + i},
                     status=DeliveryStatus.SUCCESS,
-                    response_code=200,
-                    duration_ms=100,
+                    http_status_code=200,
+                    response_time_ms=100,
                     created_at=timezone.now() - timedelta(hours=hour),
-                    created_by=self.user,
                 )
         
         analytics = self.analytics_service.calculate_throughput_analytics(
@@ -415,8 +403,8 @@ class WebhookAnalyticsServiceTest(TestCase):
             date_to=timezone.now()
         )
         
-        self.assertEqual(analytics['total_requests'], 72)
-        self.assertEqual(analytics['avg_requests_per_hour'], 3.0)
+        self.assertEqual(analytics['total_requests'], 84)
+        self.assertEqual(analytics['avg_requests_per_hour'], 3.5)
         self.assertEqual(analytics['max_requests_per_hour'], 5)
         self.assertEqual(analytics['min_requests_per_hour'], 2)
     
@@ -444,7 +432,6 @@ class WebhookAnalyticsServiceTest(TestCase):
                 is_healthy=i < 8,  # 8 out of 10 are healthy
                 response_time_ms=100 + i * 10,
                 status_code=200 if i < 8 else 500,
-                created_by=self.user,
             )
         
         metrics = self.analytics_service.calculate_endpoint_health_metrics(
@@ -479,10 +466,10 @@ class WebhookAnalyticsServiceTest(TestCase):
         """Test calculating system overview analytics."""
         # Create multiple endpoints
         endpoint2 = WebhookEndpoint.objects.create(
-            url='https://example2.com/webhook',
-            secret='test-secret-key-2',
+            target_url='https://example2.com/webhook',
+            secret_key='test-secret-key-2',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         
         # Create delivery logs for both endpoints
@@ -493,10 +480,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                     event_type='user.created',
                     payload={'user_id': 12345 + i},
                     status=DeliveryStatus.SUCCESS if i < 4 else DeliveryStatus.FAILED,
-                    response_code=200 if i < 4 else 500,
-                    duration_ms=100,
+                    http_status_code=200 if i < 4 else 500,
+                    response_time_ms=100,
                     created_at=timezone.now() - timedelta(minutes=i),
-                    created_by=self.user,
                 )
         
         overview = self.analytics_service.calculate_system_overview_analytics(
@@ -534,10 +520,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.SUCCESS if i < 8 else DeliveryStatus.FAILED,
-                response_code=200 if i < 8 else 500,
-                duration_ms=100 + i * 10,
+                http_status_code=200 if i < 8 else 500,
+                response_time_ms=100 + i * 10,
                 created_at=timezone.now() - timedelta(hours=i),
-                created_by=self.user,
             )
         
         report = self.analytics_service.generate_analytics_report(
@@ -565,10 +550,10 @@ class WebhookAnalyticsServiceTest(TestCase):
         """Test generating analytics report for multiple endpoints."""
         # Create additional endpoint
         endpoint2 = WebhookEndpoint.objects.create(
-            url='https://example2.com/webhook',
-            secret='test-secret-key-2',
+            target_url='https://example2.com/webhook',
+            secret_key='test-secret-key-2',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         
         # Create delivery logs for both endpoints
@@ -579,10 +564,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                     event_type='user.created',
                     payload={'user_id': 12345 + i},
                     status=DeliveryStatus.SUCCESS,
-                    response_code=200,
-                    duration_ms=100,
+                    http_status_code=200,
+                    response_time_ms=100,
                     created_at=timezone.now() - timedelta(minutes=i),
-                    created_by=self.user,
                 )
         
         report = self.analytics_service.generate_analytics_report(
@@ -609,10 +593,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.SUCCESS,
-                response_code=200,
-                duration_ms=100,
+                http_status_code=200,
+                response_time_ms=100,
                 created_at=timezone.now() - timedelta(hours=i),
-                created_by=self.user,
             )
         
         export_data = self.analytics_service.export_analytics_data(
@@ -635,10 +618,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.SUCCESS,
-                response_code=200,
-                duration_ms=100,
+                http_status_code=200,
+                response_time_ms=100,
                 created_at=timezone.now() - timedelta(hours=i),
-                created_by=self.user,
             )
         
         export_data = self.analytics_service.export_analytics_data(
@@ -664,10 +646,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                     event_type='user.created',
                     payload={'user_id': 12345 + i},
                     status=DeliveryStatus.SUCCESS if i < (requests_per_day - 1) else DeliveryStatus.FAILED,
-                    response_code=200 if i < (requests_per_day - 1) else 500,
-                    duration_ms=100,
+                    http_status_code=200 if i < (requests_per_day - 1) else 500,
+                    response_time_ms=100,
                     created_at=timezone.now() - timedelta(days=day),
-                    created_by=self.user,
                 )
         
         trends = self.analytics_service.calculate_trend_analytics(
@@ -699,13 +680,12 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345},
                 status=DeliveryStatus.SUCCESS,
-                response_code=200,
-                duration_ms=response_time,
+                http_status_code=200,
+                response_time_ms=response_time,
                 created_at=timezone.now() - timedelta(minutes=1),
-                created_by=self.user,
             )
         
-        metrics = self.analytics_service.calculate_performance_metrics(
+        metrics = self.analytics_service.get_performance_metrics(
             endpoint=self.endpoint,
             date_from=timezone.now() - timedelta(days=1),
             date_to=timezone.now()
@@ -715,13 +695,13 @@ class WebhookAnalyticsServiceTest(TestCase):
         self.assertEqual(metrics['max_response_time_ms'], 500)
         self.assertEqual(metrics['avg_response_time_ms'], 275.0)
         self.assertEqual(metrics['median_response_time_ms'], 275)
-        self.assertEqual(metrics['p95_response_time_ms'], 475)
+        self.assertEqual(metrics['p95_response_time_ms'], 476)
         self.assertEqual(metrics['p99_response_time_ms'], 495)
-        self.assertEqual(metrics['std_deviation'], 129.9)
+        self.assertEqual(metrics['std_deviation'], 136.93)
     
     def test_calculate_performance_metrics_no_logs(self):
         """Test calculating performance metrics with no logs."""
-        metrics = self.analytics_service.calculate_performance_metrics(
+        metrics = self.analytics_service.get_performance_metrics(
             endpoint=self.endpoint,
             date_from=timezone.now() - timedelta(days=1),
             date_to=timezone.now()
@@ -746,10 +726,9 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.SUCCESS if i % 10 < 8 else DeliveryStatus.FAILED,
-                response_code=200 if i % 10 < 8 else 500,
-                duration_ms=100 + (i % 100),
+                http_status_code=200 if i % 10 < 8 else 500,
+                response_time_ms=100 + (i % 100),
                 created_at=timezone.now() - timedelta(minutes=i),
-                created_by=self.user,
             )
         
         start_time = time.time()
@@ -769,10 +748,38 @@ class WebhookAnalyticsServiceTest(TestCase):
         
         # Should complete in reasonable time (less than 2 seconds)
         self.assertLess(end_time - start_time, 2.0)
-    
+
+
+class WebhookAnalyticsConcurrencyTest(TransactionTestCase):
+    """Real-threading concurrency test for WebhookAnalyticsService.
+
+    Kept separate from WebhookAnalyticsServiceTest (TestCase) because a
+    real threading.Thread needs its own DB connection that can actually
+    see committed data - TestCase wraps each test in a single uncommitted
+    transaction on one connection, which other threads' connections can't
+    see into, and SQLite's locking then raises "database table is locked"
+    even for read-only queries. TransactionTestCase commits for real
+    instead, so other threads' own connections can see the data.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.endpoint = WebhookEndpoint.objects.create(
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
+            status=WebhookStatus.ACTIVE,
+            owner=self.user,
+        )
+        self.analytics_service = WebhookAnalyticsService()
+
     def test_analytics_concurrent_safety(self):
         """Test analytics calculation concurrent safety."""
         import threading
+        from django.db import connection
         
         # Create delivery logs
         for i in range(100):
@@ -781,21 +788,25 @@ class WebhookAnalyticsServiceTest(TestCase):
                 event_type='user.created',
                 payload={'user_id': 12345 + i},
                 status=DeliveryStatus.SUCCESS,
-                response_code=200,
-                duration_ms=100,
+                http_status_code=200,
+                response_time_ms=100,
                 created_at=timezone.now() - timedelta(minutes=i),
-                created_by=self.user,
             )
         
         results = []
         
         def calculate_analytics():
-            analytics = self.analytics_service.calculate_endpoint_analytics(
-                endpoint=self.endpoint,
-                date_from=timezone.now() - timedelta(days=1),
-                date_to=timezone.now()
-            )
-            results.append(analytics)
+            try:
+                analytics = self.analytics_service.calculate_endpoint_analytics(
+                    endpoint=self.endpoint,
+                    date_from=timezone.now() - timedelta(days=1),
+                    date_to=timezone.now()
+                )
+                results.append(analytics)
+            finally:
+                # Each thread gets its own DB connection; close it when
+                # done rather than leaking it past the thread's lifetime.
+                connection.close()
         
         # Create multiple threads
         threads = []

@@ -24,6 +24,7 @@ class InterstitialAdConfig(TimeStampedModel):
     transition_animation = models.CharField(max_length=20, choices=[("slide","Slide"),("fade","Fade"),("zoom","Zoom")], default="fade")
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_interstitial_ad_configs"
         verbose_name = _("Interstitial Ad Config")
 

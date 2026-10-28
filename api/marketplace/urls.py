@@ -83,11 +83,13 @@ from rest_framework.response import Response
 from rest_framework.routers import SimpleRouter as DefaultRouter
 
 # ── Core ViewSets ─────────────────────────────────────────────────────────────
+from .DISPUTE_RESOLUTION.dispute_views import DisputeViewSet
 from .views import (
     CategoryViewSet,
     ProductViewSet,
     ProductVariantViewSet,
     ProductInventoryViewSet,
+    ProductAttributeViewSet,
     SellerProfileViewSet,
     SellerVerificationViewSet,
     SellerPayoutViewSet,
@@ -112,6 +114,7 @@ router.register(r"categories",       CategoryViewSet,          basename="marketp
 router.register(r"products",         ProductViewSet,           basename="marketplace-product")
 router.register(r"product-variants", ProductVariantViewSet,    basename="marketplace-variant")
 router.register(r"inventory",        ProductInventoryViewSet,  basename="marketplace-inventory")
+router.register(r"product-attributes", ProductAttributeViewSet, basename="marketplace-attribute")
 
 # Sellers
 router.register(r"sellers",             SellerProfileViewSet,      basename="marketplace-seller")
@@ -132,9 +135,12 @@ router.register(r"refunds",      RefundRequestViewSet,      basename="marketplac
 router.register(r"coupons",    CouponViewSet,            basename="marketplace-coupon")
 router.register(r"reviews",    ProductReviewViewSet,     basename="marketplace-review")
 router.register(r"promotions", PromotionCampaignViewSet, basename="marketplace-promotion")
+router.register(r"disputes",   DisputeViewSet,           basename="marketplace-dispute")
 
 
 @api_view(["GET"])
+@api_view(["GET", "POST", "PUT", "DELETE"])
+@api_view(["GET", "POST", "PUT"])
 @permission_classes([AllowAny])
 def search_view(request):
     """
@@ -161,9 +167,7 @@ def search_view(request):
     )
     engine = SearchEngine(tenant)
     return Response(engine.search(q))
-
-
-@api_view(["GET"])
+@api_view(["GET", "DELETE"])
 @permission_classes([AllowAny])
 def autocomplete_view(request):
     """GET /api/marketplace/search/autocomplete/?q=<query>"""
@@ -171,8 +175,6 @@ def autocomplete_view(request):
     tenant = getattr(request, "tenant", None)
     query = request.query_params.get("q", "")
     return Response({"suggestions": autocomplete_suggestions(tenant, query)})
-
-
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def trending_search_view(request):
@@ -180,8 +182,6 @@ def trending_search_view(request):
     from .SEARCH_DISCOVERY.autocomplete import trending_searches
     tenant = getattr(request, "tenant", None)
     return Response({"trending": trending_searches(tenant)})
-
-
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def search_filters_view(request):
@@ -196,7 +196,7 @@ def search_filters_view(request):
 # CHECKOUT SESSION & ADDRESS BOOK
 # ============================================================================
 
-@api_view(["GET", "POST", "PUT"])
+@api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def checkout_session_view(request):
     """
@@ -246,9 +246,7 @@ def checkout_session_view(request):
             session.advance_step("processing")
 
         return Response({"session": session.to_dict(), "progress": get_session_progress(session)})
-
-
-@api_view(["GET", "POST", "PUT", "DELETE"])
+@api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def address_book_view(request):
     """
@@ -287,9 +285,7 @@ def address_book_view(request):
         from .CART_CHECKOUT.address_book import delete_address as del_addr
         deleted = del_addr(int(addr_id), request.user)
         return Response({"deleted": deleted})
-
-
-@api_view(["GET", "DELETE"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def saved_payments_view(request):
     """
@@ -306,18 +302,14 @@ def saved_payments_view(request):
         return Response({"error": "id required"}, status=400)
     deleted = delete_saved_method(request.user, int(addr_id))
     return Response({"deleted": deleted})
-
-
-@api_view(["GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def loyalty_view(request):
     """GET /api/marketplace/loyalty/"""
     from .PROMOTION_MARKETING.loyalty_reward import LoyaltyService
     tenant = getattr(request, "tenant", None)
     return Response(LoyaltyService.get_summary(request.user, tenant))
-
-
-@api_view(["GET", "POST"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def referral_view(request):
     """
@@ -342,7 +334,7 @@ def referral_view(request):
 # DISPUTES
 # ============================================================================
 
-@api_view(["GET", "POST"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def dispute_list_view(request):
     """
@@ -388,9 +380,7 @@ def dispute_list_view(request):
         tenant=tenant,
     )
     return Response(result, status=201)
-
-
-@api_view(["GET"])
+@api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def dispute_detail_view(request, pk: int):
     """GET /api/marketplace/disputes/{pk}/"""
@@ -412,9 +402,7 @@ def dispute_detail_view(request, pk: int):
         "evidence": get_evidence(dispute),
         "created_at": dispute.created_at.isoformat(),
     })
-
-
-@api_view(["POST"])
+@api_view(["GET", "PUT"])
 @permission_classes([IsAuthenticated])
 def dispute_respond_view(request, pk: int):
     """POST /api/marketplace/disputes/{pk}/respond/ {response}"""
@@ -427,9 +415,7 @@ def dispute_respond_view(request, pk: int):
         tenant=tenant,
     )
     return Response(result)
-
-
-@api_view(["POST"])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def dispute_escalate_view(request, pk: int):
     """POST /api/marketplace/disputes/{pk}/escalate/"""
@@ -443,9 +429,7 @@ def dispute_escalate_view(request, pk: int):
         return Response({"success": True, "status": "escalated"})
     except Dispute.DoesNotExist:
         return Response({"error": "Dispute not found"}, status=404)
-
-
-@api_view(["POST"])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def dispute_arbitrate_view(request, pk: int):
     """POST /api/marketplace/disputes/{pk}/arbitrate/ {verdict, notes, refund_percent}"""
@@ -462,9 +446,7 @@ def dispute_arbitrate_view(request, pk: int):
         tenant=tenant,
     )
     return Response(result)
-
-
-@api_view(["POST"])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def dispute_evidence_view(request, pk: int):
     """POST /api/marketplace/disputes/{pk}/evidence/ {file, caption}"""
@@ -503,8 +485,7 @@ def _get_seller(request):
     except SellerProfile.DoesNotExist:
         return None
 
-
-@api_view(["GET", "PUT"])
+@api_view(["POST", "GET"])
 @permission_classes([IsAuthenticated])
 def vendor_inventory_view(request):
     """
@@ -531,9 +512,7 @@ def vendor_inventory_view(request):
     else:
         return Response({"error": "Provide 'file' (CSV) or 'items' (JSON list)"}, status=400)
     return Response(result.to_dict())
-
-
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 def vendor_orders_view(request):
     """
@@ -571,8 +550,6 @@ def vendor_orders_view(request):
         order_numbers = request.data.get("order_numbers", [])
         return Response(mgr.bulk_confirm(order_numbers))
     return Response({"error": "Unknown action. Use: confirm | ship | bulk_confirm"}, status=400)
-
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def vendor_products_view(request):
@@ -587,8 +564,6 @@ def vendor_products_view(request):
         qs = qs.filter(status=status_f)
     from .schemas import ProductListSerializer
     return Response({"products": ProductListSerializer(qs[:100], many=True).data, "total": qs.count()})
-
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def vendor_dashboard_view(request):
@@ -598,9 +573,7 @@ def vendor_dashboard_view(request):
         return Response({"error": "Not a registered seller"}, status=403)
     from .VENDOR_TOOLS.vendor_dashboard import get_full_dashboard
     return Response(get_full_dashboard(seller, getattr(request, "tenant", None)))
-
-
-@api_view(["POST", "GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def vendor_bulk_upload_view(request):
     """
@@ -626,9 +599,6 @@ def vendor_bulk_upload_view(request):
         return Response({"error": "file required"}, status=400)
     result = svc.start_upload(file)
     return Response(result, status=202)
-
-
-@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def vendor_export_view(request):
     """
@@ -677,7 +647,7 @@ def vendor_export_view(request):
 # MOBILE
 # ============================================================================
 
-@api_view(["GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def mobile_sync_view(request):
     """GET /api/marketplace/mobile-sync/"""
@@ -685,8 +655,6 @@ def mobile_sync_view(request):
     tenant = getattr(request, "tenant", None)
     return Response(generate_sync_manifest(tenant, request.user))
 
-
-@api_view(["GET", "POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 def device_token_view(request):
     """
@@ -724,9 +692,6 @@ def device_token_view(request):
     if token_str:
         DeviceToken.objects.filter(token=token_str, user=request.user).update(is_active=False)
     return Response({"deleted": bool(token_str)})
-
-
-@api_view(["GET"])
 @permission_classes([AllowAny])
 def app_config_view(request):
     """GET /api/marketplace/app-config/?platform=android|ios|all"""
@@ -743,7 +708,7 @@ def app_config_view(request):
 # ============================================================================
 
 @csrf_exempt
-@api_view(["POST"])
+
 @permission_classes([AllowAny])
 def payment_webhook_view(request, gateway: str):
     """
@@ -759,7 +724,7 @@ def payment_webhook_view(request, gateway: str):
 
 
 @csrf_exempt
-@api_view(["POST"])
+
 @permission_classes([AllowAny])
 def shipping_webhook_view(request, carrier: str):
     """
@@ -819,4 +784,3 @@ urlpatterns = [
 # ============================================================================
 # SEARCH VIEWS
 # ============================================================================
-

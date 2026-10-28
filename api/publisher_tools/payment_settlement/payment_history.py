@@ -9,7 +9,7 @@ from django.utils import timezone
 
 def get_payment_history(publisher, limit: int = 50) -> List[Dict]:
     """Publisher-এর payment history।"""
-    from api.publisher_tools.publisher_management.publisher_payout import PayoutRequest
+    from publisher_tools.publisher_management.publisher_payout import PayoutRequest
     payouts = PayoutRequest.objects.filter(publisher=publisher).select_related("bank_account").order_by("-created_at")[:limit]
     return [
         {
@@ -30,8 +30,8 @@ def get_payment_history(publisher, limit: int = 50) -> List[Dict]:
 
 def get_payment_summary(publisher, year: int = None) -> Dict:
     """Annual payment summary।"""
-    from api.publisher_tools.publisher_management.publisher_payout import PayoutRequest
-    from api.publisher_tools.models import PublisherInvoice
+    from publisher_tools.publisher_management.publisher_payout import PayoutRequest
+    from publisher_tools.models import PublisherInvoice
     year = year or timezone.now().year
     payouts = PayoutRequest.objects.filter(publisher=publisher, created_at__year=year)
     invoices = PublisherInvoice.objects.filter(publisher=publisher, period_start__year=year)
@@ -48,7 +48,7 @@ def get_payment_summary(publisher, year: int = None) -> Dict:
 
 
 def get_lifetime_payment_stats(publisher) -> Dict:
-    from api.publisher_tools.publisher_management.publisher_payout import PayoutRequest
+    from publisher_tools.publisher_management.publisher_payout import PayoutRequest
     paid = PayoutRequest.objects.filter(publisher=publisher, status="completed")
     return {
         "lifetime_paid":    float(paid.aggregate(t=Sum("net_amount")).get("t") or 0),

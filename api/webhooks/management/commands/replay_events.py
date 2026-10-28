@@ -150,16 +150,34 @@ class Command(BaseCommand):
             logger.error(f"Webhook replay command failed: {e}")
     
     def _show_progress(self, replay_service, replay_batch):
-        """Show progress of batch processing."""
+        """Show progress of batch processing.
+
+        BUG FIX: was calling replay_service.get_batch_status(replay_batch.batch_id)
+        and .get_batch_progress(replay_batch.batch_id) - replay_batch here is a
+        WebhookReplayBatch model instance, which has no batch_id field at all
+        (confirmed against the model - its fields are created_by, event_type,
+        reason, date_from, date_to, count, status, completed_at, created_at,
+        updated_at; the real identifier is .pk). This raised AttributeError on
+        the very first status check.
+
+        That AttributeError never surfaced as a visible crash: it happened
+        inside this method's own try block, so its own `except Exception as e:
+        logger.error(...)` swallowed it - not even to self.stderr, just to the
+        logger. Confirmed empirically: handle() would print "Created replay
+        batch <n> with N events" and "Replay batch processing started", then
+        progress reporting would silently stop with no further output and no
+        visible error, even though the batch itself was created and queued
+        successfully.
+        """
         try:
             while True:
-                batch_status = replay_service.get_batch_status(replay_batch.batch_id)
+                batch_status = replay_service.get_batch_status(replay_batch.pk)
                 
                 if batch_status['status'] in ['completed', 'failed']:
                     break
                 
                 # Get progress
-                progress = replay_service.get_batch_progress(replay_batch.batch_id)
+                progress = replay_service.get_batch_progress(replay_batch.pk)
                 
                 self.stdout.write(
                     f"Progress: {progress['processed_items']}/{progress['total_items']} "
@@ -178,8 +196,15 @@ class Command(BaseCommand):
     
     def _get_event_types(self) -> str:
         """Get available event types for help."""
+        # BUG FIX: was EventType.all_choices() - doesn't exist (EventType
+        # is a Django TextChoices class; .choices is the real property).
+        # This method isn't called anywhere in this file (confirmed - it's
+        # dead code), so this never crashed in practice, but it's the same
+        # confirmed bug fixed elsewhere this session (seed_event_types.py)
+        # and already known-broken per an existing comment in
+        # WebhookEndpointSerializer.py - fixed here too for consistency.
         event_types = []
-        for event_type, display_name in EventType.all_choices():
+        for event_type, display_name in EventType.choices:
             event_types.append(f"  {event_type}: {display_name}")
         
         return '\n'.join(event_types)

@@ -141,7 +141,7 @@ class Command(BaseCommand):
         parser.add_argument('--category', help='Only seed specific category')
 
     def handle(self, *args, **options):
-        from localization.models.core import TranslationKey
+        from api.localization.models.core import TranslationKey
         force = options.get('force', False)
         category = options.get('category')
         keys = CPALEAD_KEYS

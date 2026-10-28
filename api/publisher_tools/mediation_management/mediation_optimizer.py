@@ -7,8 +7,8 @@ from django.utils import timezone
 
 def run_full_optimization(publisher) -> Dict:
     """Publisher-এর সব mediation groups optimize করে।"""
-    from api.publisher_tools.models import MediationGroup
-    from api.publisher_tools.services import MediationService
+    from publisher_tools.models import MediationGroup
+    from publisher_tools.services import MediationService
     groups = MediationGroup.objects.filter(
         ad_unit__publisher=publisher, is_active=True, auto_optimize=True,
     )
@@ -24,7 +24,7 @@ def run_full_optimization(publisher) -> Dict:
 
 def get_optimization_opportunities(publisher) -> List[Dict]:
     """Optimization opportunities identify করে।"""
-    from api.publisher_tools.models import MediationGroup
+    from publisher_tools.models import MediationGroup
     opportunities = []
     groups = MediationGroup.objects.filter(ad_unit__publisher=publisher, is_active=True)
     for group in groups:
@@ -45,7 +45,7 @@ def get_optimization_opportunities(publisher) -> List[Dict]:
 
 def schedule_auto_optimization(publisher, interval_hours: int = 24):
     """Auto-optimization schedule করে।"""
-    from api.publisher_tools.models import MediationGroup
+    from publisher_tools.models import MediationGroup
     from django.utils import timezone
     from datetime import timedelta
     next_run = timezone.now() + timedelta(hours=interval_hours)

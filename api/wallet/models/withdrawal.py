@@ -511,3 +511,84 @@ class WithdrawalBlock(models.Model):
         self.unblocked_by   = by
         self.unblock_reason = reason
         self.save(update_fields=["is_active", "unblocked_at", "unblocked_by", "unblock_reason"])
+
+
+class UserPaymentMethod(models.Model):
+    """
+    A saved payment method for a user — used for quick withdrawal.
+    Stores the user's preferred withdrawal account details.
+
+    Called by: admin_panel.admin, tests/test_wallet.py, serializers.py, views.py.
+    """
+
+    METHOD_BKASH   = "bkash"
+    METHOD_NAGAD   = "nagad"
+    METHOD_ROCKET  = "rocket"
+    METHOD_BANK    = "bank"
+    METHOD_CRYPTO  = "crypto"
+    METHOD_PAYPAL  = "paypal"
+    METHOD_WISE    = "wise"
+    METHOD_CHOICES = [
+        (METHOD_BKASH,  "bKash"),
+        (METHOD_NAGAD,  "Nagad"),
+        (METHOD_ROCKET, "Rocket"),
+        (METHOD_BANK,   "Bank Transfer"),
+        (METHOD_CRYPTO, "Crypto (USDT)"),
+        (METHOD_PAYPAL, "PayPal"),
+        (METHOD_WISE,   "Wise"),
+    ]
+
+    tenant         = models.ForeignKey(
+        "tenants.Tenant", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="user_payment_methods",
+    )
+    user           = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="wallet_payment_methods",
+    )
+    wallet         = models.ForeignKey(
+        "wallet.Wallet", on_delete=models.CASCADE,
+        related_name="wallet_payment_methods", null=True, blank=True,
+    )
+
+    # ── Method details ───────────────────────────────────────────
+    method_type    = models.CharField(
+        max_length=20, choices=METHOD_CHOICES, db_index=True,
+    )
+    account_number = models.CharField(
+        max_length=100,
+        help_text="Phone number (bKash/Nagad), bank account, or crypto address",
+    )
+    account_name   = models.CharField(max_length=150, blank=True)
+    bank_name      = models.CharField(max_length=100, blank=True)
+    routing_number = models.CharField(max_length=50, blank=True)
+
+    # ── Flags ─────────────────────────────────────────────────────
+    is_default     = models.BooleanField(default=False, db_index=True)
+    is_verified    = models.BooleanField(default=False)
+    is_active      = models.BooleanField(default=True, db_index=True)
+
+    # ── Timestamps ────────────────────────────────────────────────
+    verified_at    = models.DateTimeField(null=True, blank=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+    updated_at     = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label   = "wallet"
+        db_table    = "wallet_userpaymentmethod"
+        ordering    = ["-is_default", "-created_at"]
+        indexes     = [
+            models.Index(fields=["user", "is_active"]),
+            models.Index(fields=["user", "method_type"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id} | {self.method_type} | {self.account_number[:6]}***"
+
+    def set_as_default(self) -> None:
+        """Set this method as default, unset all others for this user."""
+        UserPaymentMethod.objects.filter(
+            user=self.user, is_default=True
+        ).exclude(pk=self.pk).update(is_default=False)
+        self.is_default = True
+        self.save(update_fields=["is_default", "updated_at"])

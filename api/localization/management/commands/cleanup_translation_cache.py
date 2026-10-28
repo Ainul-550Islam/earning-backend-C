@@ -9,7 +9,7 @@ class Command(BaseCommand):
         parser.add_argument('--days', type=int, default=7, help='Delete entries older than N days')
 
     def handle(self, *args, **options):
-        from localization.models.translation import TranslationCache
+        from api.localization.models.translation import TranslationCache
         days = options.get('days', 7)
         deleted, _ = TranslationCache.bulk_clean_expired(days=days)
         self.stdout.write(self.style.SUCCESS(f"Deleted {deleted} expired cache entries (older than {days} days)"))

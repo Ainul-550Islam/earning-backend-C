@@ -31,7 +31,7 @@ class CustomReportAPIView(APIView):
             return Response({"success": False, "message": "start_date and end_date required."}, status=400)
 
         from datetime import date
-        from api.publisher_tools.performance_analytics.custom_report import build_custom_report, export_report_to_csv
+        from publisher_tools.performance_analytics.custom_report import build_custom_report, export_report_to_csv
 
         try:
             start = date.fromisoformat(start_date)
@@ -56,7 +56,7 @@ class ScheduledReportAPIView(APIView):
 
     def get(self, request):
         """List publisher-এর scheduled reports।"""
-        from api.publisher_tools.database_models.report_model import ReportRecord
+        from analytics_warehouse.models import ReportRecord
         try:
             publisher = request.user.publisher_profile
         except Exception:
@@ -79,7 +79,7 @@ class ScheduledReportAPIView(APIView):
         schedule    = request.data.get("schedule", "daily")
         email       = request.data.get("email_to", publisher.contact_email)
         from django.utils import timezone
-        from api.publisher_tools.database_models.report_model import ReportRecord
+        from analytics_warehouse.models import ReportRecord
         record = ReportRecord.objects.create(
             publisher=publisher,
             record_date=timezone.now().date(),
@@ -99,7 +99,7 @@ class ReportExportAPIView(APIView):
         if not report_data:
             return Response({"success": False, "message": "report_data required."}, status=400)
         if export_format == "csv":
-            from api.publisher_tools.performance_analytics.custom_report import export_report_to_csv
+            from publisher_tools.performance_analytics.custom_report import export_report_to_csv
             csv_content = export_report_to_csv(report_data)
             return Response({"success": True, "data": {"csv": csv_content, "format": "csv"}})
         return Response({"success": False, "message": f"Format '{export_format}' not supported."}, status=400)

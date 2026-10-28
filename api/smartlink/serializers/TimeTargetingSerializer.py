@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import TimeTargeting
+from api.smartlink.models import TimeTargeting
 
 
 class TimeTargetingSerializer(serializers.ModelSerializer):

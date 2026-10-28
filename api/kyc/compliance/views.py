@@ -8,6 +8,7 @@ import datetime
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def request_gdpr_erasure(request):
     """User requests GDPR data erasure (Right to be Forgotten)"""
@@ -31,9 +32,7 @@ def request_gdpr_erasure(request):
         'deadline': req.deadline,
         'message':  'Erasure request received. Will be processed within 30 days.',
     }, status=201)
-
-
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def request_data_export(request):
     """User requests data export (Right of Access)"""
@@ -60,9 +59,6 @@ def request_data_export(request):
         'download': req.data_export_file.url if req.data_export_file else None,
         'message':  'Data export ready.',
     })
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def log_consent(request):
     """Log user consent for KYC data processing"""
@@ -96,8 +92,6 @@ def log_consent(request):
         'created_at':   log.created_at,
     }, status=201)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_consents(request):
     """Get user's current consent status"""
@@ -113,8 +107,6 @@ def my_consents(request):
             }
     return Response(list(latest.values()))
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def gdpr_requests_list(request):
     """Admin — All GDPR requests"""
@@ -133,8 +125,6 @@ def gdpr_requests_list(request):
     } for r in qs[:100]]
     return Response(data)
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def process_erasure(request, request_id):
     """Admin — Process a GDPR erasure request"""
@@ -160,9 +150,6 @@ def process_erasure(request, request_id):
     req.completed_at = timezone.now()
     req.save()
     return Response({'message': 'Erasure completed', 'summary': summary})
-
-
-@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def cdd_list(request):
     """Admin — CDD records"""

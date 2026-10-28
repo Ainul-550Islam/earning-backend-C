@@ -169,13 +169,12 @@ class CampaignWizard:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def wizard_start_view(request):
     wizard = CampaignWizard(advertiser_id=request.user.id)
     return Response(wizard.start_wizard(), status=status.HTTP_201_CREATED)
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def wizard_step_view(request, step):
     wizard = CampaignWizard(advertiser_id=request.user.id)
@@ -184,8 +183,6 @@ def wizard_step_view(request, step):
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     return Response(result)
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def wizard_submit_view(request):
     wizard = CampaignWizard(advertiser_id=request.user.id)
@@ -193,8 +190,6 @@ def wizard_submit_view(request):
     if 'error' in result:
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     return Response(result, status=status.HTTP_201_CREATED)
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def wizard_state_view(request):

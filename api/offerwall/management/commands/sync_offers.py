@@ -1,6 +1,7 @@
 """
 Management command to sync offers from providers
 """
+from django.db import models
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from api.offerwall.models import OfferProvider

@@ -12,7 +12,7 @@ DEFAULT_THRESHOLDS = {
 
 
 def get_effective_threshold(publisher, payment_method: str) -> Decimal:
-    from api.publisher_tools.models import PayoutThreshold
+    from publisher_tools.models import PayoutThreshold
     threshold = PayoutThreshold.objects.filter(publisher=publisher, payment_method=payment_method, is_primary=True).first()
     if threshold:
         return threshold.minimum_threshold
@@ -20,7 +20,7 @@ def get_effective_threshold(publisher, payment_method: str) -> Decimal:
 
 
 def check_threshold_met(publisher, payment_method: str = None) -> Dict:
-    from api.publisher_tools.models import PayoutThreshold
+    from publisher_tools.models import PayoutThreshold
     if payment_method:
         threshold_val = get_effective_threshold(publisher, payment_method)
     else:
@@ -36,7 +36,7 @@ def check_threshold_met(publisher, payment_method: str = None) -> Dict:
 
 
 def get_all_thresholds(publisher) -> List[Dict]:
-    from api.publisher_tools.models import PayoutThreshold
+    from publisher_tools.models import PayoutThreshold
     return list(
         PayoutThreshold.objects.filter(publisher=publisher).values(
             "payment_method", "minimum_threshold", "payment_frequency", "is_primary", "is_verified"

@@ -1,0 +1,18 @@
+{% extends "cms/email/base_email.html" %}
+{% block subject %}Withdrawal {{ status|title }}: ${{ amount }}{% endblock %}
+{% block content %}
+<p>Hi {{ username }},</p>
+<p>Your withdrawal request has been <strong>{{ status }}</strong>.</p>
+<div class="highlight">
+  <div class="amount">${{ amount }}</div>
+  <p style="margin:4px 0 0;color:#555">Via {{ method|upper }} · Ref: {{ reference }}</p>
+</div>
+{% if status == 'paid' %}
+<p>✅ Your payment has been sent. Please allow 1–3 business days to receive it.</p>
+{% elif status == 'rejected' %}
+<p>❌ Your withdrawal was not approved. Please contact support if you have questions.</p>
+{% else %}
+<p>We are processing your request. You will be notified when it is complete.</p>
+{% endif %}
+<a href="{{ site_url }}/dashboard/" class="btn">View Dashboard</a>
+{% endblock %}

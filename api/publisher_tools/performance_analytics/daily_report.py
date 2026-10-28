@@ -8,7 +8,7 @@ from django.utils import timezone
 
 
 def generate_daily_report(publisher, report_date: date = None) -> Dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     if not report_date:
         report_date = timezone.now().date() - timedelta(days=1)
     agg = PublisherEarning.objects.filter(publisher=publisher, date=report_date).aggregate(
@@ -42,7 +42,7 @@ def generate_daily_report(publisher, report_date: date = None) -> Dict:
 
 
 def get_daily_comparison(publisher, days: int = 7) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     return list(
         PublisherEarning.objects.filter(publisher=publisher, date__gte=start)

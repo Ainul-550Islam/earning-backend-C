@@ -1,0 +1,11 @@
+{{ site_name }}
+================
+
+Hi {{ username }},
+
+{% block content %}{% endblock %}
+
+---
+© {{ year }} {{ site_name }}
+Unsubscribe: {{ unsubscribe_url }}
+{{ site_url }}

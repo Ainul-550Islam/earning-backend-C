@@ -11,7 +11,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         import datetime
         from django.utils import timezone
-        from ...models import Click
+        from api.smartlink.models import Click
 
         days = options['days']
         cutoff = timezone.now() - datetime.timedelta(days=days)

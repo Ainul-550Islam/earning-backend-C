@@ -34,10 +34,11 @@ class ConfigurationService:
     def _initialize_services(self):
         """Initialize configuration services."""
         try:
-            from .cache import RoutingCacheService
+            from .core.RoutingCacheService import RoutingCacheService
             self.cache_service = RoutingCacheService()
-        except ImportError as e:
-            logger.error(f"Failed to initialize configuration services: {e}")
+        except Exception as e:
+            logger.error(f"Failed to initialize configuration services (cache disabled): {e}")
+            self.cache_service = None
     
     def get_routing_config(self, tenant_id: int) -> Dict[str, Any]:
         """Get routing configuration for a tenant."""

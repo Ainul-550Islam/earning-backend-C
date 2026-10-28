@@ -88,7 +88,7 @@ class WebhookFilterViewSet(viewsets.ModelViewSet):
             filter_service = FilterService()
             
             result = filter_service.evaluate_filter(
-                webhook_filter.filter_config,
+                webhook_filter,
                 test_payload
             )
             
@@ -133,7 +133,7 @@ class WebhookFilterViewSet(viewsets.ModelViewSet):
         for delivery in matching_deliveries[:100]:  # Limit to 100 for performance
             try:
                 if filter_service.evaluate_filter(
-                    webhook_filter.filter_config,
+                    webhook_filter.value,
                     delivery.payload
                 ):
                     matched_count += 1
@@ -156,7 +156,7 @@ class WebhookFilterViewSet(viewsets.ModelViewSet):
             'updated_at': webhook_filter.updated_at
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-endpoint')
     def by_endpoint(self, request):
         """Get filters by endpoint ID."""
         endpoint_id = request.query_params.get('endpoint_id')
@@ -182,7 +182,7 @@ class WebhookFilterViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(filters, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-activate')
     def bulk_activate(self, request):
         """Activate multiple filters."""
         filter_ids = request.data.get('filter_ids', [])
@@ -199,7 +199,7 @@ class WebhookFilterViewSet(viewsets.ModelViewSet):
             'updated_count': updated_count
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-deactivate')
     def bulk_deactivate(self, request):
         """Deactivate multiple filters."""
         filter_ids = request.data.get('filter_ids', [])
@@ -216,7 +216,7 @@ class WebhookFilterViewSet(viewsets.ModelViewSet):
             'updated_count': updated_count
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='validate-filter')
     def validate_filter(self, request):
         """Validate filter configuration."""
         filter_config = request.data.get('filter_config')
@@ -254,7 +254,7 @@ class WebhookFilterViewSet(viewsets.ModelViewSet):
                 'message': 'Filter configuration is invalid'
             }, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='common-fields')
     def common_fields(self, request):
         """Get common filter fields."""
         common_fields = [

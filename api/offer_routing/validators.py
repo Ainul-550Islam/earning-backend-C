@@ -129,7 +129,7 @@ def validate_cap_value(value, cap_type):
     if value < 0:
         raise ValidationError(_('Cap value must be positive'))
     
-    if cap_type == CapType.PERCENTAGE and value > 100:
+    if hasattr(CapType, "PERCENTAGE") and cap_type == CapType.PERCENTAGE and value > 100:
         raise ValidationError(_('Percentage cap cannot exceed 100'))
     
     return value
@@ -405,6 +405,8 @@ def validate_email_list(emails):
     if not isinstance(emails, (list, tuple)):
         raise ValidationError(_('Email list must be a list'))
     
+    if len(emails) == 0:
+        raise ValidationError(_('Email list cannot be empty'))
     if len(emails) > 100:
         raise ValidationError(_('Email list cannot exceed 100 addresses'))
     
@@ -426,6 +428,8 @@ def validate_url_list(urls):
     if not isinstance(urls, (list, tuple)):
         raise ValidationError(_('URL list must be a list'))
     
+    if len(urls) == 0:
+        raise ValidationError(_('URL list cannot be empty'))
     if len(urls) > 50:
         raise ValidationError(_('URL list cannot exceed 50 URLs'))
     
@@ -447,7 +451,7 @@ def validate_url_list(urls):
 def validate_date_range(start_date, end_date):
     """Validate date range."""
     if start_date and end_date:
-        if start_date > end_date:
+        if start_date >= end_date:
             raise ValidationError(_('Start date cannot be after end date'))
         
         # Check if range is reasonable
@@ -499,3 +503,165 @@ def validate_json_schema(data, schema):
                 raise ValidationError(_('Field {} must be of type {}').format(field, expected_type.__name__))
     
     return data
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cap validators
+# ─────────────────────────────────────────────────────────────────────────────
+
+def validate_cap_config(config: dict) -> None:
+    """
+    Validate a cap configuration dict.
+    Raises ValidationError with a list of issues.
+    """
+    errors = []
+    valid_types = {'daily', 'weekly', 'monthly', 'lifetime', 'hourly'}
+    cap_type = config.get('cap_type', '')
+    if not cap_type:
+        errors.append('cap_type is required.')
+    elif cap_type not in valid_types:
+        errors.append(f'cap_type must be one of {sorted(valid_types)}.')
+    cap_value = config.get('cap_value') or config.get('max_offers')
+    if cap_value is None:
+        errors.append('cap_value (or max_offers) is required.')
+    elif not isinstance(cap_value, int) or cap_value <= 0:
+        errors.append('cap_value must be a positive integer.')
+    if errors:
+        raise ValidationError(errors)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Geo rule validators
+# ─────────────────────────────────────────────────────────────────────────────
+
+_VALID_COUNTRY_CODES = {
+    'US', 'GB', 'CA', 'AU', 'DE', 'FR', 'JP', 'CN', 'IN', 'BR',
+    'MX', 'KR', 'IT', 'ES', 'RU', 'NL', 'SE', 'NO', 'DK', 'FI',
+    'BD', 'PK', 'NG', 'ZA', 'EG', 'AR', 'CL', 'CO', 'PE', 'PH',
+    'ID', 'TH', 'VN', 'MY', 'SG', 'NZ', 'IE', 'PT', 'GR', 'PL',
+    'CZ', 'HU', 'RO', 'SK', 'HR', 'RS', 'UA', 'BY', 'KZ', 'UZ',
+    'TW', 'HK', 'MO', 'AE', 'SA', 'TR', 'IL', 'IR', 'IQ', 'PK',
+}
+
+
+def validate_geo_rule(config: dict) -> None:
+    """
+    Validate a geo rule configuration dict.
+    At minimum, country must be provided and be a valid ISO 3166-1 alpha-2 code.
+    """
+    errors = []
+    country = config.get('country', '').strip().upper()
+    region  = config.get('region', '').strip()
+    city    = config.get('city', '').strip()
+
+    if not country:
+        errors.append('country is required for a geo rule.')
+    elif len(country) != 2:
+        errors.append(f'country must be a 2-letter ISO code, got "{country}".')
+    elif country not in _VALID_COUNTRY_CODES:
+        errors.append(f'Unrecognised country code "{country}".')
+
+    if region and len(region) > 100:
+        errors.append('region must not exceed 100 characters.')
+    if city and len(city) > 100:
+        errors.append('city must not exceed 100 characters.')
+
+    if errors:
+        raise ValidationError(errors)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fallback rule validators
+# ─────────────────────────────────────────────────────────────────────────────
+
+def validate_fallback_rule(config: dict) -> None:
+    """
+    Validate a fallback rule configuration dict.
+    name, fallback_type, and a positive priority are required.
+    """
+    errors = []
+    valid_types = {'offer_pool', 'default_offer', 'category', 'network',
+                   'price_tier', 'geo_based'}
+
+    if not str(config.get('name', '')).strip():
+        errors.append('name is required.')
+    ftype = config.get('fallback_type', '')
+    if not ftype:
+        errors.append('fallback_type is required.')
+    elif ftype not in valid_types:
+        errors.append(f'fallback_type must be one of {sorted(valid_types)}.')
+    priority = config.get('priority')
+    if priority is None:
+        errors.append('priority is required.')
+    elif not isinstance(priority, int) or priority < 1:
+        errors.append('priority must be a positive integer.')
+    if errors:
+        raise ValidationError(errors)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tenant settings validators
+# ─────────────────────────────────────────────────────────────────────────────
+
+def validate_tenant_settings(config: dict) -> None:
+    """
+    Validate tenant settings configuration.
+    Enforces limits on max_routes, max_offers_per_route, etc.
+    """
+    errors = []
+    max_routes = config.get('max_routes')
+    if max_routes is not None:
+        if not isinstance(max_routes, int) or max_routes < 1:
+            errors.append('max_routes must be a positive integer.')
+        elif max_routes > 10_000:
+            errors.append('max_routes cannot exceed 10,000.')
+
+    max_offers = config.get('max_offers_per_route')
+    if max_offers is not None:
+        if not isinstance(max_offers, int) or max_offers < 1:
+            errors.append('max_offers_per_route must be a positive integer.')
+        elif max_offers > 1_000:
+            errors.append('max_offers_per_route cannot exceed 1,000.')
+
+    for bool_field in ('enable_ab_testing', 'enable_personalization',
+                        'enable_geo_targeting', 'enable_fraud_detection'):
+        val = config.get(bool_field)
+        if val is not None and not isinstance(val, bool):
+            errors.append(f'{bool_field} must be a boolean (true/false).')
+
+    if errors:
+        raise ValidationError(errors)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Routing weight validator
+# ─────────────────────────────────────────────────────────────────────────────
+
+def validate_routing_weight(weight_config: dict) -> None:
+    """
+    Validate a routing weight configuration.
+    All weight values must be non-negative floats that sum to ≤ 1.0 (or ≤ 100 for %).
+    """
+    errors = []
+    weights = {}
+    valid_keys = {'ctr_weight', 'epc_weight', 'quality_weight', 'recency_weight',
+                  'personalization_weight', 'geo_weight'}
+
+    for key, val in weight_config.items():
+        if key not in valid_keys:
+            continue  # ignore unknown keys silently
+        if not isinstance(val, (int, float)):
+            errors.append(f'{key} must be a number.')
+            continue
+        if val < 0:
+            errors.append(f'{key} must be non-negative.')
+        weights[key] = float(val)
+
+    total = sum(weights.values())
+    # Accept either 0–1 scale or 0–100 scale
+    if weights and total > 1.01 and total > 100.01:
+        errors.append(
+            f'Routing weights sum to {total:.2f}; they must sum to ≤ 1.0 or ≤ 100.'
+        )
+    if errors:
+        raise ValidationError(errors)
+

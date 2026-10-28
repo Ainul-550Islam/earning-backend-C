@@ -23,6 +23,7 @@ class SiteGeoData(TimeStampedModel):
     traffic_pct   = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_geo_data'
         verbose_name = _('Site Geo Data')
         ordering = ['-date', '-revenue']
@@ -47,6 +48,7 @@ class SiteGeoTargetingRule(TimeStampedModel):
     reason         = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_geo_rules'
         verbose_name = _('Geo Targeting Rule')
         ordering = ['-created_at']

@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from ..models.publisher import PublisherSmartLink
-from ..serializers.PublisherSmartLinkSerializer import PublisherSmartLinkSerializer
-from ..permissions import IsPublisher
+from api.smartlink.models.publisher import PublisherSmartLink
+from api.smartlink.serializers.PublisherSmartLinkSerializer import PublisherSmartLinkSerializer
+from api.smartlink.permissions import IsPublisher
 
 
 class PublisherSmartLinkViewSet(viewsets.ReadOnlyModelViewSet):

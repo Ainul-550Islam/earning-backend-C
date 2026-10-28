@@ -36,8 +36,8 @@ class CurrencyConversionService:
 
     def _log_conversion(self, amount, from_code, to_code, rate, user=None, ip_address='', request_path=''):
         try:
-            from ..models.currency import CurrencyConversionLog
-            from ..models.core import Currency
+            from api.localization.models.currency import CurrencyConversionLog
+            from api.localization.models.core import Currency
             CurrencyConversionLog.objects.create(
                 from_currency=Currency.objects.filter(code=from_code).first(),
                 to_currency=Currency.objects.filter(code=to_code).first(),

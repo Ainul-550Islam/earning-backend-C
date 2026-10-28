@@ -1,173 +1,345 @@
 # api/djoyalty/models/core.py
 """
-Core models: Customer, Txn, Event
-Original models.py থেকে নেওয়া + related_name fix + tenant isolation।
-"""
+Djoyalty Core Models -- Customer, Txn, Event।
+Existing models fix + new fields add।
 
+AUDIT FIXES (v2 -- integrity pass):
+  Tenant.Meta: Added Meta.indexes with (slug, is_active) compound index and
+               standalone (is_active,) index।  Previously only `slug` and
+               `api_key` had implicit B-tree indexes via unique=True।  The
+               compound (slug, is_active) covers the most common query pattern
+               ("find active tenant by slug") without a second scan।
+"""
+import logging
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from ..managers import (
-    ActiveCustomerManager, NewsletterCustomerManager,
-    FullPriceTxnManager, DiscountedTxnManager, SpendingTxnManager, RecentTxnManager,
-    CustomerRelatedEvtManager, AnonymousEvtManager, RecentEvtManager,
+    ActiveManager, InactiveManager,
+    CustomerRelatedManager, AnonymousManager,
+    FullPriceTxnManager, DiscountTxnManager,
 )
+from ..validators import validate_customer_code, validate_phone_number
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
 class Customer(models.Model):
-
-    tenant = models.ForeignKey(
-        'tenants.Tenant',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='djoyalty_customer_tenant',
-        db_index=True,
-    )
+    """
+    Loyalty customer profile।
+    User FK optional -- guest customers support করে।
+    """
+    # Optional Django User link
     user = models.OneToOneField(
         User,
+        null=True, blank=True,
         on_delete=models.SET_NULL,
-        null=True, blank=True,
         related_name='loyalty_customer',
-        help_text='Linked auth user (optional)',
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    code = models.CharField(max_length=32, unique=True)
-    firstname = models.CharField(max_length=64, null=True, blank=True)
-    lastname = models.CharField(max_length=64, null=True, blank=True)
-    street = models.CharField(max_length=64, null=True, blank=True)
-    city = models.CharField(max_length=64, null=True, blank=True)
-    zip = models.CharField(max_length=16, null=True, blank=True)
-    email = models.CharField(max_length=64, null=True, blank=True)
-    phone = models.CharField(max_length=64, null=True, blank=True)
-    note = models.TextField(null=True, blank=True)
-    newsletter = models.BooleanField(default=True)
-    is_active = models.BooleanField(default=True, db_index=True)
-    birth_date = models.DateField(null=True, blank=True)
-    referral_code = models.CharField(max_length=32, unique=True, null=True, blank=True)
-    referred_by = models.ForeignKey(
-        'self', on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='referrals',
+        verbose_name='User Account',
     )
 
+    # Tenant support
+    tenant = models.ForeignKey(
+        'djoyalty.Tenant',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='customers',
+        verbose_name='Tenant',
+    )
+
+    # Identity
+    code = models.CharField(
+        max_length=50, unique=True,
+        validators=[validate_customer_code],
+        verbose_name='Customer Code',
+        help_text='Unique customer identifier (uppercase)',
+    )
+    loyalty_number = models.CharField(
+        max_length=30, unique=True,
+        null=True, blank=True,
+        verbose_name='Loyalty Number',
+        help_text='Auto-generated loyalty card number',
+    )
+    firstname = models.CharField(max_length=100, null=True, blank=True, verbose_name='First Name')
+    lastname = models.CharField(max_length=100, null=True, blank=True, verbose_name='Last Name')
+    email = models.EmailField(null=True, blank=True, verbose_name='Email Address')
+    phone = models.CharField(
+        max_length=30, null=True, blank=True,
+        validators=[validate_phone_number],
+        verbose_name='Phone Number',
+    )
+    city = models.CharField(max_length=100, null=True, blank=True, verbose_name='City')
+    country = models.CharField(max_length=100, null=True, blank=True, verbose_name='Country')
+    address = models.TextField(null=True, blank=True, verbose_name='Address')
+    date_of_birth = models.DateField(null=True, blank=True, verbose_name='Date of Birth')
+    gender = models.CharField(
+        max_length=10, null=True, blank=True,
+        choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')],
+    )
+
+    # Preferences
+    newsletter = models.BooleanField(default=True, verbose_name='Newsletter Subscribed')
+    sms_opt_in = models.BooleanField(default=False, verbose_name='SMS Opt-in')
+    push_opt_in = models.BooleanField(default=False, verbose_name='Push Notification Opt-in')
+
+    # Status
+    is_active = models.BooleanField(default=True, verbose_name='Active')
+    is_verified = models.BooleanField(default=False, verbose_name='Verified')
+
+    # Referral
+    referred_by = models.ForeignKey(
+        'self',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='referrals',
+        verbose_name='Referred By',
+    )
+    referral_code = models.CharField(max_length=20, null=True, blank=True, unique=True)
+
+    # Metadata
+    metadata = models.JSONField(default=dict, blank=True, verbose_name='Metadata')
+    notes = models.TextField(null=True, blank=True, verbose_name='Internal Notes')
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated At')
+    last_activity_at = models.DateTimeField(null=True, blank=True, verbose_name='Last Activity')
+
+    # Managers
     objects = models.Manager()
-    active = ActiveCustomerManager()
-    newsletter_subscribers = NewsletterCustomerManager()
+    active = ActiveManager()
+    inactive = InactiveManager()
 
     class Meta:
         app_label = 'djoyalty'
+        verbose_name = 'Customer'
+        verbose_name_plural = 'Customers'
+        ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['tenant', 'code'], name='idx_tenant_code_968'),
-            models.Index(fields=['tenant', 'email'], name='idx_tenant_email_969'),
-            models.Index(fields=['is_active'], name='idx_is_active_970'),
+            models.Index(fields=['code']),
+            models.Index(fields=['email']),
+            models.Index(fields=['tenant', 'is_active']),
+            models.Index(fields=['created_at']),
         ]
 
     def __str__(self):
-        return '[{}] {}'.format(
-            self.code,
-            ' '.join(filter(None, [self.firstname, self.lastname]))
-        )
+        name = self.full_name
+        return f'{self.code} -- {name}' if name != 'Unnamed' else self.code
 
     @property
-    def full_name(self):
-        return ' '.join(filter(None, [self.firstname, self.lastname])) or 'Unnamed'
+    def full_name(self) -> str:
+        parts = [p for p in [self.firstname, self.lastname] if p]
+        return ' '.join(parts) if parts else 'Unnamed'
+
+    @property
+    def points_balance(self) -> Decimal:
+        lp = self.loyalty_points.first()
+        return lp.balance if lp else Decimal('0')
 
     @property
     def current_tier(self):
-        try:
-            return self.user_tiers.filter(is_current=True).first()
-        except Exception:
-            return None
+        """Customer এর current active UserTier।"""
+        return self.user_tiers.filter(is_current=True).select_related('tier').first()
 
     @property
-    def points_balance(self):
-        try:
-            lp = self.loyalty_points.first()
-            return lp.balance if lp else 0
-        except Exception:
-            return 0
+    def lifetime_points(self) -> Decimal:
+        lp = self.loyalty_points.first()
+        return lp.lifetime_earned if lp else Decimal('0')
+
+    def save(self, *args, **kwargs):
+        if self.code:
+            self.code = self.code.strip().upper()
+        if not self.loyalty_number:
+            from ..utils import generate_loyalty_number
+            ln = generate_loyalty_number()
+            while Customer.objects.filter(loyalty_number=ln).exists():
+                ln = generate_loyalty_number()
+            self.loyalty_number = ln
+        super().save(*args, **kwargs)
 
 
 class Txn(models.Model):
-
-    tenant = models.ForeignKey(
-        'tenants.Tenant',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='djoyalty_txn_tenant',
-        db_index=True,
-    )
-    timestamp = models.DateTimeField(auto_now_add=True)
+    """
+    Customer transaction record।
+    Purchase, spend, discount transactions।
+    """
     customer = models.ForeignKey(
-        'Customer',
-        related_name='transactions',
+        Customer,
         on_delete=models.CASCADE,
+        related_name='transactions',
+        verbose_name='Customer',
     )
-    value = models.DecimalField(decimal_places=2, max_digits=10)
-    is_discount = models.BooleanField(default=False)
-    reference = models.CharField(max_length=128, null=True, blank=True, db_index=True)
-    note = models.TextField(null=True, blank=True)
+    tenant = models.ForeignKey(
+        'djoyalty.Tenant',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='transactions',
+    )
+    value = models.DecimalField(
+        max_digits=14, decimal_places=2,
+        verbose_name='Transaction Value',
+    )
+    is_discount = models.BooleanField(default=False, verbose_name='Is Discount Purchase')
 
+    # New fields
+    txn_type = models.CharField(
+        max_length=30, null=True, blank=True,
+        choices=[
+            ('purchase', 'Purchase'),
+            ('refund', 'Refund'),
+            ('spend', 'Spend'),
+            ('discount', 'Discount Purchase'),
+            ('other', 'Other'),
+        ],
+        verbose_name='Transaction Type',
+    )
+    source = models.CharField(max_length=50, null=True, blank=True, verbose_name='Source')
+    reference_id = models.CharField(max_length=100, null=True, blank=True, verbose_name='Reference ID')
+    description = models.CharField(max_length=255, null=True, blank=True, verbose_name='Description')
+    currency = models.CharField(max_length=10, default='BDT', verbose_name='Currency')
+    metadata = models.JSONField(default=dict, blank=True, verbose_name='Metadata')
+
+    timestamp = models.DateTimeField(default=timezone.now, verbose_name='Timestamp')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Managers
     objects = models.Manager()
     txn_full = FullPriceTxnManager()
-    txn_discount = DiscountedTxnManager()
-    spending = SpendingTxnManager()
-    recent = RecentTxnManager()
+    txn_discount = DiscountTxnManager()
 
     class Meta:
         app_label = 'djoyalty'
+        verbose_name = 'Transaction'
+        verbose_name_plural = 'Transactions'
+        ordering = ['-timestamp']
         indexes = [
-            models.Index(fields=['tenant', 'customer'], name='idx_tenant_customer_971'),
-            models.Index(fields=['timestamp'], name='idx_timestamp_972'),
-            models.Index(fields=['is_discount'], name='idx_is_discount_973'),
+            models.Index(fields=['customer', 'timestamp']),
+            models.Index(fields=['tenant', 'timestamp']),
+            models.Index(fields=['is_discount']),
+            models.Index(fields=['reference_id']),
         ]
 
     def __str__(self):
-        return '{}{}@{} by {}'.format(
-            self.value,
-            '[X]' if self.is_discount else '',
-            self.timestamp,
-            self.customer,
-        )
+        discount_flag = ' [D]' if self.is_discount else ''
+        return f'Txn({self.customer.code}: {self.value}{discount_flag})'
+
+    @property
+    def type_label(self) -> str:
+        if self.is_discount:
+            return 'Discount'
+        if self.value < 0:
+            return 'Spend / Refund'
+        return 'Full Price'
 
 
 class Event(models.Model):
-
-    tenant = models.ForeignKey(
-        'tenants.Tenant',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='djoyalty_event_tenant',
-        db_index=True,
-    )
-    timestamp = models.DateTimeField(auto_now_add=True)
+    """
+    Customer activity event log।
+    Anonymous events support করে (customer=None)।
+    """
     customer = models.ForeignKey(
-        'Customer',
-        related_name='events',
+        Customer,
         null=True, blank=True,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        related_name='events',
+        verbose_name='Customer',
     )
-    action = models.CharField(max_length=128, db_index=True)
-    description = models.TextField(null=True, blank=True)
-    metadata = models.JSONField(null=True, blank=True, default=dict)
+    tenant = models.ForeignKey(
+        'djoyalty.Tenant',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='events',
+    )
+    action = models.CharField(max_length=100, verbose_name='Action')
+    description = models.TextField(null=True, blank=True, verbose_name='Description')
 
+    # New fields
+    event_category = models.CharField(
+        max_length=50, null=True, blank=True,
+        choices=[
+            ('auth', 'Authentication'),
+            ('purchase', 'Purchase'),
+            ('loyalty', 'Loyalty'),
+            ('engagement', 'Engagement'),
+            ('admin', 'Admin'),
+            ('system', 'System'),
+            ('other', 'Other'),
+        ],
+        verbose_name='Event Category',
+    )
+    metadata = models.JSONField(default=dict, blank=True, verbose_name='Metadata')
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name='IP Address')
+    user_agent = models.CharField(max_length=500, null=True, blank=True, verbose_name='User Agent')
+    source = models.CharField(max_length=50, null=True, blank=True, verbose_name='Source')
+
+    timestamp = models.DateTimeField(default=timezone.now, verbose_name='Timestamp')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Managers
     objects = models.Manager()
-    customer_related = CustomerRelatedEvtManager()
-    anonymous = AnonymousEvtManager()
-    recent = RecentEvtManager()
+    customer_related = CustomerRelatedManager()
+    anonymous = AnonymousManager()
 
     class Meta:
         app_label = 'djoyalty'
+        verbose_name = 'Event'
+        verbose_name_plural = 'Events'
+        ordering = ['-timestamp']
         indexes = [
-            models.Index(fields=['tenant', 'customer'], name='idx_tenant_customer_974'),
-            models.Index(fields=['action'], name='idx_action_975'),
-            models.Index(fields=['timestamp'], name='idx_timestamp_976'),
+            models.Index(fields=['customer', 'action']),
+            models.Index(fields=['tenant', 'timestamp']),
+            models.Index(fields=['action']),
+            models.Index(fields=['timestamp']),
         ]
 
     def __str__(self):
-        return '{} @ {} by {}'.format(
-            self.action,
-            self.timestamp,
-            self.customer or 'Anonymous',
-        )
+        who = self.customer.code if self.customer else 'Anonymous'
+        return f'Event({who}: {self.action})'
+
+    @property
+    def is_anonymous(self) -> bool:
+        return self.customer is None
+
+
+class Tenant(models.Model):
+    """
+    Multi-tenant support।
+    SaaS deployment এ প্রতিটি business তার নিজের tenant।
+
+    AUDIT FIX (v2): Added Meta.indexes block।
+    `slug` and `api_key` already have implicit indexes via unique=True, but the
+    compound (slug, is_active) pattern -- "find active tenant by slug" -- was
+    doing a B-tree scan on slug then a Python-level filter on is_active।
+    The compound index covers this in a single index lookup।
+    """
+    name = models.CharField(max_length=200, verbose_name='Tenant Name')
+    slug = models.SlugField(unique=True, verbose_name='Slug')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    settings = models.JSONField(default=dict, blank=True)
+    plan = models.CharField(max_length=50, default='standard')
+    api_key = models.CharField(max_length=100, null=True, blank=True, unique=True)
+
+    # Managers
+    objects = models.Manager()
+    active = ActiveManager()
+
+    class Meta:
+        app_label = 'djoyalty'
+        verbose_name = 'Tenant'
+        verbose_name_plural = 'Tenants'
+        # AUDIT FIX (v2): Added indexes।  slug + api_key unique=True already
+        # create individual B-tree indexes।  Compound (slug, is_active) added
+        # for the most frequent lookup pattern used in middleware and
+        # DjoyaltyTenantMixin।  Standalone (is_active,) covers admin list views।
+        indexes = [
+            models.Index(fields=['slug', 'is_active']),
+            models.Index(fields=['is_active']),
+        ]
+
+    def __str__(self):
+        return self.name

@@ -78,7 +78,6 @@ class AbstractApiIntegration:
             logger.error(f"{self.SERVICE_NAME} enrich failed for {ip_address}: {e}")
             return False
 
-FETCH_PLACEHOLDER
     def _fetch(self, ip_address: str) -> dict:
         try:
             resp = requests.get(

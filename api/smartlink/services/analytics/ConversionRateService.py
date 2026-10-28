@@ -1,13 +1,14 @@
 import logging
+from api.smartlink.services.analytics.base import AnalyticsServiceBase
 import datetime
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
-from ...models import Click, SmartLink
+from api.smartlink.models import Click, SmartLink
 
 logger = logging.getLogger('smartlink.cr_service')
 
 
-class ConversionRateService:
+class ConversionRateService(AnalyticsServiceBase):
     """
     Calculate conversion rates at various granularities.
     CR = conversions / clicks × 100
@@ -15,7 +16,7 @@ class ConversionRateService:
 
     def calculate_for_smartlink(self, smartlink: SmartLink, days: int = 7) -> float:
         """Overall CR for a SmartLink."""
-        cutoff = timezone.now().date() - datetime.timedelta(days=days)
+        cutoff = self.date_cutoff(days)
         agg = Click.objects.filter(
             smartlink=smartlink,
             created_at__date__gte=cutoff,
@@ -30,7 +31,7 @@ class ConversionRateService:
 
     def calculate_by_country(self, smartlink: SmartLink, days: int = 7) -> list:
         """CR broken down by country."""
-        cutoff = timezone.now().date() - datetime.timedelta(days=days)
+        cutoff = self.date_cutoff(days)
         rows = (
             Click.objects.filter(
                 smartlink=smartlink,
@@ -58,7 +59,7 @@ class ConversionRateService:
 
     def calculate_by_device(self, smartlink: SmartLink, days: int = 7) -> list:
         """CR broken down by device type."""
-        cutoff = timezone.now().date() - datetime.timedelta(days=days)
+        cutoff = self.date_cutoff(days)
         rows = (
             Click.objects.filter(
                 smartlink=smartlink,

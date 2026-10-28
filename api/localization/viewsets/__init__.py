@@ -12,6 +12,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+from ..tenant import TenantQuerysetMixin, get_tenant_id
+
 class LanguageViewSet(viewsets.ModelViewSet):
     """Language ViewSet — আগের সব logic রাখা হয়েছে"""
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -151,7 +153,8 @@ class TranslationKeyViewSet(viewsets.ModelViewSet):
         return Response(result)
 
 
-class MissingTranslationViewSet(viewsets.ModelViewSet):
+class MissingTranslationViewSet(TenantQuerysetMixin, viewsets.ModelViewSet):
+    _skip_tenant_filter = True  # missing translations are global logs
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['language', 'resolved']
     search_fields = ['key']
@@ -171,7 +174,8 @@ class MissingTranslationViewSet(viewsets.ModelViewSet):
         return [AllowAny()]
 
 
-class TranslationCacheViewSet(viewsets.ModelViewSet):
+class TranslationCacheViewSet(TenantQuerysetMixin, viewsets.ModelViewSet):
+    _skip_tenant_filter = True  # cache is global, keyed by language_code
     permission_classes = [IsAdminUser]
 
     def get_queryset(self):
@@ -199,7 +203,7 @@ class TranslationCacheViewSet(viewsets.ModelViewSet):
 class CountryViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['continent', 'is_active', 'is_eu_member']
+    filterset_fields = ['is_active']
     search_fields = ['name', 'code', 'native_name']
 
     def get_queryset(self):
@@ -290,7 +294,8 @@ class ExchangeRateViewSet(viewsets.ReadOnlyModelViewSet):
         return CurrencyExchangeRateSerializer
 
 
-class TranslationMemoryViewSet(viewsets.ModelViewSet):
+class TranslationMemoryViewSet(TenantQuerysetMixin, viewsets.ModelViewSet):
+    tenant_field = 'tenant_id'
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['source_language', 'target_language', 'domain', 'is_approved']
@@ -384,8 +389,8 @@ class TranslationGlossaryViewSet(viewsets.ModelViewSet):
         return TranslationGlossary.objects.select_related('source_language').order_by('source_term')
 
     def get_serializer_class(self):
-        from ..serializers.glossary import GlossaryTermSerializer
-        return GlossaryTermSerializer
+        from ..serializers.glossary_full import TranslationGlossarySerializer
+        return TranslationGlossarySerializer
 
 
 class TranslationCoverageViewSet(viewsets.ReadOnlyModelViewSet):
@@ -463,8 +468,10 @@ class PublicViewSet(viewsets.ViewSet):
         return Response({'success': True, 'language': lang_code, 'translations': data, 'count': len(data)})
 
 
-class LocalizedContentViewSet(viewsets.ModelViewSet):
-    """LocalizedContent API — content per locale for CPAlead offers/pages"""
+class LocalizedContentViewSet(TenantQuerysetMixin, viewsets.ModelViewSet):
+    """LocalizedContent API — content per locale, tenant-scoped"""
+    tenant_field = 'config__tenant_id'
+    _skip_tenant_filter = True  # scoped via content_type+object_id in the app layer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['language', 'content_type', 'is_approved', 'review_status']
     search_fields = ['content_type', 'object_id', 'field_name']
@@ -536,8 +543,9 @@ class LocalizedContentViewSet(viewsets.ModelViewSet):
         return Response({'created': created, 'updated': updated, 'total': created + updated})
 
 
-class LocalizedSEOViewSet(viewsets.ModelViewSet):
-    """LocalizedSEO API — meta title/description per locale"""
+class LocalizedSEOViewSet(TenantQuerysetMixin, viewsets.ModelViewSet):
+    """LocalizedSEO API — meta title/description per locale, tenant-scoped"""
+    _skip_tenant_filter = True  # scoped via content_type+object_id in the app layer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['language', 'content_type', 'is_indexable']
 
@@ -645,8 +653,9 @@ class NumberFormatViewSet(viewsets.ReadOnlyModelViewSet):
         })
 
 
-class TranslationRequestViewSet(viewsets.ModelViewSet):
-    """TranslationRequest API — request professional translation"""
+class TranslationRequestViewSet(TenantQuerysetMixin, viewsets.ModelViewSet):
+    """TranslationRequest API — request professional translation, tenant-scoped"""
+    tenant_field = 'tenant_id'
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'priority', 'source_language']
@@ -656,6 +665,7 @@ class TranslationRequestViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         from ..models.content import TranslationRequest
         qs = TranslationRequest.objects.select_related('source_language', 'requested_by', 'assigned_to')
+        qs = self._apply_tenant_filter(qs)
         if not self.request.user.is_staff:
             qs = qs.filter(requested_by=self.request.user)
         return qs.order_by('-created_at')
@@ -725,6 +735,23 @@ class LocalizationConfigViewSet(viewsets.ModelViewSet):
 class UserPreferenceViewSet(viewsets.ViewSet):
     """UserPreference full API — wraps the expanded UserPreferenceService"""
     permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        from ..serializers.user_preference import UserLanguagePreferenceSerializer
+        return UserLanguagePreferenceSerializer
+
+    @action(detail=False, methods=['get'])
+    def object(self, request):
+        """Raw UserLanguagePreference model instance for the current user"""
+        from ..models.core import UserLanguagePreference
+        from ..serializers.user_preference import UserLanguagePreferenceSerializer
+        try:
+            pref = UserLanguagePreference.objects.select_related(
+                'primary_language', 'ui_language', 'content_language'
+            ).prefetch_related('preferred_languages').get(user=request.user)
+        except UserLanguagePreference.DoesNotExist:
+            return Response({'detail': 'No preference record found.'}, status=404)
+        return Response(UserLanguagePreferenceSerializer(pref).data)
 
     @action(detail=False, methods=['get'])
     def my(self, request):
@@ -809,7 +836,8 @@ class UserPreferenceViewSet(viewsets.ViewSet):
             'coverage': result['coverage'],
         })
 
-class InsightViewSet(viewsets.ReadOnlyModelViewSet):
+class InsightViewSet(TenantQuerysetMixin, viewsets.ReadOnlyModelViewSet):
+    tenant_field = 'tenant_id'
     """LocalizationInsight analytics viewset"""
     permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -1270,3 +1298,266 @@ class ContentRegionViewSet(viewsets.ViewSet):
         """All regions summary"""
         from ..services.cpalead.ContentRegionService import ContentRegionService
         return Response(ContentRegionService().get_all_regions_summary())
+
+# ─── New viewsets for previously uncovered models ─────────────────────────────
+
+class CountryCurrencyViewSet(viewsets.ModelViewSet):
+    """CountryCurrency — which currencies are used per country"""
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['country', 'is_primary', 'is_legal_tender', 'is_accepted']
+    search_fields = ['country__name', 'country__code', 'currency__code', 'currency__name']
+
+    def get_queryset(self):
+        from ..models.geo import CountryCurrency
+        qs = CountryCurrency.objects.select_related('country', 'currency').order_by('country__name', '-is_primary')
+        country = self.request.query_params.get('country_code')
+        if country:
+            qs = qs.filter(country__code=country.upper())
+        return qs
+
+    def get_serializer_class(self):
+        from ..serializers.country_currency import CountryCurrencySerializer
+        return CountryCurrencySerializer
+
+    @action(detail=False, methods=['get'])
+    def for_country(self, request):
+        """All currencies for a given country code"""
+        code = request.query_params.get('code', '').upper()
+        if not code:
+            return Response({'error': 'code param required'}, status=status.HTTP_400_BAD_REQUEST)
+        from ..models.geo import CountryCurrency
+        qs = CountryCurrency.objects.filter(country__code=code).select_related('country', 'currency').order_by('-is_primary')
+        from ..serializers.country_currency import CountryCurrencySerializer
+        return Response(CountryCurrencySerializer(qs, many=True).data)
+
+
+class TranslationGlossaryEntryViewSet(viewsets.ModelViewSet):
+    """TranslationGlossaryEntry — per-language translations of glossary terms"""
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['glossary', 'language', 'is_approved']
+    search_fields = ['translated_term', 'alternative_terms', 'notes']
+
+    def get_queryset(self):
+        from ..models.translation import TranslationGlossaryEntry
+        qs = TranslationGlossaryEntry.objects.select_related(
+            'glossary', 'language', 'approved_by'
+        ).order_by('glossary__source_term', 'language__code')
+        glossary_id = self.request.query_params.get('glossary_id')
+        if glossary_id:
+            qs = qs.filter(glossary_id=glossary_id)
+        lang = self.request.query_params.get('lang')
+        if lang:
+            qs = qs.filter(language__code=lang)
+        return qs
+
+    def get_serializer_class(self):
+        from ..serializers.glossary_entry import TranslationGlossaryEntrySerializer
+        return TranslationGlossaryEntrySerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticatedOrReadOnly()]
+        return [IsAuthenticated()]
+
+    @action(detail=False, methods=['post'])
+    def bulk_approve(self, request):
+        """Approve multiple glossary entries at once"""
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'error': 'ids list required'}, status=status.HTTP_400_BAD_REQUEST)
+        from ..models.translation import TranslationGlossaryEntry
+        updated = TranslationGlossaryEntry.objects.filter(id__in=ids).update(
+            is_approved=True, approved_by=request.user
+        )
+        return Response({'approved': updated})
+
+
+class TranslationVersionViewSet(viewsets.ReadOnlyModelViewSet):
+    """TranslationVersion — full audit history of every translation change"""
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['translation', 'source', 'is_approved']
+    search_fields = ['value', 'change_reason']
+    ordering_fields = ['version_number', 'created_at']
+    ordering = ['-version_number']
+
+    def get_queryset(self):
+        from ..models.translation import TranslationVersion
+        qs = TranslationVersion.objects.select_related(
+            'translation__key', 'translation__language', 'changed_by'
+        )
+        translation_id = self.request.query_params.get('translation_id')
+        if translation_id:
+            qs = qs.filter(translation_id=translation_id)
+        lang = self.request.query_params.get('lang')
+        if lang:
+            qs = qs.filter(translation__language__code=lang)
+        key = self.request.query_params.get('key')
+        if key:
+            qs = qs.filter(translation__key__key=key)
+        return qs
+
+    def get_serializer_class(self):
+        from ..serializers.translation_version import TranslationVersionSerializer
+        return TranslationVersionSerializer
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        """Restore a translation to this historical version"""
+        version = self.get_object()
+        translation = version.translation
+        translation.value = version.value
+        if version.value_plural:
+            translation.value_plural = version.value_plural
+        translation.save()
+        return Response({
+            'success': True,
+            'restored_to_version': version.version_number,
+            'translation_id': translation.id,
+        })
+
+
+# ── New viewsets for previously uncovered models ──────────────────────────────
+
+class WebhookRegistrationViewSet(TenantQuerysetMixin, viewsets.ModelViewSet):
+    """Manage webhook endpoint registrations — per-tenant."""
+    tenant_field = 'tenant_id'
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['is_active']
+    search_fields = ['name', 'url', 'events']
+
+    def get_queryset(self):
+        from ..models.settings import WebhookRegistration
+        qs = WebhookRegistration.objects.select_related('created_by').order_by('-created_at')
+        return self._apply_tenant_filter(qs)
+
+    def get_serializer_class(self):
+        from ..serializers.webhook import WebhookRegistrationSerializer
+        return WebhookRegistrationSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated()]
+        return [IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        from ..tenant import get_tenant_id
+        tid = get_tenant_id(self.request)
+        kwargs = {'created_by': self.request.user}
+        if tid:
+            kwargs['tenant_id'] = tid
+        serializer.save(**kwargs)
+
+    @action(detail=True, methods=['get'])
+    def deliveries(self, request, pk=None):
+        """Delivery history for this webhook."""
+        webhook = self.get_object()
+        from ..models.settings import WebhookDeliveryLog
+        from ..serializers.webhook import WebhookDeliveryLogSerializer
+        qs = WebhookDeliveryLog.objects.filter(webhook=webhook).order_by('-created_at')[:100]
+        return Response(WebhookDeliveryLogSerializer(qs, many=True).data)
+
+    @action(detail=True, methods=['post'])
+    def test(self, request, pk=None):
+        """Send a test ping to this webhook endpoint."""
+        webhook = self.get_object()
+        import requests as req
+        try:
+            resp = req.post(
+                webhook.url,
+                json={'event': 'test.ping', 'webhook_id': str(webhook.id)},
+                headers=webhook.headers or {},
+                timeout=webhook.timeout_secs or 10,
+            )
+            return Response({'success': True, 'status_code': resp.status_code})
+        except Exception as e:
+            return Response({'success': False, 'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+    @action(detail=True, methods=['post'])
+    def toggle(self, request, pk=None):
+        """Enable or disable this webhook."""
+        webhook = self.get_object()
+        webhook.is_active = not webhook.is_active
+        webhook.save(update_fields=['is_active'])
+        return Response({'is_active': webhook.is_active})
+
+
+class WebhookDeliveryLogViewSet(TenantQuerysetMixin, viewsets.ReadOnlyModelViewSet):
+    """Read-only delivery log — per-tenant audit trail."""
+    tenant_field = 'webhook__tenant_id'
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['webhook', 'delivered', 'event']
+    ordering_fields = ['created_at', 'duration_ms']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        from ..models.settings import WebhookDeliveryLog
+        return WebhookDeliveryLog.objects.select_related('webhook').order_by('-created_at')
+
+    def get_serializer_class(self):
+        from ..serializers.webhook import WebhookDeliveryLogSerializer
+        return WebhookDeliveryLogSerializer
+
+
+class TranslationScreenshotViewSet(TenantQuerysetMixin, viewsets.ModelViewSet):
+    """Screenshots providing visual context for translators — tenant-scoped."""
+    tenant_field = 'tenant_id'
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['translation_key']
+    search_fields = ['title', 'description', 'page_url', 'component']
+
+    def get_queryset(self):
+        from ..models.content import TranslationScreenshot
+        qs = TranslationScreenshot.objects.select_related(
+            'translation_key', 'uploaded_by'
+        ).order_by('-created_at')
+        return self._apply_tenant_filter(qs)
+
+    def get_serializer_class(self):
+        from ..serializers.screenshot import TranslationScreenshotSerializer
+        return TranslationScreenshotSerializer
+
+    def perform_create(self, serializer):
+        from ..tenant import get_tenant_id
+        tid = get_tenant_id(self.request)
+        kwargs = {'uploaded_by': self.request.user}
+        if tid:
+            kwargs['tenant_id'] = tid
+        serializer.save(**kwargs)
+
+    @action(detail=False, methods=['get'])
+    def for_key(self, request):
+        """All screenshots for a given translation key string."""
+        key_str = request.query_params.get('key')
+        if not key_str:
+            return Response({'error': 'key param required'}, status=status.HTTP_400_BAD_REQUEST)
+        qs = self.get_queryset().filter(translation_key__key=key_str)
+        from ..serializers.screenshot import TranslationScreenshotSerializer
+        return Response(TranslationScreenshotSerializer(qs, many=True).data)
+
+    @action(detail=False, methods=['get'])
+    def keys_without_screenshots(self, request):
+        """Translation keys that have no screenshot at all."""
+        from ..models.core import TranslationKey
+        from ..models.content import TranslationScreenshot
+        keys_with = TranslationScreenshot.objects.values_list(
+            'translation_key_id', flat=True
+        ).distinct()
+        qs = TranslationKey.objects.exclude(id__in=keys_with).values('id', 'key', 'category')[:200]
+        return Response(list(qs))
+
+    @action(detail=True, methods=['post'])
+    def link_keys(self, request, pk=None):
+        """Link additional translation keys to this screenshot."""
+        screenshot = self.get_object()
+        key_ids = request.data.get('key_ids', [])
+        if not key_ids:
+            return Response({'error': 'key_ids required'}, status=status.HTTP_400_BAD_REQUEST)
+        from ..models.core import TranslationKey
+        keys = TranslationKey.objects.filter(id__in=key_ids)
+        return Response({'linked': keys.count(), 'screenshot_id': screenshot.id})

@@ -638,8 +638,9 @@ class TriggerAlertAPIView(View):
             
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+        except Exception:
+            logger.exception("Unhandled error in post")
+            return JsonResponse({'error': 'Internal server error'}, status=500)
 
 
 class SystemHealthAPIView(View):
@@ -675,8 +676,9 @@ class SystemHealthAPIView(View):
                 'timestamp': timezone.now().isoformat()
             })
             
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+        except Exception:
+            logger.exception("Unhandled error in get")
+            return JsonResponse({'error': 'Internal server error'}, status=500)
 
 
 # ============================================

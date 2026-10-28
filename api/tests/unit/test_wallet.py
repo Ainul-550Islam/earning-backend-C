@@ -2,6 +2,8 @@
 Unit tests for Wallet app.
 Tests wallet models, transactions, and financial operations.
 """
+from django.db import models
+from rest_framework.test import APIClient
 
 import pytest
 from datetime import timedelta

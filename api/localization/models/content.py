@@ -150,6 +150,10 @@ class ContentLocaleMapping(models.Model):
 
 class TranslationRequest(models.Model):
     """Request professional/human translation for content"""
+    tenant_id = models.CharField(
+        max_length=100, db_index=True, blank=True, default='',
+        help_text='Tenant identifier — empty means global/shared'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -205,6 +209,10 @@ class TranslationRequest(models.Model):
 
 # ── Screenshot / Visual Context ───────────────────────────────────
 class TranslationScreenshot(models.Model):
+    tenant_id = models.CharField(
+        max_length=100, db_index=True, blank=True, default='',
+        help_text='Tenant identifier — empty means global/shared'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     """

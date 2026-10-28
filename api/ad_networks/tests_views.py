@@ -1,3 +1,4 @@
+import unittest
 # api/ad_networks/tests_views.py
 import os
 import re

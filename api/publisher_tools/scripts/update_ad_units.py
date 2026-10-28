@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def update_ad_unit_metrics():
     """Ad units-এর calculated metrics update করে।"""
-    from api.publisher_tools.models import AdUnit, PublisherEarning
+    from publisher_tools.models import AdUnit, PublisherEarning
     from datetime import timedelta
     start = timezone.now().date() - timedelta(days=30)
     units = AdUnit.objects.filter(status="active")
@@ -47,7 +47,7 @@ def update_ad_unit_metrics():
 
 def archive_inactive_ad_units(days_inactive: int = 90):
     """Inactive ad units archive করে।"""
-    from api.publisher_tools.models import AdUnit, PublisherEarning
+    from publisher_tools.models import AdUnit, PublisherEarning
     from datetime import timedelta
     cutoff = timezone.now().date() - timedelta(days=days_inactive)
     units = AdUnit.objects.filter(status="paused")
@@ -64,7 +64,7 @@ def archive_inactive_ad_units(days_inactive: int = 90):
 
 def sync_ad_unit_revenue_totals():
     """Ad unit total_revenue ও total_impressions sync করে।"""
-    from api.publisher_tools.models import AdUnit, PublisherEarning
+    from publisher_tools.models import AdUnit, PublisherEarning
     units = AdUnit.objects.all()
     updated = 0
     for unit in units:

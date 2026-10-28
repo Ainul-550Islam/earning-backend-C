@@ -23,7 +23,7 @@ def linear_regression(x_vals: List[float], y_vals: List[float]):
 
 def forecast_publisher_revenue(publisher, days_ahead: int = 30) -> Dict:
     """Publisher-এর future revenue forecast।"""
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     history = list(
         PublisherEarning.objects.filter(publisher=publisher, granularity="daily")
         .values("date").annotate(revenue=Sum("publisher_revenue"))

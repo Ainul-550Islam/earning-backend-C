@@ -4,6 +4,7 @@ Onboarding Tasks
 This module contains Celery tasks for onboarding operations including
 step completion automation, welcome emails, and trial extension scheduling.
 """
+from django.db import models
 
 from celery import shared_task
 from django.utils import timezone
@@ -13,6 +14,7 @@ import logging
 
 from ..models import Tenant, TenantOnboarding, TenantOnboardingStep
 from ..services import OnboardingService
+from api.tenants.models.analytics import TenantNotification
 
 logger = logging.getLogger(__name__)
 

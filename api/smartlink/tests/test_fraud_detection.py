@@ -59,8 +59,20 @@ class ClickFraudServiceTest(TestCase):
         score, signals = self.service.score('1.2.3.4', '', {'country': 'US', 'asn': ''})
         self.assertGreater(score, 0)
 
-    @patch('django.core.cache.cache.get', return_value='1')
-    def test_known_bad_ip_blocked(self, mock_cache):
+    def test_known_bad_ip_blocked(self):
+        """Known bad IPs get high fraud score via fraud:blocked:{ip} cache key."""
         ua = 'Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile Safari/537.36'
-        score, signals = self.service.score('1.2.3.4', ua, {'country': 'US', 'asn': ''})
+
+        def smart_cache_get(key, default=None):
+            # Return '1' only for the bad-IP block key; 0 for velocity keys
+            if key.startswith('fraud:blocked:'):
+                return '1'
+            return default
+
+        with patch('api.smartlink.services.click.ClickFraudService.cache.get',
+                   side_effect=smart_cache_get):
+            with patch('api.smartlink.services.click.ClickFraudService.cache.incr',
+                       side_effect=ValueError):
+                with patch('api.smartlink.services.click.ClickFraudService.cache.set'):
+                    score, signals = self.service.score('1.2.3.4', ua, {'country': 'US', 'asn': ''})
         self.assertGreater(score, 30)

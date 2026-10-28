@@ -12,7 +12,7 @@ class GeoLocationService:
     def reverse_geocode(self, latitude: float, longitude: float) -> Dict:
         """Latitude/Longitude থেকে country/city/region পাওয়া"""
         try:
-            from ..models.core import City, Country
+            from api.localization.models.core import City, Country
             # Find nearest city by coordinates (simple distance)
             cities = City.objects.filter(
                 is_active=True,
@@ -45,7 +45,7 @@ class GeoLocationService:
     def search_cities(self, query: str, country_code: str = '', limit: int = 10):
         """City search with autocomplete"""
         try:
-            from ..models.core import City
+            from api.localization.models.core import City
             from django.db.models import Q
             qs = City.objects.filter(
                 is_active=True

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models.publisher import PublisherSmartLink
+from api.smartlink.models.publisher import PublisherSmartLink
 from .SmartLinkSerializer import SmartLinkSerializer
 
 

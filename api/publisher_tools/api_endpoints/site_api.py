@@ -15,7 +15,7 @@ class SiteBulkAPIView(APIView):
         site_ids  = request.data.get("site_ids", [])
         if not site_ids or not action:
             return Response({"success": False, "message": "site_ids and action required."}, status=400)
-        from api.publisher_tools.models import Site
+        from publisher_tools.models import Site
         publisher = request.user.publisher_profile if not request.user.is_staff else None
         qs = Site.objects.filter(site_id__in=site_ids)
         if publisher:
@@ -30,7 +30,7 @@ class SiteBulkAPIView(APIView):
                 count = qs.count()
                 qs.delete()
             elif action == "refresh_ads_txt":
-                from api.publisher_tools.services import SiteService
+                from publisher_tools.services import SiteService
                 for site in qs:
                     SiteService.refresh_ads_txt(site)
                     count += 1
@@ -62,8 +62,8 @@ class SiteTrafficAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, site_id=None):
-        from api.publisher_tools.models import Site
-        from api.publisher_tools.site_management.site_analytics import get_site_performance_summary
+        from publisher_tools.models import Site
+        from publisher_tools.site_management.site_analytics import get_site_performance_summary
         try:
             if request.user.is_staff:
                 site = Site.objects.get(site_id=site_id)

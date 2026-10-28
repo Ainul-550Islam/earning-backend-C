@@ -1,5 +1,5 @@
 from django.contrib import admin
-from ..models.postback_log import PostbackLog
+from api.smartlink.models.postback_log import PostbackLog
 
 
 @admin.register(PostbackLog)

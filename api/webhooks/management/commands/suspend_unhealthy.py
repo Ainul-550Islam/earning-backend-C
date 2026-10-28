@@ -4,6 +4,7 @@ This management command manually triggers the auto-suspend functionality
 for webhook endpoints that are experiencing health issues.
 """
 
+from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.db.models import Count, Avg
@@ -65,7 +66,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Suspension threshold: {consecutive_failures} consecutive failures")
         
         # Get time window
-        since = timezone.now() - timezone.timedelta(hours=hours)
+        since = timezone.now() - timedelta(hours=hours)
         
         # Build base query
         query = WebhookHealthLog.objects.filter(
@@ -125,7 +126,7 @@ class Command(BaseCommand):
         for endpoint_info in unhealthy_endpoints:
             endpoint = endpoint_info['endpoint']
             self.stdout.write(
-                f"  - {endpoint.url} ({endpoint.label or 'No label'}) "
+                f"  - {endpoint.target_url} ({endpoint.label or 'No label'}) "
                 f"- {endpoint_info['failure_count']} consecutive failures "
                 f"- Avg response time: {endpoint_info['avg_response_time']:.0f}ms"
             )
@@ -145,28 +146,29 @@ class Command(BaseCommand):
             if endpoint.status == WebhookStatus.SUSPENDED and not force:
                 if verbose:
                     self.stdout.write(
-                        f"Skipping {endpoint.url} - already suspended"
+                        f"Skipping {endpoint.target_url} - already suspended"
                     )
                 continue
             
             # Suspend the endpoint
             result = health_monitor.auto_suspend_unhealthy_endpoint(
                 endpoint,
-                consecutive_failures=consecutive_failures
+                consecutive_failures=consecutive_failures,
+                force=force,
             )
             
             if result['suspended']:
                 suspended_count += 1
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Suspended endpoint: {endpoint.url} "
+                        f"Suspended endpoint: {endpoint.target_url} "
                         f"({endpoint.label or 'No label'})"
                     )
                 )
             else:
                 self.stdout.write(
                     self.style.ERROR(
-                        f"Failed to suspend endpoint: {endpoint.url} "
+                        f"Failed to suspend endpoint: {endpoint.target_url} "
                         f"- {result.get('reason', 'Unknown error')}"
                     )
                 )
@@ -188,7 +190,7 @@ class Command(BaseCommand):
     
     def _get_endpoint_health_summary(self, endpoint_id, hours):
         """Get detailed health summary for an endpoint."""
-        since = timezone.now() - timezone.timedelta(hours=hours)
+        since = timezone.now() - timedelta(hours=hours)
         
         health_logs = WebhookHealthLog.objects.filter(
             endpoint_id=endpoint_id,
@@ -227,7 +229,7 @@ class Command(BaseCommand):
         
         endpoint = WebhookEndpoint.objects.get(id=endpoint_id)
         
-        self.stdout.write(f"\nHealth Details for: {endpoint.url}")
+        self.stdout.write(f"\nHealth Details for: {endpoint.target_url}")
         self.stdout.write(f"Label: {endpoint.label or 'No label'}")
         self.stdout.write(f"Status: {endpoint.status}")
         self.stdout.write(f"Total Checks: {summary['total_checks']}")
@@ -252,7 +254,7 @@ class Command(BaseCommand):
         # Show recent health logs
         recent_logs = WebhookHealthLog.objects.filter(
             endpoint_id=endpoint_id,
-            checked_at__gte=timezone.now() - timezone.timedelta(hours=hours)
+            checked_at__gte=timezone.now() - timedelta(hours=hours)
         ).order_by('-checked_at')[:10]
         
         if recent_logs.exists():

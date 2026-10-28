@@ -1,7 +1,12 @@
+from django.conf import settings as _sl_settings
+_OFFER_MODEL = getattr(_sl_settings, 'SMARTLINK_OFFER_MODEL', 'offer_inventory.Offer')
+_ADVERTISER_MODEL = getattr(_sl_settings, 'SMARTLINK_ADVERTISER_MODEL', 'advertiser_portal.Advertiser')
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from .smartlink import SmartLink, SmartLinkVersion
 from ..choices import ABTestStatus, DeviceType
+
 
 
 class SmartLinkStat(models.Model):
@@ -110,7 +115,7 @@ class OfferPerformanceStat(models.Model):
         related_name='offer_performance_stats',
     )
     offer = models.ForeignKey(
-        'offer_inventory.Offer', on_delete=models.CASCADE,
+        _OFFER_MODEL, on_delete=models.CASCADE,
         related_name='smartlink_performance_stats',
     )
     date = models.DateField(db_index=True)

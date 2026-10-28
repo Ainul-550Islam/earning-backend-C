@@ -26,7 +26,7 @@ class PayoutRequest(TimeStampedModel):
 
     publisher       = models.ForeignKey('publisher_tools.Publisher', on_delete=models.CASCADE, related_name='payout_requests', db_index=True)
     invoice         = models.ForeignKey('publisher_tools.PublisherInvoice', on_delete=models.SET_NULL, null=True, blank=True, related_name='payout_requests')
-    bank_account    = models.ForeignKey('publisher_management.PublisherBankAccount', on_delete=models.SET_NULL, null=True, related_name='payout_requests')
+    bank_account    = models.ForeignKey('publisher_tools.PublisherBankAccount', on_delete=models.SET_NULL, null=True, related_name='publisher_payout_requests')
     request_id      = models.CharField(max_length=30, unique=True, blank=True, db_index=True)
     requested_amount= models.DecimalField(max_digits=14, decimal_places=4, validators=[MinValueValidator(Decimal('1.00'))])
     approved_amount = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True)
@@ -49,6 +49,7 @@ class PayoutRequest(TimeStampedModel):
     metadata           = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_payout_requests'
         verbose_name = _('Payout Request')
         verbose_name_plural = _('Payout Requests')
@@ -125,6 +126,7 @@ class PayoutSchedule(TimeStampedModel):
     pause_reason    = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_payout_schedules'
         verbose_name = _('Payout Schedule')
         verbose_name_plural = _('Payout Schedules')

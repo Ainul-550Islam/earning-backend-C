@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from ..models import SmartLink, SmartLinkGroup, SmartLinkTag, SmartLinkTagging, SmartLinkVersion, SmartLinkFallback, SmartLinkRotation
+from api.smartlink.models import SmartLink, SmartLinkGroup, SmartLinkTag, SmartLinkTagging, SmartLinkVersion, SmartLinkFallback, SmartLinkRotation
 
 
 @admin.register(SmartLink)

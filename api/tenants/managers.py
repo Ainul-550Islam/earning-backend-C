@@ -4,6 +4,7 @@ Tenant Managers - Custom Django Model Managers
 This module contains custom model managers for tenant-related models
 with advanced query methods, optimizations, and business logic.
 """
+from django.db.models.functions import Extract
 
 from django.db import models
 from django.db.models import Q, Count, Sum, Avg, Max, Min, Prefetch

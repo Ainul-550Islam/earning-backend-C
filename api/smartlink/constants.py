@@ -89,7 +89,9 @@ S2S_PIXEL_TIMEOUT_SECONDS = 2
 
 # Geo
 GEO_IP_HEADER_PRIORITY = [
-    'HTTP_CF_IPCOUNTRY',      # Cloudflare
+    'HTTP_CF_CONNECTING_IP',  # Cloudflare — actual client IP
+                              # (HTTP_CF_IPCOUNTRY was WRONG: that header
+                              #  carries a 2-letter country code, not an IP)
     'HTTP_X_REAL_IP',
     'HTTP_X_FORWARDED_FOR',
     'REMOTE_ADDR',
@@ -99,3 +101,10 @@ GEO_IP_HEADER_PRIORITY = [
 API_RATE_LIMIT_REDIRECT = 10000    # public redirect endpoint
 API_RATE_LIMIT_PUBLISHER = 1000    # publisher API
 API_RATE_LIMIT_ADMIN = 500
+# External model references — configurable via Django settings
+# Allows the smartlink app to be installed independently of offer_inventory
+# and advertiser_portal apps. Override in settings.py if needed.
+# Example: SMARTLINK_OFFER_MODEL = 'myapp.MyOffer'
+import django.conf
+OFFER_MODEL = getattr(django.conf.settings, 'SMARTLINK_OFFER_MODEL', 'offer_inventory.Offer')
+ADVERTISER_MODEL = getattr(django.conf.settings, 'SMARTLINK_ADVERTISER_MODEL', 'advertiser_portal.Advertiser')

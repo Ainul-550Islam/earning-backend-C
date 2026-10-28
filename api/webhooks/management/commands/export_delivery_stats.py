@@ -8,7 +8,10 @@ import csv
 import os
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
-from django.db.models import Count, Avg, Sum, Q
+
+from ...services.analytics.WebhookAnalyticsService import WebhookAnalyticsService
+from django.db.models import Count, Avg, Sum, Q, Min, Max
+from django.db.models.functions import TruncHour, TruncDate
 from django.utils import timezone
 from django.conf import settings
 
@@ -34,7 +37,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--status',
             type=str,
-            choices=[s.value for s in DeliveryStatus],
+            choices=[choice[0] for choice in DeliveryStatus.CHOICES],
             help='Filter by delivery status (optional)'
         )
         parser.add_argument(
@@ -152,14 +155,25 @@ class Command(BaseCommand):
             self.stdout.write("Exporting statistics grouped by day...")
         
         # Get daily statistics
-        daily_stats = query.extra(
-            {'date': "date(created_at)"}
+        # BUG FIX: was query.extra({'date': "date(created_at)"}). That SQL
+        # itself runs on both backends, but confirmed empirically the value
+        # it returns differs by backend: a plain string on SQLite
+        # ('2026-08-31'), vs presumably a real date via psycopg2 on
+        # Postgres. stat['date'].strftime(...) below needs an actual date
+        # object - confirmed AttributeError: 'str' object has no attribute
+        # 'strftime' on SQLite, crashing on the very first row. Since
+        # group_by defaults to 'day', this broke this command's default
+        # invocation entirely (there, not just the --group-by hour case).
+        # TruncDate is Django's cross-backend equivalent - confirmed it
+        # returns a real date object on SQLite too.
+        daily_stats = query.annotate(
+            date=TruncDate('created_at')
         ).values('date').annotate(
             total_count=Count('id'),
             success_count=Count('id', filter=Q(status=DeliveryStatus.SUCCESS)),
             failed_count=Count('id', filter=Q(status=DeliveryStatus.FAILED)),
-            avg_response_time=Avg('duration_ms'),
-            total_response_time=Sum('duration_ms')
+            avg_response_time=Avg('response_time_ms'),
+            total_response_time=Sum('response_time_ms')
         ).order_by('date')
         
         with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
@@ -196,13 +210,20 @@ class Command(BaseCommand):
             self.stdout.write("Exporting statistics grouped by hour...")
         
         # Get hourly statistics
-        hourly_stats = query.extra(
-            {'hour': "date_trunc('hour', created_at)"}
+        # BUG FIX: was query.extra({'hour': "date_trunc('hour', created_at)"})
+        # - date_trunc() is Postgres-only SQL (confirmed empirically: raises
+        # OperationalError: no such function: date_trunc on SQLite). Correct
+        # on this project's real Postgres backend, but untestable and a
+        # portability trap. TruncHour is Django's own cross-backend
+        # equivalent - confirmed working on SQLite, and produces the same
+        # result on Postgres.
+        hourly_stats = query.annotate(
+            hour=TruncHour('created_at')
         ).values('hour').annotate(
             total_count=Count('id'),
             success_count=Count('id', filter=Q(status=DeliveryStatus.SUCCESS)),
             failed_count=Count('id', filter=Q(status=DeliveryStatus.FAILED)),
-            avg_response_time=Avg('duration_ms')
+            avg_response_time=Avg('response_time_ms')
         ).order_by('hour')
         
         with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
@@ -237,11 +258,16 @@ class Command(BaseCommand):
             self.stdout.write("Exporting statistics grouped by endpoint...")
         
         # Get endpoint statistics
-        endpoint_stats = query.values('endpoint__url', 'endpoint__label').annotate(
+        # BUG FIX: was 'endpoint__url', which doesn't exist on
+        # WebhookEndpoint (confirmed - the field is target_url, used
+        # correctly everywhere else in this same file). Raised
+        # django.core.exceptions.FieldError immediately, so --group-by
+        # endpoint crashed 100% of the time.
+        endpoint_stats = query.values('endpoint__target_url', 'endpoint__label').annotate(
             total_count=Count('id'),
             success_count=Count('id', filter=Q(status=DeliveryStatus.SUCCESS)),
             failed_count=Count('id', filter=Q(status=DeliveryStatus.FAILED)),
-            avg_response_time=Avg('duration_ms'),
+            avg_response_time=Avg('response_time_ms'),
             first_request=Min('created_at'),
             last_request=Max('created_at')
         ).order_by('-total_count')
@@ -267,7 +293,7 @@ class Command(BaseCommand):
                 success_rate = (stat['success_count'] / stat['total_count'] * 100) if stat['total_count'] > 0 else 0
                 
                 writer.writerow([
-                    stat['endpoint__url'],
+                    stat['endpoint__target_url'],
                     stat['endpoint__label'] or '',
                     stat['total_count'],
                     stat['success_count'],
@@ -288,7 +314,7 @@ class Command(BaseCommand):
             total_count=Count('id'),
             success_count=Count('id', filter=Q(status=DeliveryStatus.SUCCESS)),
             failed_count=Count('id', filter=Q(status=DeliveryStatus.FAILED)),
-            avg_response_time=Avg('duration_ms'),
+            avg_response_time=Avg('response_time_ms'),
             unique_endpoints=Count('endpoint', distinct=True)
         ).order_by('-total_count')
         
@@ -357,13 +383,13 @@ class Command(BaseCommand):
                 writer.writerow([
                     str(log.id),
                     log.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                    log.endpoint.url,
+                    log.endpoint.target_url,
                     log.endpoint.label or '',
                     log.endpoint.owner.username if log.endpoint.owner else '',
                     log.event_type,
                     log.status,
                     log.http_status_code or '',
-                    log.duration_ms or '',
+                    log.response_time_ms or '',
                     log.attempt_number,
                     log.max_attempts,
                     log.next_retry_at.strftime('%Y-%m-%d %H:%M:%S') if log.next_retry_at else '',
@@ -393,9 +419,9 @@ class Command(BaseCommand):
         
         # Get response time statistics
         response_times = query.aggregate(
-            avg_response_time=Avg('duration_ms'),
-            min_response_time=Min('duration_ms'),
-            max_response_time=Max('duration_ms')
+            avg_response_time=Avg('response_time_ms'),
+            min_response_time=Min('response_time_ms'),
+            max_response_time=Max('response_time_ms')
         )
         
         # Get date range

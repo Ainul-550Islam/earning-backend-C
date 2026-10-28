@@ -1,1 +1,1 @@
-default_app_config = 'api.publisher_tools.apps.PublisherToolsConfig'
+default_app_config = 'publisher_tools.apps.PublisherToolsConfig'

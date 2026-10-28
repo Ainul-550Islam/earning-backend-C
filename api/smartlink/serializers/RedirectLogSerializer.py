@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import RedirectLog
+from api.smartlink.models import RedirectLog
 
 
 class RedirectLogSerializer(serializers.ModelSerializer):

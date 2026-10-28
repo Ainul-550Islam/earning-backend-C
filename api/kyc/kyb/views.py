@@ -10,6 +10,9 @@ from .serializers import BusinessVerificationSerializer, UBODeclarationSerialize
 # ── User Endpoints ─────────────────────────────────────────
 
 @api_view(['GET', 'POST'])
+@api_view(['POST'])
+@api_view(['GET', 'POST', 'PATCH'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser, JSONParser])
 def my_business(request):
@@ -36,9 +39,6 @@ def my_business(request):
         BusinessVerification.objects.get(user=request.user),
         context={'request': request}
     ).data, status=code)
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_ubo(request):
     """Add UBO declaration for user's business"""
@@ -50,8 +50,6 @@ def add_ubo(request):
     ubo = s.save(business=biz)
     return Response(UBODeclarationSerializer(ubo).data, status=201)
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_director(request):
     """Add director for user's business"""
@@ -66,7 +64,6 @@ def add_director(request):
 
 # ── Admin Endpoints ────────────────────────────────────────
 
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyb_admin_list(request):
     """Admin — All business verifications"""
@@ -79,8 +76,6 @@ def kyb_admin_list(request):
         qs = qs.filter(Q(business_name__icontains=search) | Q(trade_license_no__icontains=search))
     return Response(BusinessVerificationSerializer(qs, many=True, context={'request': request}).data)
 
-
-@api_view(['GET', 'POST', 'PATCH'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyb_admin_review(request, kyb_id):
     """Admin — Review business verification"""
@@ -109,9 +104,6 @@ def kyb_admin_review(request, kyb_id):
         return Response({'error': 'Invalid status. Use: verified | rejected'}, status=400)
 
     return Response(BusinessVerificationSerializer(biz, context={'request': request}).data)
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyb_verify_ubo(request, ubo_id):
     """Admin — Verify an UBO"""

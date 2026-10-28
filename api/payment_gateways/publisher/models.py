@@ -21,7 +21,7 @@ TRAFFIC_TYPES = (
 class PublisherProfile(TimeStampedModel):
     """Extended publisher profile and settings."""
     user             = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                        related_name='publisher_profile')
+                        related_name='publisher_profile_pg')
     website_url      = models.URLField(blank=True)
     traffic_types    = models.JSONField(default=list)
     monthly_traffic  = models.CharField(max_length=50, blank=True,
@@ -67,7 +67,7 @@ class PublisherProfile(TimeStampedModel):
 class AdvertiserProfile(TimeStampedModel):
     """Extended advertiser profile."""
     user             = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                        related_name='advertiser_profile')
+                        related_name='advertiser_profile_pg')
     company_name     = models.CharField(max_length=200, blank=True)
     website_url      = models.URLField(blank=True)
     status           = models.CharField(max_length=15, default='pending',

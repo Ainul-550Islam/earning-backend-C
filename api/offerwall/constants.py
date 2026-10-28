@@ -65,10 +65,23 @@ WEBHOOK_CHARGEBACK = 'chargeback'
 WEBHOOK_REVERSAL = 'reversal'
 
 # Provider API Endpoints
-TAPJOY_API_BASE = 'https://ws.tapjoyads.com/v1'
-ADGEM_API_BASE = 'https://api.adgem.com/v1'
-ADGATE_API_BASE = 'https://api.adgatemedia.com/v3'
+TAPJOY_API_BASE    = 'https://ws.tapjoyads.com/v1'
+ADGEM_API_BASE     = 'https://api.adgem.com/v1'
+ADGATE_API_BASE    = 'https://api.adgatemedia.com/v3'
 OFFERWALL_API_BASE = 'https://www.offertoro.com/api'
+
+# Phase 2 — new provider constants
+PROVIDER_MONLIX   = 'monlix'
+PROVIDER_OGADS    = 'ogads'
+PROVIDER_FYBER    = 'fyber'
+PROVIDER_LIFTOFF  = 'liftoff'
+PROVIDER_APPLIFT  = 'applift'
+
+MONLIX_API_BASE   = 'https://publishers.monlix.com/api'
+OGADS_API_BASE    = 'https://ogads.com/api'
+FYBER_API_BASE    = 'https://offer.fyber.com/feed/v1'
+LIFTOFF_API_BASE  = 'https://vungle.com/api/pub/campaigns'
+APPLIFT_API_BASE  = 'https://tracking.applift.com/aff_lsr'
 
 # Default Configuration
 DEFAULT_REVENUE_SHARE = 70.0  # 70% to users, 30% platform fee

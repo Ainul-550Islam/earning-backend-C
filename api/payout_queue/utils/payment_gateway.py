@@ -1,13 +1,29 @@
 """
-Payment Gateway Utility — Abstract base and registry for payment processors.
+payout_queue/utils/payment_gateway.py  ← FIXED v2
 
-Each gateway (bKash, Nagad, Rocket) implements BasePaymentProcessor.
-The PaymentGatewayRegistry maps gateway strings to processor instances.
+CHANGE v2: Added _normalise_account() and _validate_account_input() to
+BasePaymentProcessor (Point 5 — technical debt).
+
+Before: Every processor (BkashProcessor, NagadProcessor, RocketProcessor,
+        BankProcessor) copy-pasted the same 3-line guard block:
+            if not account_number or not isinstance(account_number, str):
+                return False
+            cleaned = account_number.strip().replace(" ", "").replace("-", "")
+        Four identical blocks, zero single source of truth.
+
+After:  BasePaymentProcessor exposes:
+            _normalise_account(account_number) -> str
+                Strips whitespace and common separators. Returns "" on bad input.
+            _validate_account_input(account_number) -> bool
+                Returns False immediately if the account is empty or non-string.
+        Each processor's validate_account() calls these helpers instead of
+        re-implementing the guard logic inline.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 from abc import ABC, abstractmethod
 from decimal import Decimal
 from typing import Any, Optional
@@ -16,7 +32,6 @@ from ..choices import PaymentGateway
 from ..exceptions import GatewayError, GatewayTimeoutError, GatewayAuthError
 
 logger = logging.getLogger(__name__)
-
 
 class PayoutResult:
     """
@@ -49,17 +64,16 @@ class PayoutResult:
         if success and not gateway_reference:
             raise ValueError("gateway_reference must be set on success.")
 
-        self.success = success
+        self.success           = success
         self.gateway_reference = gateway_reference
-        self.error_code = error_code
-        self.error_message = error_message
-        self.raw_response = raw_response or {}
+        self.error_code        = error_code
+        self.error_message     = error_message
+        self.raw_response      = raw_response or {}
 
     def __repr__(self) -> str:  # pragma: no cover
         if self.success:
             return f"<PayoutResult SUCCESS ref={self.gateway_reference!r}>"
         return f"<PayoutResult FAILED code={self.error_code!r} msg={self.error_message!r}>"
-
 
 class BasePaymentProcessor(ABC):
     """
@@ -69,6 +83,11 @@ class BasePaymentProcessor(ABC):
         - send_payout(account_number, amount, reference, **kwargs) → PayoutResult
         - verify_transaction(gateway_reference) → PayoutResult
         - validate_account(account_number) → bool
+
+    Shared helpers (available to all subclasses):
+        - _normalise_account(account_number) → str
+        - _validate_account_input(account_number) → bool
+        - _require_config(*keys) → None
     """
 
     gateway: str = ""   # Override in subclass
@@ -87,6 +106,43 @@ class BasePaymentProcessor(ABC):
     def _validate_config(self) -> None:
         """Override to validate required config keys."""
         pass
+
+    # ── FIX v2: shared account normalisation helpers ─────────────────────────
+
+    @staticmethod
+    def _normalise_account(account_number: str) -> str:
+        """
+        Normalise an account number for validation.
+
+        - Returns "" for any falsy or non-string input (safe to call without
+          a prior type-check in subclasses).
+        - Strips leading/trailing whitespace.
+        - Removes embedded spaces and hyphens (common in bank account formatting).
+
+        Usage in subclass validate_account():
+            cleaned = self._normalise_account(account_number)
+            if not cleaned:
+                return False
+            return bool(re.match(SOME_REGEX, cleaned))
+        """
+        if not account_number or not isinstance(account_number, str):
+            return ""
+        return account_number.strip().replace(" ", "").replace("-", "")
+
+    def _validate_account_input(self, account_number: str) -> bool:
+        """
+        Fast pre-check: returns False immediately if account_number is
+        empty, None, or non-string — without running any regex.
+
+        Subclasses may call this instead of the inline guard block that was
+        previously duplicated across all processors.
+
+        Returns True if the input is non-empty after normalisation
+        (does NOT check format — call validate_account() for full validation).
+        """
+        return bool(self._normalise_account(account_number))
+
+    # ── Abstract interface ────────────────────────────────────────────────────
 
     @abstractmethod
     def send_payout(
@@ -147,7 +203,6 @@ class BasePaymentProcessor(ABC):
                 f"{self.__class__.__name__}: missing required config keys: {missing}"
             )
 
-
 # ---------------------------------------------------------------------------
 # Gateway Registry
 # ---------------------------------------------------------------------------
@@ -184,10 +239,13 @@ class PaymentGatewayRegistry:
             )
         if not isinstance(processor, BasePaymentProcessor):
             raise TypeError(
-                f"processor must be a BasePaymentProcessor instance, got {type(processor).__name__}."
+                f"processor must be a BasePaymentProcessor instance, "
+                f"got {type(processor).__name__}."
             )
         self._processors[gateway] = processor
-        logger.info("PaymentGatewayRegistry: registered processor for gateway '%s'.", gateway)
+        logger.info(
+            "PaymentGatewayRegistry: registered processor for gateway '%s'.", gateway
+        )
 
     def get(self, gateway: str) -> BasePaymentProcessor:
         """

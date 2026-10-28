@@ -14,6 +14,20 @@ import logging
 import time
 from typing import Any
 
+from ..exceptions import RateLimitError
+# BUG FIX: this module used to define its own `class RateLimitError
+# (Exception)`, completely unrelated to messaging.exceptions.RateLimitError
+# (MessagingError). consumers.py imports and catches the *exceptions.py*
+# version - since the two classes shared a name but not an inheritance
+# relationship, `except RateLimitError` there never actually caught what
+# check_message_rate() raised, and every WebSocket rate-limit violation
+# fell through to the generic `except Exception` handler, surfacing to
+# the client as "Internal server error" instead of a proper rate_limit
+# response with retry_after. Both classes had an identical constructor
+# signature (message, retry_after), so unifying to the one canonical
+# class (which also carries the correct code="rate_limit_exceeded" and
+# http_status=429) is a drop-in fix with no other behavior change.
+
 logger = logging.getLogger(__name__)
 
 
@@ -81,19 +95,21 @@ def _get_redis_client(cache):
     except AttributeError:
         pass
     try:
-        import redis
         from django.conf import settings
         cache_config = settings.CACHES.get("default", {})
-        location = cache_config.get("LOCATION", "redis://localhost:6379/0")
+        location = cache_config.get("LOCATION", "")
+        # Only attempt a real network connection if the cache is actually
+        # configured for Redis. Without this guard, any non-Redis cache
+        # backend (LocMemCache, Memcached, etc.) silently incurred a real
+        # TCP connection attempt + timeout against a hardcoded
+        # "redis://localhost:6379/0" fallback on every single rate-limit
+        # check (every message send, reaction, call, API request).
+        if not (isinstance(location, str) and location.startswith("redis://")):
+            return None
+        import redis
         return redis.from_url(location)
     except Exception:
         return None
-
-
-class RateLimitError(Exception):
-    def __init__(self, message: str, retry_after: int = 60):
-        super().__init__(message)
-        self.retry_after = retry_after
 
 
 def check_message_rate(user_id: Any, ip: str = None) -> None:

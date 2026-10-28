@@ -4,6 +4,8 @@ This module contains tests for the webhook rate limiter
 including Redis-based rate limiting, sliding windows, and throttling.
 """
 
+from django.utils import timezone
+from datetime import timedelta
 import pytest
 import time
 from unittest.mock import Mock, patch
@@ -31,11 +33,10 @@ class RateLimiterServiceTest(TestCase):
             password='testpass123'
         )
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            rate_limit_per_min=100,
-            created_by=self.user,
+            owner=self.user,
         )
         self.rate_limiter = RateLimiterService()
     
@@ -146,7 +147,7 @@ class RateLimiterServiceTest(TestCase):
     def test_increment_rate_limit_with_ttl(self):
         """Test incrementing rate limit with TTL."""
         with patch('django.core.cache.cache.incr') as mock_incr, \
-             patch('django.core.cache.cache.expire') as mock_expire:
+             patch('django.core.cache.cache.touch') as mock_touch:
             
             mock_incr.return_value = 1  # First increment
             
@@ -157,7 +158,7 @@ class RateLimiterServiceTest(TestCase):
             
             self.assertEqual(new_count, 1)
             mock_incr.assert_called_once()
-            mock_expire.assert_called_once()
+            mock_touch.assert_called_once()
     
     def test_create_rate_limit_config(self):
         """Test creating rate limit configuration."""
@@ -180,7 +181,6 @@ class RateLimiterServiceTest(TestCase):
             window_seconds=60,
             max_requests=100,
             current_count=50,
-            created_by=self.user
         )
         
         updated_rate_limit = self.rate_limiter.update_rate_limit(
@@ -199,7 +199,6 @@ class RateLimiterServiceTest(TestCase):
             endpoint=self.endpoint,
             window_seconds=60,
             max_requests=100,
-            created_by=self.user
         )
         
         result = self.rate_limiter.delete_rate_limit(rate_limit)
@@ -214,7 +213,6 @@ class RateLimiterServiceTest(TestCase):
             endpoint=self.endpoint,
             window_seconds=60,
             max_requests=100,
-            created_by=self.user
         )
         
         found_rate_limit = self.rate_limiter.get_rate_limit(self.endpoint)
@@ -260,7 +258,6 @@ class RateLimiterServiceTest(TestCase):
             window_seconds=300,
             max_requests=1000,
             current_count=500,
-            created_by=self.user
         )
         
         with patch('django.core.cache.cache.get') as mock_get:
@@ -308,7 +305,6 @@ class RateLimiterServiceTest(TestCase):
             window_seconds=60,
             max_requests=100,
             current_count=50,
-            created_by=self.user
         )
         
         with patch('django.core.cache.cache.get') as mock_get:
@@ -342,8 +338,7 @@ class RateLimiterServiceTest(TestCase):
             endpoint=self.endpoint,
             window_seconds=60,
             max_requests=100,
-            reset_at=timezone.now() - timezone.timedelta(hours=1),
-            created_by=self.user
+            reset_at=timezone.now() - timedelta(hours=1),
         )
         
         result = self.rate_limiter.cleanup_expired_rate_limits()
@@ -360,8 +355,7 @@ class RateLimiterServiceTest(TestCase):
             endpoint=self.endpoint,
             window_seconds=60,
             max_requests=100,
-            reset_at=timezone.now() + timezone.timedelta(hours=1),
-            created_by=self.user
+            reset_at=timezone.now() + timedelta(hours=1),
         )
         
         result = self.rate_limiter.cleanup_expired_rate_limits()
@@ -374,19 +368,18 @@ class RateLimiterServiceTest(TestCase):
     def test_get_rate_limit_for_multiple_endpoints(self):
         """Test rate limiting for multiple endpoints."""
         endpoint2 = WebhookEndpoint.objects.create(
-            url='https://example2.com/webhook',
-            secret='test-secret-key-2',
+            target_url='https://example2.com/webhook',
+            secret_key='test-secret-key-2',
             status=WebhookStatus.ACTIVE,
-            rate_limit_per_min=50,
-            created_by=self.user,
+            owner=self.user,
         )
         
         with patch('django.core.cache.cache.get') as mock_get:
             # Different counts for different endpoints
             def mock_get_side_effect(key, default=None):
-                if 'endpoint-1' in key:
+                if str(self.endpoint.id) in key:
                     return 25
-                elif 'endpoint-2' in key:
+                elif str(endpoint2.id) in key:
                     return 45
                 return 0
             
@@ -454,7 +447,7 @@ class RateLimiterServiceTest(TestCase):
                 burst_capacity=10
             )
             
-            self.assertTrue(is_limited)  # 85 + 10 burst = 95 (still not exceeded, but close)
+            self.assertFalse(is_limited)  # 85 + 10 burst = 95 (still not exceeded, but close)
     
     def test_rate_limit_with_ip_based_limiting(self):
         """Test rate limiting with IP-based limiting."""
@@ -572,7 +565,7 @@ class RateLimiterServiceTest(TestCase):
             
             rate_limiter = RateLimiterService(backend='redis')
             
-            with patch('django.core.cache.cache', mock_redis):
+            with patch('api.webhooks.services.analytics.RateLimiterService.cache', mock_redis):
                 is_limited = rate_limiter.is_rate_limited(
                     endpoint=self.endpoint,
                     window_seconds=60,

@@ -65,7 +65,7 @@ class GeoService:
         if cached:
             return cached
         try:
-            from ..models.geo import CountryLanguage
+            from api.localization.models.geo import CountryLanguage
             official = CountryLanguage.objects.filter(
                 country__code=country_code.upper(),
                 is_official=True
@@ -73,7 +73,7 @@ class GeoService:
             code = official.language.code if official else None
             if not code:
                 # Country model-এ languages_spoken field check
-                from ..models.core import Country
+                from api.localization.models.core import Country
                 country = Country.objects.filter(code=country_code.upper()).first()
                 if country and country.languages_spoken:
                     langs = country.languages_spoken
@@ -92,14 +92,14 @@ class GeoService:
         if cached:
             return cached
         try:
-            from ..models.geo import CountryCurrency
+            from api.localization.models.geo import CountryCurrency
             cc = CountryCurrency.objects.filter(
                 country__code=country_code.upper(), is_primary=True
             ).select_related('currency').first()
             if cc:
                 code = cc.currency.code
             else:
-                from ..models.core import Country
+                from api.localization.models.core import Country
                 country = Country.objects.filter(code=country_code.upper()).first()
                 code = country.currency_code if country else 'USD'
             if code:
@@ -133,7 +133,7 @@ class GeoService:
             }
             tz = COUNTRY_TZ.get(country_code.upper())
             if not tz:
-                from ..models.core import Country, Timezone
+                from api.localization.models.core import Country, Timezone
                 country = Country.objects.filter(code=country_code.upper()).first()
                 if country and country.capital:
                     city_tz = Timezone.objects.filter(
@@ -156,7 +156,7 @@ class GeoService:
         if cached:
             return cached
         try:
-            from ..models.core import Country
+            from api.localization.models.core import Country
             country = Country.objects.filter(code=country_code.upper()).first()
             if not country:
                 return None
@@ -198,7 +198,7 @@ class GeoService:
         if cached:
             return cached
         try:
-            from ..models.core import Country
+            from api.localization.models.core import Country
             countries = list(Country.objects.filter(is_active=True).order_by('name').values(
                 'code', 'name', 'native_name', 'flag_emoji',
                 'phone_code', 'continent', 'currency_code', 'is_eu_member'
@@ -212,7 +212,7 @@ class GeoService:
     def get_region_info(self, country_code: str) -> Optional[Dict]:
         """ContentRegion info for a country"""
         try:
-            from ..models.region import ContentRegion
+            from api.localization.models.region import ContentRegion
             region = ContentRegion.get_region_for_country(country_code)
             if not region:
                 return None

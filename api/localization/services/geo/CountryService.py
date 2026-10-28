@@ -11,9 +11,9 @@ class CountryService:
 
     def get_country_info(self, country_code: str) -> Optional[Dict]:
         try:
-            from ..models.core import Country
-            from ..models.geo import CountryLanguage, CountryCurrency
-            from ..models.settings import AddressFormat
+            from api.localization.models.core import Country
+            from api.localization.models.geo import CountryLanguage, CountryCurrency
+            from api.localization.models.settings import AddressFormat
             from django.core.cache import cache
             cache_key = f"country_info_{country_code}"
             cached = cache.get(cache_key)
@@ -53,7 +53,7 @@ class CountryService:
 
     def get_countries_by_continent(self, continent: str) -> List[Dict]:
         try:
-            from ..models.core import Country
+            from api.localization.models.core import Country
             countries = Country.objects.filter(continent=continent, is_active=True)
             return list(countries.values('code', 'name', 'flag_emoji', 'phone_code'))
         except Exception as e:

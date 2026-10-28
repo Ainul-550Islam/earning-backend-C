@@ -4,6 +4,11 @@ Scoring Tasks for Offer Routing System
 This module contains background tasks for offer scoring,
 ranking, and score optimization operations.
 """
+from django.db.models import Avg
+from django.db.models import Count
+from django.db.models import Max
+from django.db.models import Min
+from django.db.models import Sum
 
 import logging
 from celery import shared_task

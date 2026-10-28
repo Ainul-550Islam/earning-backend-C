@@ -148,6 +148,7 @@ class UserOfferCap(models.Model):
     
     # Cap tracking
     shown_today = models.IntegerField(_('Shown Today'), default=0)
+    weekly_count = models.IntegerField(_('Weekly Count'), default=0)
     reset_at = models.DateTimeField(_('Last Reset At'), null=True, blank=True)
     
     # Metadata
@@ -184,6 +185,11 @@ class UserOfferCap(models.Model):
             self.shown_today += 1
             self.save()
     
+    @property
+    def daily_count(self):
+        """Alias for shown_today for test compatibility."""
+        return self.shown_today
+
     def reset_daily_cap(self):
         """Reset daily cap for next day."""
         self.shown_today = 0
@@ -217,17 +223,31 @@ class CapOverride(models.Model):
         'OfferRoute',
         on_delete=models.CASCADE,
         related_name='overrides',
+        null=True,
+        blank=True,
         verbose_name=_('Offer')
     )
     tenant = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='overrides',
+        null=True,
+        blank=True,
         verbose_name=_('tenants.Tenant')
     )
     
     # Override configuration
     override_cap = models.IntegerField(_('Override Cap'), null=True, blank=True)
+    override_value = models.IntegerField(_('Override Value'), null=True, blank=True)
+    cap_type = models.CharField(_('Cap Type'), max_length=20, blank=True, default='')
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cap_overrides_user',
+        verbose_name=_('User')
+    )
     override_type = models.CharField(
         _('Override Type'),
         max_length=20,

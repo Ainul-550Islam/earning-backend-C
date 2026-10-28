@@ -14,6 +14,7 @@ from django.core.exceptions import ValidationError
 
 from ...models import WebhookBatch, WebhookBatchItem, WebhookDeliveryLog
 from ...constants import BatchStatus
+from ...exceptions import WebhookBatchError
 
 logger = logging.getLogger(__name__)
 

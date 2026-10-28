@@ -25,17 +25,21 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django_ratelimit.decorators import ratelimit
-from .models import TranslationCache
-from .serializers import TranslationSerializer, TranslationKeySerializer,  LanguageSerializer, MissingTranslationSerializer, TranslationCacheSerializer
+# ── modular imports (replaces old flat models.py / serializers.py) ──
+from .models import (
+    Language, Country, Currency, Timezone, City,
+    TranslationKey, Translation, TranslationCache,
+    UserLanguagePreference, MissingTranslation,
+)
+from .serializers import (
+    TranslationSerializer, TranslationKeySerializer,
+    LanguageSerializer, MissingTranslationSerializer, TranslationCacheSerializer,
+)
 import logging
 import json
 from typing import Dict, Any, Optional, List
 from decimal import Decimal, DivisionByZero, InvalidOperation
-from .models import (
-    Language, Country, Currency, Timezone, City,
-    TranslationKey, Translation, TranslationCache,
-    UserLanguagePreference, MissingTranslation
-)
+# (duplicate model imports removed)
 
 logger = logging.getLogger(__name__)
 
@@ -1507,6 +1511,7 @@ from rest_framework.response import Response
 from .models import Language, Translation
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def get_translations(request, language_code):
     """
@@ -1534,9 +1539,6 @@ def get_translations(request, language_code):
         })
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-    
-    
-@api_view(['POST'])
 @permission_classes([AllowAny])
 def report_missing_translation(request):
     """

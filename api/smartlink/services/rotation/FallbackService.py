@@ -1,6 +1,6 @@
 import logging
 from django.conf import settings
-from ...models import SmartLink, SmartLinkFallback
+from api.smartlink.models import SmartLink, SmartLinkFallback
 from ...constants import DEFAULT_FALLBACK_URL
 
 logger = logging.getLogger('smartlink.fallback')

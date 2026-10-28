@@ -9,7 +9,7 @@ from django.utils import timezone
 
 
 def generate_monthly_report(publisher, year: int = None, month: int = None) -> Dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     now = timezone.now()
     year = year or now.year
     month = month or now.month
@@ -48,7 +48,7 @@ def generate_monthly_report(publisher, year: int = None, month: int = None) -> D
 
 
 def get_monthly_growth_trend(publisher, months: int = 6) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     now = timezone.now()
     results = []
     for i in range(months, 0, -1):

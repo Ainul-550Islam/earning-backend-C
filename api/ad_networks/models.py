@@ -36,6 +36,7 @@ from .constants import (
     MIN_EXPIRY_DAYS, MIN_REWARD_AMOUNT, MAX_REWARD_AMOUNT,
     MIN_RATING, MAX_RATING, MIN_TRUST_SCORE, MAX_TRUST_SCORE
 )
+import decimal
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -1642,83 +1643,6 @@ class OfferReward(TenantModel, TimestampedModel, FraudDetectionModel):
         return self.status == 'paid'
 
 
-class NetworkAPILog(TenantModel, TimestampedModel):
-    """Log all network API calls for debugging and monitoring"""
-    tenant_id = models.CharField(max_length=100, default='default', db_index=True)
-    network = models.ForeignKey(
-        AdNetwork,
-        on_delete=models.CASCADE,
-        related_name='%(app_label)s_%(class)s_network'
-    )
-
-    # API call details
-    endpoint = models.CharField(max_length=500)
-    method = models.CharField(
-        max_length=10,
-        choices=[('GET', 'GET'), ('POST', 'POST'), ('PUT', 'PUT'), ('DELETE', 'DELETE')],
-        default='GET'
-    )
-
-    # Request data
-    request_data = models.JSONField(default=default_dict, blank=True)
-    request_headers = models.JSONField(default=default_dict, blank=True)
-    request_timestamp = models.DateTimeField(auto_now_add=True)
-
-    # Response data
-    response_data = models.JSONField(default=default_dict, blank=True)
-    response_headers = models.JSONField(default=default_dict, blank=True)
-    status_code = models.IntegerField()
-    response_timestamp = models.DateTimeField(null=True, blank=True)
-
-    # Performance metrics
-    latency_ms = models.IntegerField(default=0)
-    timeout = models.BooleanField(default=False)
-    retry_count = models.IntegerField(default=0)
-
-    # Error tracking
-    error_message = models.TextField(blank=True, null=True)
-    error_type = models.CharField(max_length=100, blank=True, null=True)
-    is_success = models.BooleanField(default=True)
-
-    # Context
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='%(app_label)s_%(class)s_user'
-    )
-    session_id = models.CharField(max_length=255, blank=True, null=True)
-
-    class Meta:
-        verbose_name = 'Network API Log'
-        verbose_name_plural = 'Network API Logs'
-        ordering = ['-request_timestamp']
-        indexes = [
-            models.Index(fields=['network', 'request_timestamp']),
-            models.Index(fields=['endpoint', 'request_timestamp']),
-            models.Index(fields=['status_code', 'is_success']),
-            models.Index(fields=['user', 'request_timestamp']),
-            models.Index(fields=['tenant_id']),
-        ]
-
-    def __str__(self):
-        return f"{self.network.name} - {self.method} {self.endpoint} - {self.status_code}"
-
-    @property
-    def duration_ms(self):
-        """Calculate request duration in milliseconds"""
-        if self.response_timestamp and self.request_timestamp:
-            delta = self.response_timestamp - self.request_timestamp
-            return int(delta.total_seconds() * 1000)
-        return self.latency_ms
-
-    @property
-    def is_error(self):
-        """Check if request resulted in error"""
-        return not self.is_success or self.status_code >= 400
-
-
 class OfferTag(TenantModel, TimestampedModel):
     """Tags for categorizing and organizing offers"""
     tenant_id = models.CharField(max_length=100, default='default', db_index=True)
@@ -1969,6 +1893,10 @@ class OfferAttachment(TenantModel, TimestampedModel):
             models.Index(fields=['tenant_id']),
             models.Index(fields=['file_hash']),
         ]
+        constraints = [
+            models.CheckConstraint(check=models.Q(file_size__gt=0), name='chk_attachment_file_size_positive'),
+            models.CheckConstraint(check=models.Q(display_order__gte=0), name='chk_attachment_display_order_nonnegative'),
+        ]
     
     def __str__(self):
         return f"{self.offer.title} - {self.filename}"
@@ -2010,6 +1938,14 @@ class UserWallet(TenantModel, TimestampedModel):
             models.Index(fields=['is_active', 'is_frozen']),
         ]
         unique_together = ['user', 'tenant_id']
+        constraints = [
+            models.CheckConstraint(check=models.Q(current_balance__gte=0), name='chk_wallet_current_balance_nonnegative'),
+            models.CheckConstraint(check=models.Q(total_earned__gte=0), name='chk_wallet_total_earned_nonnegative'),
+            models.CheckConstraint(check=models.Q(total_withdrawn__gte=0), name='chk_wallet_total_withdrawn_nonnegative'),
+            models.CheckConstraint(check=models.Q(pending_balance__gte=0), name='chk_wallet_pending_balance_nonnegative'),
+            models.CheckConstraint(check=models.Q(daily_limit__gt=0), name='chk_wallet_daily_limit_positive'),
+            models.CheckConstraint(check=models.Q(monthly_limit__gt=0), name='chk_wallet_monthly_limit_positive'),
+        ]
     
     def __str__(self):
         return f"{self.user.username} - {self.current_balance} {self.currency}"

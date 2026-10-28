@@ -13,7 +13,6 @@ from ..models import PayoutBatch, PayoutItem, WithdrawalPriority, BulkProcessLog
 
 User = get_user_model()
 
-
 class UserFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = User
@@ -31,10 +30,8 @@ class UserFactory(factory.django.DjangoModelFactory):
         obj.save()
         return obj
 
-
 class StaffUserFactory(UserFactory):
     is_staff = True
-
 
 class PayoutBatchFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -53,7 +50,6 @@ class PayoutBatchFactory(factory.django.DjangoModelFactory):
     created_by = factory.SubFactory(StaffUserFactory)
     metadata = factory.LazyFunction(dict)
 
-
 class PayoutItemFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = PayoutItem
@@ -65,11 +61,10 @@ class PayoutItemFactory(factory.django.DjangoModelFactory):
     account_number = factory.Sequence(lambda n: f"017{n:08d}")
     gross_amount = Decimal("500.00")
     fee_amount = Decimal("9.25")
-    net_amount = Decimal("490.75")
+    net_amount = factory.LazyAttribute(lambda o: o.gross_amount - o.fee_amount)
     internal_reference = factory.LazyFunction(lambda: str(uuid.uuid4()))
     retry_count = 0
     metadata = factory.LazyFunction(dict)
-
 
 class WithdrawalPriorityFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -89,7 +84,6 @@ class WithdrawalPriorityFactory(factory.django.DjangoModelFactory):
         obj.full_clean()
         super(model_class, obj).save()
         return obj
-
 
 class BulkProcessLogFactory(factory.django.DjangoModelFactory):
     class Meta:

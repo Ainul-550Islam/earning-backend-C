@@ -9,7 +9,7 @@ from django.utils import timezone
 
 def generate_waterfall_report(publisher, start_date: date, end_date: date) -> Dict:
     """Publisher-এর waterfall performance report।"""
-    from api.publisher_tools.models import MediationGroup, PublisherEarning
+    from publisher_tools.models import MediationGroup, PublisherEarning
     groups = MediationGroup.objects.filter(
         ad_unit__publisher=publisher, is_active=True
     ).select_related("ad_unit")
@@ -34,7 +34,7 @@ def generate_waterfall_report(publisher, start_date: date, end_date: date) -> Di
 
 
 def generate_network_roi_report(publisher, days: int = 30) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.db.models import Sum, Avg
     start = timezone.now().date() - timedelta(days=days)
     data = list(

@@ -1,7 +1,8 @@
 # Create migration script: migrate_to_wallet.py
 
 from django.core.management.base import BaseCommand
-from api.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()  # replaces direct api.models import
 from wallet.models import Wallet
 from wallet.services import WalletService
 

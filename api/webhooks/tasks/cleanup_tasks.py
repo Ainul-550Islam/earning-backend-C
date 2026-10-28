@@ -1,17 +1,21 @@
 """Cleanup Tasks
 
 This module contains background tasks for cleaning up old webhook data.
+FIX: Added logging to all task functions.
 """
 
+import logging
+
 from celery import shared_task
-from django.utils import timezone
 from datetime import timedelta
+from django.utils import timezone
 
 from ..models import (
     WebhookDeliveryLog, WebhookHealthLog, WebhookAnalytics,
-    WebhookEventStat, WebhookRateLimit, WebhookReplay, WebhookReplayBatch
+    WebhookEventStat, WebhookRateLimit, WebhookReplay, WebhookReplayBatch,
 )
 
+logger = logging.getLogger("ainul.webhooks.tasks.cleanup")
 
 @shared_task
 def cleanup_old_delivery_logs(days=90):
@@ -40,7 +44,7 @@ def cleanup_old_delivery_logs(days=90):
                 log.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete delivery log {log.id}: {e}")
+                logger.error("Failed to delete delivery log %s: %s", log.id, e)
         
         return {
             'success': True,
@@ -84,7 +88,7 @@ def cleanup_old_health_logs(days=30):
                 log.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete health log {log.id}: {e}")
+                logger.error("Failed to delete health log %s: %s", log.id, e)
         
         return {
             'success': True,
@@ -128,7 +132,7 @@ def cleanup_old_analytics(days=365):
                 analytics.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete analytics record {analytics.id}: {e}")
+                logger.error("Failed to delete analytics record %s: %s", analytics.id, e)
         
         return {
             'success': True,
@@ -229,23 +233,24 @@ def archive_old_data(days=180):
         # Archive delivery logs
         delivery_logs_archived = 0
         delivery_logs = WebhookDeliveryLog.objects.filter(
-            created_at__lt=cutoff_date
+            created_at__lt=cutoff_date,
+            archived=False,
         )
         
         for log in delivery_logs:
             try:
-                # Mark as archived (this assumes there's an archived field)
                 log.archived = True
                 log.archived_at = timezone.now()
                 log.save()
                 delivery_logs_archived += 1
             except Exception as e:
-                print(f"Failed to archive delivery log {log.id}: {e}")
+                logger.error("Failed to archive delivery log %s: %s", log.id, e)
         
         # Archive health logs
         health_logs_archived = 0
         health_logs = WebhookHealthLog.objects.filter(
-            checked_at__lt=cutoff_date
+            checked_at__lt=cutoff_date,
+            archived=False,
         )
         
         for log in health_logs:
@@ -255,7 +260,7 @@ def archive_old_data(days=180):
                 log.save()
                 health_logs_archived += 1
             except Exception as e:
-                print(f"Failed to archive health log {log.id}: {e}")
+                logger.error("Failed to archive health log %s: %s", log.id, e)
         
         return {
             'success': True,
@@ -448,7 +453,7 @@ def optimize_database_tables():
                         optimized_tables.append(table)
                         
                 except Exception as e:
-                    print(f"Failed to optimize table {table}: {e}")
+                    logger.error("Failed to optimize table %s: %s", table, e)
         
         return {
             'success': True,
@@ -502,7 +507,7 @@ def vacuum_database_tables():
                         vacuumed_tables.append(table)
                         
                 except Exception as e:
-                    print(f"Failed to vacuum table {table}: {e}")
+                    logger.error("Failed to vacuum table %s: %s", table, e)
         
         return {
             'success': True,

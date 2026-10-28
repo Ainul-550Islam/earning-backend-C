@@ -54,9 +54,6 @@ def geo_pricing_view(request):
     country = request.query_params.get('country', 'US')
     base = Decimal(str(request.query_params.get('base_payout', '1.00')))
     return Response(calculate_geo_payout(base, country))
-
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def geo_tiers_view(request):
     return Response({

@@ -1,0 +1,11 @@
+{% extends "offer_routing/_base.html" %}
+{% block title %}Delete Route{% endblock %}
+{% block content %}
+<h1>Delete Route: {{ object.name }}</h1>
+<div class="alert alert-danger">Are you sure you want to delete this route? This action cannot be undone.</div>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+    <a href="{% url 'offer_routing:route-detail' object.pk %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

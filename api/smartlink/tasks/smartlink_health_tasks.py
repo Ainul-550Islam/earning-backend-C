@@ -10,7 +10,7 @@ def check_broken_smartlinks():
     Every 6 hours: Find active SmartLinks with 0 active offers in pool.
     Notify admins and auto-pause broken links.
     """
-    from ..models import SmartLink
+    from api.smartlink.models import SmartLink
 
     broken = SmartLink.objects.filter(
         is_active=True, is_archived=False
@@ -40,7 +40,7 @@ def check_smartlink_redirect_health():
     """
     import urllib.request
     from django.conf import settings
-    from ..models import SmartLink
+    from api.smartlink.models import SmartLink
 
     base_url = getattr(settings, 'SMARTLINK_BASE_URL', 'https://go.example.com')
     sample = SmartLink.objects.filter(
@@ -72,7 +72,7 @@ def check_offer_pool_health():
     Every 30 minutes: Check all offer pools for health issues.
     Flags pools where all offers are capped.
     """
-    from ..models import SmartLink
+    from api.smartlink.models import SmartLink
     from ..services.rotation.CapTrackerService import CapTrackerService
 
     cap_svc = CapTrackerService()

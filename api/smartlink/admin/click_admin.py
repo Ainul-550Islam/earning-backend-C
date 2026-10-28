@@ -1,9 +1,9 @@
 from django.contrib import admin
-from ..models import Click, ClickMetadata, UniqueClick, ClickHeatmap, BotClick, ClickSession
-
+from .base_admin import ReadOnlyAdmin, SmartLinkAdminMixin
+from api.smartlink.models import Click, ClickMetadata, UniqueClick, ClickHeatmap, BotClick, ClickSession
 
 @admin.register(Click)
-class ClickAdmin(admin.ModelAdmin):
+class ClickAdmin(SmartLinkAdminMixin, ReadOnlyAdmin):
     list_display = [
         'id', 'smartlink', 'offer', 'country', 'device_type',
         'ip', 'is_unique', 'is_fraud', 'is_bot', 'is_converted',
@@ -21,26 +21,15 @@ class ClickAdmin(admin.ModelAdmin):
     list_per_page = 100
     ordering = ['-created_at']
 
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-
 @admin.register(BotClick)
-class BotClickAdmin(admin.ModelAdmin):
+class BotClickAdmin(SmartLinkAdminMixin, ReadOnlyAdmin):
     list_display = ['smartlink', 'ip', 'bot_type', 'detection_method', 'country', 'created_at']
     list_filter = ['bot_type', 'detection_method', 'country']
     search_fields = ['ip', 'user_agent', 'smartlink__slug']
     readonly_fields = ['smartlink', 'ip', 'user_agent', 'bot_type', 'detection_method', 'country', 'created_at']
 
-    def has_add_permission(self, request):
-        return False
-
-
 @admin.register(UniqueClick)
-class UniqueClickAdmin(admin.ModelAdmin):
+class UniqueClickAdmin(SmartLinkAdminMixin, ReadOnlyAdmin):
     list_display = ['fingerprint_short', 'smartlink', 'offer', 'ip', 'date', 'click_count']
     list_filter = ['date']
     search_fields = ['ip', 'smartlink__slug']
@@ -49,10 +38,6 @@ class UniqueClickAdmin(admin.ModelAdmin):
     def fingerprint_short(self, obj):
         return obj.fingerprint[:16] + '...'
     fingerprint_short.short_description = 'Fingerprint'
-
-    def has_add_permission(self, request):
-        return False
-
 
 @admin.register(ClickHeatmap)
 class ClickHeatmapAdmin(admin.ModelAdmin):

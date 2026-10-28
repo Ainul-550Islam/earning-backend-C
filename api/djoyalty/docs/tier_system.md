@@ -1,120 +1,66 @@
-# Tier System — Djoyalty
+# Tier System Guide
 
-## Overview
-Tier system customer দের loyalty level অনুযায়ী সুবিধা দেয়।
-Bronze থেকে শুরু করে Diamond পর্যন্ত ৫টি tier আছে।
+## 5-Tier Structure
 
-## Default Tiers
-| Tier | Min Points (lifetime) | Earn Multiplier | Icon |
+| Tier | Min Points | Multiplier | Color |
 |---|---|---|---|
-| Bronze | 0 | 1.0× | 🥉 |
-| Silver | 500 | 1.25× | 🥈 |
-| Gold | 2,000 | 1.5× | 🥇 |
-| Platinum | 5,000 | 2.0× | 💎 |
-| Diamond | 10,000 | 3.0× | 💠 |
+| 🥉 Bronze | 0 | 1.0x | #CD7F32 |
+| 🥈 Silver | 500 | 1.2x | #C0C0C0 |
+| 🥇 Gold | 2,000 | 1.5x | #FFD700 |
+| 💎 Platinum | 10,000 | 2.0x | #E5E4E2 |
+| 💠 Diamond | 50,000 | 3.0x | #B9F2FF |
 
-## Key Models
-
-### LoyaltyTier — Tier definition (per tenant)
-```python
-name           # bronze | silver | gold | platinum | diamond
-label          # Display name
-min_points     # Minimum lifetime_earned required
-earn_multiplier # Points multiplier for this tier
-color          # Hex color code
-icon           # Emoji icon
-rank           # Sort order (1=Bronze, 5=Diamond)
-```
-
-### UserTier — Customer's current and history tiers
-```python
-customer       # ForeignKey to Customer
-tier           # ForeignKey to LoyaltyTier
-is_current     # True = active tier
-assigned_at    # When assigned
-points_at_assignment  # lifetime_earned at the time
-```
-
-### TierHistory — Upgrade/downgrade audit trail
-```python
-from_tier      # Previous tier (null for initial)
-to_tier        # New tier
-change_type    # upgrade | downgrade | initial
-points_at_change  # lifetime_earned at the time
-```
-
-### TierConfig (per tenant)
-```python
-evaluation_period_months    # 12 (how far back to look)
-downgrade_protection_months # 3 (protection period)
-auto_downgrade              # True/False
-notify_on_upgrade           # Send notification?
-notify_on_downgrade         # Send notification?
-```
-
-## Evaluation Logic
-Tier `lifetime_earned` points এর উপর ভিত্তি করে assign হয় — NOT current balance।
-
-```
-lifetime_earned >= 10000 → Diamond
-lifetime_earned >= 5000  → Platinum
-lifetime_earned >= 2000  → Gold
-lifetime_earned >= 500   → Silver
-lifetime_earned >= 0     → Bronze
-```
-
-## Service Usage
-
-### Evaluate Tier
-```python
-from djoyalty.services.tiers.TierEvaluationService import TierEvaluationService
-user_tier = TierEvaluationService.evaluate(customer, tenant=tenant)
-```
-
-### Force Upgrade (Admin)
-```python
-from djoyalty.services.tiers.TierUpgradeService import TierUpgradeService
-TierUpgradeService.force_upgrade(customer, 'gold', reason='VIP promotion')
-```
-
-### Get Upgrade Progress
-```python
-from djoyalty.services.tiers.TierUpgradeService import TierUpgradeService
-progress = TierUpgradeService.get_upgrade_progress(customer)
-# {current_tier, next_tier, current_points, points_needed, progress_percent}
-```
-
-### Get Tier Benefits
-```python
-from djoyalty.services.tiers.TierBenefitService import TierBenefitService
-benefits = TierBenefitService.get_benefits_for_customer(customer)
-```
-
-## Setup Commands
+## Seed Default Tiers
 ```bash
-# Default tiers seed করো
 python manage.py seed_tiers
+python manage.py seed_tiers --with-benefits  # Also add benefits
+python manage.py seed_tiers --reset          # Delete and re-seed
+```
 
-# সব customer এর tier re-evaluate করো
+## Auto Tier Evaluation
+
+Tier is re-evaluated automatically when points are earned (via signal).
+
+### Manual Evaluation
+```bash
 python manage.py evaluate_tiers
+python manage.py evaluate_tiers --customer-id 123
+python manage.py evaluate_tiers --dry-run
 ```
 
-## API Endpoints
-| Method | URL | Description |
-|---|---|---|
-| GET | `/api/djoyalty/tiers/` | All tier definitions |
-| GET | `/api/djoyalty/user-tiers/?customer=1` | Customer's current tier |
-| POST | `/api/djoyalty/user-tiers/evaluate/` | Re-evaluate tier |
+### API
+```http
+POST /api/loyalty/user-tiers/evaluate/
+{ "customer_id": 123 }
 
-## Celery Task
+GET /api/loyalty/user-tiers/my_tier/?customer_id=123
+GET /api/loyalty/user-tiers/progress/?customer_id=123
+GET /api/loyalty/user-tiers/history/?customer_id=123
+```
+
+## Tier Benefits
+
+Benefits per tier can be configured in admin or seeded:
+
 ```python
-# Monthly tier evaluation
-'djoyalty.evaluate_all_tiers'  # tier_evaluation_tasks.py
+# Bronze: Welcome Bonus, Birthday Points
+# Silver: 1.2x Multiplier, Priority Support, Free Shipping 500+
+# Gold: 1.5x, Account Manager, Always Free Shipping, Exclusive Offers
+# Platinum: 2x, VIP Events, Personal Shopper, Quarterly Gift
+# Diamond: 3x, Concierge Service, Annual Gift, Invitation-only Events
 ```
 
-## Tier Benefits Examples
-- **Bronze**: Standard earn rate
-- **Silver**: 1.25× earn, Priority support
-- **Gold**: 1.5× earn, Free shipping, Birthday bonus
-- **Platinum**: 2.0× earn, Dedicated account manager
-- **Diamond**: 3.0× earn, VIP lounge access, Annual gift
+## Force Upgrade/Downgrade (Admin)
+```http
+POST /api/loyalty/user-tiers/force_upgrade/
+{ "customer_id": 1, "tier_name": "gold", "reason": "VIP customer" }
+
+POST /api/loyalty/user-tiers/force_downgrade/
+{ "customer_id": 1, "tier_name": "silver", "reason": "Policy change" }
+```
+
+## Downgrade Protection
+
+By default, customers are protected from downgrade for `TIER_DOWNGRADE_PROTECTION_MONTHS` (3 months) after tier assignment.
+
+Configure in `TierConfig` per tenant.

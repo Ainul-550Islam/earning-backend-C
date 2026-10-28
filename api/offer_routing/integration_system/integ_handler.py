@@ -577,3 +577,6 @@ class IntegrationHandler:
 
 # Global integration handler instance
 integration_handler = IntegrationHandler()
+
+# Module-level singleton for backward-compat
+integ_handler = IntegrationHandler()

@@ -30,7 +30,7 @@ class ChallengeService:
                 participant.status = 'completed'
                 participant.completed_at = timezone.now()
                 participant.points_awarded = participant.challenge.points_reward
-                if participant.points_reward > 0:
+                if participant.points_awarded > 0:
                     from ..earn.BonusEventService import BonusEventService
                     BonusEventService.award_bonus(
                         customer, participant.challenge.points_reward,

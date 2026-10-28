@@ -1,6 +1,6 @@
 # api/djoyalty/services/tiers/TierDowngradeService.py
 """
-TierDowngradeService — Customer এর tier downgrade logic।
+TierDowngradeService -- Customer এর tier downgrade logic।
 Protection period সহ।
 """
 import logging

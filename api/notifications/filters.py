@@ -6,6 +6,14 @@ Enables powerful API filtering: /notifications/?channel=push&is_read=false&date_
 import django_filters
 from django.db.models import Q
 from django_filters import rest_framework as filters
+from api.notifications.models import Notification
+from api.notifications.models.channel import PushDevice
+from api.notifications.models.channel import InAppMessage
+from api.notifications.models.schedule import NotificationSchedule
+from api.notifications.models.schedule import NotificationBatch
+from api.notifications.models.analytics import NotificationInsight
+from api.notifications.models.analytics import OptOutTracking
+from api.notifications.models.analytics import DeliveryRate
 
 
 class NotificationFilter(filters.FilterSet):

@@ -7,7 +7,7 @@ logger = logging.getLogger('smartlink.tasks.domain')
 @shared_task(name='smartlink.verify_pending_domains', queue='default')
 def verify_pending_domains():
     """Every 6 hours: attempt to verify all pending custom domains."""
-    from ..models.publisher import PublisherDomain
+    from api.smartlink.models.publisher import PublisherDomain
     from ..choices import DomainVerificationStatus
     from ..services.core.DomainService import DomainService
 
@@ -37,7 +37,7 @@ def check_ssl_expiry():
     """Daily: Check SSL certificate expiry for all verified domains."""
     import datetime
     from django.utils import timezone
-    from ..models.publisher import PublisherDomain
+    from api.smartlink.models.publisher import PublisherDomain
     from ..choices import DomainVerificationStatus
     from ..services.core.DomainService import DomainService
 

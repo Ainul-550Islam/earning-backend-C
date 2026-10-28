@@ -4,6 +4,9 @@ Personalization Tasks for Offer Routing System
 This module contains background tasks for personalization,
 including preference updates, affinity calculations, and model training.
 """
+from django.db.models import Avg
+from django.db.models import Count
+from django.db.models import Q
 
 import logging
 from celery import shared_task

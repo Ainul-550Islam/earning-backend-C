@@ -1,9 +1,14 @@
+from datetime import timedelta
+import json
 import os
 import boto3
 import tempfile
 from botocore.exceptions import ClientError
 from django.conf import settings
 from .BaseBackupService import BaseBackupService
+import logging
+
+logger = logging.getLogger(__name__)
 
 class S3BackupService(BaseBackupService):
     def __init__(self, config=None):
@@ -287,7 +292,7 @@ class S3BackupService(BaseBackupService):
                             pass
                             
                     except Exception as e:
-                        print(f"ফাইল ডিলিট ব্যর্থ {backup['key']}: {str(e)}")
+                        logger.warning(f"Failed to delete file {backup['key']}: {str(e)}")
             
         except Exception as e:
             raise Exception(f"S3 ক্লিনআপ ব্যর্থ: {str(e)}")

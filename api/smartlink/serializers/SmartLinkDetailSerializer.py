@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .SmartLinkSerializer import SmartLinkSerializer
-from ..models import SmartLink, TargetingRule, OfferPool, SmartLinkFallback, SmartLinkRotation
+from api.smartlink.models import SmartLink, TargetingRule, OfferPool, SmartLinkFallback, SmartLinkRotation
 
 
 class FallbackInlineSerializer(serializers.ModelSerializer):

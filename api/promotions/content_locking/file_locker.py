@@ -155,6 +155,8 @@ class FileLocker:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def create_file_lock_view(request):
     locker = FileLocker()
@@ -168,8 +170,6 @@ def create_file_lock_view(request):
     )
     return Response(result, status=status.HTTP_201_CREATED)
 
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def get_download_token_view(request, lock_id):
     visitor_id = request.query_params.get('visitor_id', '')
@@ -178,9 +178,6 @@ def get_download_token_view(request, lock_id):
     if 'error' in result:
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     return Response(result)
-
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def consume_download_view(request, token):
     locker = FileLocker()

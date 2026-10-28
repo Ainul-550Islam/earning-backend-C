@@ -98,29 +98,23 @@ class ContentModerator:
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def review_queue_view(request):
     mod = ContentModerator()
     return Response({'queue': mod.get_review_queue()})
 
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def approve_campaign_view(request, campaign_id):
     mod = ContentModerator()
     result = mod.approve_campaign(campaign_id, request.user.id, request.data.get('notes', ''))
     return Response(result)
 
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def reject_campaign_view(request, campaign_id):
     mod = ContentModerator()
     result = mod.reject_campaign(campaign_id, request.user.id, request.data.get('reason', ''))
     return Response(result)
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def auto_review_campaign_view(request, campaign_id):
     mod = ContentModerator()

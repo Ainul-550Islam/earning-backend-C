@@ -8,7 +8,7 @@ from django.db.models import Sum, Avg
 
 
 def get_active_placements_for_site(site) -> List:
-    from api.publisher_tools.models import AdPlacement, AdUnit
+    from publisher_tools.models import AdPlacement, AdUnit
     return list(
         AdPlacement.objects.filter(
             ad_unit__site=site, is_active=True, ad_unit__status="active",
@@ -17,7 +17,7 @@ def get_active_placements_for_site(site) -> List:
 
 
 def get_active_placements_for_app(app) -> List:
-    from api.publisher_tools.models import AdPlacement
+    from publisher_tools.models import AdPlacement
     return list(
         AdPlacement.objects.filter(
             ad_unit__app=app, is_active=True, ad_unit__status="active",
@@ -50,7 +50,7 @@ def toggle_placement(placement, is_active: bool) -> None:
 
 def clone_placement(placement, new_name: str = None, new_position: str = None):
     """Placement clone করে নতুন position-এ।"""
-    from api.publisher_tools.models import AdPlacement
+    from publisher_tools.models import AdPlacement
     clone = AdPlacement.objects.create(
         ad_unit=placement.ad_unit,
         name=new_name or f"{placement.name} (Copy)",
@@ -69,7 +69,7 @@ def clone_placement(placement, new_name: str = None, new_position: str = None):
 
 
 def get_placement_performance_summary(placement, days: int = 30) -> Dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from datetime import timedelta
     start = timezone.now().date() - timedelta(days=days)
     # Note: earning records don't directly link to placement, link via ad_unit

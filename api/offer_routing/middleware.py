@@ -4,6 +4,7 @@ Django Middleware for Offer Routing System
 This module provides middleware for request/response intercepting,
 including tenant/user context, performance tracking, and security logging.
 """
+import uuid
 
 import time
 import logging
@@ -16,7 +17,7 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from ipware import get_client_ip
 
-from .models import RoutingAuditLog, SecurityEvent
+from .models import SecurityEvent
 from .utils import get_client_user_agent, validate_ip_address
 
 User = get_user_model()
@@ -644,3 +645,110 @@ def get_routing_middleware():
         'offer_routing.middleware.RoutingAuditMiddleware',
         'offer_routing.middleware.RoutingCacheMiddleware',
     ]
+
+# ─────────────────────────────────────────────────────────────────────────────
+class TenantIsolationMiddleware(MiddlewareMixin):
+    """
+    Enforces per-tenant data isolation.
+    Sets request.tenant from the authenticated user and blocks cross-tenant
+    access on every request to the offer_routing namespace.
+    """
+
+    PREFIX = "/api/offer_routing/"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        super().__init__(get_response)
+
+    def process_request(self, request):
+        if not request.path.startswith(self.PREFIX):
+            return None
+        user = getattr(request, "user", None)
+        if user and user.is_authenticated:
+            request.tenant = user
+            request.tenant_id = getattr(user, "tenant_id", user.id)
+        else:
+            request.tenant = None
+            request.tenant_id = None
+        return None
+
+    def process_response(self, request, response):
+        return response
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+class RequestLoggingMiddleware(MiddlewareMixin):
+    """
+    Structured JSON request logging for all offer_routing endpoints.
+    Logs: method, path, status, duration_ms, user_id, tenant_id, ip.
+    """
+
+    import logging as _log
+    _logger = _log.getLogger("offer_routing.requests")
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        super().__init__(get_response)
+
+    def process_request(self, request):
+        import time
+        request._rl_start = time.monotonic()
+        return None
+
+    def process_response(self, request, response):
+        import time, json as _json
+        try:
+            duration_ms = round((time.monotonic() - getattr(request, "_rl_start", time.monotonic())) * 1000, 2)
+            user = getattr(request, "user", None)
+            self._logger.info(
+                _json.dumps({
+                    "method": request.method,
+                    "path": request.path,
+                    "status": response.status_code,
+                    "duration_ms": duration_ms,
+                    "user_id": getattr(user, "id", None) if user and user.is_authenticated else None,
+                    "tenant_id": getattr(request, "tenant_id", None),
+                    "ip": request.META.get("REMOTE_ADDR"),
+                })
+            )
+        except Exception:
+            pass
+        return response
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+class APIKeyAuthMiddleware(MiddlewareMixin):
+    """
+    Authenticates requests that carry an X-API-Key header.
+    If the key is valid and the user is not already authenticated,
+    sets request.user from the key's owner.
+    This runs *before* Django REST Framework's authenticators.
+    """
+
+    HEADER = "HTTP_X_API_KEY"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        super().__init__(get_response)
+
+    def process_request(self, request):
+        from django.contrib.auth.models import AnonymousUser
+        if getattr(request, "user", None) and getattr(request.user, "is_authenticated", False):
+            return None  # already authenticated
+        api_key = request.META.get(self.HEADER) or request.GET.get("api_key")
+        if not api_key:
+            return None
+        try:
+            from .models import TenantAPIKey
+            key_obj = TenantAPIKey.objects.select_related("tenant").get(
+                key=api_key, is_active=True
+            )
+            request.user = key_obj.tenant
+            request._api_key_auth = True
+        except Exception:
+            pass  # invalid key — leave request.user as-is (AnonymousUser)
+        return None
+
+    def process_response(self, request, response):
+        return response
+

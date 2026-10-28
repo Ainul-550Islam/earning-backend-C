@@ -1,6 +1,6 @@
 # api/djoyalty/services/DjoyaltyService.py
 """
-Main DjoyaltyService facade — সব sub-services এর entry point।
+Main DjoyaltyService facade -- সব sub-services এর entry point।
 """
 import logging
 from decimal import Decimal

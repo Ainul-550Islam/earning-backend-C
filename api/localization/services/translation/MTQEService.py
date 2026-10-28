@@ -124,7 +124,7 @@ class MTQEService:
         if src_lang == tgt_lang:
             return 100.0
         # Different scripts — source and target should differ significantly
-        from ..utils.fuzzy import levenshtein_similarity
+        from api.localization.utils.fuzzy import levenshtein_similarity
         similarity = levenshtein_similarity(source, translated)
         if similarity > 85:  # Too similar — likely untranslated
             return max(0, round(100 - similarity, 1))

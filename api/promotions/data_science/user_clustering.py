@@ -1,5 +1,4 @@
 # api/promotions/data_science/user_clustering.py
-user_clustering.py
 # User Quality Clustering — K-Means দিয়ে user segment করে
 # =============================================================================
 

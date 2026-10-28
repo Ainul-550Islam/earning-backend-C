@@ -1,0 +1,20 @@
+Survey Completed - Great job, {{ user.username }}!
+
+You've successfully completed survey "{{ survey_title }}" and earned {{ reward_amount }} {{ currency_symbol }}!
+
+{% if quality_score %}
+Quality Score: {{ quality_score }}/1.0
+{% endif %}
+
+{% if time_spent %}
+Time spent: {{ time_spent }} minutes
+{% endif %}
+
+Take more surveys: {{ site_url }}/surveys/
+
+{% if next_survey_available %}
+New Survey Available!
+We have a new survey that matches your profile. Check your dashboard to participate!
+{% endif %}
+
+Keep completing surveys to earn more rewards and improve your profile score!

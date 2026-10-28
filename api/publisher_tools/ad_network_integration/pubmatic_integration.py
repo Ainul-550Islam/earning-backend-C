@@ -36,6 +36,7 @@ class PubMaticConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_pubmatic_configs"
         verbose_name = _("PubMatic Config")
         unique_together = [["publisher"]]

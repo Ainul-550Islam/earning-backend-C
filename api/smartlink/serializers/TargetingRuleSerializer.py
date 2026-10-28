@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import TargetingRule, GeoTargeting, DeviceTargeting, OSTargeting, TimeTargeting, ISPTargeting, LanguageTargeting
+from api.smartlink.models import TargetingRule, GeoTargeting, DeviceTargeting, OSTargeting, TimeTargeting, ISPTargeting, LanguageTargeting
 
 
 class GeoTargetingInlineSerializer(serializers.ModelSerializer):

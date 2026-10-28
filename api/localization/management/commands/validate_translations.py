@@ -10,8 +10,8 @@ class Command(BaseCommand):
         parser.add_argument('--show-warnings', action='store_true')
 
     def handle(self, *args, **options):
-        from localization.services.translation.TranslationQAService import TranslationQAService
-        from localization.models.core import Language
+        from api.localization.services.translation.TranslationQAService import TranslationQAService
+        from api.localization.models.core import Language
         service = TranslationQAService()
         lang_code = options.get('language')
         show_warnings = options.get('show_warnings', False)

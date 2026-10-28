@@ -4,6 +4,7 @@ Threshold Admin Classes
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
+from django.db import models
 from django.db.models import Count, Avg
 from django.utils import timezone
 from django.contrib import messages
@@ -70,7 +71,7 @@ class ThresholdConfigAdmin(ModelAdmin):
     ]
     
     search_fields = [
-        'alert_rule__name', 'alert_rule__alert_type', 'config'
+        'alert_rule__name', 'alert_rule__alert_type'
     ]
     
     list_editable = ['primary_threshold', 'secondary_threshold']
@@ -85,10 +86,11 @@ class ThresholdConfigAdmin(ModelAdmin):
             'fields': ('alert_rule', 'threshold_type', 'is_active')
         }),
         ('Threshold Values', {
-            'fields': ('primary_threshold', 'secondary_threshold', 'time_window_minutes')
+            'fields': ('primary_threshold', 'secondary_threshold', 'calculation_window_minutes')
         }),
         ('Configuration', {
-            'fields': ('correlation_threshold', 'minimum_occurrences', 'config')
+            'fields': ('comparison_operator', 'percentile_value', 'standard_deviations',
+                       'model_type', 'model_parameters')
         }),
         ('Statistics', {
             'fields': ('created_at', 'updated_at', 'breach_count', 'last_breach',
@@ -163,7 +165,7 @@ class ThresholdConfigAdmin(ModelAdmin):
     
     def test_thresholds(self, request, queryset):
         """Test selected threshold configurations"""
-        from ..tasks.threshold import ThresholdConfigEvaluateSerializer
+        from ..serializers.threshold import ThresholdConfigEvaluateSerializer
         tested_count = 0
         for config in queryset:
             # Simulate threshold evaluation
@@ -212,7 +214,7 @@ class ThresholdBreachAdmin(ModelAdmin):
     ]
     
     search_fields = [
-        'threshold_config__alert_rule__name', 'alert_log__message', 'notes'
+        'threshold_config__alert_rule__name', 'alert_log__message', 'resolution_notes'
     ]
     
     readonly_fields = [
@@ -229,7 +231,7 @@ class ThresholdBreachAdmin(ModelAdmin):
         }),
         ('Resolution', {
             'fields': ('acknowledged_at', 'acknowledged_by', 'resolved_at', 
-                      'resolved_by', 'duration_minutes', 'notes')
+                      'resolved_by', 'duration_minutes', 'resolution_notes')
         }),
     )
     
@@ -344,7 +346,7 @@ class AdaptiveThresholdAdmin(ModelAdmin):
     ]
     
     search_fields = [
-        'threshold_config__alert_rule__name', 'adaptation_method', 'config'
+        'threshold_config__alert_rule__name', 'adaptation_method'
     ]
     
     readonly_fields = [
@@ -357,10 +359,11 @@ class AdaptiveThresholdAdmin(ModelAdmin):
             'fields': ('threshold_config', 'adaptation_method', 'is_active')
         }),
         ('Learning Configuration', {
-            'fields': ('min_samples', 'confidence_threshold')
+            'fields': ('learning_rate', 'adaptation_window_days')
         }),
         ('Adaptation Settings', {
-            'fields': ('adaptation_frequency', 'model_parameters', 'config')
+            'fields': ('base_threshold', 'min_threshold', 'max_threshold',
+                       'max_adjustment_percentage')
         }),
         ('Statistics', {
             'fields': ('current_threshold', 'adaptation_count', 'last_adaptation',
@@ -505,7 +508,8 @@ class ThresholdProfileAdmin(ModelAdmin):
             'fields': ('name', 'profile_type', 'description', 'is_default', 'is_active')
         }),
         ('Configuration', {
-            'fields': ('threshold_settings', 'alert_type_mappings')
+            'fields': ('default_threshold_multiplier', 'sensitivity_level', 'alert_type_settings',
+                       'target_false_positive_rate', 'target_detection_rate')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')
@@ -526,8 +530,8 @@ class ThresholdProfileAdmin(ModelAdmin):
     def effective_settings_count(self, obj):
         """Count of effective settings"""
         # This would count unique alert types with settings
-        if obj.threshold_settings:
-            return len(obj.threshold_settings)
+        if obj.alert_type_settings:
+            return len(obj.alert_type_settings)
         return 0
     effective_settings_count.short_description = 'Settings'
     

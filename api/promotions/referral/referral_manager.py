@@ -102,9 +102,6 @@ class ReferralManager:
 def my_referral_view(request):
     mgr = ReferralManager()
     return Response(mgr.get_referral_stats(request.user.id))
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_referral_link_view(request):
     mgr = ReferralManager()

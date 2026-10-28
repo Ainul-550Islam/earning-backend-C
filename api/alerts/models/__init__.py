@@ -7,6 +7,7 @@ from .channel import *
 from .incident import *
 from .intelligence import *
 from .reporting import *
+from .integration import *
 
 __all__ = [
     # Core models (18 existing)
@@ -30,4 +31,7 @@ __all__ = [
     
     # Reporting models (4 new)
     'AlertReport', 'MTTRMetric', 'MTTDMetric', 'SLABreach',
+
+    # Integration models (1 new)
+    'IntegrationVersion',
 ]

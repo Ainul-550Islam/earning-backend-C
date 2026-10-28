@@ -75,10 +75,15 @@ class TestBroadcastTasks(TestCase):
 
     def test_send_scheduled_broadcasts(self):
         from ..tasks import send_scheduled_broadcasts
+        from ..models import AdminBroadcast
         b = AdminBroadcastFactory(
             created_by=self.admin,
             status=BroadcastStatus.SCHEDULED,
-            scheduled_at=timezone.now() - timedelta(minutes=5),
+            scheduled_at=timezone.now() + timedelta(minutes=5),
+        )
+        # Backdate to trigger dispatch (bypass model validation via queryset update)
+        AdminBroadcast.objects.filter(pk=b.pk).update(
+            scheduled_at=timezone.now() - timedelta(minutes=1)
         )
         with patch("messaging.tasks.send_broadcast_async") as mock_task:
             mock_task.delay = MagicMock()
@@ -214,7 +219,7 @@ class TestCPATasks(TestCase):
     def setUp(self):
         self.user = UserFactory()
 
-    @patch("messaging.services_cpa.deliver_cpa_notification_task")
+    @patch("messaging.tasks_cpa.deliver_cpa_notification_task")
     def test_cleanup_old_cpa_notifications(self, mock_task):
         mock_task.delay = MagicMock()
         from ..tasks_cpa import cleanup_old_cpa_notifications
@@ -240,7 +245,11 @@ class TestCPATasks(TestCase):
             title="Test",
             body="Body",
             status="SCHEDULED",
-            scheduled_at=timezone.now() - timedelta(minutes=5),
+            scheduled_at=timezone.now() + timedelta(minutes=5),
+        )
+        # Backdate to trigger dispatch
+        CPABroadcast.objects.filter(pk=b.pk).update(
+            scheduled_at=timezone.now() - timedelta(minutes=1)
         )
         with patch("messaging.tasks_cpa.send_cpa_broadcast_task") as mock_task:
             mock_task.delay = MagicMock()

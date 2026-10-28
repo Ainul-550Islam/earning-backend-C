@@ -1,3 +1,4 @@
+from django.db import models
 # api/promotions/services/task_service.py
 import logging
 from django.db import transaction

@@ -18,8 +18,8 @@ def generate_invoices_for_month(year: int = None, month: int = None, dry_run: bo
     Specified month-এর সব eligible publishers-এর invoice generate করে।
     dry_run=True হলে শুধু দেখায়, save করে না।
     """
-    from api.publisher_tools.models import Publisher, PublisherInvoice
-    from api.publisher_tools.services import InvoiceService
+    from publisher_tools.models import Publisher, PublisherInvoice
+    from publisher_tools.services import InvoiceService
 
     now = timezone.now()
     year  = year or now.year
@@ -79,8 +79,8 @@ def generate_invoices_for_month(year: int = None, month: int = None, dry_run: bo
 
 def issue_pending_invoices():
     """Draft invoices issue করে।"""
-    from api.publisher_tools.models import PublisherInvoice
-    from api.publisher_tools.services import InvoiceService
+    from publisher_tools.models import PublisherInvoice
+    from publisher_tools.services import InvoiceService
     drafts = PublisherInvoice.objects.filter(status="draft")
     issued = 0
     for invoice in drafts:
@@ -95,8 +95,8 @@ def issue_pending_invoices():
 
 def send_invoice_notifications():
     """Issued invoices-এর notification পাঠায়।"""
-    from api.publisher_tools.models import PublisherInvoice
-    from api.publisher_tools.webhooks.payment_webhook import send_invoice_issued_webhook
+    from publisher_tools.models import PublisherInvoice
+    from publisher_tools.webhooks.payment_webhook import send_invoice_issued_webhook
     issued = PublisherInvoice.objects.filter(status="issued", issued_at__isnull=False)
     sent = 0
     for invoice in issued:

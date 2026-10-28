@@ -3,6 +3,7 @@ SmartLink S2S Postback API
 Advertisers fire this endpoint when a conversion happens.
 URL: /postback/?click_id=123&payout=2.50&offer_id=456&security_token=xxx
 """
+from api.smartlink.utils import get_client_ip
 import logging
 from django.http import HttpResponse
 from django.views import View
@@ -89,11 +90,8 @@ class PostbackView(View):
         return hmac.compare_digest(token, expected)
 
     def _get_ip(self, request) -> str:
-        for header in ('HTTP_CF_IPCOUNTRY', 'HTTP_X_REAL_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'):
-            ip = request.META.get(header)
-            if ip:
-                return ip.split(',')[0].strip()
-        return '0.0.0.0'
+        # Single canonical implementation in api.smartlink.utils.get_client_ip
+        return get_client_ip(request)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -102,6 +100,11 @@ class PostbackPixelView(View):
     1×1 pixel postback — for advertisers that fire an image pixel.
     GET /pixel/?click_id=xxx&payout=1.50&offer_id=456
     Returns a 1×1 transparent GIF.
+
+    Also handles impression pixels:
+    GET /pixel/?sl=<slug>&offer=<id>&type=impression
+    Records an ImpressionLog entry before returning the pixel.
+    This is how pre-click view events are tracked for VTR / CTR analytics.
     """
     TRANSPARENT_GIF = (
         b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00'
@@ -110,8 +113,58 @@ class PostbackPixelView(View):
     )
 
     def get(self, request):
-        # Process same as postback
-        PostbackView().get(request)
+        pixel_type = request.GET.get('type', 'postback')
+
+        if pixel_type == 'impression':
+            # SmartLink impression pixel: fired by ad creative before click
+            self._record_impression(request)
+        else:
+            # Standard conversion postback pixel
+            PostbackView().get(request)
+
         response = HttpResponse(self.TRANSPARENT_GIF, content_type='image/gif')
         response['Cache-Control'] = 'no-store, no-cache'
+        response['Access-Control-Allow-Origin'] = '*'
         return response
+
+    def _record_impression(self, request):
+        """
+        Record a pre-click impression fired by an ad creative.
+        URL pattern: /pixel/?type=impression&sl=<slug>&offer=<offer_id>&sub1=...
+        """
+        slug     = request.GET.get('sl', '').strip()
+        offer_id = request.GET.get('offer', None)
+        if not slug:
+            return
+        try:
+            from api.smartlink.models import SmartLink
+            sl = SmartLink.objects.get(slug=slug, is_active=True)
+            from ..services.geoip.GeoIPEnricher import GeoIPEnricher
+            from ..utils import get_client_ip
+            ip = get_client_ip(request)
+            geo = GeoIPEnricher().enrich(ip)
+            from ..services.click.BotDetectionService import BotDetectionService
+            ua = request.META.get('HTTP_USER_AGENT', '')
+            is_bot, _ = BotDetectionService().detect(ip, ua)
+            context = {
+                'ip':          ip,
+                'country':     geo.get('country', ''),
+                'device_type': request.GET.get('device', geo.get('device_type', '')),
+                'os':          request.GET.get('os', ''),
+                'browser':     request.GET.get('browser', ''),
+                'referrer':    request.META.get('HTTP_REFERER', ''),
+                'sub1':        request.GET.get('sub1', ''),
+                'sub2':        request.GET.get('sub2', ''),
+                '_is_bot':     is_bot,
+            }
+            from ..services.analytics.ImpressionTrackingService import ImpressionTrackingService
+            ImpressionTrackingService().record(
+                smartlink=sl,
+                context=context,
+                offer_id=int(offer_id) if offer_id and offer_id.isdigit() else None,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger('smartlink.pixel').warning(
+                f"Impression pixel record failed for slug={slug}: {e}"
+            )

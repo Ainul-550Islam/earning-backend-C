@@ -35,45 +35,22 @@ class AdvertiserPortalConfig(AppConfig):
     
     def _initialize_components(self):
         """Initialize app components."""
-        # Initialize cache
-        try:
-            from .cache import cache_manager
-            cache_manager.initialize()
-            logger.info("Cache manager initialized")
-        except Exception as e:
-            logger.warning(f"Failed to initialize cache manager: {e}")
-        
-        # Initialize events
-        try:
-            from .events import event_publisher
-            event_publisher.initialize()
-            logger.info("Event publisher initialized")
-        except Exception as e:
-            logger.warning(f"Failed to initialize event publisher: {e}")
-        
-        # Initialize hooks
-        try:
-            from .hooks import hook_manager
-            hook_manager.initialize()
-            logger.info("Hook manager initialized")
-        except Exception as e:
-            logger.warning(f"Failed to initialize hook manager: {e}")
-        
-        # Initialize plugins
-        try:
-            from .plugins import plugin_manager
-            plugin_manager.initialize()
-            logger.info("Plugin manager initialized")
-        except Exception as e:
-            logger.warning(f"Failed to initialize plugin manager: {e}")
-        
-        # Initialize tasks
-        try:
-            from .tasks import task_manager
-            task_manager.initialize()
-            logger.info("Task manager initialized")
-        except Exception as e:
-            logger.warning(f"Failed to initialize task manager: {e}")
+        components = (
+            ('Cache manager', '.cache', 'cache_manager'),
+            ('Event publisher', '.events', 'event_publisher'),
+            ('Hook manager', '.hooks', 'hook_manager'),
+            ('Plugin manager', '.plugins', 'plugin_manager'),
+            ('Task manager', '.tasks', 'task_manager'),
+        )
+        for label, module_path, attr in components:
+            try:
+                module = __import__(f'{self.name}{module_path}', fromlist=[attr])
+                manager = getattr(module, attr, None)
+                if manager is not None and hasattr(manager, 'initialize'):
+                    manager.initialize()
+                logger.info("%s initialized", label)
+            except Exception as e:
+                logger.warning("Failed to initialize %s: %s", label, e)
 
 
 # App settings

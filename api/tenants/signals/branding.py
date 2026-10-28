@@ -229,8 +229,8 @@ def domain_updated(sender, instance, created, **kwargs):
                 )
                 
                 # Trigger signal
-                from . import ssl_certificate_updated
-                ssl_certificate_updated.send(sender=TenantDomain, domain=instance)
+                from . import ssl_certificate_updated as ssl_signal  # FIX
+                ssl_signal.send(sender=TenantDomain, domain=instance)
                 
                 # Send notification
                 TenantNotification.objects.create(

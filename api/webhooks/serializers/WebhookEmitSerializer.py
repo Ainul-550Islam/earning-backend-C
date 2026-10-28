@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 
 from ..models import WebhookEndpoint
 from ..choices import WebhookStatus
+from ..validators import validate_event_type as _validate_event_type
 
 User = get_user_model()
 
@@ -35,15 +36,8 @@ class WebhookEmitSerializer(serializers.Serializer):
         return value
     
     def validate_event_type(self, value):
-        """Validate event type."""
-        if not value:
-            raise serializers.ValidationError("Event type is required.")
-        
-        # Validate event type format (e.g., 'user.created')
-        if '.' not in value:
-            raise serializers.ValidationError("Event type must be in format 'domain.event'.")
-        
-        return value
+        """Validate event type (delegates to canonical validators.py)."""
+        return _validate_event_type(value)
     
     def validate_payload(self, value):
         """Validate payload."""
@@ -83,15 +77,8 @@ class WebhookEmitBatchSerializer(serializers.Serializer):
         return value
     
     def validate_event_type(self, value):
-        """Validate event type."""
-        if not value:
-            raise serializers.ValidationError("Event type is required.")
-        
-        # Validate event type format (e.g., 'user.created')
-        if '.' not in value:
-            raise serializers.ValidationError("Event type must be in format 'domain.event'.")
-        
-        return value
+        """Validate event type (delegates to canonical validators.py)."""
+        return _validate_event_type(value)
     
     def validate_events(self, value):
         """Validate events list."""
@@ -232,9 +219,6 @@ class WebhookEmitFilterSerializer(serializers.Serializer):
         """Validate endpoint ID filter."""
         return value
     
-    def validate_event_type(self, value):
-        """Validate event type filter."""
-        return value
     
     def validate_success(self, value):
         """Validate success filter."""
@@ -269,15 +253,8 @@ class WebhookEmitPreviewSerializer(serializers.Serializer):
         return value
     
     def validate_event_type(self, value):
-        """Validate event type."""
-        if not value:
-            raise serializers.ValidationError("Event type is required.")
-        
-        # Validate event type format (e.g., 'user.created')
-        if '.' not in value:
-            raise serializers.ValidationError("Event type must be in format 'domain.event'.")
-        
-        return value
+        """Validate event type (delegates to canonical validators.py)."""
+        return _validate_event_type(value)
     
     def validate_payload(self, value):
         """Validate payload."""
@@ -337,15 +314,8 @@ class WebhookEmitValidateSerializer(serializers.Serializer):
         return value
     
     def validate_event_type(self, value):
-        """Validate event type."""
-        if not value:
-            raise serializers.ValidationError("Event type is required.")
-        
-        # Validate event type format (e.g., 'user.created')
-        if '.' not in value:
-            raise serializers.ValidationError("Event type must be in format 'domain.event'.")
-        
-        return value
+        """Validate event type (delegates to canonical validators.py)."""
+        return _validate_event_type(value)
     
     def validate_payload(self, value):
         """Validate payload."""

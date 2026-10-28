@@ -2,6 +2,7 @@
 Unit tests for Offerwall app.
 Tests offer models, completions, and business logic.
 """
+from rest_framework.test import APIClient
 
 import pytest
 from datetime import timedelta

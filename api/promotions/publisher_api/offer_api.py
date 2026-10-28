@@ -127,6 +127,7 @@ class PublisherOfferAPI:
 # ── API Views ─────────────────────────────────────────────────────────────────
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def publisher_api_offers_view(request):
     """
@@ -157,9 +158,6 @@ def publisher_api_offers_view(request):
         sort=request.query_params.get('sort', 'payout_desc'),
     )
     return Response(data)
-
-
-@api_view(['POST'])
 @permission_classes([AllowAny])
 def generate_api_key_view(request):
     """POST /api/promotions/publisher-api/generate-key/"""

@@ -4,6 +4,7 @@
 from django.core.cache import cache
 import ipaddress
 import logging
+from api.payment_gateways.blacklist.models import TrafficBlacklist
 
 logger = logging.getLogger(__name__)
 

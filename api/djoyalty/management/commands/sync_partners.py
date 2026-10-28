@@ -1,59 +1,60 @@
 # api/djoyalty/management/commands/sync_partners.py
-"""Management command: Sync partner merchant data।"""
 from django.core.management.base import BaseCommand
 
 
 class Command(BaseCommand):
-    help = 'Sync partner merchant data and update last_sync_at timestamps'
+    help = 'Sync all active partner merchants (update last_sync_at, check webhooks).'
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            '--partner-id',
-            type=int,
-            help='Sync specific partner by ID',
-            default=None,
-        )
-        parser.add_argument(
-            '--list',
-            action='store_true',
-            help='List all active partners and their sync status',
-        )
+        parser.add_argument('--partner-id', type=int, help='Sync a single partner by ID.')
+        parser.add_argument('--check-webhooks', action='store_true', help='Also ping webhook URLs.')
 
     def handle(self, *args, **options):
         from djoyalty.models.campaigns import PartnerMerchant
+        from djoyalty.services.PartnerMerchantService import PartnerMerchantService
         from django.utils import timezone
 
-        if options.get('list'):
-            partners = PartnerMerchant.objects.all().order_by('name')
-            self.stdout.write(f'\n{"Name":<30} {"Active":<8} {"Last Sync":<25}')
-            self.stdout.write('-' * 65)
-            for p in partners:
-                last_sync = str(p.last_sync_at)[:19] if p.last_sync_at else 'Never'
-                active = '✅ Yes' if p.is_active else '❌ No'
-                self.stdout.write(f'{p.name:<30} {active:<8} {last_sync:<25}')
-            self.stdout.write(f'\nTotal: {partners.count()} partners\n')
+        partner_id = options.get('partner_id')
+
+        if partner_id:
+            try:
+                partner = PartnerMerchant.objects.get(id=partner_id)
+                ok = PartnerMerchantService.sync_partner(partner)
+                if ok:
+                    self.stdout.write(self.style.SUCCESS(f'Synced partner: {partner.name}'))
+                else:
+                    self.stdout.write(self.style.ERROR(f'Failed to sync: {partner.name}'))
+            except PartnerMerchant.DoesNotExist:
+                self.stdout.write(self.style.ERROR(f'Partner {partner_id} not found.'))
             return
 
-        qs = PartnerMerchant.objects.filter(is_active=True)
-        if options.get('partner_id'):
-            qs = qs.filter(id=options['partner_id'])
-            if not qs.exists():
-                self.stderr.write(self.style.ERROR(f'Partner ID {options["partner_id"]} not found or inactive.'))
-                return
+        count = PartnerMerchantService.sync_all_active()
+        self.stdout.write(self.style.SUCCESS(f'Synced {count} active partners at {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}.'))
 
-        self.stdout.write(f'Syncing {qs.count()} partner(s)...')
-        synced = 0
-        errors = 0
-        for partner in qs:
-            try:
-                partner.last_sync_at = timezone.now()
-                partner.save(update_fields=['last_sync_at'])
-                self.stdout.write(f'  ✅ Synced: {partner.name}')
-                synced += 1
-            except Exception as e:
-                self.stderr.write(self.style.ERROR(f'  ❌ Error syncing {partner.name}: {e}'))
-                errors += 1
+        if options['check_webhooks']:
+            self.stdout.write('Checking partner webhook URLs...')
+            partners_with_webhooks = PartnerMerchant.objects.filter(
+                is_active=True,
+                webhook_url__isnull=False,
+            ).exclude(webhook_url='')
 
-        self.stdout.write(self.style.SUCCESS(
-            f'\nSync complete: {synced} synced, {errors} errors.'
-        ))
+            active, failed = 0, 0
+            import urllib.request
+            for partner in partners_with_webhooks:
+                try:
+                    req = urllib.request.Request(
+                        partner.webhook_url, method='HEAD',
+                        headers={'User-Agent': 'DjoyaltySync/1.0'},
+                    )
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        if resp.status < 400:
+                            active += 1
+                            self.stdout.write(f'  ✓ {partner.name}: {partner.webhook_url}')
+                        else:
+                            failed += 1
+                            self.stdout.write(self.style.WARNING(f'  ✗ {partner.name}: HTTP {resp.status}'))
+                except Exception as e:
+                    failed += 1
+                    self.stdout.write(self.style.ERROR(f'  ✗ {partner.name}: {e}'))
+
+            self.stdout.write(f'Webhook check: {active} ok, {failed} failed.')

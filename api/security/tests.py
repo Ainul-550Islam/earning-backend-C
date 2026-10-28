@@ -3,6 +3,7 @@ Security App Tests - Production Ready
 Comprehensive test suite with defensive coding patterns
 Version: 3.0.0
 """
+import unittest
 
 import logging
 import json
@@ -21,9 +22,9 @@ from django.db import connection, transaction
 from django.db.utils import IntegrityError
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
-from ..models import DeviceInfo, SecurityLog, UserBan
-from ..serializers import DeviceInfoSerializer
-from ..viewsets import DeviceInfoViewSet
+from .models import DeviceInfo, SecurityLog, UserBan
+from .serializers import DeviceInfoSerializer
+from .viewset import DeviceInfoViewSet
 import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
@@ -45,7 +46,7 @@ from .middleware import (
     SecurityAuditMiddleware, VPNProxyDetectionMiddleware
 )
 from .vpn_detector import VPNDetector
-from .utils import NullSafe, TypeValidator, GracefulDegradation
+from .utils import NullSafe, GracefulDegradation
 
 logger = logging.getLogger('security.tests')
 User = get_user_model()
@@ -291,7 +292,7 @@ def retry_on_failure(max_retries=3, delay=0.1):
 
 # ==================== BASE TEST CLASS WITH DEFENSIVE UTILITIES ====================
 
-class BaseSecurityTest(TestCase):
+class BaseSecurityUnitTest(TestCase):
     """Base test class with defensive utilities"""
     
     def setUp(self):
@@ -469,7 +470,7 @@ class BaseSecurityTest(TestCase):
 
 # ==================== DEVICE INFO TESTS ====================
 
-class DeviceInfoTests(BaseSecurityTest):
+class DeviceInfoTests(BaseSecurityUnitTest):
     """Tests for DeviceInfo model and views"""
     
     def _setup_test_data(self):
@@ -1389,7 +1390,7 @@ class DeviceInfoTests(BaseSecurityTest):
     def test_device_serializer_validation(self):
         """Test device serializer validation"""
         try:
-            from ..serializers import DeviceInfoSerializer
+            from .serializers import DeviceInfoSerializer
             
             # Test valid data
             valid_data = {
@@ -1679,7 +1680,7 @@ class DeviceInfoPerformanceTests(TestCase):
     
     def test_serializer_performance(self):
         """Test serializer performance"""
-        from ..serializers import DeviceInfoSerializer
+        from .serializers import DeviceInfoSerializer
         
         device = self.devices[0]
         
@@ -1708,7 +1709,7 @@ class DeviceInfoPerformanceTests(TestCase):
         DeviceInfo.objects.all().delete()
         User.objects.all().delete()
 
-class SecurityLogTests(BaseSecurityTest):
+class SecurityLogTests(BaseSecurityUnitTest):
     """Tests for SecurityLog model and views"""
     
     def test_security_log_creation(self):
@@ -1880,7 +1881,7 @@ class SecurityLogTests(BaseSecurityTest):
             raise
 
 
-class RiskScoreTests(BaseSecurityTest):
+class RiskScoreTests(BaseSecurityUnitTest):
     """Tests for RiskScore model and views"""
     
     def test_risk_score_calculation(self):
@@ -2453,7 +2454,7 @@ class UtilsTests(TestCase):
             raise
 
 
-class IntegrationTests(BaseSecurityTest):
+class IntegrationTests(BaseSecurityUnitTest):
     """Integration tests for complete security system"""
     
     def test_complete_workflow(self):
@@ -2584,7 +2585,7 @@ class IntegrationTests(BaseSecurityTest):
             raise
 
 
-class PerformanceTests(BaseSecurityTest):
+class PerformanceTests(BaseSecurityUnitTest):
     """Performance and load tests"""
     
     def test_bulk_operations_performance(self):
@@ -2661,7 +2662,7 @@ class PerformanceTests(BaseSecurityTest):
             raise
 
 
-class SecurityTests(BaseSecurityTest):
+class SecurityTests(BaseSecurityUnitTest):
     """Security-specific tests"""
     
     def test_authentication_bypass(self):

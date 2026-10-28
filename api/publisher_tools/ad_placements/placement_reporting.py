@@ -9,7 +9,7 @@ from django.utils import timezone
 
 def generate_placement_report(publisher, start_date, end_date) -> Dict:
     """Publisher-এর সব placements-এর performance report।"""
-    from api.publisher_tools.models import AdPlacement, PublisherEarning
+    from publisher_tools.models import AdPlacement, PublisherEarning
     placements = AdPlacement.objects.filter(
         ad_unit__publisher=publisher
     ).select_related("ad_unit")
@@ -59,7 +59,7 @@ def generate_placement_report(publisher, start_date, end_date) -> Dict:
 
 def get_placement_efficiency_score(placement) -> Dict:
     """Placement efficiency score — কতটা revenue generate করছে।"""
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=30)
     agg = PublisherEarning.objects.filter(
         ad_unit=placement.ad_unit, date__gte=start,

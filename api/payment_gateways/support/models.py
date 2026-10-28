@@ -21,7 +21,7 @@ class SupportTicket(TimeStampedModel):
     STATUS     = (('open','Open'),('in_progress','In Progress'),('resolved','Resolved'),('closed','Closed'))
 
     user            = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                       related_name='support_tickets')
+                       related_name='support_tickets_pg')
     ticket_number   = models.CharField(max_length=20, unique=True)
     subject         = models.CharField(max_length=300)
     category        = models.CharField(max_length=20, choices=CATEGORIES, default='other')
@@ -29,7 +29,7 @@ class SupportTicket(TimeStampedModel):
     status          = models.CharField(max_length=15, choices=STATUS, default='open')
     description     = models.TextField()
     assigned_to     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                       null=True, blank=True, related_name='assigned_tickets')
+                       null=True, blank=True, related_name='assigned_tickets_pg')
     resolved_at     = models.DateTimeField(null=True, blank=True)
     related_txn_ref = models.CharField(max_length=100, blank=True)
     attachment_url  = models.URLField(max_length=500, blank=True)
@@ -51,7 +51,7 @@ class SupportTicket(TimeStampedModel):
 
 class TicketMessage(TimeStampedModel):
     ticket      = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='messages')
-    sender      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    sender      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='pg_ticketmessages')
     message     = models.TextField()
     is_staff    = models.BooleanField(default=False)
     attachment_url = models.URLField(max_length=500, blank=True)

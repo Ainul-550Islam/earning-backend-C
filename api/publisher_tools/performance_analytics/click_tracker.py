@@ -6,7 +6,7 @@ from django.utils import timezone
 
 def track_click(unit_id: str, context: dict) -> dict:
     """Single click track করে। Fraud check করে।"""
-    from api.publisher_tools.fraud_prevention.invalid_traffic_detector import detect_invalid_traffic, check_click_velocity
+    from publisher_tools.fraud_prevention.invalid_traffic_detector import detect_invalid_traffic, check_click_velocity
     import hashlib
     # Velocity check
     user_key = hashlib.md5(f"{context.get('ip_address','')}:{context.get('device_id','')}".encode()).hexdigest()

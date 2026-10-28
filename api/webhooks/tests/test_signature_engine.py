@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 from django.test import TestCase
 from django.utils import timezone
 
-from ..services.core import SignatureEngine
+from ..services.core.SignatureEngine import SignatureEngine
 from ..models import WebhookEndpoint
 
 
@@ -169,7 +169,7 @@ class SignatureEngineTest(TestCase):
         """Test webhook header verification with valid headers."""
         headers = self.signature_engine.generate_headers(self.payload, self.secret)
         
-        is_valid = self.signature_engine.verify_webhook_headers(
+        is_valid = self.signature_engine.verify_webhook_signature(
             self.payload,
             headers,
             self.secret
@@ -182,7 +182,7 @@ class SignatureEngineTest(TestCase):
         headers = self.signature_engine.generate_headers(self.payload, self.secret)
         headers['X-Webhook-Signature'] = 'invalid-signature'
         
-        is_valid = self.signature_engine.verify_webhook_headers(
+        is_valid = self.signature_engine.verify_webhook_signature(
             self.payload,
             headers,
             self.secret
@@ -197,7 +197,7 @@ class SignatureEngineTest(TestCase):
             'Content-Type': 'application/json'
         }
         
-        is_valid = self.signature_engine.verify_webhook_headers(
+        is_valid = self.signature_engine.verify_webhook_signature(
             self.payload,
             headers,
             self.secret
@@ -212,7 +212,7 @@ class SignatureEngineTest(TestCase):
             'Content-Type': 'application/json'
         }
         
-        is_valid = self.signature_engine.verify_webhook_headers(
+        is_valid = self.signature_engine.verify_webhook_signature(
             self.payload,
             headers,
             self.secret
@@ -226,7 +226,7 @@ class SignatureEngineTest(TestCase):
         # Set timestamp to 10 minutes ago
         headers['X-Webhook-Timestamp'] = '2023-12-31T23:50:00Z'
         
-        is_valid = self.signature_engine.verify_webhook_headers(
+        is_valid = self.signature_engine.verify_webhook_signature(
             self.payload,
             headers,
             self.secret,
@@ -237,7 +237,7 @@ class SignatureEngineTest(TestCase):
     
     def test_get_signature_algorithm(self):
         """Test getting signature algorithm."""
-        algorithm = self.signature_engine.get_algorithm()
+        algorithm = self.signature_engine.get_algorithm_info()
         
         self.assertEqual(algorithm, 'sha256')
     
@@ -369,8 +369,8 @@ class SignatureEngineTest(TestCase):
     def test_sign_payload_with_endpoint(self):
         """Test signing with webhook endpoint."""
         endpoint = WebhookEndpoint(
-            url='https://example.com/webhook',
-            secret=self.secret
+            target_url='https://example.com/webhook',
+            secret_key=self.secret
         )
         
         signature = self.signature_engine.sign_with_endpoint(self.payload, endpoint)
@@ -381,8 +381,8 @@ class SignatureEngineTest(TestCase):
     def test_verify_signature_with_endpoint(self):
         """Test signature verification with webhook endpoint."""
         endpoint = WebhookEndpoint(
-            url='https://example.com/webhook',
-            secret=self.secret
+            target_url='https://example.com/webhook',
+            secret_key=self.secret
         )
         
         signature = self.signature_engine.sign_with_endpoint(self.payload, endpoint)
@@ -397,8 +397,12 @@ class SignatureEngineTest(TestCase):
     
     def test_sign_payload_with_endpoint_no_secret(self):
         """Test signing with endpoint that has no secret."""
+        # NOTE: secret_key has an auto-generating model default, so it must
+        # be explicitly overridden with a falsy value here to simulate "no
+        # secret" — omitting it entirely still yields a real generated key.
         endpoint = WebhookEndpoint(
-            url='https://example.com/webhook'
+            target_url='https://example.com/webhook',
+            secret_key=''
         )
         
         with self.assertRaises(ValueError):
@@ -406,8 +410,10 @@ class SignatureEngineTest(TestCase):
     
     def test_verify_signature_with_endpoint_no_secret(self):
         """Test signature verification with endpoint that has no secret."""
+        # NOTE: same auto-generating default issue as the sign test above.
         endpoint = WebhookEndpoint(
-            url='https://example.com/webhook'
+            target_url='https://example.com/webhook',
+            secret_key=''
         )
         
         with self.assertRaises(ValueError):

@@ -185,7 +185,7 @@ class PayoutRequest(TimeStampedModel):
     )
 
     user             = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                        related_name='payout_requests')
+                        related_name='payment_gateway_payout_requests')
     amount           = models.DecimalField(max_digits=12, decimal_places=2)
     fee              = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
     net_amount       = models.DecimalField(max_digits=12, decimal_places=2)

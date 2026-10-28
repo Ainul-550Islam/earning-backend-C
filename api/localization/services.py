@@ -1,3 +1,4 @@
+from django.db import models
 # services.py
 from django.utils import timezone
 from django.core.cache import cache

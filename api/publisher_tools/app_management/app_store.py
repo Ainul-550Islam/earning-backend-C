@@ -33,6 +33,7 @@ class AppStoreMetadata(TimeStampedModel):
     sync_error       = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_app_store_metadata"
         verbose_name = _("App Store Metadata")
 

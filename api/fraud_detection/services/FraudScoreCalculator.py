@@ -3,11 +3,11 @@ from typing import Dict, List, Any, Optional
 from django.db.models import Q, Count, Sum, Avg
 from django.utils import timezone
 from datetime import timedelta
-from ..models import (
+from api.fraud_detection.models import (
     UserRiskProfile, FraudAttempt, FraudRule,
     DeviceFingerprint, IPReputation
 )
-from ..detectors import (
+from api.fraud_detection.detectors import (
     MultiAccountDetector, VPNProxyDetector,
     ClickFraudDetector, DeviceFingerprinter,
     PatternAnalyzer
@@ -380,21 +380,25 @@ class FraudScoreCalculator:
                 factors.append(f'High IP diversity: {unique_ips} unique IPs')
             
             # 2. IP reputation
+            # Collect distinct IPs first, then bulk-fetch reputations (avoids N+1)
+            distinct_ips = list(
+                UserActivity.objects.filter(
+                    user=self.user,
+                    timestamp__gte=thirty_days_ago,
+                    ip_address__isnull=False,
+                ).values_list('ip_address', flat=True).distinct()
+            )
+            ip_reputations = {
+                rep.ip_address: rep
+                for rep in IPReputation.objects.filter(ip_address__in=distinct_ips)
+            }
             suspicious_ips = []
-            for activity in UserActivity.objects.filter(
-                user=self.user,
-                timestamp__gte=thirty_days_ago,
-                ip_address__isnull=False
-            ).distinct('ip_address'):
-                
-                ip_reputation = IPReputation.objects.filter(
-                    ip_address=activity.ip_address
-                ).first()
-                
+            for ip in distinct_ips:
+                ip_reputation = ip_reputations.get(ip)
                 if ip_reputation and ip_reputation.fraud_score >= 60:
                     suspicious_ips.append({
-                        'ip': activity.ip_address,
-                        'fraud_score': ip_reputation.fraud_score
+                        'ip': ip,
+                        'fraud_score': ip_reputation.fraud_score,
                     })
             
             if suspicious_ips:

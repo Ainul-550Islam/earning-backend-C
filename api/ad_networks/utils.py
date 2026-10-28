@@ -3,6 +3,9 @@ api/ad_networks/utils.py
 Utility functions for ad networks module
 SaaS-ready with tenant support
 """
+from django.db import models
+from django.db.models import Count
+from django.db.models import Sum
 
 import os
 import uuid
@@ -26,6 +29,7 @@ from django.contrib.auth import get_user_model
 
 from .models import Offer, AdNetwork, OfferAttachment, UserOfferEngagement
 from .constants import UPLOAD_SETTINGS, STORAGE_CONFIG
+from api.ad_networks.models import OfferConversion
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

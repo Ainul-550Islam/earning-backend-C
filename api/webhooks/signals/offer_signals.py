@@ -10,10 +10,46 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from ..services.core import DispatchService
+import logging
+
+from ..services.core.DispatchService import DispatchService
 from ..models import WebhookSubscription
 
 User = get_user_model()
+
+logger = logging.getLogger("ainul.webhooks.signals")
+
+
+def _resolve_offer_model():
+    """
+    BUG FIX: this previously imported `from apps.offers.models import Offer`,
+    a package (`apps.`) that does not exist in this project — the real
+    project has no `apps.` namespace; business apps live directly under
+    `api.` (per the project's own directory listing: offer_inventory/,
+    offer_routing/, offerwall/ — there is no single "offer" app).
+
+    There isn't a single unambiguous "offer" app to point at without the
+    sibling app source, so this tries the most likely candidates in order
+    and uses whichever actually defines Offer. If neither matches your
+    project, update this list with the correct path — everything downstream
+    (connect_offer_signals) already degrades safely (logs a warning, does
+    not crash) if this raises ImportError.
+    """
+    candidates = (
+        "api.offer_inventory.models",
+        "api.offer_routing.models",
+    )
+    last_error = None
+    for module_path in candidates:
+        try:
+            module = __import__(module_path, fromlist=["Offer"])
+            return module.Offer
+        except (ImportError, AttributeError) as e:
+            last_error = e
+            continue
+    raise ImportError(
+        f"Could not locate Offer model in any of {candidates}: {last_error}"
+    )
 
 
 # Signal definitions
@@ -24,6 +60,9 @@ offer_cancelled = Signal()
 offer_updated = Signal()
 
 
+from ._isolation import isolated_receiver
+
+@isolated_receiver
 def on_offer_credited(sender, instance, created, **kwargs):
     """
     Signal handler for offer crediting.
@@ -60,11 +99,11 @@ def on_offer_credited(sender, instance, created, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -78,9 +117,10 @@ def on_offer_credited(sender, instance, created, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending offer credited webhook: {e}")
+            logger.error("sending offer credited webhook: %s", e)
 
 
+@isolated_receiver
 def on_offer_completed(sender, instance, **kwargs):
     """
     Signal handler for offer completion.
@@ -118,11 +158,11 @@ def on_offer_completed(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -136,9 +176,10 @@ def on_offer_completed(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending offer completed webhook: {e}")
+            logger.error("sending offer completed webhook: %s", e)
 
 
+@isolated_receiver
 def on_offer_expired(sender, instance, **kwargs):
     """
     Signal handler for offer expiration.
@@ -176,11 +217,11 @@ def on_offer_expired(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -194,9 +235,10 @@ def on_offer_expired(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending offer expired webhook: {e}")
+            logger.error("sending offer expired webhook: %s", e)
 
 
+@isolated_receiver
 def on_offer_cancelled(sender, instance, **kwargs):
     """
     Signal handler for offer cancellation.
@@ -234,11 +276,11 @@ def on_offer_cancelled(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -252,9 +294,10 @@ def on_offer_cancelled(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending offer cancelled webhook: {e}")
+            logger.error("sending offer cancelled webhook: %s", e)
 
 
+@isolated_receiver
 def on_offer_updated(sender, instance, **kwargs):
     """
     Signal handler for offer updates.
@@ -316,11 +359,11 @@ def on_offer_updated(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -334,43 +377,42 @@ def on_offer_updated(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending offer updated webhook: {e}")
+            logger.error("sending offer updated webhook: %s", e)
 
 
 # Connect signal handlers
 def connect_offer_signals():
-    """Connect offer-related signals to their handlers."""
-    from apps.offers.models import Offer
-    
-    try:
-        post_save.connect(on_offer_credited, sender=Offer)
-        post_save.connect(on_offer_completed, sender=Offer)
-        post_save.connect(on_offer_expired, sender=Offer)
-        post_save.connect(on_offer_cancelled, sender=Offer)
-        post_save.connect(on_offer_updated, sender=Offer)
-        
-        print("Offer signals connected successfully")
-    except ImportError:
-        # Offer app not available
-        print("Offer app not available, skipping signal connections")
-    except Exception as e:
-        print(f"Error connecting offer signals: {e}")
+    """
+    Connect offer-related signals to their handlers.
+
+    BUG FIX: this used to catch its own ImportError (and any other
+    Exception) and just log a warning, so it always returned normally.
+    That silently defeated connector.py's _try_connect(), whose whole job
+    is to catch exactly that ImportError and report {'offer': False} - the
+    system was logging "offer signals connected successfully" even when
+    the sibling app genuinely wasn't installed and zero handlers got
+    connected. Single owner for this decision is connector.py; let
+    exceptions propagate there instead of swallowing them here too.
+    """
+    Offer = _resolve_offer_model()
+
+    post_save.connect(on_offer_credited, sender=Offer)
+    post_save.connect(on_offer_completed, sender=Offer)
+    post_save.connect(on_offer_expired, sender=Offer)
+    post_save.connect(on_offer_cancelled, sender=Offer)
+    post_save.connect(on_offer_updated, sender=Offer)
+
+    logger.info("[Webhooks] %s", "Offer signals connected successfully")
 
 
 def disconnect_offer_signals():
     """Disconnect offer-related signals."""
-    from apps.offers.models import Offer
-    
-    try:
-        post_save.disconnect(on_offer_credited, sender=Offer)
-        post_save.disconnect(on_offer_completed, sender=Offer)
-        post_save.disconnect(on_offer_expired, sender=Offer)
-        post_save.disconnect(on_offer_cancelled, sender=Offer)
-        post_save.disconnect(on_offer_updated, sender=Offer)
-        
-        print("Offer signals disconnected successfully")
-    except ImportError:
-        # Offer app not available
-        print("Offer app not available, skipping signal disconnection")
-    except Exception as e:
-        print(f"Error disconnecting offer signals: {e}")
+    Offer = _resolve_offer_model()
+
+    post_save.disconnect(on_offer_credited, sender=Offer)
+    post_save.disconnect(on_offer_completed, sender=Offer)
+    post_save.disconnect(on_offer_expired, sender=Offer)
+    post_save.disconnect(on_offer_cancelled, sender=Offer)
+    post_save.disconnect(on_offer_updated, sender=Offer)
+
+    logger.info("[Webhooks] %s", "Offer signals disconnected successfully")

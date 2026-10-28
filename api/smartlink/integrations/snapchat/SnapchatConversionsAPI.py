@@ -3,6 +3,7 @@ SmartLink Snapchat Conversions API Integration
 Server-side conversion tracking for Snapchat Ads.
 """
 import hashlib
+from api.smartlink.integrations.base import IntegrationBase
 import logging
 import threading
 import requests
@@ -12,7 +13,10 @@ from django.conf import settings
 logger = logging.getLogger('smartlink.integrations.snapchat')
 
 
-class SnapchatConversionsAPI:
+class SnapchatConversionsAPI(IntegrationBase):
+    integration_name = "Snapchat"
+    default_timeout  = 10
+
     """Fire conversion events to Snapchat CAPI for publisher campaign tracking."""
 
     CAPI_URL = "https://tr.snapchat.com/v2/conversion"

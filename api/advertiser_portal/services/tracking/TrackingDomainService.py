@@ -4,6 +4,7 @@ Tracking Domain Service
 Service for managing tracking domains,
 including domain verification and SSL management.
 """
+from django.db import models
 
 import logging
 import socket

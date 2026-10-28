@@ -1,3 +1,4 @@
+from django.db import models
 # =============================================================================
 # api/promotions/bidding/realtime_bidding.py
 # Real-Time Bidding (RTB) — Millisecond-level bid response

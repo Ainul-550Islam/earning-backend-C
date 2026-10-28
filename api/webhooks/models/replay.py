@@ -102,6 +102,12 @@ class WebhookReplayBatch(models.Model):
         verbose_name=_('Event Type'),
         help_text=_('Type of events to replay')
     )
+    reason = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_('Reason'),
+        help_text=_('Why this batch replay was created'),
+    )
     date_from = models.DateField(
         verbose_name=_('Date From'),
         help_text=_('Start date for event replay')
@@ -121,6 +127,11 @@ class WebhookReplayBatch(models.Model):
         default=ReplayStatus.PENDING,
         verbose_name=_('Status'),
     )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_('Completed At'),
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_('Created At'),
@@ -137,6 +148,9 @@ class WebhookReplayBatch(models.Model):
             models.Index(fields=['created_by', 'status'], name='wrb_created_by_status_idx'),
             models.Index(fields=['event_type'], name='wrb_event_type_idx'),
             models.Index(fields=['status', 'created_at'], name='wrb_status_created_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(check=models.Q(count__gte=1), name='wrb_count_gte_1'),
         ]
     
     def __str__(self) -> str:
@@ -187,6 +201,7 @@ class WebhookReplayItem(models.Model):
     class Meta:
         verbose_name = _('Webhook Replay Item')
         verbose_name_plural = _('Webhook Replay Items')
+        ordering = ['created_at', 'id']
         indexes = [
             models.Index(fields=['batch', 'status'], name='wri_batch_status_idx'),
             models.Index(fields=['original_log'], name='wri_original_log_idx'),

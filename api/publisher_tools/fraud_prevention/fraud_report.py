@@ -9,7 +9,7 @@ from django.utils import timezone
 
 def generate_fraud_report(publisher, days: int = 30) -> Dict:
     """Publisher-এর comprehensive fraud report।"""
-    from api.publisher_tools.models import TrafficSafetyLog, PublisherEarning
+    from publisher_tools.models import TrafficSafetyLog, PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     logs = TrafficSafetyLog.objects.filter(publisher=publisher, detected_at__date__gte=start, is_false_positive=False)
     agg = logs.aggregate(
@@ -45,7 +45,7 @@ def generate_fraud_report(publisher, days: int = 30) -> Dict:
 
 def generate_platform_fraud_report(days: int = 30) -> Dict:
     """Platform-wide fraud report (admin only)。"""
-    from api.publisher_tools.models import TrafficSafetyLog
+    from publisher_tools.models import TrafficSafetyLog
     start = timezone.now().date() - timedelta(days=days)
     logs = TrafficSafetyLog.objects.filter(detected_at__date__gte=start, is_false_positive=False)
     return {

@@ -272,23 +272,16 @@ def publisher_analytics_view(request):
     days = int(request.GET.get('days', 30))
     return Response({'success': True, 'data': engine.get_publisher_analytics(request.user, days)})
 
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_analytics_view(request):
     """Admin analytics dashboard."""
     return Response({'success': True, 'data': engine.get_admin_summary()})
 
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def gateway_analytics_view(request):
     """Gateway analytics."""
     days = int(request.GET.get('days', 30))
     return Response({'success': True, 'data': engine.get_gateway_analytics(days)})
-
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def offer_analytics_view(request, offer_id):
     """Offer analytics."""

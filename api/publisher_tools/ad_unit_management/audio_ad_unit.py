@@ -24,6 +24,7 @@ class AudioAdConfig(TimeStampedModel):
     min_content_length_sec = models.IntegerField(default=300, help_text="Min content length to show mid-roll")
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_audio_ad_configs"
         verbose_name = _("Audio Ad Config")
 

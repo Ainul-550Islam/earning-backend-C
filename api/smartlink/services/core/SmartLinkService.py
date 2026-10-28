@@ -1,7 +1,7 @@
 import logging
 from django.db import transaction
 from django.utils import timezone
-from ...models import SmartLink, SmartLinkGroup, SmartLinkTag, SmartLinkTagging
+from api.smartlink.models import SmartLink, SmartLinkGroup, SmartLinkTag, SmartLinkTagging
 from ...exceptions import SlugConflict, SlugReserved, PublisherLimitExceeded
 from ...constants import SLUG_RESERVED_WORDS, MAX_SMARTLINKS_PER_PUBLISHER
 from .SlugGeneratorService import SlugGeneratorService

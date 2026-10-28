@@ -61,7 +61,7 @@ class InboundWebhookServiceTest(TestCase):
             'X-Stripe-Idempotency-Key': 'test-key-12345'
         }
         
-        with patch('api.webhooks.services.inbound.InboundEventRouter.route_event') as mock_route:
+        with patch('api.webhooks.services.inbound.InboundEventRouter.InboundEventRouter.route_event') as mock_route:
             mock_route.return_value = True
             
             result = self.inbound_service.process_inbound_webhook(
@@ -197,7 +197,7 @@ class InboundWebhookServiceTest(TestCase):
             'X-Stripe-Signature': self._generate_signature(payload, self.inbound_webhook.secret)
         }
         
-        with patch('api.webhooks.services.inbound.InboundEventRouter.route_event') as mock_route:
+        with patch('api.webhooks.services.inbound.InboundEventRouter.InboundEventRouter.route_event') as mock_route:
             mock_route.return_value = True
             
             self.inbound_service.process_inbound_webhook(
@@ -265,7 +265,7 @@ class InboundWebhookServiceTest(TestCase):
             'X-Stripe-Signature': self._generate_signature(payload, self.inbound_webhook.secret)
         }
         
-        with patch('api.webhooks.services.inbound.InboundEventRouter.route_event') as mock_route:
+        with patch('api.webhooks.services.inbound.InboundEventRouter.InboundEventRouter.route_event') as mock_route:
             mock_route.return_value = True
             
             result = self.inbound_service.process_inbound_webhook(
@@ -312,10 +312,10 @@ class InboundWebhookServiceTest(TestCase):
         headers = {
             'Content-Type': 'application/json',
             'X-Stripe-Signature': self._generate_signature(payload, self.inbound_webhook.secret),
-            'X-Stripe-Timestamp': '2024-01-01T00:00:00Z'
+            'X-Stripe-Timestamp': timezone.now().isoformat()
         }
         
-        with patch('api.webhooks.services.inbound.InboundEventRouter.route_event') as mock_route:
+        with patch('api.webhooks.services.inbound.InboundEventRouter.InboundEventRouter.route_event') as mock_route:
             mock_route.return_value = True
             
             result = self.inbound_service.process_inbound_webhook(
@@ -377,7 +377,7 @@ class InboundWebhookServiceTest(TestCase):
             'X-Stripe-Signature': self._generate_signature(payload, inbound_webhook.secret)
         }
         
-        with patch('api.webhooks.services.inbound.InboundEventRouter.route_event') as mock_route:
+        with patch('api.webhooks.services.inbound.InboundEventRouter.InboundEventRouter.route_event') as mock_route:
             mock_route.return_value = True
             
             result = self.inbound_service.process_inbound_webhook(
@@ -440,7 +440,7 @@ class InboundWebhookServiceTest(TestCase):
         }
         
         # First processing
-        with patch('api.webhooks.services.inbound.InboundEventRouter.route_event') as mock_route:
+        with patch('api.webhooks.services.inbound.InboundEventRouter.InboundEventRouter.route_event') as mock_route:
             mock_route.return_value = True
             
             result1 = self.inbound_service.process_inbound_webhook(
@@ -453,7 +453,7 @@ class InboundWebhookServiceTest(TestCase):
             self.assertTrue(result1['success'])
         
         # Second processing (should be detected as duplicate)
-        with patch('api.webhooks.services.inbound.InboundEventRouter.route_event') as mock_route:
+        with patch('api.webhooks.services.inbound.InboundEventRouter.InboundEventRouter.route_event') as mock_route:
             result2 = self.inbound_service.process_inbound_webhook(
                 inbound=self.inbound_webhook,
                 payload=payload,
@@ -481,7 +481,7 @@ class InboundWebhookServiceTest(TestCase):
             'X-Stripe-Signature': self._generate_signature(large_payload, self.inbound_webhook.secret)
         }
         
-        with patch('api.webhooks.services.inbound.InboundEventRouter.route_event') as mock_route:
+        with patch('api.webhooks.services.inbound.InboundEventRouter.InboundEventRouter.route_event') as mock_route:
             mock_route.return_value = True
             
             result = self.inbound_service.process_inbound_webhook(
@@ -510,7 +510,7 @@ class InboundWebhookServiceTest(TestCase):
             'X-Stripe-Signature': self._generate_signature(payload, self.inbound_webhook.secret)
         }
         
-        with patch('api.webhooks.services.inbound.InboundEventRouter.route_event') as mock_route:
+        with patch('api.webhooks.services.inbound.InboundEventRouter.InboundEventRouter.route_event') as mock_route:
             mock_route.return_value = True
             
             result = self.inbound_service.process_inbound_webhook(
@@ -537,7 +537,7 @@ class InboundWebhookServiceTest(TestCase):
             'X-Stripe-Signature': self._generate_signature(payload, self.inbound_webhook.secret)
         }
         
-        with patch('api.webhooks.services.inbound.InboundEventRouter.route_event') as mock_route:
+        with patch('api.webhooks.services.inbound.InboundEventRouter.InboundEventRouter.route_event') as mock_route:
             mock_route.return_value = True
             
             start_time = time.time()
@@ -1056,7 +1056,7 @@ class InboundEventRouterTest(TestCase):
             'data': {'payment_id': 'pay_123456789'}
         }
         
-        with patch('api.webhooks.handlers.handle_event_5') as mock_handler:
+        with patch('api.webhooks.handlers.handle_event_5', create=True) as mock_handler:
             mock_handler.return_value = True
             
             start_time = time.time()

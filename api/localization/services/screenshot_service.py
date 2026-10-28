@@ -42,8 +42,8 @@ class ScreenshotService:
         region: {'x': 10, 'y': 20, 'w': 200, 'h': 50} — highlight region in screenshot
         """
         try:
-            from ..models.content import TranslationScreenshot
-            from ..models.core import TranslationKey
+            from api.localization.models.content import TranslationScreenshot
+            from api.localization.models.core import TranslationKey
 
             # Validate: need either image_data or image_url
             if not image_data and not image_url:
@@ -97,7 +97,7 @@ class ScreenshotService:
     def get_for_key(self, key_name: str) -> List[Dict]:
         """Translation key-এর সব screenshots পাওয়া"""
         try:
-            from ..models.content import TranslationScreenshot
+            from api.localization.models.content import TranslationScreenshot
             shots = TranslationScreenshot.objects.filter(
                 translation_key__key=key_name
             ).order_by('-created_at')
@@ -126,7 +126,7 @@ class ScreenshotService:
     def get_image_data(self, screenshot_id: int) -> Optional[str]:
         """Screenshot base64 image data পাওয়া"""
         try:
-            from ..models.content import TranslationScreenshot
+            from api.localization.models.content import TranslationScreenshot
             s = TranslationScreenshot.objects.filter(pk=screenshot_id).first()
             return s.image_data if s else None
         except Exception:
@@ -135,8 +135,8 @@ class ScreenshotService:
     def bulk_link_keys(self, screenshot_id: int, key_names: List[str]) -> Dict:
         """Existing screenshot-কে multiple keys-এর সাথে link করে"""
         try:
-            from ..models.content import TranslationScreenshot
-            from ..models.core import TranslationKey
+            from api.localization.models.content import TranslationScreenshot
+            from api.localization.models.core import TranslationKey
             shot = TranslationScreenshot.objects.filter(pk=screenshot_id).first()
             if not shot:
                 return {'success': False, 'error': 'Screenshot not found'}
@@ -166,7 +166,7 @@ class ScreenshotService:
 
     def delete_screenshot(self, screenshot_id: int) -> bool:
         try:
-            from ..models.content import TranslationScreenshot
+            from api.localization.models.content import TranslationScreenshot
             TranslationScreenshot.objects.filter(pk=screenshot_id).delete()
             return True
         except Exception:
@@ -175,8 +175,8 @@ class ScreenshotService:
     def get_keys_without_screenshots(self, limit: int = 100) -> List[str]:
         """Screenshot নেই এমন important keys"""
         try:
-            from ..models.core import TranslationKey
-            from ..models.content import TranslationScreenshot
+            from api.localization.models.core import TranslationKey
+            from api.localization.models.content import TranslationScreenshot
             linked_key_ids = TranslationScreenshot.objects.values_list('translation_key_id', flat=True).distinct()
             keys = TranslationKey.objects.filter(
                 is_active=True

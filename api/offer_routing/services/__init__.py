@@ -110,3 +110,24 @@ __all__ = [
     'RoutingReporter',
     'routing_reporter',
 ]
+# ── Previously missing services (deep scan fix) ──────────────────────────────
+from .geo_revenue import GeoRevenueService
+from .dynamic_pricing import DynamicPricingService
+from .ml_integration import MLIntegrationService
+from .waterfall import WaterfallService
+from .postback import PostbackService
+from .fraud import FraudDetectionService
+
+geo_revenue_service = GeoRevenueService()
+dynamic_pricing_service = DynamicPricingService()
+ml_integration_service = MLIntegrationService()
+waterfall_service = WaterfallService()
+postback_service = PostbackService()
+fraud_detection_service = FraudDetectionService()
+
+from .domain import (
+    RoutingTemplateService, TenantService, SecurityEventService,
+    OfferQualityService, NetworkPerformanceService, UserJourneyService,
+    routing_template_service, tenant_service, security_event_service,
+    offer_quality_service, network_performance_service, user_journey_service,
+)

@@ -2,9 +2,9 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..models import OfferPool, OfferPoolEntry
-from ..serializers.OfferPoolEntrySerializer import OfferPoolEntrySerializer
-from ..permissions import IsPublisher
+from api.smartlink.models import OfferPool, OfferPoolEntry
+from api.smartlink.serializers.OfferPoolEntrySerializer import OfferPoolEntrySerializer
+from api.smartlink.permissions import IsPublisher
 
 
 class OfferPoolEntryViewSet(viewsets.ModelViewSet):

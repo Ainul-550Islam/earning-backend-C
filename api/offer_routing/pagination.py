@@ -5,6 +5,7 @@ This module provides pagination classes for handling large datasets,
 including cursor-based pagination, standard page pagination, and optimized
 querying for routing logs, analytics data, and performance metrics.
 """
+from django.db import models
 
 import math
 import base64
@@ -341,14 +342,14 @@ class AnalyticsPagination(PageNumberPagination):
             ).order_by('-date')
         
         elif aggregation_type == 'hourly':
-            queryset = queryset.extra({
+            queryset = queryset.extra(select={
                 'hour': 'EXTRACT(HOUR FROM created_at)',
                 'date': 'DATE(created_at)'
             }).values('date', 'hour').annotate(
                 count=models.Count('id'),
                 avg_score=models.Avg('score'),
                 total_conversions=models.Sum('conversions')
-            }).order_by('-date', '-hour')
+            ).order_by('-date', '-hour')
         
         return super().paginate_queryset(queryset, request, view)
 

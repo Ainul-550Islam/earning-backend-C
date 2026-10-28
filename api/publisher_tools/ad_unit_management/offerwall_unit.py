@@ -30,6 +30,7 @@ class OfferwallAdConfig(TimeStampedModel):
     server_side_credit   = models.BooleanField(default=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_offerwall_ad_configs"
         verbose_name = _("Offerwall Config")
 

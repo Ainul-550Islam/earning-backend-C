@@ -11,6 +11,11 @@ from ..models import WebhookReplay, WebhookReplayBatch, WebhookDeliveryLog
 from ..services.replay import ReplayService
 from ..constants import ReplayStatus
 
+import logging
+
+logger = logging.getLogger('ainul.webhooks.tasks.replay.tasks')
+
+
 
 @shared_task(bind=True, max_retries=3)
 def process_replay(self, replay_id):
@@ -23,6 +28,7 @@ def process_replay(self, replay_id):
     Returns:
         dict: Result of the replay processing
     """
+    logger.info('[Task] process_replay started')
     try:
         # Get the replay
         replay = WebhookReplay.objects.get(id=replay_id)
@@ -69,6 +75,7 @@ def process_replay_batch(self, batch_id):
     Returns:
         dict: Result of the batch processing
     """
+    logger.info('[Task] process_replay_batch started')
     try:
         # Get the replay batch
         batch = WebhookReplayBatch.objects.get(id=batch_id)
@@ -119,6 +126,7 @@ def create_replay_batch(delivery_log_ids, replayed_by_id, reason="Batch replay")
     Returns:
         dict: Result of batch creation
     """
+    logger.info('[Task] create_replay_batch started')
     try:
         # Get the delivery logs
         delivery_logs = WebhookDeliveryLog.objects.filter(id__in=delivery_log_ids)
@@ -134,7 +142,6 @@ def create_replay_batch(delivery_log_ids, replayed_by_id, reason="Batch replay")
         return {
             'success': True,
             'batch_id': str(batch.id),
-            'batch_id_display': batch.batch_id,
             'item_count': batch.count,
             'creation_timestamp': timezone.now().isoformat()
         }
@@ -158,6 +165,7 @@ def cleanup_old_replays(days=30):
     Returns:
         dict: Summary of cleanup operations
     """
+    logger.info('[Task] cleanup_old_replays started')
     try:
         # Calculate cutoff date
         cutoff_date = timezone.now() - timedelta(days=days)
@@ -174,7 +182,7 @@ def cleanup_old_replays(days=30):
                 replay.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete replay {replay.id}: {e}")
+                logger.error("Failed to delete replay %s: %s", replay.id, e)
         
         return {
             'success': True,
@@ -202,6 +210,7 @@ def cleanup_old_replay_batches(days=30):
     Returns:
         dict: Summary of cleanup operations
     """
+    logger.info('[Task] cleanup_old_replay_batches started')
     try:
         # Calculate cutoff date
         cutoff_date = timezone.now() - timedelta(days=days)
@@ -218,7 +227,7 @@ def cleanup_old_replay_batches(days=30):
                 batch.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete replay batch {batch.id}: {e}")
+                logger.error("Failed to delete replay batch %s: %s", batch.id, e)
         
         return {
             'success': True,
@@ -244,28 +253,27 @@ def process_pending_replays():
     Returns:
         dict: Summary of processing operations
     """
+    logger.info('[Task] process_pending_replays started')
     try:
         # Get pending replays
         pending_replays = WebhookReplay.objects.filter(status=ReplayStatus.PENDING)
         
-        processed_count = 0
-        success_count = 0
-        failed_count = 0
+        queued_count = 0
+        failed_count = 0  # DRY FIX: success_count removed (was 0 forever); processed_count → queued_count
         
         for replay in pending_replays:
             try:
                 # Queue individual replay task
                 process_replay.delay(str(replay.id))
-                processed_count += 1
+                queued_count += 1
             except Exception as e:
                 failed_count += 1
-                print(f"Failed to queue replay {replay.id}: {e}")
+                logger.error("Failed to queue replay %s: %s", replay.id, e)
         
         return {
             'success': True,
             'pending_replays_found': pending_replays.count(),
-            'replays_queued': processed_count,
-            'success_count': success_count,
+            'replays_queued': queued_count,
             'failed_count': failed_count,
             'processing_timestamp': timezone.now().isoformat()
         }
@@ -286,28 +294,27 @@ def process_pending_replay_batches():
     Returns:
         dict: Summary of processing operations
     """
+    logger.info('[Task] process_pending_replay_batches started')
     try:
         # Get pending replay batches
         pending_batches = WebhookReplayBatch.objects.filter(status=ReplayStatus.PENDING)
         
-        processed_count = 0
-        success_count = 0
-        failed_count = 0
+        queued_count = 0
+        failed_count = 0  # DRY FIX: success_count removed (was 0 forever); processed_count → queued_count
         
         for batch in pending_batches:
             try:
                 # Queue individual batch task
                 process_replay_batch.delay(str(batch.id))
-                processed_count += 1
+                queued_count += 1
             except Exception as e:
                 failed_count += 1
-                print(f"Failed to queue replay batch {batch.id}: {e}")
+                logger.error("Failed to queue replay batch %s: %s", batch.id, e)
         
         return {
             'success': True,
             'pending_batches_found': pending_batches.count(),
-            'batches_queued': processed_count,
-            'success_count': success_count,
+            'batches_queued': queued_count,
             'failed_count': failed_count,
             'processing_timestamp': timezone.now().isoformat()
         }
@@ -327,6 +334,7 @@ def get_replay_statistics():
     Returns:
         dict: Replay statistics
     """
+    logger.info('[Task] get_replay_statistics started')
     try:
         from django.db.models import Count
         
@@ -387,6 +395,7 @@ def create_failed_delivery_replays(hours=24, reason="Auto-replay of failed deliv
     Returns:
         dict: Summary of replay creation
     """
+    logger.info('[Task] create_failed_delivery_replays started')
     try:
         # Calculate time window
         since = timezone.now() - timedelta(hours=hours)
@@ -413,7 +422,7 @@ def create_failed_delivery_replays(hours=24, reason="Auto-replay of failed deliv
                     created_count += 1
                     
             except Exception as e:
-                print(f"Failed to create replay for delivery {delivery.id}: {e}")
+                logger.error("Failed to create replay for delivery %s: %s", delivery.id, e)
         
         return {
             'success': True,

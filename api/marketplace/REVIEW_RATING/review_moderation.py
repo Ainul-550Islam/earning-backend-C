@@ -14,6 +14,12 @@ BANNED_WORDS = [
 MIN_BODY_LENGTH = 10
 MAX_BODY_LENGTH = 2000
 
+CONTACT_SPAM_KEYWORDS = [
+    "whatsapp", "telegram", "call me", "contact on", "contact us on",
+    "for better deal", "best price", "direct contact", "inbox me",
+]
+_PHONE_RE = __import__('re').compile(r'(\+?880|01)[0-9\s\-]{9,}')
+
 
 def auto_moderate(review: ProductReview) -> dict:
     """
@@ -33,6 +39,15 @@ def auto_moderate(review: ProductReview) -> dict:
     spam_words = [w for w in BANNED_WORDS if w in body_lower]
     if spam_words:
         flags.append(f"contains_flagged_words:{','.join(spam_words)}")
+
+    # Contact / promo spam keywords
+    contact_hits = [k for k in CONTACT_SPAM_KEYWORDS if k in body_lower]
+    if contact_hits:
+        flags.append(f"contact_spam:{','.join(contact_hits)}")
+
+    # Phone number in review body
+    if _PHONE_RE.search(review.body):
+        flags.append("contains_phone_number")
 
     # Duplicate review check
     similar = ProductReview.objects.filter(
@@ -71,3 +86,11 @@ def bulk_approve(review_ids: list):
 
 def bulk_reject(review_ids: list):
     ProductReview.objects.filter(pk__in=review_ids).delete()
+
+# ── Compatibility alias with normalised keys ─────────────────────────────────
+def auto_moderate_review(review):
+    """Alias for auto_moderate — adds 'clean' key expected by tests."""
+    result = auto_moderate(review)
+    # Normalise: tests expect 'clean' (True when no flags)
+    result["clean"] = len(result.get("flags", [])) == 0
+    return result

@@ -106,69 +106,13 @@ class Backup(models.Model):
         (RETENTION_CUSTOM, 'Custom Policy'),
     ]
     
-    
-    # ৩. অ্যাডমিন প্যানেলের এরর ফিক্স করার জন্য প্রয়োজনীয় ফিল্ডগুলো নিচে দিন
-    name = models.CharField(max_length=255, null=True, blank=True)
-    status = models.CharField(max_length=100, default='pending', null=True, blank=True)
-    duration = models.FloatField(null=True, blank=True) # এরর ফিক্স হবে
-    verification_hash = models.CharField(max_length=255, null=True, blank=True) # এরর ফিক্স হবে
-    is_verified = models.BooleanField(default=False) # এরর ফিক্স হবে
-    start_time = models.DateTimeField(auto_now_add=True)
-    end_time = models.DateTimeField(null=True, blank=True)
-    
-    # 🔴 MISSING FIELDS ADDED
+    # --- Core Identity ---
     backup_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, verbose_name=_("Backup ID"))
     name = models.CharField(max_length=255, unique=True, verbose_name=_("Backup Name"))
     description = models.TextField(blank=True, null=True, verbose_name=_("Description"))
     backup_type = models.CharField(max_length=255, choices=BACKUP_TYPE_CHOICES, default=BACKUP_TYPE_FULL, verbose_name=_("Backup Type"))
     status = models.CharField(max_length=100, choices=STATUS_CHOICES, default=STATUS_PENDING, verbose_name=_("Status"))
-    
-    # --- Basic Metadata ---
-    storage_type = models.CharField(max_length=100, choices=STORAGE_CHOICES, default=STORAGE_LOCAL, verbose_name=_("Storage Type"))
-    database_name = models.CharField(max_length=100, verbose_name=_("Database Name"))
-    file_path = models.CharField(max_length=500, null=True, blank=True, verbose_name=_("File Path"))
-    file_size = models.BigIntegerField(default=0, verbose_name=_("File Size (Bytes)"))
-    
-    # --- Schedule & Verification (Fixes Admin Errors) ---
-    is_scheduled = models.BooleanField(default=False, verbose_name=_("Is Scheduled?"))
-    is_verified = models.BooleanField(default=False, verbose_name=_("Is Verified?"))
-    verification_hash = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Verification Hash"))
-    duration = models.FloatField(null=True, blank=True, verbose_name=_("Duration (Seconds)"))
-    
-    # --- Advanced Features ---
-    compression_type = models.CharField(max_length=100, default='zip', verbose_name=_("Compression"))
-    encryption_type = models.CharField(max_length=100, null=True, blank=True, verbose_name=_("Encryption"))
-    retention_policy = models.CharField(max_length=100, choices=RETENTION_CHOICES, default=RETENTION_DAILY, null=True, blank=True)
-    
-    # gfs_category এর length বাড়িয়ে ১১ এরর ফিক্স করা হলো
-    gfs_category = models.CharField(max_length=100, null=True, blank=True, verbose_name=_("GFS Category")) 
-    
-    # --- Statistics & Logging ---
-    backup_speed = models.FloatField(default=0, verbose_name=_("Speed (MB/s)"))
-    row_count = models.BigIntegerField(default=0, verbose_name=_("Total Rows"))
-    
-    # --- Timestamps ---
-    start_time = models.DateTimeField(null=True, blank=True, verbose_name=_("Start Time"))
-    end_time = models.DateTimeField(null=True, blank=True, verbose_name=_("End Time"))
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        db_table = 'backup_history'
-        verbose_name = _('Database Backup')
-        verbose_name_plural = _('Database Backups')
-        ordering = ['-start_time']
-        indexes = [
-            models.Index(fields=['backup_id'], name='idx_backup_id_826'),
-            models.Index(fields=['status'], name='idx_status_827'),
-            models.Index(fields=['backup_type'], name='idx_backup_type_828'),
-            models.Index(fields=['start_time'], name='idx_start_time_829'),
-        ]
-
-    def __str__(self):
-        return f"{self.name} ({self.status})"
-    
-    
     # 🔴 CRITICAL: created_by field that was missing
     created_by = models.ForeignKey(
         User,
@@ -214,6 +158,9 @@ class Backup(models.Model):
     encryption_key = models.TextField(blank=True, null=True, verbose_name=_("Encryption Key"))
     compression_enabled = models.BooleanField(default=True, verbose_name=_("Compression Enabled"))
     compression_method = models.CharField(max_length=100, default='gzip', blank=True, verbose_name=_("Compression Method"))
+    compression_type = models.CharField(max_length=100, default='gzip', blank=True, verbose_name=_("Compression Type"))
+    encryption_type = models.CharField(max_length=100, null=True, blank=True, verbose_name=_("Encryption Type"))
+    row_count = models.BigIntegerField(default=0, verbose_name=_("Total Rows"))
     compression_ratio = models.FloatField(default=0.0, verbose_name=_("Compression Ratio"))
     
     # 🔴 Timestamps missing fields
@@ -245,6 +192,15 @@ class Backup(models.Model):
     # 🔴 আপনার NEW FIELDS (যেগুলো আগে থেকে ছিল)
     # Backup Integrity & Health
     is_healthy = models.BooleanField(default=True, help_text="Is the backup file not corrupted?")
+
+    # Soft delete — prevents accidental permanent deletion
+    is_deleted = models.BooleanField(default=False, db_index=True,
+                                      help_text="Soft-deleted backups are hidden but not purged")
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='deleted_backups'
+    )
     last_health_check = models.DateTimeField(null=True, blank=True)
     health_check_count = models.IntegerField(default=0)
     health_score = models.IntegerField(
@@ -905,44 +861,6 @@ class BackupSchedule(models.Model):
         (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December'),
     ]
     
-    
-    # ... আপনার cron_expression এর পর থেকে ...
-
-    # টাইম এবং ডে কনফিগারেশন
-    scheduled_time = models.TimeField(default='00:00', verbose_name=_("Execution Time"))
-    day_of_week = models.IntegerField(choices=DAY_CHOICES, null=True, blank=True, verbose_name=_("Day of Week"))
-    day_of_month = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name=_("Day of Month"))
-    month_of_year = models.IntegerField(choices=MONTH_CHOICES, null=True, blank=True, verbose_name=_("Month of Year"))
-
-    # ব্যাকআপ সেটিংস
-    backup_type = models.CharField(max_length=100, choices=Backup.BACKUP_TYPE_CHOICES, default='full', null=True, blank=True)
-    
-    # 🔴 অ্যাডমিন এরর ফিক্স করার জন্য এই ফিল্ডগুলো অবশ্যই যোগ করুন
-    storage_type = models.CharField(
-        max_length=100, 
-        choices=Backup.STORAGE_CHOICES, 
-        default='local',
-        verbose_name=_("Storage Type")
-    )
-    
-    # স্ট্যাটাস এবং ট্র্যাকিং
-    is_active = models.BooleanField(default=True, verbose_name=_("Is Active"))
-    
-    # 🔴 অ্যাডমিন এরর (readonly_fields) ফিক্স করার জন্য এই ৩টি ফিল্ড লাগবেই
-    successful_executions = models.PositiveIntegerField(default=0, verbose_name=_("Successful Executions"))
-    last_success = models.DateTimeField(null=True, blank=True, verbose_name=_("Last Success"))
-    last_failure = models.DateTimeField(null=True, blank=True, verbose_name=_("Last Failure"))
-
-    # টাইমস্ট্যাম্প
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = _("Backup Schedule")
-        verbose_name_plural = _("Backup Schedules")
-
-    def __str__(self):
-        return f"{self.name} ({self.frequency})"
     
     name = models.CharField(max_length=255, unique=True, verbose_name=_("Schedule Name"))
     description = models.TextField(blank=True, null=True, verbose_name=_("Description"))
@@ -2094,3 +2012,261 @@ class DeltaBackupTracker(models.Model):
     
     def __str__(self):
         return f"Delta: {self.parent_backup.name} -> {self.child_backup.name}"
+
+
+class BackupVerification(models.Model):
+    """Track backup verification results and integrity checks"""
+    
+    backup = models.ForeignKey(
+        Backup,
+        on_delete=models.CASCADE,
+        related_name='verifications',
+        verbose_name=_("Backup")
+    )
+    verified_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Verified At")
+    )
+    is_valid = models.BooleanField(
+        default=False,
+        verbose_name=_("Is Valid")
+    )
+    checksum_match = models.BooleanField(
+        default=False,
+        verbose_name=_("Checksum Match")
+    )
+    size_match = models.BooleanField(
+        default=False,
+        verbose_name=_("Size Match")
+    )
+    error_message = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_("Error Message")
+    )
+    verification_method = models.CharField(
+        max_length=100,
+        choices=[
+            ('hash', 'Hash Verification'),
+            ('size', 'Size Verification'),
+            ('test_restore', 'Test Restore'),
+            ('full', 'Full Verification'),
+        ],
+        default='hash',
+        verbose_name=_("Verification Method")
+    )
+    verification_details = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Verification Details")
+    )
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='backup_verifications',
+        verbose_name=_("Verified By")
+    )
+    
+    class Meta:
+        db_table = 'backup_verifications'
+        verbose_name = _('Backup Verification')
+        verbose_name_plural = _('Backup Verifications')
+        ordering = ['-verified_at']
+        indexes = [
+            models.Index(fields=['backup'], name='idx_backup_verification_873'),
+            models.Index(fields=['verified_at'], name='idx_verified_at_874'),
+            models.Index(fields=['is_valid'], name='idx_is_valid_875'),
+        ]
+    
+    def __str__(self):
+        return f"Verification of {self.backup.name} - {'Valid' if self.is_valid else 'Invalid'}"
+
+
+class BackupEncryption(models.Model):
+    """Track backup encryption information and keys"""
+    
+    backup = models.OneToOneField(
+        Backup,
+        on_delete=models.CASCADE,
+        related_name='encryption_info',
+        verbose_name=_("Backup")
+    )
+    algorithm = models.CharField(
+        max_length=100,
+        choices=[
+            ('AES-256-GCM', 'AES-256-GCM'),
+            ('ChaCha20-Poly1305', 'ChaCha20-Poly1305'),
+            ('Fernet', 'Fernet'),
+        ],
+        default='AES-256-GCM',
+        verbose_name=_("Algorithm")
+    )
+    key_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        verbose_name=_("Key Hash (SHA256)")
+    )
+    is_encrypted = models.BooleanField(
+        default=False,
+        verbose_name=_("Is Encrypted")
+    )
+    encryption_key = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_("Encrypted Key")
+    )
+    salt = models.CharField(
+        max_length=32,
+        blank=True,
+        null=True,
+        verbose_name=_("Salt")
+    )
+    iv = models.CharField(
+        max_length=32,
+        blank=True,
+        null=True,
+        verbose_name=_("Initialization Vector")
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Created At")
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Updated At")
+    )
+    
+    class Meta:
+        db_table = 'backup_encryption'
+        verbose_name = _('Backup Encryption')
+        verbose_name_plural = _('Backup Encryptions')
+        indexes = [
+            models.Index(fields=['backup'], name='idx_backup_encryption_876'),
+            models.Index(fields=['algorithm'], name='idx_algorithm_877'),
+            models.Index(fields=['is_encrypted'], name='idx_is_encrypted_878'),
+        ]
+    
+    def __str__(self):
+        return f"Encryption of {self.backup.name} - {self.algorithm}"
+    
+    def generate_key_hash(self, key):
+        """Generate SHA256 hash of encryption key"""
+        if key:
+            self.key_hash = hashlib.sha256(key.encode()).hexdigest()
+        return self.key_hash
+
+
+class BackupAlert(models.Model):
+    """Track backup-related alerts and notifications"""
+    
+    ALERT_TYPE_FAILED = 'failed'
+    ALERT_TYPE_SIZE_EXCEEDED = 'size_exceeded'
+    ALERT_TYPE_SCHEDULE_MISSED = 'schedule_missed'
+    ALERT_TYPE_STORAGE_FULL = 'storage_full'
+    ALERT_TYPE_VERIFICATION_FAILED = 'verification_failed'
+    ALERT_TYPE_RETENTION_EXPIRED = 'retention_expired'
+    ALERT_TYPE_SECURITY = 'security'
+    
+    ALERT_TYPE_CHOICES = [
+        (ALERT_TYPE_FAILED, 'Backup Failed'),
+        (ALERT_TYPE_SIZE_EXCEEDED, 'Size Limit Exceeded'),
+        (ALERT_TYPE_SCHEDULE_MISSED, 'Schedule Missed'),
+        (ALERT_TYPE_STORAGE_FULL, 'Storage Full'),
+        (ALERT_TYPE_VERIFICATION_FAILED, 'Verification Failed'),
+        (ALERT_TYPE_RETENTION_EXPIRED, 'Retention Expired'),
+        (ALERT_TYPE_SECURITY, 'Security Alert'),
+    ]
+    
+    alert_type = models.CharField(
+        max_length=100,
+        choices=ALERT_TYPE_CHOICES,
+        verbose_name=_("Alert Type")
+    )
+    backup = models.ForeignKey(
+        Backup,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='alerts',
+        verbose_name=_("Backup")
+    )
+    message = models.TextField(
+        verbose_name=_("Message")
+    )
+    is_resolved = models.BooleanField(
+        default=False,
+        verbose_name=_("Is Resolved")
+    )
+    severity = models.CharField(
+        max_length=100,
+        choices=[
+            ('low', 'Low'),
+            ('medium', 'Medium'),
+            ('high', 'High'),
+            ('critical', 'Critical'),
+        ],
+        default='medium',
+        verbose_name=_("Severity")
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Created At")
+    )
+    resolved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Resolved At")
+    )
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='resolved_backup_alerts',
+        verbose_name=_("Resolved By")
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Metadata")
+    )
+    
+    class Meta:
+        db_table = 'backup_alerts'
+        verbose_name = _('Backup Alert')
+        verbose_name_plural = _('Backup Alerts')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['alert_type'], name='idx_alert_type_879'),
+            models.Index(fields=['backup'], name='idx_backup_alert_880'),
+            models.Index(fields=['is_resolved'], name='idx_is_resolved_881'),
+            models.Index(fields=['severity'], name='idx_severity_882'),
+            models.Index(fields=['created_at'], name='idx_alert_created_at_883'),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_alert_type_display()} - {self.message[:50]}"
+    
+    def resolve(self, user=None):
+        """Mark alert as resolved"""
+        self.is_resolved = True
+        self.resolved_at = timezone.now()
+        self.resolved_by = user
+        self.save()
+    
+    @classmethod
+    def create_alert(cls, alert_type, message, backup=None, severity='medium', metadata=None):
+        """Factory method to create alerts"""
+        return cls.objects.create(
+            alert_type=alert_type,
+            message=message,
+            backup=backup,
+            severity=severity,
+            metadata=metadata or {}
+        )
+
+
+# Signal handlers

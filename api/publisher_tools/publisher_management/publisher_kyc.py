@@ -288,6 +288,7 @@ class PublisherKYC(TimeStampedModel):
     metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_kyc'
         verbose_name = _('Publisher KYC')
         verbose_name_plural = _('Publisher KYC Records')
@@ -483,6 +484,7 @@ class KYCDocument(TimeStampedModel):
     )
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_kyc_documents'
         verbose_name = _('KYC Document')
         verbose_name_plural = _('KYC Documents')

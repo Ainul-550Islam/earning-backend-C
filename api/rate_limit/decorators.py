@@ -2,10 +2,10 @@ from django.http import JsonResponse
 from django.views.decorators.cache import never_cache
 from functools import wraps
 import time
-from .services.RateLimitService import RateLimitService
+from api.rate_limit.services.RateLimitService import RateLimitService
 
 
-def rate_limit(config_name: str = None, **kwargs):
+def rate_limit(config_name: str = None, **rate_kwargs):
     """
     Rate limit decorator for Django views
     
@@ -26,24 +26,24 @@ def rate_limit(config_name: str = None, **kwargs):
             # Check if specific config should be used
             if config_name:
                 try:
-                    from .models import RateLimitConfig
+                    from api.rate_limit.models import RateLimitConfig
                     config = RateLimitConfig.objects.get(name=config_name, is_active=True)
                     configs = [config]
                 except RateLimitConfig.DoesNotExist:
                     # If config doesn't exist, apply default rate limiting
                     configs = rate_limit_service.get_applicable_configs(request)
             else:
-                # Use dynamic configuration from kwargs
+                # Use dynamic configuration from rate_kwargs
                 configs = rate_limit_service.get_applicable_configs(request)
                 
-                # Apply additional constraints from kwargs
-                if kwargs:
-                    # Filter configs based on kwargs
+                # Apply additional constraints from rate_kwargs
+                if rate_kwargs:
+                    # Filter configs based on rate_kwargs
                     filtered_configs = []
                     for config in configs:
                         if all(
                             getattr(config, key, None) == value 
-                            for key, value in kwargs.items() 
+                            for key, value in rate_kwargs.items() 
                             if hasattr(config, key)
                         ):
                             filtered_configs.append(config)
@@ -228,30 +228,29 @@ def premium_only():
                     'success': False,
                     'error': 'authentication_required'
                 }, status=401)
-            
-            # Check if user has premium rate limit profile
+
             try:
                 from .models import UserRateLimitProfile
                 profile = UserRateLimitProfile.objects.get(user=request.user)
-                
+
                 if not profile.is_premium:
                     return JsonResponse({
                         'success': False,
                         'error': 'premium_required',
                         'message': 'এই ফিচারটি শুধুমাত্র প্রিমিয়াম ইউজারদের জন্য।'
                     }, status=403)
-                
+
             except UserRateLimitProfile.DoesNotExist:
                 return JsonResponse({
                     'success': False,
                     'error': 'premium_required',
                     'message': 'এই ফিচারটি শুধুমাত্র প্রিমিয়াম ইউজারদের জন্য।'
                 }, status=403)
-            
+
             return view_func(request, *args, **kwargs)
-        
+
         return _wrapped_view
-    
+
     return decorator
 
 
@@ -273,7 +272,7 @@ def dynamic_rate_limit(**dynamic_kwargs):
             is_premium = False
             if request.user.is_authenticated:
                 try:
-                    from .models import UserRateLimitProfile
+                    from api.rate_limit.models import UserRateLimitProfile
                     profile = UserRateLimitProfile.objects.get(user=request.user)
                     is_premium = profile.is_premium
                 except UserRateLimitProfile.DoesNotExist:
@@ -296,7 +295,7 @@ def dynamic_rate_limit(**dynamic_kwargs):
                 }
             
             # Create temporary config for this request
-            from .models import RateLimitConfig
+            from api.rate_limit.models import RateLimitConfig
             temp_config = RateLimitConfig(
                 name=f"dynamic_{view_func.__name__}",
                 rate_limit_type='endpoint',

@@ -2,7 +2,7 @@ import random
 import logging
 from django.db import transaction
 from django.utils import timezone
-from ...models import SmartLink, SmartLinkVersion, ABTestResult
+from api.smartlink.models import SmartLink, SmartLinkVersion, ABTestResult
 from ...choices import ABTestStatus
 from ...exceptions import ABTestConfigError
 from ...constants import AB_TEST_MIN_SAMPLE_SIZE, AB_TEST_CONFIDENCE_LEVEL, AB_TEST_MAX_VARIANTS

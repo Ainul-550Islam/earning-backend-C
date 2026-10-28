@@ -16,6 +16,7 @@ from django.utils.translation import gettext_lazy as _
 from ..models import Tenant, TenantSettings, TenantOnboarding, TenantOnboardingStep
 from ..models.security import TenantAPIKey, TenantAuditLog
 from ..models.branding import TenantBranding
+from api.tenants.models.plan import Plan
 
 User = get_user_model()
 

@@ -1,3 +1,4 @@
+from django.core.exceptions import ImproperlyConfigured
 # =============================================================================
 # api/promotions/security_vault/api_encryption.py
 # End-to-End API Response Encryption

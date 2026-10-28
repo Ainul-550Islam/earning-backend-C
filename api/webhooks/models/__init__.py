@@ -1,62 +1,91 @@
-
-# Functions needed by migrations (originally in flat models.py)
-try:
-    from api.webhooks.models_flat import _generate_secret_key, _empty_dict
-except ImportError:
-    import secrets
-    def _generate_secret_key() -> str:
-        return secrets.token_hex(32)
-    def _empty_dict():
-        return {}
+# Copyright © 2026 Ainul Enterprise Engine. All Rights Reserved.
 """
-Webhooks Models Module
+Webhooks Models Package
 
-This module contains all models for the webhooks system,
-including core models, advanced features, analytics, and replay functionality.
-Models are organized into separate files for better maintainability.
+Single authoritative source. All views, serializers, tasks and services
+must import from here — not from individual sub-modules directly.
 """
 
-# Import all models to ensure Django discovers them
+# ── Core models (canonical) ───────────────────────────────────────────────────
 from .core import WebhookEndpoint, WebhookSubscription, WebhookDeliveryLog
-from .advanced import WebhookFilter, WebhookBatch, WebhookBatchItem, WebhookTemplate, WebhookSecret
-from .inbound import InboundWebhook, InboundWebhookLog, InboundWebhookRoute, InboundWebhookError
-from .analytics import WebhookAnalytics, WebhookHealthLog, WebhookEventStat, WebhookRateLimit, WebhookRetryAnalysis
+
+# ── Advanced models ───────────────────────────────────────────────────────────
+from .advanced import (
+    WebhookFilter,
+    WebhookBatch,
+    WebhookBatchItem,
+    WebhookTemplate,
+    WebhookSecret,
+)
+
+# ── Inbound models ────────────────────────────────────────────────────────────
+from .inbound import (
+    InboundWebhook,
+    InboundWebhookLog,
+    InboundWebhookRoute,
+    InboundWebhookError,
+)
+
+# ── Analytics models ──────────────────────────────────────────────────────────
+from .analytics import (
+    WebhookAnalytics,
+    WebhookHealthLog,
+    WebhookEventStat,
+    WebhookRateLimit,
+    WebhookRetryAnalysis,
+)
+
+# ── Replay models ─────────────────────────────────────────────────────────────
 from .replay import WebhookReplay, WebhookReplayBatch, WebhookReplayItem
 
-# Explicitly list all model names for Django's model discovery
-# This ensures Django recognizes all models for makemigrations and migrate commands
+# ── Helpers re-exported so services/tasks can import from .models ─────────────
+from .core import _generate_secret_key, _empty_dict
+
 __all__ = [
-    # Core Models
-    'WebhookEndpoint',
-    'WebhookSubscription',
-    'WebhookDeliveryLog',
-    
-    # Advanced Models
-    'WebhookFilter',
-    'WebhookBatch',
-    'WebhookBatchItem',
-    'WebhookTemplate',
-    'WebhookSecret',
-    
-    # Inbound Models
-    'InboundWebhook',
-    'InboundWebhookLog',
-    'InboundWebhookRoute',
-    'InboundWebhookError',
-    
-    # Analytics Models
-    'WebhookAnalytics',
-    'WebhookHealthLog',
-    'WebhookEventStat',
-    'WebhookRateLimit',
-    'WebhookRetryAnalysis',
-    
-    # Replay Models
-    'WebhookReplay',
-    'WebhookReplayBatch',
-    'WebhookReplayItem',
+    # Core
+    "WebhookEndpoint",
+    "WebhookSubscription",
+    "WebhookDeliveryLog",
+    # Advanced
+    "WebhookFilter",
+    "WebhookBatch",
+    "WebhookBatchItem",
+    "WebhookTemplate",
+    "WebhookSecret",
+    # Inbound
+    "InboundWebhook",
+    "InboundWebhookLog",
+    "InboundWebhookRoute",
+    "InboundWebhookError",
+    # Analytics
+    "WebhookAnalytics",
+    "WebhookHealthLog",
+    "WebhookEventStat",
+    "WebhookRateLimit",
+    "WebhookRetryAnalysis",
+    # Replay
+    "WebhookReplay",
+    "WebhookReplayBatch",
+    "WebhookReplayItem",
+    # Aging
+    'AgeTier',
+    'AgingEventType',
+    'WebhookAgingPolicy',
+    'WebhookEndpointAging',
+    'WebhookDeliveryAging',
+    'WebhookAgingEvent',
+    # Helpers
+    "_generate_secret_key",
+    "_empty_dict",
 ]
 
-# Django will discover models through the app registry
-# The models will be available for makemigrations and migrate commands
-# when Django apps are loaded properly.
+# ── Aging models ──────────────────────────────────────────────────────────────
+from .aging import (
+    AgeTier,
+    AgingEventType,
+    WebhookAgingPolicy,
+    WebhookEndpointAging,
+    WebhookDeliveryAging,
+    WebhookAgingEvent,
+)
+

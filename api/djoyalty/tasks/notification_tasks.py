@@ -1,7 +1,7 @@
 # api/djoyalty/tasks/notification_tasks.py
 """
 Celery task: Loyalty notification sending।
-Schedule: Daily — expiry warnings।
+Schedule: Daily -- expiry warnings।
 """
 import logging
 
@@ -50,7 +50,7 @@ def send_pending_notifications_task(self):
         count = 0
         for notification in pending:
             try:
-                # Actual sending logic — email/sms/push সেই অনুযায়ী implement করো
+                # Actual sending logic -- email/sms/push সেই অনুযায়ী implement করো
                 notification.is_sent = True
                 notification.sent_at = timezone.now()
                 notification.save(update_fields=['is_sent', 'sent_at'])

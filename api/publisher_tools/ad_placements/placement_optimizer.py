@@ -9,7 +9,7 @@ from django.utils import timezone
 
 def analyze_all_placements(publisher) -> List[Dict]:
     """Publisher-এর সব placements analyze করে।"""
-    from api.publisher_tools.models import AdPlacement, PublisherEarning
+    from publisher_tools.models import AdPlacement, PublisherEarning
     placements = AdPlacement.objects.filter(
         ad_unit__publisher=publisher, is_active=True
     ).select_related("ad_unit")

@@ -14,14 +14,14 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
-from ...models import RoutingDecisionLog, UserOfferHistory
-from ...constants import (
+from offer_routing.models import RoutingDecisionLog, UserOfferHistory
+from offer_routing.constants import (
     ROUTING_CACHE_TIMEOUT, USER_CACHE_TIMEOUT,
     CONTEXT_CACHE_TIMEOUT, CACHE_KEY_PREFIX,
     MAX_CACHE_SIZE, CACHE_CLEANUP_INTERVAL
 )
-from ...exceptions import CacheError, ConfigurationError
-from ...utils import generate_cache_key, hash_context
+from offer_routing.exceptions import CacheError, ConfigurationError
+from offer_routing.utils import generate_cache_key, hash_context
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

@@ -1,3 +1,4 @@
+import re
 # =============================================================================
 # api/promotions/security_vault/secure_storage.py
 # AES-256 + Fernet Encrypted Data Storage

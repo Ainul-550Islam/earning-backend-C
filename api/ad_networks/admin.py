@@ -4290,14 +4290,30 @@ class OfferDailyLimitAdmin(admin.ModelAdmin):
         return super().get_queryset(request).filter(tenant_id=getattr(request, 'tenant_id', 'default'))
 
 #যদি @admin.register() decorator কাজ না করে, তাহলে manually register করুন
-admin.site.register(AdNetwork, AdNetworkAdmin)
-admin.site.register(OfferCategory, OfferCategoryAdmin)
-admin.site.register(Offer, OfferAdmin)
-admin.site.register(UserOfferEngagement, UserOfferEngagementAdmin)
-admin.site.register(OfferConversion, OfferConversionAdmin)
-admin.site.register(BlacklistedIP, BlacklistedIPAdmin)
-admin.site.register(KnownBadIP, KnownBadIPAdmin)
-admin.site.register(FraudDetectionRule, FraudDetectionRuleAdmin)
+try:
+    admin.site.register(AdNetwork, AdNetworkAdmin)
+except Exception: pass
+try:
+    admin.site.register(OfferCategory, OfferCategoryAdmin)
+except Exception: pass
+try:
+    admin.site.register(Offer, OfferAdmin)
+except Exception: pass
+try:
+    admin.site.register(UserOfferEngagement, UserOfferEngagementAdmin)
+except Exception: pass
+try:
+    admin.site.register(OfferConversion, OfferConversionAdmin)
+except Exception: pass
+try:
+    admin.site.register(BlacklistedIP, BlacklistedIPAdmin)
+except Exception: pass
+try:
+    admin.site.register(KnownBadIP, KnownBadIPAdmin)
+except Exception: pass
+try:
+    admin.site.register(FraudDetectionRule, FraudDetectionRuleAdmin)
+except Exception: pass
 
 # ==================== Custom CSS & JS ====================
 

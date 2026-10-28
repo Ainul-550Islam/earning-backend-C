@@ -113,6 +113,7 @@ class LandingPageRotator:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def create_rotator_view(request):
     rotator = LandingPageRotator()
@@ -124,8 +125,6 @@ def create_rotator_view(request):
     )
     return Response(result, status=status.HTTP_201_CREATED)
 
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def rotator_redirect_view(request, rotator_id):
     from django.shortcuts import redirect
@@ -135,9 +134,6 @@ def rotator_redirect_view(request, rotator_id):
         return Response(lp, status=status.HTTP_404_NOT_FOUND)
     rotator.record_click(rotator_id, lp['lp_id'])
     return redirect(lp['url'])
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def rotator_stats_view(request, rotator_id):
     rotator = LandingPageRotator()

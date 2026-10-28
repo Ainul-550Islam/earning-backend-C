@@ -470,3 +470,6 @@ def send_onboarding_reminder(tenant, reminder_type):
         
     except Exception as e:
         logger.error(f"Failed to send onboarding reminder to {tenant.name}: {str(e)}")
+
+from django.dispatch import Signal
+onboarding_completed = Signal()

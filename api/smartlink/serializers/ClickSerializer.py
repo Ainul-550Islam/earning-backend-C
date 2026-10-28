@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import Click, ClickMetadata
+from api.smartlink.models import Click, ClickMetadata
 
 
 class ClickMetadataInlineSerializer(serializers.ModelSerializer):

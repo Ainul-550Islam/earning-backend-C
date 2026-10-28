@@ -1,13 +1,14 @@
 import logging
+from api.smartlink.services.analytics.base import AnalyticsServiceBase
 import datetime
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
-from ...models import Click, SmartLink, OfferPerformanceStat
+from api.smartlink.models import Click, SmartLink, OfferPerformanceStat
 
 logger = logging.getLogger('smartlink.epc_calculator')
 
 
-class EPCCalculatorService:
+class EPCCalculatorService(AnalyticsServiceBase):
     """
     Calculate Earnings Per Click (EPC) at various granularities:
     per SmartLink, per offer, per geo, per device, per time period.
@@ -15,7 +16,7 @@ class EPCCalculatorService:
 
     def calculate_for_smartlink(self, smartlink: SmartLink, days: int = 7) -> float:
         """Calculate overall EPC for a SmartLink over the last N days."""
-        cutoff = timezone.now().date() - datetime.timedelta(days=days)
+        cutoff = self.date_cutoff(days)
         agg = Click.objects.filter(
             smartlink=smartlink,
             created_at__date__gte=cutoff,
@@ -32,7 +33,7 @@ class EPCCalculatorService:
     def calculate_for_offer(self, offer_id: int, country: str = '',
                             device_type: str = '', days: int = 7) -> float:
         """Calculate EPC for a specific offer, optionally filtered by geo/device."""
-        cutoff = timezone.now().date() - datetime.timedelta(days=days)
+        cutoff = self.date_cutoff(days)
         qs = OfferPerformanceStat.objects.filter(
             offer_id=offer_id,
             date__gte=cutoff,
@@ -52,7 +53,7 @@ class EPCCalculatorService:
 
     def calculate_geo_epc(self, smartlink: SmartLink, days: int = 7) -> list:
         """EPC broken down by country."""
-        cutoff = timezone.now().date() - datetime.timedelta(days=days)
+        cutoff = self.date_cutoff(days)
         rows = (
             Click.objects.filter(
                 smartlink=smartlink,

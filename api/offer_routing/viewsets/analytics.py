@@ -5,6 +5,7 @@ This module contains viewsets for accessing routing analytics,
 insights, performance metrics, and business reports.
 """
 
+from ..throttling import AnalyticsThrottle, RoutingEngineThrottle, AnalyticsThrottle, BulkOperationThrottle, EvaluatorThrottle
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -19,6 +20,8 @@ from ..services.analytics import analytics_service
 from ..services.reporter import routing_reporter
 from ..permissions import IsAuthenticatedOrReadOnly, CanViewAnalytics
 from ..exceptions import ValidationError, AnalyticsError
+from ..serializers import RoutingDecisionLogSerializer, RoutingInsightSerializer, RoutePerformanceStatSerializer, OfferExposureStatSerializer
+
 
 User = get_user_model()
 
@@ -32,14 +35,18 @@ class RoutingDecisionLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     
     queryset = RoutingDecisionLog.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = RoutingDecisionLogSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanViewAnalytics]
+    throttle_classes = [AnalyticsThrottle]
     
     def get_queryset(self):
         """Filter logs by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(user__tenant=self.request.user)
+            try:
+                queryset = queryset.filter(user__tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-created_at')
     
     @action(detail=False, methods=['get'])
@@ -72,43 +79,20 @@ class RoutingDecisionLogViewSet(viewsets.ReadOnlyModelViewSet):
         """Get performance trends over time."""
         try:
             days = int(request.query_params.get('days', 30))
-            
-            # Get daily performance data
-            from datetime import timedelta
-            cutoff_date = timezone.now() - timedelta(days=days)
-            
-            daily_stats = RoutingDecisionLog.objects.filter(
-                user__tenant=request.user,
-                created_at__gte=cutoff_date
-            ).extra({
-                'date': 'date(created_at)'
-            }).values('date').annotate(
-                total_decisions=Count('id'),
-                avg_response_time=Avg('response_time_ms'),
-                cache_hit_rate=Avg('cache_hit'),
-                personalization_rate=Avg('personalization_applied'),
-                caps_check_rate=Avg('caps_checked'),
-                fallback_rate=Avg('fallback_used')
-            ).order_by('date')
-            
-            trends = []
-            for stat in daily_stats:
-                trends.append({
-                    'date': stat['date'].isoformat(),
-                    'total_decisions': stat['total_decisions'],
-                    'avg_response_time_ms': stat['avg_response_time'] or 0,
-                    'cache_hit_rate': (stat['cache_hit_rate'] or 0) * 100,
-                    'personalization_rate': (stat['personalization_rate'] or 0) * 100,
-                    'caps_check_rate': (stat['caps_check_rate'] or 0) * 100,
-                    'fallback_rate': (stat['fallback_used'] or 0) * 100
-                })
-            
+
+            from ..services.analytics import RoutingAnalyticsService
+            svc = RoutingAnalyticsService()
+            trends = svc.get_performance_trends(
+                tenant_id=request.user.id,
+                days=days,
+            )
+
             return Response({
                 'success': True,
                 'period_days': days,
-                'trends': trends
+                'trends': trends,
             })
-            
+
         except Exception as e:
             return Response({
                 'success': False,
@@ -165,14 +149,18 @@ class RoutingInsightViewSet(viewsets.ReadOnlyModelViewSet):
     """
     
     queryset = RoutingInsight.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = RoutingInsightSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanViewAnalytics]
+    throttle_classes = [AnalyticsThrottle]
     
     def get_queryset(self):
         """Filter insights by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-created_at')
     
     @action(detail=False, methods=['get'])
@@ -318,14 +306,18 @@ class RoutePerformanceStatViewSet(viewsets.ReadOnlyModelViewSet):
     """
     
     queryset = RoutePerformanceStat.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = RoutePerformanceStatSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanViewAnalytics]
+    throttle_classes = [AnalyticsThrottle]
     
     def get_queryset(self):
         """Filter stats by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-date')
     
     @action(detail=False, methods=['get'])
@@ -468,14 +460,18 @@ class OfferExposureStatViewSet(viewsets.ReadOnlyModelViewSet):
     """
     
     queryset = OfferExposureStat.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = OfferExposureStatSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanViewAnalytics]
+    throttle_classes = [AnalyticsThrottle]
     
     def get_queryset(self):
         """Filter stats by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-date')
     
     @action(detail=False, methods=['get'])
@@ -577,6 +573,7 @@ class ReportViewSet(viewsets.ViewSet):
     """
     
     permission_classes = [IsAuthenticatedOrReadOnly, CanViewAnalytics]
+    throttle_classes = [AnalyticsThrottle]
     
     @action(detail=False, methods=['post'])
     def generate_performance_report(self, request):

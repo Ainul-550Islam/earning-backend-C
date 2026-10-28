@@ -1,0 +1,9 @@
+{% extends "offer_routing/_base.html" %}
+{% block title %}Error{% endblock %}
+{% block content %}
+<div class="alert alert-danger">
+    <h4>{{ error_title|default:"An Error Occurred" }}</h4>
+    <p>{{ error_message|default:"Something went wrong. Please try again." }}</p>
+</div>
+<a href="{% url 'offer_routing:dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+{% endblock %}

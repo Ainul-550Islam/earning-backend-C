@@ -56,6 +56,17 @@ class RoutingABTest(models.Model):
     
     # Test status and timing
     is_active = models.BooleanField(_('Is Active'), default=True)
+    status = models.CharField(
+        _('Status'),
+        max_length=20,
+        choices=[
+            ('active', _('Active')),
+            ('paused', _('Paused')),
+            ('completed', _('Completed')),
+            ('archived', _('Archived')),
+        ],
+        default='active'
+    )
     started_at = models.DateTimeField(_('Started At'), null=True, blank=True)
     ended_at = models.DateTimeField(_('Ended At'), null=True, blank=True)
     duration_hours = models.IntegerField(
@@ -237,7 +248,7 @@ class ABTestAssignment(models.Model):
     )
     
     # Assignment details
-    assigned_at = models.DateTimeField(_('Assigned At'), auto_now_add=True)
+    assigned_at = models.DateTimeField(_('Assigned At'), default=timezone.now)
     assigned_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -261,7 +272,6 @@ class ABTestAssignment(models.Model):
         verbose_name = _('A/B Test Assignment')
         verbose_name_plural = _('A/B Test Assignments')
         ordering = ['-assigned_at']
-        unique_together = ['user', 'test']  # Prevent duplicate assignments
         indexes = [
             models.Index(fields=['test', 'user'], name='idx_test_user_1190'),
             models.Index(fields=['test', 'variant'], name='idx_test_variant_1191'),
@@ -340,12 +350,17 @@ class ABTestResult(models.Model):
     and performance metrics for completed tests.
     """
     
-    test = models.OneToOneField(
+    test = models.ForeignKey(
         RoutingABTest,
         on_delete=models.CASCADE,
         related_name='results',
         verbose_name=_('A/B Test')
     )
+    
+    # Per-event fields (for test result tracking)
+    user_id = models.IntegerField(_('User ID'), null=True, blank=True)
+    variant = models.CharField(_('Variant'), max_length=30, null=True, blank=True)
+    metric_value = models.FloatField(_('Metric Value'), null=True, blank=True)
     
     # Statistical results
     control_impressions = models.BigIntegerField(_('Control Impressions'), default=0)
@@ -407,7 +422,7 @@ class ABTestResult(models.Model):
         verbose_name=_('Analyzed By')
     )
     
-    created_at = models.DateTimeField(_('Created At'), auto_now_add=True)
+    created_at = models.DateTimeField(_('Created At'), default=timezone.now)
     updated_at = models.DateTimeField(_('Updated At'), auto_now=True)
     
     class Meta:

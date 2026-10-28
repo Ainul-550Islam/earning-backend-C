@@ -42,6 +42,7 @@ class PublisherVerification(TimeStampedModel):
     metadata          = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_verifications'
         verbose_name = _('Publisher Verification')
         verbose_name_plural = _('Publisher Verifications')

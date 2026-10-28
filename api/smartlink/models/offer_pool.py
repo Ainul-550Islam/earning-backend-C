@@ -1,3 +1,7 @@
+from django.conf import settings as _sl_settings
+_OFFER_MODEL = getattr(_sl_settings, 'SMARTLINK_OFFER_MODEL', 'offer_inventory.Offer')
+_ADVERTISER_MODEL = getattr(_sl_settings, 'SMARTLINK_ADVERTISER_MODEL', 'advertiser_portal.Advertiser')
+
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -46,7 +50,7 @@ class OfferPoolEntry(models.Model):
     )
     # FK to your Offer model — adjust app label as needed
     offer = models.ForeignKey(
-        'offer_inventory.Offer', on_delete=models.CASCADE,
+        _OFFER_MODEL, on_delete=models.CASCADE,
         related_name='pool_entries',
     )
     weight = models.PositiveSmallIntegerField(
@@ -118,6 +122,7 @@ class OfferCapTracker(models.Model):
         Thread-safe via F() expression.
         """
         from django.db.models import F
+
         OfferCapTracker.objects.filter(pk=self.pk).update(
             clicks_count=F('clicks_count') + 1
         )
@@ -136,7 +141,7 @@ class OfferBlacklist(models.Model):
         related_name='blacklisted_offers',
     )
     offer = models.ForeignKey(
-        'offer_inventory.Offer', on_delete=models.CASCADE,
+        _OFFER_MODEL, on_delete=models.CASCADE,
         related_name='blacklisted_from_smartlinks',
     )
     reason = models.TextField(blank=True)
@@ -165,7 +170,7 @@ class OfferRotationLog(models.Model):
         related_name='rotation_logs',
     )
     offer = models.ForeignKey(
-        'offer_inventory.Offer', on_delete=models.SET_NULL, null=True,
+        _OFFER_MODEL, on_delete=models.SET_NULL, null=True,
         related_name='rotation_logs',
     )
     selected_reason = models.CharField(max_length=30, help_text=_('e.g. weighted_random, epc_optimized'))
@@ -191,7 +196,7 @@ class OfferScoreCache(models.Model):
     Used by EPC optimizer for fast routing decisions.
     """
     offer = models.ForeignKey(
-        'offer_inventory.Offer', on_delete=models.CASCADE,
+        _OFFER_MODEL, on_delete=models.CASCADE,
         related_name='score_caches',
     )
     country = models.CharField(max_length=2, db_index=True)

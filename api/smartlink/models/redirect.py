@@ -1,3 +1,7 @@
+from django.conf import settings as _sl_settings
+_OFFER_MODEL = getattr(_sl_settings, 'SMARTLINK_OFFER_MODEL', 'offer_inventory.Offer')
+_ADVERTISER_MODEL = getattr(_sl_settings, 'SMARTLINK_ADVERTISER_MODEL', 'advertiser_portal.Advertiser')
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from .smartlink import SmartLink
@@ -16,7 +20,7 @@ class RedirectLog(models.Model):
         db_index=True,
     )
     offer = models.ForeignKey(
-        'offer_inventory.Offer', on_delete=models.SET_NULL,
+        _OFFER_MODEL, on_delete=models.SET_NULL,
         null=True, related_name='smartlink_redirect_logs',
     )
     click = models.OneToOneField(
@@ -217,6 +221,7 @@ class RedirectChain(models.Model):
 
     def add_hop(self, step_type: str, url: str):
         from django.utils import timezone
+
         self.chain.append({
             'step': self.hop_count + 1,
             'type': step_type,

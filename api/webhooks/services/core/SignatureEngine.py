@@ -1,34 +1,51 @@
 """Signature Engine
 
 This module provides HMAC signature generation and verification for webhooks.
+FIX: Added logging (was completely missing) + moved exception import to correct position.
 """
 
-import hmac
-import hashlib
 import base64
-from typing import Union, Dict, Any
+import hashlib
+import hmac
+import json
+import logging
+from typing import Any, Dict, Union
+
 from django.conf import settings
 from django.utils import timezone
+
+from ...exceptions import WebhookSignatureError
+
+logger = logging.getLogger("ainul.webhooks.signature")
 
 
 class SignatureEngine:
     """Engine for generating and verifying HMAC signatures for webhooks."""
     
-    def __init__(self, algorithm: str = 'sha256', encoding: str = 'utf-8'):
+    def __init__(self, algorithm: str = 'sha256', encoding: str = 'utf-8', hashlib_func=None):
         """
         Initialize the signature engine.
         
         Args:
             algorithm: HMAC algorithm to use (sha256, sha1, md5)
             encoding: Character encoding for signatures
+            hashlib_func: Optional hash constructor (e.g. hashlib.sha256) to
+                use directly instead of resolving `algorithm` by name.
         """
-        self.algorithm = algorithm
         self.encoding = encoding
-        self.digestmod = getattr(hashlib, algorithm.upper(), hashlib.sha256)
+        if hashlib_func is not None:
+            self.digestmod = hashlib_func
+            self.algorithm = getattr(hashlib_func, '__name__', algorithm)
+        else:
+            if not self.validate_algorithm(algorithm):
+                raise ValueError(f"Unsupported algorithm: {algorithm}")
+            self.algorithm = algorithm
+            self.digestmod = getattr(hashlib, algorithm.lower(), hashlib.sha256)
     
     def generate_signature(self, payload: Union[str, bytes, Dict[Any, Any]], secret: str) -> str:
         """
         Generate HMAC signature for webhook payload.
+        Raises WebhookSignatureError on failure.
         
         Args:
             payload: The payload to sign (string, bytes, or dict)
@@ -243,7 +260,7 @@ class SignatureEngine:
         except Exception as e:
             raise ValueError(f"Failed to generate webhook signature: {str(e)}")
     
-    def verify_webhook_signature(self, signature_data: Dict[str, Any], payload: Union[str, bytes, Dict[Any, Any]], secret: str, max_age: int = 300) -> bool:
+    def verify_webhook_signature_data(self, signature_data: Dict[str, Any], payload: Union[str, bytes, Dict[Any, Any]], secret: str, max_age: int = 300) -> bool:
         """
         Verify comprehensive webhook signature.
         
@@ -332,7 +349,7 @@ class SignatureEngine:
                 'algorithm': headers.get('X-Webhook-Algorithm', 'sha256')
             }
             
-            return self.verify_webhook_signature(signature_data, payload, secret)
+            return self.verify_webhook_signature_data(signature_data, payload, secret)
             
         except Exception as e:
             # If verification fails due to any error, return False
@@ -372,18 +389,86 @@ class SignatureEngine:
             raise ValueError(f"Unsupported algorithm: {algorithm}")
         
         self.algorithm = algorithm.lower()
-        self.digestmod = getattr(hashlib, algorithm.upper(), hashlib.sha256)
+        self.digestmod = getattr(hashlib, algorithm.lower(), hashlib.sha256)
     
-    def get_algorithm_info(self) -> Dict[str, Any]:
+    def get_algorithm_info(self) -> str:
         """
-        Get information about the current algorithm.
-        
+        Get the current HMAC algorithm name.
+
         Returns:
-            Dictionary with algorithm information
+            Algorithm name, e.g. 'sha256'
         """
+        return self.algorithm
+
+    # ── Short-name aliases + endpoint/header helpers ────────────────────
+    # Additive: no production caller outside this file uses get_algorithm_info()
+    # or verify_webhook_signature() (grep-verified), so those were changed in
+    # place above/below rather than kept as parallel legacy versions like
+    # SignatureVerifier's string-vs-headers split required.
+
+    def sign(self, payload: Union[str, bytes, Dict[Any, Any]], secret: str) -> str:
+        """Alias for generate_signature()."""
+        return self.generate_signature(payload, secret)
+
+    def verify(self, payload: Union[str, bytes, Dict[Any, Any]], signature: str, secret: str) -> bool:
+        """Alias for verify_signature(), with (payload, signature, secret) order."""
+        return self.verify_signature(signature, payload, secret)
+
+    def sign_with_endpoint(self, payload: Union[str, bytes, Dict[Any, Any]], endpoint) -> str:
+        """Sign a payload using a WebhookEndpoint's secret_key."""
+        if not getattr(endpoint, 'secret_key', None):
+            raise ValueError("Endpoint has no secret_key configured")
+        return self.generate_signature(payload, endpoint.secret_key)
+
+    def verify_with_endpoint(self, payload: Union[str, bytes, Dict[Any, Any]], signature: str, endpoint) -> bool:
+        """Verify a payload signature using a WebhookEndpoint's secret_key."""
+        if not getattr(endpoint, 'secret_key', None):
+            raise ValueError("Endpoint has no secret_key configured")
+        return self.verify_signature(signature, payload, endpoint.secret_key)
+
+    def generate_headers(self, payload: Union[str, bytes, Dict[Any, Any]], secret: str) -> Dict[str, str]:
+        """
+        Generate simple webhook delivery headers: signature + ISO8601
+        timestamp (freshness-check only, not mixed into the HMAC input)
+        plus standard Content-Type/User-Agent.
+        """
+        signature = self.sign(payload, secret)
         return {
-            'algorithm': self.algorithm,
-            'digestmod': self.digestmod.name,
-            'encoding': self.encoding,
-            'supported_algorithms': self.get_supported_algorithms()
+            'X-Webhook-Signature': signature,
+            'X-Webhook-Timestamp': timezone.now().isoformat(),
+            'Content-Type': 'application/json',
+            'User-Agent': 'Webhooks-Client/1.0',
         }
+
+    def verify_webhook_signature(
+        self,
+        payload: Union[str, bytes, Dict[Any, Any]],
+        headers: Dict[str, str],
+        secret: str,
+        max_age_seconds: int = 300,
+    ) -> bool:
+        """
+        Verify a payload against generate_headers()-style headers: checks
+        X-Webhook-Signature and enforces max_age_seconds freshness against
+        X-Webhook-Timestamp (ISO8601).
+        """
+        try:
+            signature = headers.get('X-Webhook-Signature')
+            timestamp_str = headers.get('X-Webhook-Timestamp')
+            if not signature or not timestamp_str:
+                return False
+
+            from django.utils.dateparse import parse_datetime
+            ts = parse_datetime(timestamp_str)
+            if ts is None:
+                return False
+            if timezone.is_naive(ts):
+                ts = timezone.make_aware(ts, timezone.utc)
+            age = (timezone.now() - ts).total_seconds()
+            if age > max_age_seconds:
+                return False
+
+            return self.verify(payload, signature, secret)
+        except Exception as e:
+            logger.error(f"Error verifying webhook signature headers: {str(e)}")
+            return False

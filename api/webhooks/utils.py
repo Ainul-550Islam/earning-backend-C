@@ -1,7 +1,40 @@
-"""Webhooks Utilities Module
+"""
+Ainul Enterprise Engine — Webhook Utilities
+utils.py
 
-This module contains utility functions for the webhooks system,
-including data processing, formatting, and helper functions.
+Utility functions used throughout the webhook system.
+
+FIX: Documented usage of all 15 previously "floating" utility functions:
+
+    generate_webhook_signature   — SignatureEngine.generate_signature()
+    verify_webhook_signature     — SignatureVerifier.verify()
+    get_cache_key                — RateLimiterService._get_cache_key()
+    format_webhook_payload       — DispatchService._prepare_payload()
+    get_webhook_headers          — DispatchService._build_headers()
+    parse_webhook_headers        — InboundWebhookService._parse_headers()
+    calculate_retry_delay        — DispatchService._schedule_retry()
+    get_webhook_status_stats     — WebhookAnalyticsService.get_stats()
+    sanitize_webhook_url         — WebhookEndpointSerializer.validate_target_url()
+    get_event_type_display_name  — no live caller confirmed (Session 9):
+                                    the routed EventTypeListAPIView.get()
+                                    (views.py) derives display names from
+                                    dict(EventType.choices) directly and
+                                    never calls this; only the unrouted
+                                    viewsets/_deprecated_unused/
+                                    EventTypeListAPIView.py referenced it.
+                                    Kept and rewritten to match that same
+                                    EventType.choices-based approach
+                                    rather than removed, since __all__
+                                    exports it and something outside this
+                                    app may still import it directly.
+    format_webhook_error_message — WebhookDeliveryLogSerializer
+    set_cache_data               — RateLimiterService._set_rate_limit()
+    get_cache_data               — RateLimiterService._get_rate_limit()
+    delete_cache_data            — RateLimiterService._clear_rate_limit()
+    truncate_string              — WebhookDeliveryLogAdmin.payload_preview()
+    format_bytes                 — AdminWebhookExportSerializer
+    is_valid_webhook_url         — validate_webhook_url() validator
+    mask_sensitive_data          — WebhookEndpointSerializer (secrets)
 """
 
 import json
@@ -14,11 +47,13 @@ from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
 from django.utils import timezone
 from django.core.cache import cache
+from django.db import models
 
 from .constants import (
     WebhookStatus, DeliveryStatus, FilterOperator,
     BatchStatus, ReplayStatus
 )
+from .validators import is_valid_webhook_url
 
 logger = logging.getLogger(__name__)
 
@@ -94,11 +129,9 @@ def format_webhook_payload(payload: Dict[str, Any], template: Optional[str] = No
         except ImportError:
             logger.warning("Jinja2 not available for template processing")
             return payload
-    except Exception as e:
-        logger.error(f"Template processing error: {e}")
+        except Exception as e:
+            logger.error(f"Template processing error: {e}")
             return payload
-    
-    return payload
 
 
 def get_webhook_headers(secret: str, additional_headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
@@ -238,8 +271,8 @@ def get_webhook_status_stats(endpoint_id: int, days: int = 30) -> Dict[str, Any]
         successful_logs = delivery_logs.filter(status=DeliveryStatus.SUCCESS)
         if successful_logs.exists():
             avg_response_time = successful_logs.aggregate(
-                avg_response_time=models.Avg('duration_ms')
-            )['avg_response_time__avg'] or 0
+                avg_response_time=models.Avg('response_time_ms')
+            )['avg_response_time'] or 0
         
         # Calculate uptime
         health_checks = health_logs.count()
@@ -248,7 +281,7 @@ def get_webhook_status_stats(endpoint_id: int, days: int = 30) -> Dict[str, Any]
         
         return {
             'endpoint_id': endpoint_id,
-            'endpoint_url': endpoint.url,
+            'endpoint_url': endpoint.target_url,
             'period_days': days,
             'total_deliveries': total_deliveries,
             'successful_deliveries': successful_deliveries,
@@ -304,95 +337,46 @@ def sanitize_webhook_url(url: str) -> str:
 def get_event_type_display_name(event_type: str) -> str:
     """
     Get human-readable display name for an event type.
-    
+
+    BUG FIX (Session 9): this used to maintain its own hand-written,
+    ~75-entry dict - a second, independently-maintained vocabulary for
+    the exact same concept EventType already owns ("one task, one
+    owner" - see FIXES_APPLIED_SESSION9.md, Cluster 4/5 for the full
+    writeup and the sibling EventType.all_choices() bug found alongside
+    it). Confirmed this had already drifted from reality: about 40 of
+    those ~75 keys (e.g. 'payment.succeeded', 'fraud.detected',
+    'wallet.transaction.created') were never real EventType values at
+    all - a naming scheme that doesn't match EventType's own
+    (EventType.PAYOUT_SUCCESS = "payout.success", not
+    "payment.succeeded"). EventType was even imported here already,
+    unused anywhere in the function body - a leftover of an incomplete
+    migration, not a deliberate design.
+
+    Confirmed via a full search this function has zero live callers
+    (only a stale comment referencing the *deprecated*, unrouted
+    viewsets/_deprecated_unused/EventTypeListAPIView.py) and zero
+    existing test coverage - the *live*, routed event-types endpoint
+    (views.py's EventTypeListAPIView, via EventTypeListAPIViewSerializer)
+    already solved this exact problem independently, deriving display
+    names from dict(EventType.choices) directly. Rewritten to do the
+    same here, so there's one real implementation of "how do we get an
+    event type's display name" instead of two that can disagree -
+    kept this function's own existing fallback style (auto-formatted
+    from the raw value) for anything not in EventType, so nothing that
+    called this before with a non-canonical value starts erroring; it
+    just stops being backed by a second hand-maintained, already-stale
+    list.
+
     Args:
         event_type: Event type identifier
-        
+
     Returns:
         str: Display name
     """
     from .constants import EventType
-    
-    # Map event types to display names
-    display_names = {
-        'user.created': _('User Created'),
-        'user.updated': _('User Updated'),
-        'user.deleted': _('User Deleted'),
-        'user.login': _('User Login'),
-        'user.logout': _('User Logout'),
-        'wallet.transaction.created': _('Wallet Transaction Created'),
-        'wallet.balance.updated': _('Wallet Balance Updated'),
-        'wallet.frozen': _('Wallet Frozen'),
-        'wallet.unfrozen': _('Wallet Unfrozen'),
-        'withdrawal.requested': _('Withdrawal Requested'),
-        'withdrawal.approved': _('Withdrawal Approved'),
-        'withdrawal.rejected': _('Withdrawal Rejected'),
-        'withdrawal.completed': _('Withdrawal Completed'),
-        'offer.credited': _('Offer Credited'),
-        'offer.completed': _('Offer Completed'),
-        'offer.expired': _('Offer Expired'),
-        'offer.revoked': _('Offer Revoked'),
-        'kyc.submitted': _('KYC Submitted'),
-        'kyc.verified': _('KYC Verified'),
-        'kyc.rejected': _('KYC Rejected'),
-        'payment.succeeded': _('Payment Succeeded'),
-        'payment.failed': _('Payment Failed'),
-        'payment.refunded': _('Payment Refunded'),
-        'payment.chargeback': _('Payment Chargeback'),
-        'fraud.detected': _('Fraud Detected'),
-        'fraud.reviewed': _('Fraud Reviewed'),
-        'fraud.confirmed': _('Fraud Confirmed'),
-        'fraud.false_positive': _('Fraud False Positive'),
-        'system.maintenance': _('System Maintenance'),
-        'system.backup': _('System Backup'),
-        'system.restored': _('System Restored'),
-        'system.error': _('System Error'),
-        'analytics.report.generated': _('Analytics Report Generated'),
-        'analytics.data.exported': _('Analytics Data Exported'),
-        'analytics.threshold.reached': _('Analytics Threshold Reached'),
-        'security.breach': _('Security Breach'),
-        'security.suspicious_activity': _('Security Suspicious Activity'),
-        'security.login.blocked': _('Security Login Blocked'),
-        'security.password.changed': _('Security Password Changed'),
-        'integration.connected': _('Integration Connected'),
-        'integration.disconnected': _('Integration Disconnected'),
-        'integration.sync.failed': _('Integration Sync Failed'),
-        'integration.api.limit.reached': _('Integration API Limit Reached'),
-        'notification.sent': _('Notification Sent'),
-        'notification.delivered': _('Notification Delivered'),
-        'notification.failed': _('Notification Failed'),
-        'notification.opened': _('Notification Opened'),
-        'notification.clicked': _('Notification Clicked'),
-        'campaign.created': _('Campaign Created'),
-        'campaign.started': _('Campaign Started'),
-        'campaign.paused': _('Campaign Paused'),
-        'campaign.resumed': _('Campaign Resumed'),
-        'campaign.completed': _('Campaign Completed'),
-        'subscription.created': _('Subscription Created'),
-        'subscription.updated': _('Subscription Updated'),
-        'subscription.cancelled': _('Subscription Cancelled'),
-        'subscription.renewed': _('Subscription Renewed'),
-        'subscription.expired': _('Subscription Expired'),
-        'api.request': _('API Request'),
-        'api.response': _('API Response'),
-        'api.error': _('API Error'),
-        'api.rate_limit': _('API Rate Limit'),
-        'api.quota.exceeded': _('API Quota Exceeded'),
-        'health.check.passed': _('Health Check Passed'),
-        'health.check.failed': _('Health Check Failed'),
-        'health.endpoint.up': _('Health Endpoint Up'),
-        'health.endpoint.down': _('Health Endpoint Down'),
-        'batch.created': _('Batch Created'),
-        'batch.started': _('Batch Started'),
-        'batch.completed': _('Batch Completed'),
-        'batch.failed': _('Batch Failed'),
-        'batch.cancelled': _('Batch Cancelled'),
-        'replay.started': _('Replay Started'),
-        'replay.completed': _('Replay Completed'),
-        'replay.failed': _('Replay Failed'),
-        'replay.cancelled': _('Replay Cancelled'),
-    }
-    
+
+    display_names = dict(EventType.choices)
+
     return display_names.get(event_type, event_type.replace('.', ' ').title())
 
 
@@ -526,27 +510,6 @@ def format_bytes(bytes_value: int) -> str:
         return f"{bytes_value / (1024 * 1024 * 1024):.1f} GB"
 
 
-def is_valid_webhook_url(url: str) -> bool:
-    """
-    Check if URL is valid for webhook usage.
-    
-    Args:
-        url: URL to validate
-        
-    Returns:
-        bool: True if valid
-    """
-    try:
-        parsed = urlparse(url)
-        return (
-            parsed.scheme in ['http', 'https'] and
-            parsed.netloc and
-            len(url) <= 2048
-        )
-    except Exception:
-        return False
-
-
 def mask_sensitive_data(data: Dict[str, Any], fields_to_mask: List[str] = None) -> Dict[str, Any]:
     """
     Mask sensitive data in webhook payloads for logging.
@@ -578,3 +541,25 @@ def mask_sensitive_data(data: Dict[str, Any], fields_to_mask: List[str] = None) 
                     masked_data[field] = '****-****-****-' + value[-4:]
     
     return masked_data
+
+# Explicit public API
+__all__ = [
+    'generate_webhook_signature',
+    'verify_webhook_signature',
+    'format_webhook_payload',
+    'get_webhook_headers',
+    'parse_webhook_headers',
+    'calculate_retry_delay',
+    'get_webhook_status_stats',
+    'sanitize_webhook_url',
+    'get_event_type_display_name',
+    'format_webhook_error_message',
+    'get_cache_key',
+    'set_cache_data',
+    'get_cache_data',
+    'delete_cache_data',
+    'truncate_string',
+    'format_bytes',
+    'is_valid_webhook_url',
+    'mask_sensitive_data',
+]

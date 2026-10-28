@@ -2,7 +2,7 @@ import random
 import hashlib
 import logging
 from django.core.cache import cache
-from ...models import SmartLink
+from api.smartlink.models import SmartLink
 from ...constants import SLUG_ALLOWED_CHARS, SLUG_DEFAULT_LENGTH, SLUG_RESERVED_WORDS
 from ...exceptions import SlugConflict
 

@@ -1896,10 +1896,6 @@ class ExportDataView(APIView):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def unread_count(request):
     """
     Get unread notification count
@@ -1915,7 +1911,7 @@ def unread_count(request):
     return Response({'unread_count': count})
 
 
-@api_view(['POST'])
+@api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def mark_notification_read(request, notification_id):
     """

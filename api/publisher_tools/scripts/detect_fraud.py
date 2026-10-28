@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 def scan_recent_traffic_logs(hours: int = 24):
     """Recent traffic logs scan করে fraud detect করে।"""
-    from api.publisher_tools.models import TrafficSafetyLog
-    from api.publisher_tools.fraud_prevention.quality_score import get_risk_level
+    from publisher_tools.models import TrafficSafetyLog
+    from publisher_tools.fraud_prevention.quality_score import get_risk_level
     start = timezone.now() - timedelta(hours=hours)
     logs = TrafficSafetyLog.objects.filter(
         detected_at__gte=start, action_taken="pending", is_false_positive=False,
@@ -40,7 +40,7 @@ def scan_recent_traffic_logs(hours: int = 24):
 
 def detect_click_farms():
     """Click farm patterns detect করে।"""
-    from api.publisher_tools.models import TrafficSafetyLog
+    from publisher_tools.models import TrafficSafetyLog
     from django.db.models import Count
     start = timezone.now() - timedelta(hours=24)
     suspicious_ips = list(
@@ -55,7 +55,7 @@ def detect_click_farms():
         if not ip_data.get("ip_address"):
             continue
         try:
-            from api.publisher_tools.fraud_prevention.ip_blacklist import block_ip
+            from publisher_tools.fraud_prevention.ip_blacklist import block_ip
             block_ip(ip_data["ip_address"], f"Click farm detected: {ip_data['count']} events", fraud_score=90, hours=48)
             blocked += 1
         except Exception as e:
@@ -66,7 +66,7 @@ def detect_click_farms():
 
 def detect_device_farms():
     """Device farm patterns detect করে।"""
-    from api.publisher_tools.models import TrafficSafetyLog
+    from publisher_tools.models import TrafficSafetyLog
     from django.db.models import Count, Q
     start = timezone.now() - timedelta(hours=24)
     device_logs = TrafficSafetyLog.objects.filter(
@@ -82,7 +82,7 @@ def detect_device_farms():
 
 def calculate_revenue_impact():
     """Today-এর fraud revenue impact calculate করে।"""
-    from api.publisher_tools.models import TrafficSafetyLog
+    from publisher_tools.models import TrafficSafetyLog
     today = timezone.now().date()
     from django.db.models import Sum
     agg = TrafficSafetyLog.objects.filter(

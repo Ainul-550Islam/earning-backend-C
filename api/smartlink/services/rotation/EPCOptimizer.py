@@ -1,6 +1,7 @@
 import logging
+from api.smartlink.services.analytics.base import AnalyticsServiceBase
 from django.core.cache import cache
-from ...models import OfferScoreCache, OfferPoolEntry
+from api.smartlink.models import OfferScoreCache, OfferPoolEntry
 from ...constants import EPC_MIN_CLICKS_FOR_SCORE, EPC_SMOOTHING_FACTOR, CACHE_TTL_EPC_SCORE
 
 logger = logging.getLogger('smartlink.epc_optimizer')
@@ -109,7 +110,7 @@ class EPCOptimizer:
         Recalculate EPC scores for all offer/geo/device combos.
         Called by epc_update_tasks.py every 30 minutes.
         """
-        from ...models import OfferPerformanceStat
+        from api.smartlink.models import OfferPerformanceStat
         from django.db.models import Sum, Count, F
         from django.utils import timezone
         import datetime
@@ -145,13 +146,10 @@ class EPCOptimizer:
                 offer_id=row['offer_id'],
                 country=row['country'],
                 device_type=row['device_type'],
-                defaults={
-                    'epc': epc,
-                    'conversion_rate': cr,
-                    'total_clicks': clicks,
-                    'total_conversions': conversions,
-                    'score': score,
-                }
+                defaults={**AnalyticsServiceBase.build_score_defaults(
+                    epc=epc, cr=cr, clicks=clicks,
+                    conversions=conversions, revenue=0,
+                ), 'score': score}
             )
 
             # Invalidate cache so new score is fetched

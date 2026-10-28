@@ -71,7 +71,7 @@ def get_dashboard_summary(publisher, period: str = 'last_30_days') -> Dict:
     """
     from ..models import PublisherEarning, Site, App, AdUnit, TrafficSafetyLog
 
-    from ...utils import get_date_range, calculate_ecpm
+    from ..utils import get_date_range, calculate_ecpm
     start_date, end_date = get_date_range(period)
 
     # Current period
@@ -318,7 +318,7 @@ def get_earnings_chart_data(publisher, period: str = 'last_30_days', metric: str
     metric: 'revenue', 'impressions', 'ecpm', 'ctr'
     """
     from ..models import PublisherEarning
-    from ...utils import get_date_range
+    from ..utils import get_date_range
 
     start_date, end_date = get_date_range(period)
 

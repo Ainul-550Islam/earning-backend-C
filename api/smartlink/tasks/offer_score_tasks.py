@@ -8,14 +8,14 @@ logger = logging.getLogger('smartlink.tasks.offer_score')
 def update_offer_scores():
     """Every 30 minutes: refresh OfferScoreCache for all active offers."""
     from ..services.rotation.OfferScoreService import OfferScoreService
-    from ..models import OfferPoolEntry
+    from api.smartlink.models import OfferPoolEntry
     from django.db.models import Sum, Count
     import datetime
     from django.utils import timezone
 
     svc = OfferScoreService()
     cutoff = timezone.now().date() - datetime.timedelta(days=7)
-    from ..models import OfferPerformanceStat
+    from api.smartlink.models import OfferPerformanceStat
 
     rows = (
         OfferPerformanceStat.objects.filter(date__gte=cutoff)

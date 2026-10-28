@@ -117,9 +117,6 @@ def offer_feed(request):
         'pages':       (total + limit - 1) // limit,
         'offers':      offers_data,
     })
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def offer_detail_api(request, offer_id):
     """Get single offer details with tracking setup guide."""

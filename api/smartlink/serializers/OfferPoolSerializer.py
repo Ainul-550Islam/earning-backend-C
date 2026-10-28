@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import OfferPool, OfferPoolEntry
+from api.smartlink.models import OfferPool, OfferPoolEntry
 
 
 class OfferPoolEntryInlineSerializer(serializers.ModelSerializer):

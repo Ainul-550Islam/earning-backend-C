@@ -1,5 +1,4 @@
 # api/promotions/security_vault/ip_whitelist.py
-ip_whitelist.py
 # IP Whitelist — শুধু নির্দিষ্ট IP থেকে sensitive API access
 # =============================================================================
 

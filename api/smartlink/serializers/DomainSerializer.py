@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models.publisher import PublisherDomain
+from api.smartlink.models.publisher import PublisherDomain
 from ..constants import DOMAIN_DNS_TXT_PREFIX
 
 

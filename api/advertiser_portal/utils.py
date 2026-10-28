@@ -27,6 +27,7 @@ from django.http import HttpRequest
 from django.contrib.gis.geoip2 import GeoIP2
 # from django.contrib.gis.geoip2.resources import GeoIP2Exception
 from geoip2.errors import GeoIP2Error as GeoIP2Exception
+from api.advertiser_portal.enums import DeviceTypeEnum
 
 logger = logging.getLogger(__name__)
 

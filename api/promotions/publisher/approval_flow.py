@@ -115,6 +115,8 @@ class PublisherApproval:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def apply_publisher_view(request):
     approval = PublisherApproval()
@@ -124,15 +126,10 @@ def apply_publisher_view(request):
     )
     return Response(result, status=status.HTTP_201_CREATED)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def publisher_status_view(request):
     approval = PublisherApproval()
     return Response(approval.get_publisher_status(request.user.id))
-
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_approve_publisher_view(request, publisher_id):
     approval = PublisherApproval()

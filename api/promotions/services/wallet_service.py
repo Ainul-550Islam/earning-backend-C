@@ -1,3 +1,4 @@
+from django.db import models
 # api/promotions/services/wallet_service.py
 import logging
 from decimal import Decimal

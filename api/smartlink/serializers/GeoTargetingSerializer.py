@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import GeoTargeting
+from api.smartlink.models import GeoTargeting
 
 
 class GeoTargetingSerializer(serializers.ModelSerializer):

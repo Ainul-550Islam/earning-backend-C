@@ -990,6 +990,13 @@ class ProductReview(TenantMixin, TimestampMixin):
         db_table = "marketplace_product_review"
         ordering = ["-created_at"]
         unique_together = [("product", "user", "order_item")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "product", "user"],
+                name="unique_review_per_buyer_product",
+                condition=models.Q(order_item__isnull=True),
+            ),
+        ]
 
     def __str__(self):
         return f"{self.product.name} — {self.rating}★ by {self.user.username}"
@@ -1039,3 +1046,12 @@ class PromotionCampaign(TenantMixin, TimestampMixin):
     def is_live(self):
         now = timezone.now()
         return self.is_active and self.starts_at <= now <= self.ends_at
+# ── Dispute Resolution models (part of marketplace app) ──────────────────────
+from .DISPUTE_RESOLUTION.dispute_model import (  # noqa: F401
+    Dispute, DisputeMessage, DisputeEvidence, DisputeArbitration,
+)
+
+# ── Loyalty / Promotion models ────────────────────────────────────────────────
+from .PROMOTION_MARKETING.loyalty_reward import (  # noqa: F401
+    LoyaltyAccount, LoyaltyTransaction,
+)

@@ -69,6 +69,8 @@ class APIKeyManager:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
+@api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def create_api_key_view(request):
     manager = APIKeyManager()
@@ -80,17 +82,12 @@ def create_api_key_view(request):
     )
     return Response(result, status=status.HTTP_201_CREATED)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_api_keys_view(request):
     manager = APIKeyManager()
     keys = manager.list_user_keys(request.user.id)
     # Don't return actual key values
     return Response({'api_keys': [{'name': k['name'], 'created': k['created_at']} for k in keys]})
-
-
-@api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def revoke_api_key_view(request, key_hash):
     manager = APIKeyManager()

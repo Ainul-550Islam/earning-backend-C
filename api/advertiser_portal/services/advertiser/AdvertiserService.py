@@ -4,6 +4,7 @@ Advertiser Service
 Comprehensive service for managing advertiser accounts,
 including CRUD operations, verification flows, and onboarding.
 """
+from django.db import models
 
 import logging
 from typing import Dict, List, Optional, Any

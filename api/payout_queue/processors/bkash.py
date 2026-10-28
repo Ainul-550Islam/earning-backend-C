@@ -1,11 +1,28 @@
 """
-bKash Payment Processor.
+payout_queue/processors/bkash.py  ← DRY v7 (built on v2)
 
-Implements the bKash B2C Disbursement API.
-Docs: https://developer.bka.sh/reference/b2cdisbursement
+DRY CHANGE v7:
 
-Config keys required:
-    app_key, app_secret, username, password, base_url
+  ① _app_headers(token) helper added  (replaces 2 duplicate dicts)
+
+     Before:  _execute_payment() and _query_payment() each built an identical
+              3-key authenticated header dict inline:
+                  headers = {
+                      "Content-Type": "application/json",
+                      "Authorization": token,
+                      "X-APP-Key": self.config["app_key"],
+                  }
+              If bKash adds a new required header (e.g. X-Request-ID), it must
+              be added in two places.
+
+     After:   Both methods call `headers = self._app_headers(token)` — one
+              definition, two call sites.
+
+     NOTE:    _get_grant_token() uses a different header structure
+              (username + password instead of Authorization + X-APP-Key) so
+              it is intentionally NOT included in _app_headers().
+
+v2 change preserved: validate_account() uses self._normalise_account().
 """
 
 from __future__ import annotations
@@ -19,11 +36,12 @@ from ..choices import PaymentGateway
 from ..constants import GATEWAY_TIMEOUT_SECONDS, BKASH_PHONE_REGEX
 from ..exceptions import GatewayError, GatewayTimeoutError, GatewayAuthError
 from ..utils.payment_gateway import BasePaymentProcessor, PayoutResult
+import requests
+from requests.exceptions import Timeout as RequestsTimeout
 
 logger = logging.getLogger(__name__)
 
 _REQUIRED_CONFIG = ("app_key", "app_secret", "username", "password", "base_url")
-
 
 class BkashProcessor(BasePaymentProcessor):
     """
@@ -39,13 +57,41 @@ class BkashProcessor(BasePaymentProcessor):
     def _validate_config(self) -> None:
         self._require_config(*_REQUIRED_CONFIG)
 
+    # ------------------------------------------------------------------
+    # DRY v7: shared authenticated header helper
+    # ------------------------------------------------------------------
+
+    def _app_headers(self, token: str) -> dict:
+        """
+        DRY v7: Returns the authenticated JSON headers for bKash API calls.
+
+        Before:  _execute_payment() and _query_payment() each built this
+                 identical 3-key dict inline.  Any new required header
+                 (e.g. X-Request-ID, X-Idempotency-Key) would need two edits.
+        After:   Both methods call self._app_headers(token).
+
+        NOTE: _get_grant_token() uses a different structure (username/password
+        credentials instead of Bearer token + app key) — intentionally excluded.
+        """
+        return {
+            "Content-Type":  "application/json",
+            "Authorization": token,
+            "X-APP-Key":     self.config["app_key"],
+        }
+
+    # ------------------------------------------------------------------
+    # Public interface
+    # ------------------------------------------------------------------
+
     def validate_account(self, account_number: str) -> bool:
         """
         Validate a bKash wallet number (Bangladesh mobile: 01XXXXXXXXX).
+
+        FIX v2: uses self._normalise_account() from BasePaymentProcessor.
         """
-        if not account_number or not isinstance(account_number, str):
+        cleaned = self._normalise_account(account_number)
+        if not cleaned:
             return False
-        cleaned = account_number.strip().replace(" ", "").replace("-", "")
         return bool(re.match(BKASH_PHONE_REGEX, cleaned))
 
     def send_payout(
@@ -60,14 +106,8 @@ class BkashProcessor(BasePaymentProcessor):
         Initiate a bKash B2C disbursement.
 
         Steps:
-        1. Obtain grant token (if not cached).
-        2. POST /b2c/payment/request.
-        3. Execute the payment.
-
-        Args:
-            account_number: Recipient bKash number (e.g. 01XXXXXXXXX).
-            amount:         Net payout amount (Decimal).
-            reference:      Unique idempotency key.
+        1. Obtain grant token.
+        2. POST /tokenized/checkout/disbursement.
 
         Returns:
             PayoutResult
@@ -94,10 +134,10 @@ class BkashProcessor(BasePaymentProcessor):
         )
 
         try:
-            token = self._get_grant_token()
+            token    = self._get_grant_token()
             response = self._execute_payment(
                 token=token,
-                account_number=account_number.strip(),
+                account_number=self._normalise_account(account_number),
                 amount=amount,
                 reference=reference,
             )
@@ -112,7 +152,7 @@ class BkashProcessor(BasePaymentProcessor):
                 f"BkashProcessor.send_payout: unexpected error: {exc}"
             ) from exc
 
-        success = response.get("statusCode") == "0000"
+        success           = response.get("statusCode") == "0000"
         gateway_reference = response.get("trxID", "")
 
         if success:
@@ -126,7 +166,7 @@ class BkashProcessor(BasePaymentProcessor):
                 raw_response=response,
             )
         else:
-            error_code = response.get("statusCode", "UNKNOWN")
+            error_code    = response.get("statusCode", "UNKNOWN")
             error_message = response.get("statusMessage", "Unknown bKash error.")
             logger.warning(
                 "BkashProcessor.send_payout: FAILED code=%s msg=%s ref=%s",
@@ -140,9 +180,7 @@ class BkashProcessor(BasePaymentProcessor):
             )
 
     def verify_transaction(self, gateway_reference: str) -> PayoutResult:
-        """
-        Verify a bKash transaction by trxID.
-        """
+        """Verify a bKash transaction by trxID."""
         if not gateway_reference or not isinstance(gateway_reference, str):
             raise GatewayError("gateway_reference must be a non-empty string.")
 
@@ -151,7 +189,7 @@ class BkashProcessor(BasePaymentProcessor):
         )
 
         try:
-            token = self._get_grant_token()
+            token    = self._get_grant_token()
             response = self._query_payment(token=token, trx_id=gateway_reference)
         except Exception as exc:
             raise GatewayError(
@@ -179,18 +217,19 @@ class BkashProcessor(BasePaymentProcessor):
     def _get_grant_token(self) -> str:
         """
         Obtain a bKash grant token.
-        Raises GatewayAuthError on failure.
+
+        Uses credential-based headers (username + password) — intentionally
+        different from _app_headers() which uses token + app_key.
         """
         try:
-            import requests
-            url = f"{self.config['base_url']}/tokenized/checkout/token/grant"
+            url     = f"{self.config['base_url']}/tokenized/checkout/token/grant"
             headers = {
                 "Content-Type": "application/json",
-                "username": self.config["username"],
-                "password": self.config["password"],
+                "username":     self.config["username"],
+                "password":     self.config["password"],
             }
             payload = {
-                "app_key": self.config["app_key"],
+                "app_key":    self.config["app_key"],
                 "app_secret": self.config["app_secret"],
             }
             resp = requests.post(
@@ -198,7 +237,7 @@ class BkashProcessor(BasePaymentProcessor):
                 timeout=GATEWAY_TIMEOUT_SECONDS,
             )
             resp.raise_for_status()
-            data = resp.json()
+            data  = resp.json()
             token = data.get("id_token") or data.get("access_token")
             if not token:
                 raise GatewayAuthError(
@@ -207,7 +246,7 @@ class BkashProcessor(BasePaymentProcessor):
             return token
         except GatewayAuthError:
             raise
-        except requests.exceptions.Timeout as exc:
+        except RequestsTimeout as exc:
             raise GatewayTimeoutError(
                 f"BkashProcessor._get_grant_token: timeout: {exc}"
             ) from exc
@@ -226,17 +265,13 @@ class BkashProcessor(BasePaymentProcessor):
     ) -> dict:
         """POST to bKash disburse endpoint and return raw JSON."""
         try:
-            import requests
-            url = f"{self.config['base_url']}/tokenized/checkout/disbursement"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": token,
-                "X-APP-Key": self.config["app_key"],
-            }
+            url     = f"{self.config['base_url']}/tokenized/checkout/disbursement"
+            # DRY v7: _app_headers() replaces the inline dict that was also in _query_payment.
+            headers = self._app_headers(token)
             payload = {
-                "amount": str(amount),
-                "currency": "BDT",
-                "intent": "disbursement",
+                "amount":                str(amount),
+                "currency":              "BDT",
+                "intent":                "disbursement",
                 "merchantInvoiceNumber": reference,
                 "b2cPaymentInfo": [
                     {
@@ -251,7 +286,7 @@ class BkashProcessor(BasePaymentProcessor):
             )
             resp.raise_for_status()
             return resp.json()
-        except requests.exceptions.Timeout as exc:
+        except RequestsTimeout as exc:
             raise GatewayTimeoutError(
                 f"BkashProcessor._execute_payment: timeout: {exc}"
             ) from exc
@@ -263,20 +298,16 @@ class BkashProcessor(BasePaymentProcessor):
     def _query_payment(self, *, token: str, trx_id: str) -> dict:
         """Query bKash transaction status."""
         try:
-            import requests
-            url = f"{self.config['base_url']}/tokenized/checkout/transaction/status"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": token,
-                "X-APP-Key": self.config["app_key"],
-            }
-            resp = requests.post(
+            url     = f"{self.config['base_url']}/tokenized/checkout/transaction/status"
+            # DRY v7: _app_headers() replaces the inline dict that was also in _execute_payment.
+            headers = self._app_headers(token)
+            resp    = requests.post(
                 url, json={"trxID": trx_id}, headers=headers,
                 timeout=GATEWAY_TIMEOUT_SECONDS,
             )
             resp.raise_for_status()
             return resp.json()
-        except requests.exceptions.Timeout as exc:
+        except RequestsTimeout as exc:
             raise GatewayTimeoutError(
                 f"BkashProcessor._query_payment: timeout: {exc}"
             ) from exc

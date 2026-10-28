@@ -3,6 +3,7 @@ api/ad_networks/tests/test_urls.py
 Tests for URL patterns in the ad_networks module
 SaaS-ready with tenant support
 """
+from decimal import Decimal
 
 import pytest
 from django.test import TestCase

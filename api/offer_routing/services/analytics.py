@@ -19,6 +19,7 @@ from ..constants import (
     PERFORMANCE_STATS_RETENTION_DAYS
 )
 from ..exceptions import AnalyticsError
+from api.offer_routing.models.scoring import UserOfferHistory
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -522,6 +523,53 @@ class RoutingAnalyticsService:
             logger.error(f"Error getting route analytics: {e}")
             return {}
     
+    def get_performance_trends(self, tenant_id: int, days: int = 30) -> list:
+        """
+        Return a list of daily performance snapshots for the given tenant,
+        covering the last *days* days.
+
+        Each entry contains:
+            date, total_decisions, avg_response_time_ms,
+            cache_hit_rate, personalization_rate, fallback_rate
+        """
+        try:
+            from datetime import timedelta
+            from django.db.models import Count, Avg
+
+            cutoff = timezone.now() - timedelta(days=days)
+
+            daily_qs = (
+                RoutingDecisionLog.objects
+                .filter(user__id=tenant_id, created_at__gte=cutoff)
+                .extra({'date': 'date(created_at)'})
+                .values('date')
+                .annotate(
+                    total_decisions=Count('id'),
+                    avg_response_time=Avg('response_time_ms'),
+                    cache_hit_rate=Avg('cache_hit'),
+                    personalization_rate=Avg('personalization_applied'),
+                    fallback_rate=Avg('fallback_used'),
+                )
+                .order_by('date')
+            )
+
+            trends = []
+            for row in daily_qs:
+                date_val = row['date']
+                trends.append({
+                    'date': date_val.isoformat() if hasattr(date_val, 'isoformat') else str(date_val),
+                    'total_decisions': row['total_decisions'],
+                    'avg_response_time_ms': row['avg_response_time'] or 0,
+                    'cache_hit_rate': (row['cache_hit_rate'] or 0) * 100,
+                    'personalization_rate': (row['personalization_rate'] or 0) * 100,
+                    'fallback_rate': (row['fallback_rate'] or 0) * 100,
+                })
+            return trends
+
+        except Exception as e:
+            logger.error(f"get_performance_trends error (tenant={tenant_id}): {e}")
+            return []
+
     def cleanup_old_data(self) -> int:
         """Clean up old analytics data."""
         try:

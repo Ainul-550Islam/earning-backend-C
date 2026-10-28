@@ -24,6 +24,7 @@ class PlacementHeaderBiddingConfig(TimeStampedModel):
     prebid_config_override = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_placement_hb_configs"
         verbose_name = _("Placement HB Config")
 

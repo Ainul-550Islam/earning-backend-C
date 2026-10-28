@@ -8,7 +8,7 @@ class Command(BaseCommand):
         parser.add_argument('--apply-winners', action='store_true', help='Auto-apply winners to SmartLinks')
 
     def handle(self, *args, **options):
-        from ...models import ABTestResult
+        from api.smartlink.models import ABTestResult
         from ...choices import ABTestStatus
         from ...services.rotation.ABTestService import ABTestService
 

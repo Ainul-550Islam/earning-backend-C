@@ -119,3 +119,8 @@ def validate_cart_items(cart: Cart) -> dict:
             item.save(update_fields=["unit_price"])
             refreshed += 1
     return {"valid": len(errors) == 0, "errors": errors, "refreshed_count": refreshed}
+
+# ── Backward-compatible alias (used throughout TESTS/) ───────────────────────
+def get_or_create_cart(user, tenant) -> "Cart":
+    """Alias for get_or_create_user_cart — imported by all test files."""
+    return get_or_create_user_cart(user, tenant)

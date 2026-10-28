@@ -10,7 +10,7 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from ..services.core import DispatchService
+from ..services.core.DispatchService import DispatchService
 from ..models import WebhookSubscription
 
 User = get_user_model()
@@ -25,6 +25,9 @@ payment_refunded = Signal()
 payment_disputed = Signal()
 
 
+from ._isolation import isolated_receiver
+
+@isolated_receiver
 def on_payment_succeeded(sender, instance, **kwargs):
     """
     Signal handler for successful payment.
@@ -64,11 +67,11 @@ def on_payment_succeeded(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -85,6 +88,7 @@ def on_payment_succeeded(sender, instance, **kwargs):
             print(f"Error sending payment succeeded webhook: {e}")
 
 
+@isolated_receiver
 def on_payment_failed(sender, instance, **kwargs):
     """
     Signal handler for failed payment.
@@ -125,11 +129,11 @@ def on_payment_failed(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -146,6 +150,7 @@ def on_payment_failed(sender, instance, **kwargs):
             print(f"Error sending payment failed webhook: {e}")
 
 
+@isolated_receiver
 def on_payment_initiated(sender, instance, created, **kwargs):
     """
     Signal handler for payment initiation.
@@ -185,11 +190,11 @@ def on_payment_initiated(sender, instance, created, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -206,6 +211,7 @@ def on_payment_initiated(sender, instance, created, **kwargs):
             print(f"Error sending payment initiated webhook: {e}")
 
 
+@isolated_receiver
 def on_payment_cancelled(sender, instance, **kwargs):
     """
     Signal handler for payment cancellation.
@@ -244,11 +250,11 @@ def on_payment_cancelled(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -265,6 +271,7 @@ def on_payment_cancelled(sender, instance, **kwargs):
             print(f"Error sending payment cancelled webhook: {e}")
 
 
+@isolated_receiver
 def on_payment_refunded(sender, instance, **kwargs):
     """
     Signal handler for payment refund.
@@ -304,11 +311,11 @@ def on_payment_refunded(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -325,6 +332,7 @@ def on_payment_refunded(sender, instance, **kwargs):
             print(f"Error sending payment refunded webhook: {e}")
 
 
+@isolated_receiver
 def on_payment_disputed(sender, instance, **kwargs):
     """
     Signal handler for payment dispute.
@@ -364,11 +372,11 @@ def on_payment_disputed(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -388,7 +396,7 @@ def on_payment_disputed(sender, instance, **kwargs):
 # Connect signal handlers
 def connect_payment_signals():
     """Connect payment-related signals to their handlers."""
-    from apps.payments.models import Payment
+    from api.payment_gateways.models import Payment
     
     try:
         post_save.connect(on_payment_succeeded, sender=Payment)
@@ -408,7 +416,7 @@ def connect_payment_signals():
 
 def disconnect_payment_signals():
     """Disconnect payment-related signals."""
-    from apps.payments.models import Payment
+    from api.payment_gateways.models import Payment
     
     try:
         post_save.disconnect(on_payment_succeeded, sender=Payment)

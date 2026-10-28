@@ -251,7 +251,7 @@ class SmartRotationMLEngine:
             from ..rotation.EPCOptimizer import EPCOptimizer
             # Quick score lookup — returns 0 if not available
             try:
-                from ...models import OfferScoreCache
+                from api.smartlink.models import OfferScoreCache
                 score = OfferScoreCache.objects.filter(
                     offer_id=entry.offer_id
                 ).order_by('-score').values_list('epc', flat=True).first()

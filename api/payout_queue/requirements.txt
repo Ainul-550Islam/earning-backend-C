@@ -1,0 +1,95 @@
+# payout_queue/requirements.txt
+#
+# Production dependencies for api.payout_queue
+# Install: pip install -r requirements.txt
+#
+# Split files:
+#   requirements.txt          — production (this file)
+#   requirements-dev.txt      — development + testing extras
+#
+# Generated against Python 3.11+ / Django 4.2+
+
+# ===========================================================================
+# CORE FRAMEWORK
+# ===========================================================================
+Django>=4.2,<5.3
+djangorestframework>=3.14.0,<4.0
+django-filter>=23.5
+
+# ===========================================================================
+# DATABASE
+# ===========================================================================
+psycopg2-binary>=2.9.9          # PostgreSQL adapter (binary = no compile needed)
+# OR for production with C extensions:
+# psycopg2>=2.9.9
+
+# ===========================================================================
+# ASYNC TASK QUEUE
+# ===========================================================================
+celery[redis]>=5.3.0,<6.0       # Task queue with Redis broker
+redis>=5.0.0                     # Redis client (Celery broker + Django cache)
+django-celery-beat>=2.5.0        # Celery periodic task scheduler (DB-backed)
+
+# ===========================================================================
+# ENCRYPTION (v8: account_number at-rest encryption)
+# ===========================================================================
+cryptography>=42.0.0             # Fernet symmetric encryption for EncryptedCharField
+# Note: cryptography is also a transitive dep of several other packages.
+# Pinned to >= 42 to avoid known vulnerabilities in older versions.
+
+# ===========================================================================
+# HTTP (gateway processors: bKash, Nagad, Rocket, Bank)
+# ===========================================================================
+requests>=2.31.0,<3.0            # HTTP client for gateway API calls
+urllib3>=2.0.0                   # requests dependency, explicit pin for security
+
+# ===========================================================================
+# MONITORING & ERROR TRACKING (v8: Sentry)
+# ===========================================================================
+sentry-sdk[django,celery]>=1.40.0
+# Includes: DjangoIntegration, CeleryIntegration, LoggingIntegration
+# Optional: add [fastapi] or [flask] if you mix frameworks
+
+# ===========================================================================
+# SETTINGS / ENVIRONMENT
+# ===========================================================================
+python-decouple>=3.8             # Read .env files: from decouple import config
+# OR:
+# python-dotenv>=1.0.0           # Uncomment if project uses python-dotenv instead
+
+# ===========================================================================
+# CACHING
+# ===========================================================================
+django-redis>=5.4.0              # Redis cache backend for CACHES["default"]
+# Required for:
+#   - Batch statistics caching (services.get_batch_statistics)
+#   - Rate limiting cache
+#   - Session backend (optional)
+
+# ===========================================================================
+# OPTIONAL BUT RECOMMENDED
+# ===========================================================================
+
+# API schema generation (OpenAPI / Swagger)
+# drf-spectacular>=0.27.0        # Recommended — generates OpenAPI 3 schema
+# OR:
+# drf-yasg>=1.21.7               # Alternative — generates Swagger 2.0
+
+# Structured JSON logging
+# python-json-logger>=2.0.7      # Used by LOGGING config in settings_final_additions.py
+
+# UUID field helpers
+# django-extensions>=3.2.3       # Adds UUIDField, TimeStampedModel, etc.
+
+# Admin theme (optional but improves UX for payout_queue admin)
+# django-unfold>=0.30.0          # Modern Django admin theme
+# OR:
+# django-jazzmin>=3.0.0
+
+# ===========================================================================
+# SECURITY
+# ===========================================================================
+# These are not direct imports but should be in requirements for security:
+certifi>=2024.2.2               # CA certificates (used by requests)
+charset-normalizer>=3.3.2       # requests dependency
+idna>=3.6                       # requests dependency

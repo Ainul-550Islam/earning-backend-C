@@ -11,8 +11,9 @@ from ...serializers.EarnRuleSerializer import BonusEventSerializer
 from ...services.earn.BonusEventService import BonusEventService
 from ...pagination import DjoyaltyPagePagination
 from ...permissions import IsLoyaltyAdmin
+from ...mixins import DjoyaltyBaseViewSet
 
-class BonusEventViewSet(viewsets.ReadOnlyModelViewSet):
+class BonusEventViewSet(DjoyaltyBaseViewSet, viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = BonusEvent.objects.all().select_related('customer').order_by('-created_at')
     serializer_class = BonusEventSerializer
@@ -38,4 +39,4 @@ class BonusEventViewSet(viewsets.ReadOnlyModelViewSet):
             )
             return Response(BonusEventSerializer(bonus).data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return self.err(str(e))

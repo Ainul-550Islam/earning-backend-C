@@ -3,6 +3,7 @@
 Daily reconciliation service — compares wallet balances vs ledger entries.
 Flags discrepancies for admin investigation.
 """
+from django.db.models import QuerySet
 import logging
 from decimal import Decimal
 from django.db.models import Sum

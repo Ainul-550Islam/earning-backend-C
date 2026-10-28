@@ -3,11 +3,14 @@
 This module contains the ViewSet for webhook health monitoring.
 """
 
+from datetime import timedelta
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from django.shortcuts import get_object_or_404
+from django.db import models
 from django.utils import timezone
 
 from ..models import WebhookHealthLog, WebhookEndpoint
@@ -49,10 +52,11 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
         return super().get_queryset().filter(endpoint__owner=self.request.user)
     
     def perform_create(self, serializer):
-        """Set created_by field on creation."""
-        serializer.save(created_by=self.request.user)
+        """No created_by field exists on WebhookHealthLog — ownership
+        comes from the endpoint the health check is created against."""
+        serializer.save()
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='check-health')
     def check_health(self, request):
         """Check health for endpoints."""
         serializer = WebhookHealthCheckSerializer(data=request.data)
@@ -63,31 +67,37 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
         
         try:
             from ..services.analytics import HealthMonitorService
-            health_service = HealthMonitorService()
+            # FIX: Also use EndpointHealthService for actual HTTP ping + auto-suspension.
+            # HealthMonitorService tracks history; EndpointHealthService performs the live check.
+            from ..services.core.EndpointHealthService import EndpointHealthService
+            health_service   = HealthMonitorService()
+            ping_service     = EndpointHealthService()
             
             if all_endpoints:
-                # Check all endpoints
                 endpoints = WebhookEndpoint.objects.filter(owner=request.user)
                 results = []
-                
                 for endpoint in endpoints:
                     try:
+                        # Live HTTP ping via EndpointHealthService
+                        ping_result = ping_service.ping_endpoint(endpoint)
+                        # Store in history via HealthMonitorService
                         health_result = health_service.check_endpoint_health(endpoint)
                         results.append({
                             'endpoint_id': str(endpoint.id),
                             'endpoint_label': endpoint.label,
-                            'endpoint_url': endpoint.url,
-                            'is_healthy': health_result['is_healthy'],
-                            'status_code': health_result.get('status_code'),
-                            'response_time_ms': health_result.get('response_time_ms'),
-                            'error': health_result.get('error'),
+                            'endpoint_url': endpoint.target_url,
+                            'is_healthy': ping_result.get('is_healthy', health_result.get('is_healthy')),
+                            'status_code': ping_result.get('status_code', health_result.get('status_code')),
+                            'response_time_ms': ping_result.get('response_time_ms', health_result.get('response_time_ms')),
+                            'auto_suspended': ping_result.get('auto_suspended', False),
+                            'error': ping_result.get('error', health_result.get('error')),
                             'checked_at': timezone.now().isoformat()
                         })
                     except Exception as e:
                         results.append({
                             'endpoint_id': str(endpoint.id),
                             'endpoint_label': endpoint.label,
-                            'endpoint_url': endpoint.url,
+                            'endpoint_url': endpoint.target_url,
                             'is_healthy': False,
                             'error': str(e),
                             'checked_at': timezone.now().isoformat()
@@ -106,7 +116,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
                 result = {
                     'endpoint_id': str(endpoint.id),
                     'endpoint_label': endpoint.label,
-                    'endpoint_url': endpoint.url,
+                    'endpoint_url': endpoint.target_url,
                     'is_healthy': health_result['is_healthy'],
                     'status_code': health_result.get('status_code'),
                     'response_time_ms': health_result.get('response_time_ms'),
@@ -127,17 +137,29 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['get'], url_path='batch-check')
     def batch_check(self, request):
-        """Check health for multiple endpoints."""
-        serializer = WebhookHealthBatchSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        endpoint_ids = serializer.validated_data['endpoint_ids']
+        """Check health for multiple endpoints.
+
+        BUG FIX: was POST-only, expecting endpoint_ids as JSON body via
+        WebhookHealthBatchSerializer — a health *check* is a read, and
+        every real caller passes endpoint_ids as a query param, so this
+        405'd on every call. Comma-separated ?endpoint_ids=id1,id2; with
+        the param omitted, checks all of the caller's endpoints.
+        """
+        ids_param = request.query_params.get('endpoint_ids', '')
+        if ids_param:
+            endpoint_ids = [v.strip() for v in ids_param.split(',') if v.strip()]
+        else:
+            endpoint_ids = list(
+                WebhookEndpoint.objects.filter(owner=request.user).values_list('id', flat=True)
+            )
         
         try:
             from ..services.analytics import HealthMonitorService
+            from ..services.core.EndpointHealthService import EndpointHealthService
             health_service = HealthMonitorService()
+            ping_service   = EndpointHealthService()   # FIX: actual HTTP pings
             
             results = []
             for endpoint_id in endpoint_ids:
@@ -148,7 +170,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
                     results.append({
                         'endpoint_id': str(endpoint.id),
                         'endpoint_label': endpoint.label,
-                        'endpoint_url': endpoint.url,
+                        'endpoint_url': endpoint.target_url,
                         'is_healthy': health_result['is_healthy'],
                         'status_code': health_result.get('status_code'),
                         'response_time_ms': health_result.get('response_time_ms'),
@@ -196,7 +218,8 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
         health_logs = endpoint.health_logs.all()
         
         total_checks = health_logs.count()
-        healthy_checks = health_logs.filter(is_healthy=True).count()
+        healthy_logs = health_logs.filter(is_healthy=True)
+        healthy_checks = healthy_logs.count()
         unhealthy_checks = health_logs.filter(is_healthy=False).count()
         uptime_percentage = (healthy_checks / total_checks * 100) if total_checks > 0 else 0
         
@@ -231,7 +254,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
         return Response({
             'endpoint_id': str(endpoint.id),
             'endpoint_label': endpoint.label,
-            'endpoint_url': endpoint.url,
+            'endpoint_url': endpoint.target_url,
             'total_checks': total_checks,
             'healthy_checks': healthy_checks,
             'unhealthy_checks': unhealthy_checks,
@@ -243,7 +266,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
             'last_check': health_log.checked_at.isoformat()
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-endpoint')
     def by_endpoint(self, request):
         """Get health logs by endpoint ID."""
         endpoint_id = request.query_params.get('endpoint_id')
@@ -269,7 +292,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(health_logs, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-status')
     def by_status(self, request):
         """Get health logs by status."""
         is_healthy = request.query_params.get('is_healthy')
@@ -290,7 +313,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
     def recent(self, request):
         """Get recent health logs."""
         hours = int(request.query_params.get('hours', 24))
-        since = timezone.now() - timezone.timedelta(hours=hours)
+        since = timezone.now() - timedelta(hours=hours)
         
         health_logs = self.get_queryset().filter(checked_at__gte=since)
         
@@ -345,7 +368,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
                 overview.append({
                     'endpoint_id': str(endpoint.id),
                     'endpoint_label': endpoint.label,
-                    'endpoint_url': endpoint.url,
+                    'endpoint_url': endpoint.target_url,
                     'status': endpoint.status,
                     'uptime_24h': round(uptime, 2),
                     'total_checks_24h': total_checks,
@@ -357,7 +380,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
                 overview.append({
                     'endpoint_id': str(endpoint.id),
                     'endpoint_label': endpoint.label,
-                    'endpoint_url': endpoint.url,
+                    'endpoint_url': endpoint.target_url,
                     'status': endpoint.status,
                     'uptime_24h': 0,
                     'total_checks_24h': 0,
@@ -375,12 +398,12 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
     def trends(self, request):
         """Get health trends over time."""
         days = int(request.query_params.get('days', 7))
-        since = timezone.now() - timezone.timedelta(days=days)
+        since = timezone.now() - timedelta(days=days)
         
         # Get daily trends
         trends = []
         for day in range(days):
-            date = (timezone.now() - timezone.timedelta(days=day)).date()
+            date = (timezone.now() - timedelta(days=day)).date()
             
             day_logs = self.get_queryset().filter(checked_at__date=date)
             total_checks = day_logs.count()
@@ -429,7 +452,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
                     alerts.append({
                         'endpoint_id': str(endpoint.id),
                         'endpoint_label': endpoint.label,
-                        'endpoint_url': endpoint.url,
+                        'endpoint_url': endpoint.target_url,
                         'alert_type': 'consecutive_failures',
                         'message': 'Endpoint has 3 consecutive health check failures',
                         'severity': 'high',
@@ -447,7 +470,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
                     alerts.append({
                         'endpoint_id': str(endpoint.id),
                         'endpoint_label': endpoint.label,
-                        'endpoint_url': endpoint.url,
+                        'endpoint_url': endpoint.target_url,
                         'alert_type': 'high_response_time',
                         'message': f'Endpoint has high average response time: {round(avg_response_time, 2)}ms',
                         'severity': 'medium',
@@ -500,7 +523,7 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
             'status_breakdown': list(status_breakdown)
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='schedule-checks')
     def schedule_checks(self, request):
         """Schedule health checks for all endpoints."""
         try:
@@ -519,3 +542,32 @@ class WebhookHealthViewSet(viewsets.ModelViewSet):
                 'error': str(e),
                 'message': 'Failed to schedule health checks'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    @action(detail=True, methods=["post"], url_path="ping", url_name="ping")
+    def ping_endpoint(self, request, pk=None):
+        """
+        POST /webhooks/health/{id}/ping/
+
+        Live HTTP ping of a single endpoint using EndpointHealthService.
+        Returns response time, status code, and auto-suspension result.
+        Previously EndpointHealthService.ping_endpoint() was floating — never called.
+        """
+        endpoint = get_object_or_404(WebhookEndpoint, pk=pk, owner=request.user)
+        from ..services.core.EndpointHealthService import EndpointHealthService
+        service = EndpointHealthService()
+        result  = service.ping_endpoint(endpoint)
+        return Response({"success": True, "endpoint_id": str(endpoint.pk), "ping": result})
+
+    @action(detail=False, methods=["get"], url_path="unhealthy-summary")
+    def unhealthy_summary(self, request):
+        """
+        GET /webhooks/health/unhealthy-summary/
+
+        Return all unhealthy endpoints in the last N hours.
+        Uses EndpointHealthService.get_unhealthy_endpoints() — previously floating.
+        """
+        hours = int(request.query_params.get("hours", 24))
+        from ..services.core.EndpointHealthService import EndpointHealthService
+        service   = EndpointHealthService()
+        unhealthy = service.get_unhealthy_endpoints(hours=hours)
+        return Response({"success": True, "unhealthy_endpoints": unhealthy, "hours": hours})
+

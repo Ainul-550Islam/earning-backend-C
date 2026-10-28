@@ -12,6 +12,8 @@ from datetime import timedelta
 import logging
 
 from .models import Wallet, WalletTransaction, UserPaymentMethod, Withdrawal, WithdrawalRequest
+from api.wallet.models_cpalead_extra import KYCVerification
+from api.users.models import UserStatistics
 
 logger = logging.getLogger(__name__)
 
@@ -373,7 +375,7 @@ class WalletService:
     def _get_tier_bonus_multiplier(user) -> float:
         """User tier অনুযায়ী reward multiplier"""
         try:
-            from api.users.models import UserLevel
+            from .adapters.outbound import get_user_level_info as _get_user_level_info  # replaces direct UserLevel import
             level = UserLevel.objects.filter(user=user).first()
             if level:
                 return level.task_reward_bonus  # 1.0 = no bonus, 1.1 = 10% bonus
@@ -435,7 +437,7 @@ class WalletService:
     def _check_fraud_before_withdrawal(user) -> dict:
         """Withdrawal এর আগে fraud check করো"""
         try:
-            from api.fraud_detection.models import UserRiskProfile
+            from .adapters.outbound import get_user_risk_info as _get_user_risk_info  # replaces direct UserRiskProfile import
             risk = UserRiskProfile.objects.filter(user=user).first()
             if risk:
                 if risk.is_restricted:
@@ -447,7 +449,7 @@ class WalletService:
 
         # KYC check — withdrawal এর আগে KYC verify হতে হবে
         try:
-            from api.users.models import KYCVerification
+            from .adapters.outbound import get_user_kyc_level as _get_user_kyc_level  # replaces direct KYCVerification import
             kyc = KYCVerification.objects.filter(user=user).first()
             if not kyc or kyc.verification_status != 'approved':
                 return {'allowed': False, 'reason': 'KYC verification complete করুন withdrawal এর আগে।'}
@@ -460,7 +462,7 @@ class WalletService:
     def _update_user_stats_on_earn(user, amount: Decimal):
         """Earning হলে UserStatistics update করো"""
         try:
-            from api.users.models import UserStatistics
+            from .adapters.outbound import get_user_stats as _get_user_stats  # replaces direct UserStatistics import
             stats, _ = UserStatistics.objects.get_or_create(user=user)
             stats.total_earned += amount
             stats.earned_today += amount
@@ -472,7 +474,7 @@ class WalletService:
     def _update_user_stats_on_withdraw(user, amount: Decimal):
         """Withdrawal হলে UserStatistics update করো"""
         try:
-            from api.users.models import UserStatistics
+            from .adapters.outbound import get_user_stats as _get_user_stats  # replaces direct UserStatistics import
             stats, _ = UserStatistics.objects.get_or_create(user=user)
             stats.total_withdrawn += amount
             stats.withdrawals_count += 1
@@ -614,7 +616,7 @@ class CryptoPayoutService:
 # # wallet/services.py
 # from django.db import transaction
 # from decimal import Decimal
-# from .models import Wallet, GatewayTransaction
+# from .models import Wallet, transaction
 # from django.utils import timezone
 # from django.db import models
 # from django.conf import settings
@@ -627,21 +629,21 @@ class CryptoPayoutService:
 #     """Wallet operations service"""
     
 #     @staticmethod
-#     @GatewayTransaction.atomic
+#     @transaction.atomic
 #     def create_wallet(user):
 #         """Auto-create wallet on user signup"""
 #         wallet, created = Wallet.objects.get_or_create(user=user)
 #         return wallet
     
 #     @staticmethod
-#     @GatewayTransaction.atomic
+#     @transaction.atomic
 #     def add_earnings(wallet, amount, description='', reference_id='', metadata=None):
 #         """Add earnings to wallet"""
 #         if amount <= 0:
 #             raise ValueError("Amount must be positive")
         
-#         # Create GatewayTransaction
-#         txn = GatewayTransaction.objects.create(
+#         # Create transaction
+#         txn = transaction.objects.create(
 #             wallet=wallet,
 #             type='earning',
 #             amount=amount,
@@ -663,13 +665,13 @@ class CryptoPayoutService:
 #         return txn
     
 #     @staticmethod
-#     @GatewayTransaction.atomic
+#     @transaction.atomic
 #     def add_bonus(wallet, amount, expires_at=None, description=''):
 #         """Add bonus balance"""
 #         if amount <= 0:
 #             raise ValueError("Amount must be positive")
         
-#         txn = GatewayTransaction.objects.create(
+#         txn = transaction.objects.create(
 #             wallet=wallet,
 #             type='bonus',
 #             amount=amount,
@@ -689,7 +691,7 @@ class CryptoPayoutService:
 #         return txn
     
 #     @staticmethod
-#     @GatewayTransaction.atomic
+#     @transaction.atomic
 #     def create_withdrawal(wallet, amount, payment_method, account_number):
 #         """Create withdrawal request"""
 #         if amount <= 0:
@@ -701,8 +703,8 @@ class CryptoPayoutService:
 #         if wallet.is_locked:
 #             raise ValueError(f"Wallet is locked: {wallet.locked_reason}")
         
-#         # Create pending GatewayTransaction
-#         txn = GatewayTransaction.objects.create(
+#         # Create pending transaction
+#         txn = transaction.objects.create(
 #             wallet=wallet,
 #             type='withdrawal',
 #             amount=-amount,  # Negative for debit
@@ -723,61 +725,61 @@ class CryptoPayoutService:
 #         return txn
     
 #     @staticmethod
-#     @GatewayTransaction.atomic
-#     def approve_withdrawal(GatewayTransaction, approved_by=None):
+#     @transaction.atomic
+#     def approve_withdrawal(transaction, approved_by=None):
 #         """Approve withdrawal"""
-#         if GatewayTransaction.type != 'withdrawal':
-#             raise ValueError("Not a withdrawal GatewayTransaction")
+#         if transaction.type != 'withdrawal':
+#             raise ValueError("Not a withdrawal transaction")
         
-#         if GatewayTransaction.status != 'pending':
-#             raise ValueError("GatewayTransaction not pending")
+#         if transaction.status != 'pending':
+#             raise ValueError("transaction not pending")
         
-#         wallet = GatewayTransaction.wallet
-#         amount = abs(GatewayTransaction.amount)
+#         wallet = transaction.wallet
+#         amount = abs(transaction.amount)
         
-#         # Update GatewayTransaction
-#         GatewayTransaction.status = 'approved'
-#         GatewayTransaction.approved_by = approved_by
-#         GatewayTransaction.approved_at = timezone.now()
-#         GatewayTransaction.balance_after = wallet.current_balance
-#         GatewayTransaction.save()
+#         # Update transaction
+#         transaction.status = 'approved'
+#         transaction.approved_by = approved_by
+#         transaction.approved_at = timezone.now()
+#         transaction.balance_after = wallet.current_balance
+#         transaction.save()
         
 #         # Update wallet
 #         wallet.pending_balance -= amount
 #         wallet.total_withdrawn += amount
 #         wallet.save()
         
-#         return GatewayTransaction
+#         return transaction
     
 #     @staticmethod
-#     @GatewayTransaction.atomic
-#     def reject_withdrawal(GatewayTransaction, reason=''):
+#     @transaction.atomic
+#     def reject_withdrawal(transaction, reason=''):
 #         """Reject withdrawal and refund"""
-#         if GatewayTransaction.type != 'withdrawal':
-#             raise ValueError("Not a withdrawal GatewayTransaction")
+#         if transaction.type != 'withdrawal':
+#             raise ValueError("Not a withdrawal transaction")
         
-#         if GatewayTransaction.status != 'pending':
-#             raise ValueError("GatewayTransaction not pending")
+#         if transaction.status != 'pending':
+#             raise ValueError("transaction not pending")
         
-#         wallet = GatewayTransaction.wallet
-#         amount = abs(GatewayTransaction.amount)
+#         wallet = transaction.wallet
+#         amount = abs(transaction.amount)
         
 #         # Refund to current balance
 #         wallet.current_balance += amount
 #         wallet.pending_balance -= amount
 #         wallet.save()
         
-#         # Update GatewayTransaction
-#         GatewayTransaction.status = 'rejected'
-#         GatewayTransaction.description += f" | Rejected: {reason}"
-#         GatewayTransaction.save()
+#         # Update transaction
+#         transaction.status = 'rejected'
+#         transaction.description += f" | Rejected: {reason}"
+#         transaction.save()
         
-#         return GatewayTransaction
+#         return transaction
     
 #     @staticmethod
-#     def get_GatewayTransaction_history(wallet, limit=50):
-#         """Get GatewayTransaction history"""
-#         return GatewayTransaction.objects.filter(wallet=wallet)[:limit]
+#     def get_transaction_history(wallet, limit=50):
+#         """Get transaction history"""
+#         return transaction.objects.filter(wallet=wallet)[:limit]
     
 #     @staticmethod
 #     def calculate_daily_earnings(wallet, date=None):
@@ -786,7 +788,7 @@ class CryptoPayoutService:
         
 #         target_date = date or dt_date.today()
         
-#         earnings = GatewayTransaction.objects.filter(
+#         earnings = transaction.objects.filter(
 #             wallet=wallet,
 #             type__in=['earning', 'reward', 'referral'],
 #             status='approved',
@@ -816,7 +818,7 @@ class CryptoPayoutService:
 #     Returns (allowed: bool, reason: str).
 #     """
 #     try:
-#         from api.fraud_detection.models import UserRiskProfile
+#         from .adapters.outbound import get_user_risk_info as _get_user_risk_info  # replaces direct UserRiskProfile import
 #         risk = UserRiskProfile.objects.filter(user=user).first()
 #         if not risk:
 #             return True, ""
@@ -849,3 +851,38 @@ try:
 except ImportError as _e:
     import logging
     logging.getLogger("wallet.services").debug(f"New services import: {_e}")
+
+# ── Inbound adapter shims (backward compat for postback_engine / offerwall) ──
+# Other modules import these directly from api.wallet.services
+# They are thin wrappers over adapters/inbound.py
+from .adapters.inbound import (
+    credit_from_conversion,
+    debit_for_reversal,
+    get_wallet_balance,
+    create_wallet_for_user,
+)
+
+# ════════════════════════════════════════════════════════════════
+# BACKWARD-COMPAT SHIMS — modules that import directly from api.wallet.services
+# All new code should use api.wallet.adapters.inbound instead
+# ════════════════════════════════════════════════════════════════
+from .adapters.inbound import (
+    credit_from_conversion,
+    debit_for_reversal,
+    add_earnings,
+    add_referral_commission,
+    deduct_balance,
+    get_or_create_wallet,
+    get_wallet_summary,
+    admin_credit,
+    admin_debit,
+    transfer,
+    approve_withdrawal,
+    WalletService as _WalletServiceAdapter,
+    TransactionService as _TransactionServiceAdapter,
+    WithdrawalService as _WithdrawalServiceAdapter,
+    EarningService as _EarningServiceAdapter,
+    BalanceService as _BalanceServiceAdapter,
+    ReconciliationService as _ReconciliationServiceAdapter,
+    PayoutService as _PayoutServiceAdapter,
+)

@@ -39,6 +39,7 @@ class SiteApprovalRecord(TimeStampedModel):
     auto_approved       = models.BooleanField(default=False)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_approval_records'
         verbose_name = _('Site Approval Record')
         verbose_name_plural = _('Site Approval Records')

@@ -99,7 +99,7 @@ class Publisher(TimeStampedModel):
         settings.AUTH_USER_MODEL,
         null=True, blank=True,
         on_delete=models.CASCADE,
-        related_name='publisher_profile',
+        related_name='publisher_tools_profile',
         verbose_name=_("User Account"),
     )
     publisher_id = models.CharField(
@@ -1403,7 +1403,8 @@ class MediationGroup(TimeStampedModel):
         ]
 
     def __str__(self):
-        return f"{self.name} [{self.mediation_type}] → {self.ad_unit.name}"
+        ad_unit_name = self.ad_unit.name if self.ad_unit_id else "unassigned"
+        return f"{self.name} [{self.mediation_type}] → {ad_unit_name}"
 
 
 class WaterfallItem(TimeStampedModel):
@@ -1535,8 +1536,13 @@ class WaterfallItem(TimeStampedModel):
             models.Index(fields=['floor_ecpm'], name='idx_floor_ecpm_1507'),
         ]
 
+    @property
+    def network_label(self):
+        """Ad network name; falls back to the item name when no network is linked."""
+        return self.network.name if self.network_id else self.name
+
     def __str__(self):
-        return f"#{self.priority} {self.network.name} (floor: ${self.floor_ecpm})"
+        return f"#{self.priority} {self.network_label} (floor: ${self.floor_ecpm})"
 
 
 class HeaderBiddingConfig(TimeStampedModel):
@@ -2659,3 +2665,498 @@ class SiteQualityMetric(TimeStampedModel):
             + performance
         )
         return self.overall_quality_score
+
+# ==============================================================================
+# ৬. WEBHOOKS
+# PublisherWebhook, WebhookDeliveryLog
+# Migration: 0006_publisher_nullable_fields_webhook_blockedip
+# ==============================================================================
+
+class PublisherWebhook(TimeStampedModel):
+    """
+    Publisher-configured webhook endpoint।
+    নির্দিষ্ট event ঘটলে এই URL-এ POST request যাবে।
+    views_webhooks.py → PublisherWebhookViewSet দ্বারা expose করা।
+    signals.py → send_webhook_event() call করে।
+    """
+
+    WEBHOOK_STATUS_CHOICES = [
+        ('active',   'Active'),
+        ('paused',   'Paused'),
+        ('failed',   'Failed — Too Many Errors'),
+        ('disabled', 'Disabled'),
+    ]
+
+    EVENT_CHOICES = [
+        ('earning.daily_finalized', _('Daily Earning Finalized')),
+        ('earning.adjusted', _('Earning Adjusted')),
+        ('invoice.created', _('Invoice Created')),
+        ('invoice.issued', _('Invoice Issued')),
+        ('invoice.paid', _('Invoice Paid')),
+        ('invoice.failed', _('Payment Failed')),
+        ('publisher.approved', _('Publisher Approved')),
+        ('publisher.suspended', _('Publisher Suspended')),
+        ('publisher.tier_changed', _('Tier Changed')),
+        ('publisher.kyc_approved', _('KYC Approved')),
+        ('publisher.kyc_rejected', _('KYC Rejected')),
+        ('site.approved', _('Site Approved')),
+        ('site.rejected', _('Site Rejected')),
+        ('site.quality_alert', _('Site Quality Alert')),
+        ('app.approved', _('App Approved')),
+        ('app.rejected', _('App Rejected')),
+        ('ad_unit.created', _('Ad Unit Created')),
+        ('ad_unit.paused', _('Ad Unit Paused')),
+        ('fraud.high_risk_detected', _('High Risk IVT Detected')),
+        ('fraud.publisher_warned', _('Publisher Fraud Warning')),
+        ('performance.milestone', _('Revenue Milestone Reached')),
+        ('performance.ecpm_drop', _('eCPM Significant Drop')),
+        ('ab_test.winner_declared', _('A/B Test Winner Declared')),
+    ]
+
+    name              = models.CharField(max_length=200, verbose_name=_('Webhook Name'))
+    endpoint_url      = models.URLField(verbose_name=_('Endpoint URL'))
+    secret_key        = models.CharField(max_length=128, blank=True, verbose_name=_('Secret Key'))
+    subscribed_events = models.JSONField(default=_default_list, verbose_name=_('Subscribed Events'))
+    subscribe_all     = models.BooleanField(default=False)
+    status            = models.CharField(
+        max_length=20,
+        choices=WEBHOOK_STATUS_CHOICES,
+        default='active',
+        verbose_name=_('Status'),
+        db_index=True,
+    )
+    is_active            = models.BooleanField(default=True, db_index=True)
+    timeout_seconds      = models.IntegerField(default=10)
+    max_retries          = models.IntegerField(default=3)
+    retry_backoff        = models.BooleanField(default=True)
+    custom_headers       = models.JSONField(default=_default_dict, blank=True)
+
+    # Delivery stats (denormalized for dashboard speed)
+    total_deliveries       = models.IntegerField(default=0)
+    successful_deliveries  = models.IntegerField(default=0)
+    failed_deliveries      = models.IntegerField(default=0)
+    consecutive_failures   = models.IntegerField(default=0)
+    last_delivery_at       = models.DateTimeField(null=True, blank=True)
+    last_success_at        = models.DateTimeField(null=True, blank=True)
+    last_failure_at        = models.DateTimeField(null=True, blank=True)
+    last_failure_reason    = models.TextField(blank=True)
+    description            = models.TextField(blank=True)
+
+    publisher = models.ForeignKey(
+        'Publisher',
+        on_delete=models.CASCADE,
+        related_name='webhooks',
+        verbose_name=_('Publisher'),
+    )
+
+    class Meta:
+        verbose_name        = 'Publisher Webhook'
+        verbose_name_plural = 'Publisher Webhooks'
+        db_table            = 'publisher_tools_publisher_webhooks'
+        ordering            = ['-created_at']
+        indexes = [
+            models.Index(fields=['publisher', 'is_active'], name='idx_pub_webhook_active_9001'),
+            models.Index(fields=['status'],                 name='idx_pub_webhook_status_9002'),
+        ]
+
+    def __str__(self):
+        return f"{self.name} → {self.endpoint_url} [{self.status}]"
+
+    @property
+    def success_rate(self) -> float:
+        """Successful delivery percentage."""
+        if self.total_deliveries == 0:
+            return 0.0
+        return round(self.successful_deliveries / self.total_deliveries * 100, 2)
+
+    @property
+    def is_healthy(self) -> bool:
+        """Webhook active এবং consecutive failures 3-এর কম।"""
+        return self.status == 'active' and self.consecutive_failures < 3
+
+    def mark_failed(self, reason: str = '') -> None:
+        """Delivery failure record করে এবং প্রয়োজনে status 'failed'-এ নামায়।"""
+        self.failed_deliveries       += 1
+        self.total_deliveries        += 1
+        self.consecutive_failures    += 1
+        self.last_failure_at          = timezone.now()
+        self.last_failure_reason      = reason[:500] if reason else ''
+        if self.consecutive_failures >= 10:
+            self.status = 'failed'
+        self.save(update_fields=[
+            'failed_deliveries', 'total_deliveries', 'consecutive_failures',
+            'last_failure_at', 'last_failure_reason', 'status',
+        ])
+
+    def mark_success(self) -> None:
+        """Successful delivery record করে।"""
+        self.successful_deliveries += 1
+        self.total_deliveries      += 1
+        self.consecutive_failures   = 0
+        self.last_success_at        = timezone.now()
+        self.last_delivery_at       = timezone.now()
+        if self.status == 'failed':
+            self.status = 'active'
+        self.save(update_fields=[
+            'successful_deliveries', 'total_deliveries', 'consecutive_failures',
+            'last_success_at', 'last_delivery_at', 'status',
+        ])
+
+
+class WebhookDeliveryLog(TimeStampedModel):
+    """
+    প্রতিটি webhook delivery-র বিস্তারিত ইতিহাস।
+    Debugging ও monitoring-এর জন্য।
+    PublisherWebhookViewSet.deliveries() action এই model query করে।
+    """
+
+    DELIVERY_STATUS_CHOICES = [
+        ('pending',  'Pending'),
+        ('success',  'Success'),
+        ('failed',   'Failed'),
+        ('retrying', 'Retrying'),
+    ]
+
+    webhook          = models.ForeignKey(
+        PublisherWebhook,
+        on_delete=models.CASCADE,
+        related_name='delivery_logs',
+    )
+    event_type       = models.CharField(max_length=100, db_index=True)
+    event_id         = models.CharField(max_length=50, default='', db_index=True)
+    payload          = models.JSONField(default=_default_dict)
+    status           = models.CharField(
+        max_length=20,
+        choices=DELIVERY_STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+    )
+    attempt          = models.IntegerField(default=1)
+    response_code    = models.IntegerField(null=True, blank=True)
+    response_body    = models.TextField(blank=True)
+    error_message    = models.TextField(blank=True)
+    delivery_time_ms = models.IntegerField(null=True, blank=True)
+    delivered_at     = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name        = 'Webhook Delivery Log'
+        verbose_name_plural = 'Webhook Delivery Logs'
+        db_table            = 'publisher_tools_webhook_delivery_logs'
+        ordering            = ['-created_at']
+        indexes = [
+            models.Index(fields=['webhook', 'status'],    name='webhook_delivery_status_9003'),
+            models.Index(fields=['event_type', 'status'], name='idx_webhook_event_status_9004'),
+        ]
+
+    def __str__(self):
+        return (
+            f"Delivery {self.event_type} → {self.webhook.name} "
+            f"[{self.status}] attempt={self.attempt}"
+        )
+
+    @property
+    def is_successful(self) -> bool:
+        return self.status == 'success'
+
+    @property
+    def response_latency_display(self) -> str:
+        if self.delivery_time_ms is None:
+            return '—'
+        if self.delivery_time_ms < 1000:
+            return f"{self.delivery_time_ms}ms"
+        return f"{self.delivery_time_ms / 1000:.2f}s"
+
+
+# ==============================================================================
+# ৭. FRAUD PREVENTION — BLOCKED IPs
+# BlockedIP
+# Migration: 0006_publisher_nullable_fields_webhook_blockedip
+# ==============================================================================
+
+class BlockedIP(TimeStampedModel):
+    """
+    Fraud detection-এ block করা IP address।
+    FraudViewSet.block_ip() এবং fraud_prevention/__init__.py দ্বারা manage করা হয়।
+    views_fraud.py → FraudViewSet.blocked_ips(), block_ip(), unblock_ip() ব্যবহার করে।
+    """
+
+    ip_address      = models.GenericIPAddressField(db_index=True, verbose_name=_('IP Address'))
+    reason          = models.CharField(max_length=200, verbose_name=_('Block Reason'))
+    fraud_score     = models.IntegerField(default=0, verbose_name=_('Fraud Score at Block'))
+    is_auto_blocked = models.BooleanField(default=True, db_index=True)
+    expires_at      = models.DateTimeField(null=True, blank=True, db_index=True)
+    is_permanent    = models.BooleanField(default=False)
+    unblocked_at    = models.DateTimeField(null=True, blank=True)
+    notes           = models.TextField(blank=True)
+
+    publisher = models.ForeignKey(
+        'Publisher',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='publisher_tools_blocked_ips',
+        verbose_name=_('Publisher'),
+    )
+    blocked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='publisher_tools_global_blocked_ips',
+    )
+
+    class Meta:
+        db_table = 'publisher_tools_blocked_ips'
+        indexes = [
+            models.Index(fields=['ip_address'],               name='idx_blocked_ip_addr_9005'),
+            models.Index(fields=['ip_address', 'expires_at'], name='idx_blocked_ip_exp_9006'),
+        ]
+
+    def __str__(self):
+        permanent = ' (permanent)' if self.is_permanent else ''
+        return f"BlockedIP: {self.ip_address} — {self.reason}{permanent}"
+
+    @property
+    def is_active_block(self) -> bool:
+        """Block এখনও কার্যকর কিনা চেক করে।"""
+        if self.unblocked_at:
+            return False
+        if self.is_permanent:
+            return True
+        if self.expires_at:
+            return self.expires_at > timezone.now()
+        return True
+
+    @property
+    def block_type(self) -> str:
+        if self.is_permanent:
+            return 'permanent'
+        if self.is_auto_blocked:
+            return 'auto'
+        return 'manual'
+
+
+# ==============================================================================
+# ৮. A/B TESTING
+# ABTest, ABTestVariant
+# Migration: 0007_abtest_abtestVariant
+# ==============================================================================
+
+class ABTest(TimeStampedModel):
+    """
+    Ad unit-এ A/B test পরিচালনা করে।
+    views_abtest.py → ABTestViewSet দ্বারা expose করা।
+    a_b_testing/ subfolder analysis, allocation, reporting logic প্রদান করে।
+
+    Status flow: draft → running → paused ↔ running → completed / cancelled
+    """
+
+    TEST_TYPE_CHOICES = [
+        ('placement',    'Placement Test'),
+        ('ad_format',    'Ad Format Test'),
+        ('floor_price',  'Floor Price Test'),
+        ('waterfall',    'Waterfall Test'),
+        ('creative',     'Creative Test'),
+        ('multivariate', 'Multivariate Test'),
+    ]
+    STATUS_CHOICES = [
+        ('draft',     'Draft'),
+        ('running',   'Running'),
+        ('paused',    'Paused'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    WINNER_REASON_CHOICES = [
+        ('highest_revenue', 'Highest Revenue'),
+        ('highest_ecpm',    'Highest eCPM'),
+        ('highest_fill',    'Highest Fill Rate'),
+        ('highest_ctr',     'Highest CTR'),
+        ('statistical_sig', 'Statistical Significance'),
+        ('manual',          'Manual Selection'),
+    ]
+
+    test_id    = models.CharField(max_length=20, unique=True, blank=True, verbose_name=_('Test ID'))
+    name       = models.CharField(max_length=200, verbose_name=_('Test Name'))
+    hypothesis = models.TextField(blank=True, verbose_name=_('Hypothesis'))
+    test_type  = models.CharField(
+        max_length=20,
+        choices=TEST_TYPE_CHOICES,
+        verbose_name=_('Test Type'),
+        db_index=True,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft',
+        verbose_name=_('Status'),
+        db_index=True,
+    )
+    start_date        = models.DateTimeField(null=True, blank=True, verbose_name=_('Start Date'))
+    end_date          = models.DateTimeField(null=True, blank=True, verbose_name=_('End Date'))
+    min_duration_days = models.IntegerField(
+        default=7,
+        validators=[MinValueValidator(1)],
+        verbose_name=_('Minimum Duration (days)'),
+    )
+    confidence_level  = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('95.00'),
+        verbose_name=_('Required Confidence Level (%)'),
+    )
+    min_sample_size          = models.IntegerField(default=1000, verbose_name=_('Min Sample Size per Variant'))
+    winner_reason            = models.CharField(max_length=30, choices=WINNER_REASON_CHOICES, blank=True, verbose_name=_('Winner Reason'))
+    confidence_achieved      = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    statistical_significance = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    concluded_at             = models.DateTimeField(null=True, blank=True)
+    description              = models.TextField(blank=True)
+    conclusion_notes         = models.TextField(blank=True)
+    metadata                 = models.JSONField(default=_default_dict, blank=True)
+
+    # winner_variant FK added below after ABTestVariant class is defined
+    publisher = models.ForeignKey(
+        'Publisher',
+        on_delete=models.CASCADE,
+        related_name='ab_tests',
+        verbose_name=_('Publisher'),
+    )
+    ad_unit = models.ForeignKey(
+        'AdUnit',
+        on_delete=models.CASCADE,
+        related_name='ab_tests',
+        verbose_name=_('Ad Unit'),
+    )
+
+    class Meta:
+        verbose_name        = 'A/B Test'
+        verbose_name_plural = 'A/B Tests'
+        db_table            = 'publisher_tools_ab_tests'
+        ordering            = ['-created_at']
+        indexes = [
+            models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1543'),
+            models.Index(fields=['ad_unit', 'status'],   name='idx_ad_unit_status_1544'),
+            models.Index(fields=['test_type'],           name='idx_test_type_1545'),
+        ]
+
+    def __str__(self):
+        return f"{self.test_id or self.name} [{self.test_type}] — {self.status}"
+
+    def save(self, *args, **kwargs):
+        if not self.test_id:
+            import random
+            import string
+            prefix = 'ABT-'
+            self.test_id = prefix + ''.join(
+                random.choices(string.ascii_uppercase + string.digits, k=8)
+            )
+        super().save(*args, **kwargs)
+
+    @property
+    def is_running(self) -> bool:
+        return self.status == 'running'
+
+    @property
+    def is_conclusive(self) -> bool:
+        """Required confidence level অর্জিত হয়েছে কিনা।"""
+        if self.confidence_achieved is None:
+            return False
+        return float(self.confidence_achieved) >= float(self.confidence_level)
+
+    @property
+    def duration_days(self) -> int | None:
+        """Test চলেছে বা চলেছিল কত দিন।"""
+        if not self.start_date:
+            return None
+        end = self.concluded_at or timezone.now()
+        return max(0, (end - self.start_date).days)
+
+    @property
+    def has_enough_data(self) -> bool:
+        """সব variant minimum sample size পেয়েছে কিনা।"""
+        return all(
+            v.total_impressions >= self.min_sample_size
+            for v in self.variants.all()  # type: ignore[attr-defined]
+        )
+
+
+class ABTestVariant(TimeStampedModel):
+    """
+    ABTest-এর প্রতিটি variant (control + treatment)।
+    traffic_split: 0.00–100.00 (%)।
+    সব variants-এর traffic_split-এর সমষ্টি 100 হওয়া উচিত।
+    """
+
+    name          = models.CharField(max_length=100, verbose_name=_('Variant Name'))
+    is_control    = models.BooleanField(default=False, verbose_name=_('Is Control'))
+    traffic_split = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name=_('Traffic Split (%)'),
+    )
+    config          = models.JSONField(default=_default_dict, verbose_name=_('Variant Configuration'))
+
+    # Accumulated stats — Celery tasks দ্বারা update হয়
+    total_impressions  = models.BigIntegerField(default=0, verbose_name=_('Impressions'))
+    total_clicks       = models.BigIntegerField(default=0, verbose_name=_('Clicks'))
+    total_revenue      = models.DecimalField(max_digits=14, decimal_places=6, default=Decimal('0.000000'))
+    total_ad_requests  = models.BigIntegerField(default=0)
+    ecpm               = models.DecimalField(max_digits=10, decimal_places=4, default=Decimal('0.0000'))
+    ctr                = models.DecimalField(max_digits=6,  decimal_places=4, default=Decimal('0.0000'))
+    fill_rate          = models.DecimalField(max_digits=6,  decimal_places=4, default=Decimal('0.0000'))
+
+    test = models.ForeignKey(
+        ABTest,
+        on_delete=models.CASCADE,
+        related_name='variants',
+        verbose_name=_('Test'),
+    )
+
+    class Meta:
+        verbose_name        = 'A/B Test Variant'
+        verbose_name_plural = 'A/B Test Variants'
+        db_table            = 'publisher_tools_ab_test_variants'
+        ordering            = ['test', 'is_control', 'name']
+        indexes = [
+            models.Index(fields=['test', 'is_control'], name='idx_test_is_control_1546'),
+        ]
+
+    def __str__(self):
+        control_label = ' [Control]' if self.is_control else ''
+        return f"{self.test.name} → {self.name}{control_label} ({self.traffic_split}%)"
+
+    @property
+    def revenue_per_impression(self) -> Decimal:
+        if self.total_impressions == 0:
+            return Decimal('0')
+        return (self.total_revenue / self.total_impressions).quantize(Decimal('0.000001'))
+
+    def recalculate_metrics(self) -> None:
+        """eCPM, CTR, fill_rate নতুন করে compute করে সেভ করে।"""
+        if self.total_impressions > 0:
+            self.ecpm = (
+                (self.total_revenue / self.total_impressions) * 1000
+            ).quantize(Decimal('0.0001'))
+            self.ctr = (
+                Decimal(self.total_clicks) / Decimal(self.total_impressions)
+            ).quantize(Decimal('0.0001'))
+        if self.total_ad_requests > 0:
+            self.fill_rate = (
+                Decimal(self.total_impressions) / Decimal(self.total_ad_requests)
+            ).quantize(Decimal('0.0001'))
+        self.save(update_fields=['ecpm', 'ctr', 'fill_rate'])
+
+
+# ── ABTest.winner_variant FK ──────────────────────────────────────────────────
+# ABTestVariant class define হওয়ার পরে যোগ করা হচ্ছে (circular reference এড়াতে)
+ABTest.add_to_class(
+    'winner_variant',
+    models.ForeignKey(
+        ABTestVariant,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='won_tests',
+        verbose_name=_('Winner Variant'),
+    ),
+)

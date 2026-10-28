@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0}
+.container{max-width:600px;margin:40px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+.header{background:#16a34a;color:#fff;padding:30px;text-align:center}
+.header h1{margin:0;font-size:28px}.header p{margin:5px 0 0;opacity:.9}
+.body{padding:30px}
+.resolution{background:#f0fdf4;border-left:4px solid #16a34a;padding:15px;border-radius:4px;margin:20px 0}
+.stars{font-size:32px;margin:10px 0}
+.rate-btn{display:inline-block;padding:10px 20px;margin:5px;border-radius:6px;text-decoration:none;color:#fff;font-weight:bold}
+.star1{background:#dc2626}.star2{background:#ea580c}.star3{background:#ca8a04}.star4{background:#0ea5e9}.star5{background:#16a34a}
+.btn{display:inline-block;background:#16a34a;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:20px 0}
+.footer{background:#f9fafb;padding:20px;text-align:center;color:#6b7280;font-size:13px}
+</style></head><body>
+<div class="container">
+  <div class="header"><h1>✅ Issue Resolved!</h1><p>Ticket #{{ ticket_id }}</p></div>
+  <div class="body">
+    <p>Hello <strong>{{ username }}</strong>,</p>
+    <p>Your support ticket <strong>#{{ ticket_id }}</strong> has been resolved.</p>
+    {% if resolution %}<div class="resolution"><strong>Resolution:</strong><br>{{ resolution }}</div>{% endif %}
+    <p><strong>How was your support experience?</strong></p>
+    <div class="stars">
+      <a href="{{ rate_1 }}" class="rate-btn star1">⭐ 1</a>
+      <a href="{{ rate_2 }}" class="rate-btn star2">⭐ 2</a>
+      <a href="{{ rate_3 }}" class="rate-btn star3">⭐ 3</a>
+      <a href="{{ rate_4 }}" class="rate-btn star4">⭐⭐ 4</a>
+      <a href="{{ rate_5 }}" class="rate-btn star5">⭐⭐⭐ 5</a>
+    </div>
+    <p>If you have any more questions, feel free to <a href="{{ ticket_url }}">open a new ticket</a>.</p>
+  </div>
+  <div class="footer">© {{ year }} {{ site_name }}</div>
+</div></body></html>

@@ -67,7 +67,6 @@ class NotificationTypes(Enum):
     RANK_UP = 'rank_up'
 
     # CPAlead / Offerwall
-    OFFER_COMPLETED = 'offer_completed'
     OFFER_AVAILABLE = 'offer_available'
     POSTBACK_RECEIVED = 'postback_received'
     POSTBACK_FAILED = 'postback_failed'

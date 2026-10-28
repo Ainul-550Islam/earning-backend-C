@@ -67,7 +67,7 @@ def suggest_waterfall_optimization(group) -> Dict:
     """
     from ..models import WaterfallItem
 
-    items = WaterfallItem.objects.filter(
+    items = WaterfallItem.objects.select_related('network').filter(
         mediation_group=group,
         status='active',
     ).order_by('priority')
@@ -77,7 +77,7 @@ def suggest_waterfall_optimization(group) -> Dict:
         if item.fill_rate < 10 and item.total_ad_requests > 1000:
             recommendations.append({
                 'item_id': str(item.id),
-                'network': item.network.name,
+                'network': item.network_label,
                 'issue': 'very_low_fill_rate',
                 'action': 'Consider removing or pausing this network (fill rate < 10%)',
                 'fill_rate': float(item.fill_rate),
@@ -86,7 +86,7 @@ def suggest_waterfall_optimization(group) -> Dict:
         elif item.avg_latency_ms > 800:
             recommendations.append({
                 'item_id': str(item.id),
-                'network': item.network.name,
+                'network': item.network_label,
                 'issue': 'high_latency',
                 'action': 'Move this network lower in waterfall (latency > 800ms)',
                 'latency_ms': item.avg_latency_ms,

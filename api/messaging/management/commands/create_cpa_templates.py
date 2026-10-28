@@ -156,7 +156,7 @@ class Command(BaseCommand):
                             help="Recreate templates even if they already exist.")
 
     def handle(self, *args, **options):
-        from messaging.models import MessageTemplate
+        from api.messaging.models import MessageTemplate
 
         created = 0
         skipped = 0

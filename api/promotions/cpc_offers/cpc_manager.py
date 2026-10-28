@@ -194,8 +194,6 @@ def cpc_click_view(request, campaign_id):
     )
     return redirect(result['redirect'])
 
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def cpc_campaigns_view(request):
     """GET /api/promotions/cpc/campaigns/?country=US&device=mobile"""
@@ -205,9 +203,6 @@ def cpc_campaigns_view(request):
         device=request.query_params.get('device', 'desktop'),
     )
     return Response({'campaigns': campaigns})
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def cpc_stats_view(request):
     """GET /api/promotions/cpc/stats/?days=7"""

@@ -175,7 +175,7 @@ class GitWebhookService:
     def sync_keys_to_db(self, keys: Set[str], namespace: str = '') -> Dict:
         """Extracted keys DB-তে sync করে — নতুন keys add করে, missing keys flag করে"""
         try:
-            from ..models.core import TranslationKey
+            from api.localization.models.core import TranslationKey
             existing = set(TranslationKey.objects.values_list('key', flat=True))
             new_keys = [k for k in keys if k not in existing]
 
@@ -189,9 +189,7 @@ class GitWebhookService:
                     defaults={
                         'category': category,
                         'namespace': namespace or '',
-                        'description': f'Auto-extracted from source code',
-                        'is_active': True,
-                    }
+                        'description': f'Auto-extracted from source code'}
                 )
                 created += 1
 

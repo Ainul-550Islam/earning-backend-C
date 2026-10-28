@@ -2,6 +2,7 @@
 Advanced Risk Scoring Engine
 Machine Learning-based risk assessment for user activities
 """
+from django.db import models
 import logging
 import numpy as np
 from typing import Dict, List, Tuple

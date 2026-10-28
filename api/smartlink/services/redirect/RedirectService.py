@@ -1,7 +1,7 @@
 import logging
 import time
 from django.http import HttpResponseRedirect, HttpResponse
-from ...models import RedirectLog
+from api.smartlink.models import RedirectLog
 from ...choices import RedirectType
 from ...constants import REDIRECT_TIMEOUT_SECONDS
 

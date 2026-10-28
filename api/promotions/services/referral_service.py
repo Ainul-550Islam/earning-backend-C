@@ -1,3 +1,4 @@
+from django.db import models
 # api/promotions/services/referral_service.py
 import logging
 from decimal import Decimal

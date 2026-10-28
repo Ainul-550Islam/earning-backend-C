@@ -4,7 +4,9 @@ Evaluator Viewsets for Offer Routing System
 This module contains viewsets for route evaluation,
 testing, and validation operations.
 """
+from django.db.models import Count
 
+from ..throttling import EvaluatorThrottle, RoutingEngineThrottle, AnalyticsThrottle, BulkOperationThrottle, EvaluatorThrottle
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -27,6 +29,7 @@ class RouteEvaluatorViewSet(viewsets.ViewSet):
     """
     
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [EvaluatorThrottle]
     
     @action(detail=False, methods=['post'])
     def validate_route(self, request):

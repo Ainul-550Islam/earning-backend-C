@@ -6,7 +6,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..permissions import IsPublisher
+from api.smartlink.permissions import IsPublisher
 from ..reports.PublisherReportService import PublisherReportService
 from ..services.billing.PublisherPayoutService import PublisherPayoutService
 from ..services.antifraud.ClickQualityScore import ClickQualityScore

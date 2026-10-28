@@ -1,3 +1,4 @@
+from django.core.files.base import ContentFile
 import os
 import subprocess
 import tempfile

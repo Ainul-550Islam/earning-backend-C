@@ -1,22 +1,26 @@
 """factories.py – Factory Boy factories for postback tests."""
+import uuid
 import factory
 import factory.fuzzy
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from postback.choices import (
+from api.postback.choices import (
+    ConversionEventType,
     DeduplicationWindow,
     NetworkType,
+    PostbackConversionStatus,
     PostbackStatus,
     RejectionReason,
     SignatureAlgorithm,
     ValidatorStatus,
 )
-from postback.models import (
+from api.postback.models import (
     DuplicateLeadCheck,
     LeadValidator,
     NetworkPostbackConfig,
     PostbackLog,
+    PostbackS2SLog,
 )
 
 User = get_user_model()
@@ -51,6 +55,34 @@ class NetworkPostbackConfigFactory(factory.django.DjangoModelFactory):
     default_reward_points = 100
     rate_limit_per_minute = 1000
     contact_email = factory.Faker("email")
+    # S2S callback fields
+    callback_url = ""
+    callback_method = "GET"
+    callback_secret = ""
+    metadata = {}
+
+
+class CPALeadNetworkFactory(NetworkPostbackConfigFactory):
+    """Factory for CPAlead-specific network config."""
+    name = "CPAlead"
+    network_key = factory.Sequence(lambda n: f"cpalead-{n:04d}")
+    network_type = NetworkType.CPA
+    field_mapping = {
+        "lead_id": "lead_id",
+        "offer_id": "offer_id",
+        "payout": "payout",
+        "goal_id": "goal_id",
+        "sub_id1": "sub_id",
+    }
+    callback_url = "https://tracker.example.com/cb?lead={lead_id}&payout={payout}&ip={ip_address}"
+    callback_method = "GET"
+
+
+class S2SNetworkFactory(NetworkPostbackConfigFactory):
+    """Factory for a network with S2S callback configured."""
+    callback_url = "https://adv.example.com/postback?txn={transaction_id}&rev={payout}"
+    callback_method = "GET"
+    callback_secret = "s2s-test-secret-key"
 
 
 class InactiveNetworkFactory(NetworkPostbackConfigFactory):
@@ -93,6 +125,36 @@ class PostbackLogFactory(factory.django.DjangoModelFactory):
     signature_verified = True
     ip_whitelisted = True
     received_at = factory.LazyFunction(timezone.now)
+    # New fields
+    event_type = ConversionEventType.UNKNOWN
+    conversion_status = PostbackConversionStatus.APPROVED
+    is_reversal = False
+    click_id = ""
+    fire_delay_ms = 0
+
+
+class CPALeadPostbackLogFactory(PostbackLogFactory):
+    """Factory for a CPAlead postback log with full fields."""
+    network = factory.SubFactory(CPALeadNetworkFactory)
+    raw_payload = factory.LazyFunction(lambda: {
+        "lead_id": "CPA_LEAD_001",
+        "offer_id": "OFFER_789",
+        "payout": "5.00",
+        "currency": "USD",
+        "goal_id": "sale",
+        "sub_id": "SUB_001",
+        "sub_id2": "SUB_002",
+        "sub_id3": "SUB_003",
+        "country": "US",
+        "device": "mobile",
+        "os": "ios",
+        "browser": "safari",
+        "status": "approved",
+    })
+    lead_id = "CPA_LEAD_001"
+    offer_id = "OFFER_789"
+    event_type = ConversionEventType.SALE
+    conversion_status = PostbackConversionStatus.APPROVED
 
 
 class RewardedPostbackLogFactory(PostbackLogFactory):
@@ -100,6 +162,8 @@ class RewardedPostbackLogFactory(PostbackLogFactory):
     points_awarded = 100
     processed_at = factory.LazyFunction(timezone.now)
     resolved_user = factory.SubFactory(UserFactory)
+    event_type = ConversionEventType.LEAD
+    conversion_status = PostbackConversionStatus.APPROVED
 
 
 class RejectedPostbackLogFactory(PostbackLogFactory):
@@ -122,6 +186,14 @@ class FailedPostbackLogFactory(PostbackLogFactory):
     next_retry_at = factory.LazyFunction(
         lambda: timezone.now() - timezone.timedelta(minutes=5)
     )
+
+
+class ReversalPostbackLogFactory(PostbackLogFactory):
+    """Factory for a reversal/chargeback postback log."""
+    is_reversal = True
+    conversion_status = PostbackConversionStatus.REVERSED
+    payout = "-2.50"
+    event_type = ConversionEventType.UNKNOWN
 
 
 class DuplicateLeadCheckFactory(factory.django.DjangoModelFactory):
@@ -160,3 +232,17 @@ class PayoutRangeValidatorFactory(LeadValidatorFactory):
 class OfferWhitelistValidatorFactory(LeadValidatorFactory):
     validator_type = "offer_whitelist"
     params = {"allowed_offers": ["OFFER_A", "OFFER_B"]}
+
+
+class PostbackS2SLogFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = PostbackS2SLog
+
+    postback_log = factory.SubFactory(RewardedPostbackLogFactory)
+    callback_url = "https://adv.example.com/postback?lead=LEAD123&payout=2.50"
+    http_status = 200
+    response_body = "OK"
+    success = True
+    attempt_number = 1
+    error_message = ""
+    fired_at = factory.LazyFunction(timezone.now)

@@ -46,8 +46,13 @@ class WalletService:
 
     @staticmethod
     @transaction.atomic
-    def get_or_create(user) -> Wallet:
-        """Get or create a wallet for a user. Also sets up publisher structures."""
+    def get_or_create_wallet(user, currency: str = "BDT"):
+        """Alias for get_or_create. Called by: users.signals, referral, adapters."""
+        return WalletService._get_or_create(user)
+
+    @staticmethod
+    def _get_or_create(user):
+        """Atomic get-or-create. Returns (wallet, created); created is True only for the call that inserted the row."""
         wallet, created = Wallet.objects.get_or_create(
             user=user,
             defaults={"currency": "BDT"},
@@ -55,7 +60,12 @@ class WalletService:
         if created:
             logger.info(f"Wallet created for user={user.id}")
             WalletService._setup_publisher(user, wallet)
-        return wallet
+        return wallet, created
+
+    @staticmethod
+    def get_or_create(user) -> Wallet:
+        """Get or create a wallet for a user. Also sets up publisher structures."""
+        return WalletService._get_or_create(user)[0]
 
     @staticmethod
     def _setup_publisher(user, wallet: Wallet):
@@ -90,10 +100,12 @@ class WalletService:
         ip_address: str = None,
         country_code: str = "",
         fee_amount: Decimal = Decimal("0"),
+        skip_multipliers: bool = False,
     ) -> WalletTransaction:
         """
         Credit a wallet with full audit trail:
           - idempotency check
+          - skip_multipliers: if True, skip GEO/tier/perf multipliers (caller pre-computed)
           - GEO rate multiplier (for earnings)
           - tier bonus multiplier
           - performance bonus (CPAlead up to 20%)
@@ -121,22 +133,23 @@ class WalletService:
 
         # ── GEO multiplier (earnings only) ────────────────────────────
         original_amount = amount
-        if country_code and txn_type in (
-            TransactionType.EARNING, TransactionType.REWARD,
-            TransactionType.CPA, TransactionType.CPI, TransactionType.CPC,
-            TransactionType.SURVEY, TransactionType.OFFER_WALL,
-        ):
-            geo_mult = WalletService._get_geo_multiplier(country_code)
-            amount = (amount * geo_mult).quantize(Decimal("0.00000001"))
+        if not skip_multipliers:
+            if country_code and txn_type in (
+                TransactionType.EARNING, TransactionType.REWARD,
+                TransactionType.CPA, TransactionType.CPI, TransactionType.CPC,
+                TransactionType.SURVEY, TransactionType.OFFER_WALL,
+            ):
+                geo_mult = WalletService._get_geo_multiplier(country_code)
+                amount = (amount * geo_mult).quantize(Decimal("0.00000001"))
 
-        # ── Tier multiplier ───────────────────────────────────────────
-        if txn_type in (TransactionType.EARNING, TransactionType.REWARD, TransactionType.REFERRAL):
-            tier_mult = WalletService._get_tier_multiplier(wallet.user)
-            amount = (amount * tier_mult).quantize(Decimal("0.00000001"))
+            # ── Tier multiplier ───────────────────────────────────────────
+            if txn_type in (TransactionType.EARNING, TransactionType.REWARD, TransactionType.REFERRAL):
+                tier_mult = WalletService._get_tier_multiplier(wallet.user)
+                amount = (amount * tier_mult).quantize(Decimal("0.00000001"))
 
         # ── Performance bonus (CPAlead ≤ 20%) ────────────────────────
         bonus_amount = Decimal("0")
-        if txn_type in (TransactionType.EARNING, TransactionType.REWARD):
+        if not skip_multipliers and txn_type in (TransactionType.EARNING, TransactionType.REWARD):
             bonus_amount = WalletService._calc_performance_bonus(wallet.user, wallet, amount)
 
         total_credit = amount + bonus_amount
@@ -230,6 +243,7 @@ class WalletService:
         created_by=None,
         ip_address: str = None,
         fee_amount: Decimal = Decimal("0"),
+        skip_multipliers: bool = False,
     ) -> WalletTransaction:
         """
         Debit a wallet. Moves funds to pending_balance pending processing.
@@ -383,6 +397,16 @@ class WalletService:
     # ── Summary ───────────────────────────────────────────────────────
 
     @staticmethod
+    def deduct_balance(wallet, amount: Decimal, description: str = "", reference_id: str = "") -> WalletTransaction:
+        """Debit alias used by referral.CommissionClawbackService, services.py."""
+        from ...choices import TransactionType
+        return WalletService.debit(
+            wallet=wallet, amount=Decimal(str(amount)),
+            txn_type=TransactionType.ADMIN_DEBIT,
+            description=description, reference_id=reference_id,
+        )
+
+    @staticmethod
     def get_summary(user) -> dict:
         """Full wallet summary for dashboard."""
         try:
@@ -422,6 +446,20 @@ class WalletService:
     # ── Private helpers ───────────────────────────────────────────────
 
     @staticmethod
+    def _get_kyc_level(user) -> int:
+        """
+        Return KYC level 0-3 for a user.
+        Called by: decorators.py, permissions.py.
+        0=unverified, 1=basic, 2=verified, 3=enhanced.
+        """
+        try:
+            from ...adapters.outbound import get_user_kyc_level
+            uid = user.pk if hasattr(user, "pk") else int(user)
+            return get_user_kyc_level(uid)
+        except Exception:
+            return 0
+
+    @staticmethod
     def _get_geo_multiplier(country_code: str) -> Decimal:
         try:
             from ...models_cpalead_extra import GeoRate
@@ -441,10 +479,10 @@ class WalletService:
     @staticmethod
     def _get_tier_multiplier(user) -> Decimal:
         try:
-            from api.users.models import UserLevel
-            ul = UserLevel.objects.get(user=user)
-            if hasattr(ul, "task_reward_bonus"):
-                return Decimal(str(ul.task_reward_bonus))
+            from ...adapters.outbound import get_user_level_info
+            info = get_user_level_info(user.id)
+            if info.found:
+                return Decimal(str(info.task_reward_bonus))
         except Exception:
             pass
         tier = getattr(user, "tier", "FREE")
@@ -538,3 +576,28 @@ class WalletService:
             ).save()
         except Exception as e:
             logger.debug(f"Balance history skip: {e}")
+
+    @staticmethod
+    def reserve_balance(wallet, amount: Decimal, reason: str = "") -> "WalletTransaction":
+        """Move amount from available to frozen (escrow/hold)."""
+        from ...models import Wallet as WalletModel
+        with transaction.atomic():
+            wallet = WalletModel.objects.select_for_update().get(pk=wallet.pk)
+            if wallet.current_balance < amount:
+                raise ValueError(f"Insufficient balance: {wallet.current_balance} < {amount}")
+            wallet.frozen_balance  = (wallet.frozen_balance or Decimal("0")) + amount
+            wallet.current_balance = wallet.current_balance - amount
+            wallet.save(update_fields=["frozen_balance", "current_balance", "updated_at"])
+        return None  # no txn for internal reservation
+
+    @staticmethod
+    def release_reserve(wallet, amount: Decimal, reason: str = "") -> None:
+        """Release previously reserved (frozen) balance back to current."""
+        from ...models import Wallet as WalletModel
+        from django.db import transaction as db_transaction
+        with db_transaction.atomic():
+            w = WalletModel.objects.select_for_update().get(pk=wallet.pk)
+            release_amt = min(amount, w.frozen_balance or Decimal("0"))
+            w.frozen_balance  = (w.frozen_balance or Decimal("0")) - release_amt
+            w.current_balance = w.current_balance + release_amt
+            w.save(update_fields=["frozen_balance", "current_balance", "updated_at"])

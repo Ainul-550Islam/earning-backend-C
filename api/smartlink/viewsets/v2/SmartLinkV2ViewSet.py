@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
-from ...models import SmartLink
+from api.smartlink.models import SmartLink
 from ...serializers.SmartLinkDetailSerializer import SmartLinkDetailSerializer
 from ...serializers.SmartLinkSerializer import SmartLinkSerializer
 from ...services.core.SmartLinkService import SmartLinkService

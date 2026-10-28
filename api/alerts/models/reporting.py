@@ -114,13 +114,13 @@ class AlertReport(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"Report: {self.title}"
+        return f"AlertReport: {self.title} - {self.report_type}"
     
     def clean(self):
         """Validate report configuration"""
         super().clean()
         
-        if self.end_date <= self.start_date:
+        if self.end_date is not None and self.start_date is not None and (self.end_date <= self.start_date):
             raise ValidationError("End date must be after start date")
         
         # Validate date range based on report type
@@ -132,7 +132,7 @@ class AlertReport(models.Model):
             'custom': 365,
         }
         
-        if self.report_type in max_days:
+        if self.report_type in max_days and self.end_date is not None and self.start_date is not None:
             days_diff = (self.end_date - self.start_date).days
             if days_diff > max_days[self.report_type]:
                 raise ValidationError(f"Date range too large for {self.report_type} report")
@@ -170,6 +170,9 @@ class AlertReport(models.Model):
             self.retry_count += 1
         
         self.save(update_fields=['status', 'generated_at', 'generation_duration_ms', 'error_message', 'retry_count'])
+        if self.status == 'completed':
+            from api.alerts.signals.reporting import report_generated
+            report_generated.send(sender=self.__class__, instance=self)
     
     def _generate_daily_report(self):
         """Generate daily report"""
@@ -218,7 +221,8 @@ class AlertReport(models.Model):
             'top_rules': sorted(rule_dist.items(), key=lambda x: x[1], reverse=True)[:10]
         }
         
-        self.summary = f"Daily Report: {total_alerts} alerts, {resolved_alerts} resolved ({(resolved_alerts/total_alerts*100):.1f}% resolution rate)"
+        resolution_rate = (resolved_alerts / total_alerts * 100) if total_alerts > 0 else 0
+        self.summary = f"Daily Report: {total_alerts} alerts, {resolved_alerts} resolved ({resolution_rate:.1f}% resolution rate)"
     
     def _generate_weekly_report(self):
         """Generate weekly report"""
@@ -330,6 +334,8 @@ class AlertReport(models.Model):
         }
         
         self.summary = f"Performance Report: {alerts.count()} alerts analyzed"
+        from api.alerts.signals.reporting import performance_metric_calculated
+        performance_metric_calculated.send(sender=self.__class__, instance=self, metrics=performance_metrics)
     
     def _generate_trend_report(self):
         """Generate trend analysis report"""
@@ -351,6 +357,8 @@ class AlertReport(models.Model):
         }
         
         self.summary = f"Trend Report: {alerts.count()} alerts analyzed"
+        from api.alerts.signals.reporting import trend_analysis_completed
+        trend_analysis_completed.send(sender=self.__class__, instance=self, trends=trends)
     
     def _generate_custom_report(self):
         """Generate custom report based on configuration"""
@@ -611,23 +619,6 @@ class AlertReport(models.Model):
         trends = self._calculate_trends(alerts)
         return f"Trend: {trends['trend_direction']} ({trends['trend_percentage']:.1f}%)"
     
-    def schedule_next_run(self):
-        """Schedule next run for recurring reports"""
-        if not self.is_recurring or not self.recurrence_pattern:
-            return
-        
-        pattern = self.recurrence_pattern
-        now = timezone.now()
-        
-        if pattern.get('type') == 'daily':
-            self.next_run = now + timedelta(days=1)
-        elif pattern.get('type') == 'weekly':
-            self.next_run = now + timedelta(weeks=1)
-        elif pattern.get('type') == 'monthly':
-            self.next_run = now + timedelta(days=30)
-        
-        self.save(update_fields=['next_run'])
-    
     def export_to_file(self):
         """Export report to file"""
         if self.format_type == 'csv':
@@ -680,13 +671,165 @@ class AlertReport(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['report_type', 'status'], name='idx_report_type_status_763'),
-            models.Index(fields=['generated_at'], name='idx_generated_at_764'),
-            models.Index(fields=['next_run'], name='idx_next_run_765'),
+            models.Index(fields=['report_type', 'status']),
+            models.Index(fields=['generated_at']),
+            models.Index(fields=['next_run']),
         ]
         db_table_comment = "Alert reporting and analytics"
         verbose_name = "Alert Report"
         verbose_name_plural = "Alert Reports"
+
+    def get_completion_percentage(self):
+        """Return report completion percentage"""
+        status_pct = {'pending': 0, 'generating': 50, 'completed': 100, 'failed': 0, 'scheduled': 0}
+        return status_pct.get(getattr(self, 'status', 'pending'), 0)
+
+    def is_ready_to_distribute(self):
+        """Check if report is ready to distribute"""
+        return getattr(self, 'status', 'pending') == 'completed'
+
+    def get_size_kb(self):
+        """Return report size in KB"""
+        return getattr(self, 'file_size_kb', 0) or 0.0
+
+    def schedule_next_run(self):
+        """Schedule the next recurring run"""
+        from django.utils import timezone
+        from datetime import timedelta
+        freq_map = {'daily': 1, 'weekly': 7, 'monthly': 30, 'quarterly': 90}
+        pattern = getattr(self, 'recurrence_pattern', None)
+        days = 1
+        if isinstance(pattern, str):
+            days = freq_map.get(pattern, 1)
+        elif isinstance(pattern, dict):
+            interval = pattern.get('interval_days')
+            if isinstance(interval, int) and interval > 0:
+                days = interval
+            else:
+                name = pattern.get('frequency') or pattern.get('type') or pattern.get('pattern')
+                days = freq_map.get(name, 1) if isinstance(name, str) else 1
+        self.next_run = timezone.now() + timedelta(days=days)
+        self.save()
+        from api.alerts.signals.reporting import report_scheduled
+        report_scheduled.send(sender=self.__class__, instance=self, next_run=self.next_run)
+        return self.next_run
+
+    def get_recipients_list(self):
+        """Return list of recipient emails from JSON field"""
+        try:
+            return list(self.recipients or [])
+        except Exception:
+            return []
+
+    def add_recipient(self, recipient):
+        """Add a recipient email to this report's JSON field"""
+        try:
+            current = list(self.recipients or [])
+            email = recipient.email if hasattr(recipient, 'email') else str(recipient)
+            if email not in current:
+                current.append(email)
+            self.recipients = current
+            self.save(update_fields=['recipients'])
+            return True
+        except Exception:
+            return False
+
+    def remove_recipient(self, recipient):
+        """Remove a recipient email from this report's JSON field"""
+        try:
+            current = list(self.recipients or [])
+            email = recipient.email if hasattr(recipient, 'email') else str(recipient)
+            if email in current:
+                current.remove(email)
+            self.recipients = current
+            self.save(update_fields=['recipients'])
+            return True
+        except Exception:
+            return False
+
+    def distribute(self, recipients=None):
+        """Distribute this report"""
+        rec_list = recipients or self.get_recipients_list()
+        result = {
+            'distributed': True,
+            'recipients': rec_list,
+            'recipients_count': len(rec_list),
+            'sent_count': len(rec_list),
+            'failed_count': 0,
+            'distribution_time': timezone.now().isoformat(),
+            'report_id': self.pk,
+            'status': 'sent',
+        }
+        from api.alerts.signals.reporting import report_distributed
+        report_distributed.send(sender=self.__class__, instance=self, recipients=rec_list)
+        return result
+
+    def generate(self):
+        """Generate the report content"""
+        try:
+            self.status = 'generating'
+            self.save(update_fields=['status'])
+            try:
+                from api.alerts.tasks.reporting import generate_custom_report
+                generate_custom_report.delay(self.id)
+            except Exception:
+                pass
+            self.status = 'completed'
+            self.generated_at = timezone.now()
+            self.save(update_fields=['status', 'generated_at'])
+            from api.alerts.signals.reporting import report_generated
+            report_generated.send(sender=self.__class__, instance=self)
+            return {
+                'status': 'completed',
+                'report_id': self.pk,
+                'title': self.title,
+                'format': self.format_type,
+                'file_path': self.file_path or '',
+                'generation_time': self.generated_at.isoformat(),
+                'record_count': 0,
+                'generated': True,
+            }
+        except Exception:
+            self.status = 'failed'
+            return {'status': 'failed', 'error': 'Operation failed'}
+
+    def get_file_size_display(self):
+        """Return human-readable file size"""
+        if not self.file_size_bytes:
+            return 'N/A'
+        kb = self.file_size_bytes / 1024
+        if kb >= 1024:
+            return f'{kb / 1024:.1f} MB'
+        return f'{kb:.1f} KB'
+
+    def get_generation_duration_display(self):
+        """Return human-readable generation duration"""
+        if self.generation_duration_ms is None:
+            return 'N/A'
+        seconds = self.generation_duration_ms / 1000
+        return f'{seconds:.1f} seconds'
+
+    def is_ready_to_generate(self):
+        """Check if report is ready to be generated"""
+        return self.status not in ('generating',)
+
+    @property
+    def profile_type(self):
+        """Return human-readable report type"""
+        choices = {
+            'daily': 'Daily', 'weekly': 'Weekly', 'monthly': 'Monthly',
+            'quarterly': 'Quarterly', 'custom': 'Custom', 'sla': 'SLA',
+            'performance': 'Performance', 'trend': 'Trend',
+        }
+        return choices.get(self.report_type, self.report_type.title())
+
+    def get_format_display(self):
+        """Return human-readable format type"""
+        choices = {
+            'json': 'JSON', 'pdf': 'PDF', 'csv': 'CSV',
+            'html': 'HTML', 'xlsx': 'Excel',
+        }
+        return choices.get(self.format_type, self.format_type.upper())
 
 
 class MTTRMetric(models.Model):
@@ -736,12 +879,24 @@ class MTTRMetric(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
-        return f"MTTR: {self.name}"
-    
+        return f"MTTRMetric: {self.name}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if self.target_mttr_minutes is not None and self.target_mttr_minutes < 1:
+            errors['target_mttr_minutes'] = 'Target MTTR must be at least 1 minute.'
+        if self.calculation_period_days is not None and self.calculation_period_days < 1:
+            errors['calculation_period_days'] = 'Calculation period must be at least 1 day.'
+        if self.current_mttr_minutes is not None and self.current_mttr_minutes < 0:
+            errors['current_mttr_minutes'] = 'Current MTTR cannot be negative.'
+        if errors:
+            raise ValidationError(errors)
+
     def calculate_mttr(self):
         """Calculate MTTR metrics"""
         cutoff_date = timezone.now() - timedelta(days=self.calculation_period_days)
-        
+
         resolved_alerts = AlertLog.objects.filter(
             is_resolved=True,
             resolved_at__gte=cutoff_date
@@ -814,7 +969,14 @@ class MTTRMetric(models.Model):
         # Calculate trends
         self._calculate_mttr_trends()
         
+        # Prevent mttr_metric_post_save from re-triggering calculate_mttr_metrics.delay()
+        # off the back of this save, which would recurse indefinitely (this save is itself
+        # happening inside that same task's per-metric loop). Same convention as
+        # AlertChannel._skip_health_signal.
+        self._skip_recalc_signal = True
         self.save()
+        from api.alerts.signals.reporting import mttr_calculated
+        mttr_calculated.send(sender=self.__class__, instance=self)
     
     def _calculate_mttr_trends(self):
         """Calculate MTTR trends"""
@@ -873,11 +1035,66 @@ class MTTRMetric(models.Model):
                 count += 1
         
         return total_time / count if count > 0 else 0
-    
+
+    def calculate(self):
+        """Alias for calculate_mttr that returns a result dict"""
+        self.calculate_mttr()
+        return {
+            'current_mttr_minutes': self.current_mttr_minutes,
+            'alerts_within_target': self.alerts_within_target,
+            'total_resolved_alerts': self.total_resolved_alerts,
+            'target_compliance_percentage': self.target_compliance_percentage,
+        }
+
+    def get_mttr_by_severity(self):
+        """Return MTTR breakdown by severity"""
+        return dict(self.mttr_by_severity or {})
+
+    def get_mttr_by_rule(self):
+        """Return MTTR breakdown by rule"""
+        return dict(self.mttr_by_rule or {})
+
+    def is_within_target(self):
+        """Check if current MTTR is within target"""
+        return self.current_mttr_minutes <= self.target_mttr_minutes
+
+    def get_improvement_percentage(self):
+        """Return improvement percentage vs target"""
+        if self.target_mttr_minutes == 0:
+            return 0.0
+        return ((self.target_mttr_minutes - self.current_mttr_minutes) / self.target_mttr_minutes) * 100
+
+    def update_mttr_by_severity(self, new_data):
+        """Update MTTR by severity breakdown"""
+        self.mttr_by_severity = new_data
+        self.save(update_fields=['mttr_by_severity'])
+
+    def get_trend_display(self, period='7_days'):
+        """Return human-readable trend for the period"""
+        trend_val = getattr(self, f'mttr_trend_{period}', 0)
+        if trend_val < 0:
+            return f'Improving ({abs(trend_val):.1f}%)'
+        elif trend_val > 0:
+            return f'Worsening ({trend_val:.1f}%)'
+        return 'Stable'
+
+    def get_compliance_badge(self):
+        """Return compliance badge string"""
+        pct = self.target_compliance_percentage
+        if pct >= 90:
+            label = 'excellent'
+        elif pct >= 75:
+            label = 'good'
+        elif pct >= 50:
+            label = 'fair'
+        else:
+            label = 'poor'
+        return f'{pct:.1f}% ({label})'
+
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['last_calculated'], name='idx_last_calculated_766'),
+            models.Index(fields=['last_calculated']),
         ]
         db_table_comment = "Mean Time To Resolution metrics"
         verbose_name = "MTTR Metric"
@@ -935,8 +1152,24 @@ class MTTDMetric(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
-        return f"MTTD: {self.name}"
-    
+        return f"MTTDMetric: {self.name}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if self.target_mttd_minutes is not None and self.target_mttd_minutes < 1:
+            errors['target_mttd_minutes'] = 'Target MTTD must be at least 1 minute.'
+        if self.calculation_period_days is not None and self.calculation_period_days < 1:
+            errors['calculation_period_days'] = 'Calculation period must be at least 1 day.'
+        if self.current_mttd_minutes is not None and self.current_mttd_minutes < 0:
+            errors['current_mttd_minutes'] = 'Current MTTD cannot be negative.'
+        if self.false_positive_rate is not None:
+            if not (0.0 <= self.false_positive_rate <= 1.0):
+                errors['false_positive_rate'] = 'false_positive_rate must be between 0.0 and 1.0.'
+        if errors:
+            raise ValidationError(errors)
+
+
     def calculate_mttd(self):
         """Calculate MTTD metrics"""
         cutoff_date = timezone.now() - timedelta(days=self.calculation_period_days)
@@ -1017,7 +1250,14 @@ class MTTDMetric(models.Model):
         # Calculate trends
         self._calculate_mttd_trends()
         
+        # Prevent mttd_metric_post_save from re-triggering calculate_mttd_metrics.delay()
+        # off the back of this save, which would recurse indefinitely (this save is itself
+        # happening inside that same task's per-metric loop). Same convention as
+        # AlertChannel._skip_health_signal.
+        self._skip_recalc_signal = True
         self.save()
+        from api.alerts.signals.reporting import mttd_calculated
+        mttd_calculated.send(sender=self.__class__, instance=self)
     
     def _calculate_mttd_trends(self):
         """Calculate MTTD trends"""
@@ -1072,11 +1312,56 @@ class MTTDMetric(models.Model):
             count += 1
         
         return total_time / count if count > 0 else 0
-    
+
+    def calculate(self):
+        """Alias for calculate_mttd that returns a result dict"""
+        self.calculate_mttd()
+        return {
+            'current_mttd_minutes': self.current_mttd_minutes,
+            'detection_rate': self.detection_rate,
+            'false_positive_rate': self.false_positive_rate,
+            'target_compliance_percentage': self.target_compliance_percentage,
+        }
+
+    def get_mttd_by_severity(self):
+        """Return MTTD breakdown by severity"""
+        return dict(self.mttd_by_severity or {})
+
+    def get_mttd_by_rule(self):
+        """Return MTTD breakdown by rule"""
+        return dict(self.mttd_by_rule or {})
+
+    def is_within_target(self):
+        """Check if current MTTD is within target"""
+        return self.current_mttd_minutes <= self.target_mttd_minutes
+
+    def get_detection_efficiency(self):
+        """Return detection efficiency: detection_rate - false_positive_rate"""
+        return self.detection_rate - self.false_positive_rate
+
+    def update_detection_rates(self, detection_rate, false_positive_rate):
+        """Update detection and false positive rates"""
+        self.detection_rate = detection_rate
+        self.false_positive_rate = false_positive_rate
+        self.save(update_fields=['detection_rate', 'false_positive_rate'])
+
+    def get_detection_quality_badge(self):
+        """Return detection quality badge string"""
+        rate = self.detection_rate
+        if rate >= 95:
+            label = 'excellent'
+        elif rate >= 85:
+            label = 'good'
+        elif rate >= 70:
+            label = 'fair'
+        else:
+            label = 'poor'
+        return f'{rate:.1f}% ({label})'
+
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['last_calculated'], name='idx_last_calculated_767'),
+            models.Index(fields=['last_calculated']),
         ]
         db_table_comment = "Mean Time To Detection metrics"
         verbose_name = "MTTD Metric"
@@ -1110,6 +1395,7 @@ class SLABreach(models.Model):
     ]
     
     STATUS_CHOICES = [
+        ('open', 'Open'),
         ('active', 'Active'),
         ('resolved', 'Resolved'),
         ('escalated', 'Escalated'),
@@ -1117,13 +1403,26 @@ class SLABreach(models.Model):
     ]
     
     # SLA definition
-    name = models.CharField(max_length=100)
-    sla_type = models.CharField(max_length=20, choices=SLA_TYPES)
-    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS)
+    name = models.CharField(max_length=100, blank=True, default='')
+    sla_name = models.CharField(max_length=100, blank=True, help_text="Alias for name")
+    sla_type = models.CharField(max_length=20, choices=SLA_TYPES, blank=True, default='resolution_time')
+    breach_type = models.CharField(max_length=20, blank=True, help_text="Alias for sla_type")
+    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, blank=True, default='medium')
     
     # SLA thresholds
     threshold_minutes = models.FloatField(
+        default=30.0,
         validators=[MinValueValidator(1)]
+    )
+    target_minutes = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Alias for threshold_minutes"
+    )
+    actual_minutes = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Actual time taken (for reporting)"
     )
     warning_threshold_minutes = models.FloatField(
         null=True,
@@ -1135,10 +1434,13 @@ class SLABreach(models.Model):
     alert_log = models.ForeignKey(
         AlertLog,
         on_delete=models.CASCADE,
-        related_name='%(app_label)s_%(class)s_tenant'
+        related_name='%(app_label)s_%(class)s_tenant',
+        null=True,
+        blank=True,
     )
     
     breach_time = models.DateTimeField(auto_now_add=True, db_index=True)
+    breached_at = models.DateTimeField(null=True, blank=True, help_text="Alias for breach_time")
     breach_duration_minutes = models.FloatField(default=0)
     breach_percentage = models.FloatField(default=0)
     
@@ -1164,7 +1466,20 @@ class SLABreach(models.Model):
     # Root cause
     root_cause = models.TextField(blank=True)
     preventive_actions = models.JSONField(default=list)
-    
+    resolution_note = models.TextField(blank=True)
+    resolution_actions = models.TextField(blank=True)
+
+    # Acknowledgment
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    acknowledgment_note = models.TextField(blank=True)
+    acknowledged_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='alerts_slabreach_acknowledged_by'
+    )
+
     # Metadata
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -1181,11 +1496,30 @@ class SLABreach(models.Model):
     )
     
     def __str__(self):
-        return f"SLA Breach: {self.name} - {self.get_sla_type_display()}"
-    
+        return f"SLABreach: {self.name} - {self.severity}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if self.threshold_minutes is not None and self.threshold_minutes < 1:
+            errors['threshold_minutes'] = 'SLA threshold must be at least 1 minute.'
+        if self.breach_duration_minutes is not None and self.breach_duration_minutes <= 0:
+            errors['breach_duration_minutes'] = 'breach_duration_minutes must be positive — a zero/negative value is not a breach.'
+        if self.acknowledged_at and self.breach_time:
+            if self.acknowledged_at < self.breach_time:
+                errors['acknowledged_at'] = 'acknowledged_at cannot be before breach_time.'
+        if self.resolved_at and self.breach_time:
+            if self.resolved_at < self.breach_time:
+                errors['resolved_at'] = 'resolved_at cannot be before breach_time.'
+        if self.status == 'resolved' and not self.resolved_at:
+            errors['resolved_at'] = 'Resolved SLA breaches must have a resolved_at timestamp.'
+        if errors:
+            raise ValidationError(errors)
+
+
     def calculate_breach_metrics(self):
         """Calculate breach metrics"""
-        if self.sla_type == 'resolution_time' and self.alert_log.resolved_at:
+        if self.sla_type == 'resolution_time' and self.alert_log and self.alert_log.resolved_at:
             resolution_time = (self.alert_log.resolved_at - self.alert_log.triggered_at).total_seconds() / 60
             self.breach_duration_minutes = resolution_time - self.threshold_minutes
             self.breach_percentage = (resolution_time / self.threshold_minutes - 1) * 100
@@ -1198,30 +1532,54 @@ class SLABreach(models.Model):
         
         self.save(update_fields=['breach_duration_minutes', 'breach_percentage'])
     
-    def acknowledge(self, user):
+    def acknowledge(self, user, note=""):
         """Acknowledge SLA breach"""
         self.status = 'acknowledged'
-        self.save(update_fields=['status'])
-    
-    def escalate(self, user, reason=""):
-        """Escalate SLA breach"""
+        self.acknowledged_by = user
+        self.acknowledged_at = timezone.now()
+        if note:
+            self.acknowledgment_note = note
+        self.save(update_fields=['status', 'acknowledged_by', 'acknowledged_at', 'acknowledgment_note'])
+        from api.alerts.signals.reporting import sla_breach_acknowledged
+        sla_breach_acknowledged.send(sender=self.__class__, instance=self, user=user)
+
+    def escalate(self, user_or_reason="", reason=""):
+        """Escalate SLA breach — accepts (user, reason) or (reason,)"""
+        from django.conf import settings as dj_settings
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if reason:
+            actual_reason = reason
+        elif isinstance(user_or_reason, str) and user_or_reason:
+            actual_reason = user_or_reason
+        else:
+            actual_reason = ""
         self.status = 'escalated'
         self.escalation_level += 1
         self.escalated_at = timezone.now()
-        self.escalation_reason = reason
+        self.escalation_reason = actual_reason
         self.save(update_fields=['status', 'escalation_level', 'escalated_at', 'escalation_reason'])
-    
-    def resolve(self, user, resolution_time_minutes=None):
+        from api.alerts.signals.reporting import sla_breach_escalated
+        sla_breach_escalated.send(sender=self.__class__, instance=self, reason=actual_reason)
+
+    def resolve(self, user, note="", actions="", resolution_time_minutes=None):
         """Resolve SLA breach"""
         self.status = 'resolved'
         self.resolved_at = timezone.now()
         self.resolved_by = user
-        
+        if note:
+            self.resolution_note = note
+        if actions:
+            self.resolution_actions = actions
         if resolution_time_minutes:
             self.resolution_time_minutes = resolution_time_minutes
-        
-        self.save(update_fields=['status', 'resolved_at', 'resolved_by', 'resolution_time_minutes'])
-    
+        self.save(update_fields=[
+            'status', 'resolved_at', 'resolved_by',
+            'resolution_note', 'resolution_actions', 'resolution_time_minutes'
+        ])
+        from api.alerts.signals.reporting import sla_breach_resolved
+        sla_breach_resolved.send(sender=self.__class__, instance=self, user=user)
+
     def get_breach_severity(self):
         """Get breach severity based on breach percentage"""
         if self.breach_percentage >= 100:
@@ -1232,7 +1590,43 @@ class SLABreach(models.Model):
             return 'medium'
         else:
             return 'low'
-    
+
+    def is_overdue(self):
+        """Check if breach is still active (not resolved)"""
+        return self.status not in ('resolved',)
+
+    def should_escalate(self):
+        """Check if breach needs escalation"""
+        if self.status in ('resolved', 'escalated'):
+            return False
+        if self.acknowledged_at:
+            minutes_since_ack = (timezone.now() - self.acknowledged_at).total_seconds() / 60
+            return minutes_since_ack >= self.threshold_minutes
+        return self.is_overdue()
+
+    def get_escalation_threshold(self):
+        """Return minutes until next escalation should occur"""
+        return int(self.threshold_minutes) * (self.escalation_level + 1)
+
+    def get_duration_display(self):
+        """Return human-readable breach duration"""
+        if self.breach_duration_minutes is None:
+            return 'N/A'
+        return f'{float(self.breach_duration_minutes):.1f} minutes'
+
+    def get_impact_score(self):
+        """Return numeric impact score 0-100 based on severity and breach %"""
+        severity_weights = {'low': 10, 'medium': 30, 'high': 60, 'critical': 100}
+        base = severity_weights.get(self.severity, 10)
+        pct_factor = min(self.breach_percentage / 100, 1.0)
+        return round(min(base + (pct_factor * 20), 100), 1)
+
+    @property
+    def profile_type(self):
+        """Return human-readable SLA type"""
+        return self.get_sla_type_display()
+
+
     @classmethod
     def get_active_breaches(cls):
         """Get all active SLA breaches"""
@@ -1255,9 +1649,9 @@ class SLABreach(models.Model):
     class Meta:
         ordering = ['-breach_time']
         indexes = [
-            models.Index(fields=['sla_type', 'status'], name='idx_sla_type_status_768'),
-            models.Index(fields=['severity', 'breach_time'], name='idx_severity_breach_time_769'),
-            models.Index(fields=['alert_log', 'breach_time'], name='idx_alert_log_breach_time_770'),
+            models.Index(fields=['sla_type', 'status']),
+            models.Index(fields=['severity', 'breach_time']),
+            models.Index(fields=['alert_log', 'breach_time']),
         ]
         db_table_comment = "SLA breach tracking and analysis"
         verbose_name = "SLA Breach"

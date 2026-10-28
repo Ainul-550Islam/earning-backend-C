@@ -1,45 +1,41 @@
+# core/models.py
+# Central abstract base models — used by CMS and all api apps.
+# All other apps (cms, wallet, users, etc.) import from here.
+
 from django.db import models
-from django.utils.translation import gettext_lazy as _
-import uuid
-from django.core.exceptions import ValidationError
 
 
-class BaseModel(models.Model):
-    """
-    Abstract base model with UUID primary key.
-    """
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-        verbose_name=_('ID')
-    )
-
-    class Meta:
-        abstract = True
-
-
-class TimeStampedModel(BaseModel):
-    """
-    Abstract model with created and modified timestamps.
-    """
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_('Created At')
-    )
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name=_('Updated At')
-    )
+class TimeStampedModel(models.Model):
+    """Abstract base: created_at + updated_at timestamps."""
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
         ordering = ['-created_at']
 
 
-# SystemSettings Model
-    def save(self, *args, **kwargs):
-        # Ensure only one SystemSettings instance exists
-        if not self.pk and SystemSettings.objects.exists():
-            raise ValidationError("Only one SystemSettings instance is allowed")
-        return super().save(*args, **kwargs)
+class SoftDeleteModel(models.Model):
+    """Abstract base: soft-delete support (is_deleted flag)."""
+    is_deleted  = models.BooleanField(default=False, db_index=True)
+    deleted_at  = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+    def soft_delete(self):
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
+    def restore(self):
+        self.is_deleted = False
+        self.deleted_at = None
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
+
+class BaseModel(TimeStampedModel, SoftDeleteModel):
+    """Full base model: timestamps + soft-delete."""
+    class Meta(TimeStampedModel.Meta):
+        abstract = True

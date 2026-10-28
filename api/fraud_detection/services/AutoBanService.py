@@ -3,12 +3,18 @@ from typing import Dict, List, Any, Optional, Tuple
 from django.utils import timezone
 from datetime import timedelta
 from django.db import transaction
-from ..models import (
+from api.fraud_detection.models import (
     FraudAttempt, UserRiskProfile, FraudRule,
-    FraudAlert, IPReputation
+    FraudAlert, IPReputation, FraudCase
 )
-from api.users.models import User
-from api.wallet.models import WalletTransaction
+try:
+    from api.users.models import User
+except ImportError:
+    User = None  # type: ignore
+try:
+    from api.wallet.models import WalletTransaction
+except ImportError:
+    WalletTransaction = None  # type: ignore
 import json
 
 logger = logging.getLogger(__name__)
@@ -135,7 +141,7 @@ class AutoBanService:
         
         return results
     
-    def auto_ban_user(self, user: User, reason: str, duration_hours: int = None) -> Dict:
+    def auto_ban_user(self, user: User, reason: str, duration_hours: int = None, fraud_score: int = 0, fraud_attempt: FraudAttempt = None) -> Dict:
         """
         Automatically ban a user
         """
@@ -169,6 +175,12 @@ class AutoBanService:
                 # Create audit log
                 self._create_ban_audit_log(user, reason, duration_hours)
                 
+                # Create FraudCase for high-score bans
+                fraud_case_created = False
+                if fraud_score >= 70:
+                    self._create_fraud_case_for_ban(user, fraud_score, reason, fraud_attempt)
+                    fraud_case_created = True
+                
                 logger.warning(f"Auto-banned user {user.id}: {reason} (until {ban_until})")
                 
                 return {
@@ -177,7 +189,8 @@ class AutoBanService:
                     'user_id': user.id,
                     'duration_hours': duration_hours,
                     'banned_until': ban_until.isoformat(),
-                    'reason': reason
+                    'reason': reason,
+                    'fraud_case_created': fraud_case_created
                 }
                 
         except Exception as e:
@@ -710,3 +723,36 @@ class AutoBanService:
             validation_results['warnings'].append('Severe offense ban duration is very long')
         
         return validation_results
+    
+    def _create_fraud_case_for_ban(self, user: User, fraud_score: int, reason: str, fraud_attempt: FraudAttempt = None):
+        """Create fraud case for high-score bans"""
+        try:
+            from api.fraud_detection.models import FraudCase
+            from api.fraud_detection.choices import CaseStatus
+            
+            # Generate case number
+            today = timezone.now().strftime('%Y%m%d')
+            case_number = f"FC-BAN-{today}-{user.id}"
+            
+            # Create fraud case
+            case = FraudCase.objects.create(
+                case_number=case_number,
+                user=user,
+                title=f"Auto-Ban: {reason}",
+                description=f"Automatic ban due to high fraud score: {fraud_score}. {reason}",
+                risk_score=fraud_score,
+                priority='critical' if fraud_score >= 85 else 'high',
+                status=CaseStatus.OPEN,
+                evidence_data=json.dumps({
+                    'auto_ban': True,
+                    'fraud_score': fraud_score,
+                    'ban_reason': reason,
+                    'fraud_attempt_id': fraud_attempt.attempt_id if fraud_attempt else None,
+                    'banned_at': timezone.now().isoformat()
+                })
+            )
+            
+            logger.info(f"Created fraud case {case_number} for auto-ban of user {user.id}")
+            
+        except Exception as e:
+            logger.error(f"Error creating fraud case for ban: {e}")

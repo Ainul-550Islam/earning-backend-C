@@ -1,5 +1,5 @@
 from django.contrib import admin
-from ..models import OfferScoreCache, OfferPerformanceStat
+from api.smartlink.models import OfferScoreCache, OfferPerformanceStat
 
 
 @admin.register(OfferPerformanceStat)

@@ -6,12 +6,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 from .services import (
-    AlertProcessorService,
     NotificationService,
     AnalyticsService,
     AlertGroupService
 )
-from .models import SystemHealthCheck, AlertSuppression
+from .services.core import LegacyAlertProcessorService as AlertProcessorService
+from .models import SystemHealthCheck, AlertSuppression, AlertRule, AlertLog, Notification, AlertGroup
 
 
 @shared_task

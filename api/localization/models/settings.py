@@ -155,6 +155,10 @@ class AddressFormat(models.Model):
 
 # ── Webhook Management ────────────────────────────────────────────
 class WebhookRegistration(models.Model):
+    tenant_id = models.CharField(
+        max_length=100, db_index=True, blank=True, default='',
+        help_text='Tenant identifier — empty means global/shared'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     """Registered webhook endpoints — DB-তে manage করা হয়"""
@@ -196,6 +200,10 @@ class WebhookDeliveryLog(models.Model):
     delivered  = models.BooleanField(default=False)
     error      = models.TextField(blank=True)
     duration_ms = models.PositiveIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        status = 'OK' if self.delivered else 'FAIL'
+        return f"[{status}] {self.event} → {self.webhook_id} (attempt {self.attempt})"
 
     class Meta:
         verbose_name = _('Webhook Delivery Log')

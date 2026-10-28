@@ -24,6 +24,7 @@ class FrequencyCap(TimeStampedModel):
     ], default="user")
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_frequency_caps"
         verbose_name = _("Frequency Cap")
         ordering = ["-created_at"]
@@ -46,6 +47,7 @@ class FrequencyLog(TimeStampedModel):
     last_event_at    = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_frequency_logs"
         verbose_name = _("Frequency Log")
         unique_together = [["frequency_cap", "identifier", "window_start"]]

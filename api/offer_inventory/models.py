@@ -16,7 +16,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import (
-    MinValueValidator, MaxValueValidator, URLValidator
+    MinValueValidator, MaxValueValidator
 )
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -69,7 +69,7 @@ class OfferNetwork(TimeStampedModel):
         verbose_name = _('Offer Network')
 
     def __str__(self):
-        return self.name
+        return self.name or 'Unnamed offer network'
 
 
 class OfferCategory(TimeStampedModel):
@@ -88,7 +88,7 @@ class OfferCategory(TimeStampedModel):
         verbose_name = _('Offer Category')
 
     def __str__(self):
-        return self.name
+        return self.name or 'Unnamed offer category'
 
 
 class Offer(TimeStampedModel):
@@ -143,7 +143,7 @@ class Offer(TimeStampedModel):
         verbose_name = _('Offer')
 
     def __str__(self):
-        return self.title
+        return self.title or 'Untitled offer'
 
     @property
     def is_available(self):
@@ -245,7 +245,7 @@ class OfferCap(TimeStampedModel):
         unique_together = ('offer', 'cap_type')
 
     def __str__(self):
-        return f"{self.offer.title} | {self.cap_type} cap: {self.current_count}/{self.cap_limit}"
+        return f"{self.offer or 'Unassigned offer'} | {self.cap_type} cap: {self.current_count}/{self.cap_limit}"
 
     @property
     def is_reached(self):
@@ -281,7 +281,8 @@ class OfferInventorySource(TimeStampedModel):
         ]
 
     def __str__(self):
-        return f"{self.network.name} — {self.feed_url[:60]}"
+        feed_url = (self.feed_url or '')[:60]
+        return f"{self.network or 'Unassigned network'} — {feed_url}"
 
 
 class DirectAdvertiser(TimeStampedModel):
@@ -304,7 +305,7 @@ class DirectAdvertiser(TimeStampedModel):
         verbose_name = _('Direct Advertiser')
 
     def __str__(self):
-        return self.company_name
+        return self.company_name or 'Unnamed advertiser'
 
 
 class Campaign(TimeStampedModel):
@@ -332,7 +333,7 @@ class Campaign(TimeStampedModel):
         ordering  = ['-created_at']
 
     def __str__(self):
-        return self.name
+        return self.name or 'Unnamed campaign'
 
     @property
     def remaining_budget(self):
@@ -352,7 +353,7 @@ class OfferLandingPage(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return f"{self.offer.title} — {self.title}"
+        return f"{self.offer or 'Unassigned offer'} — {self.title or 'Untitled landing page'}"
 
 
 class OfferCreative(TimeStampedModel):
@@ -376,7 +377,7 @@ class OfferCreative(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return f"{self.offer.title} | {self.creative_type}"
+        return f"{self.offer or 'Unassigned offer'} | {self.creative_type or 'Unspecified creative'}"
 
 
 class IncentiveLevel(TimeStampedModel):
@@ -431,7 +432,7 @@ class OfferSchedule(TimeStampedModel):
         ordering  = ['scheduled_at']
 
     def __str__(self):
-        return f"{self.offer.title} → {self.action} @ {self.scheduled_at}"
+        return f"{self.offer or 'Unassigned offer'} → {self.action or 'Unspecified action'} @ {self.scheduled_at}"
 
 
 class NetworkPinger(TimeStampedModel):
@@ -447,7 +448,7 @@ class NetworkPinger(TimeStampedModel):
         ordering  = ['-created_at']
 
     def __str__(self):
-        return f"{self.network.name} | {self.response_code} | {self.response_time}ms"
+        return f"{self.network or 'Unassigned network'} | {self.response_code} | {self.response_time}ms"
 
 
 class OfferRating(TimeStampedModel):
@@ -463,7 +464,7 @@ class OfferRating(TimeStampedModel):
         unique_together = ('offer', 'user')
 
     def __str__(self):
-        return f"{self.offer.title} — ★{self.score} by {self.user}"
+        return f"{self.offer or 'Unassigned offer'} — ★{self.score} by {self.user or 'Unknown user'}"
 
 
 class OfferQuestionnaire(TimeStampedModel):
@@ -479,7 +480,7 @@ class OfferQuestionnaire(TimeStampedModel):
         ordering  = ['order']
 
     def __str__(self):
-        return f"{self.offer.title} | Q{self.order}"
+        return f"{self.offer or 'Unassigned offer'} | Q{self.order}"
 
 
 class OfferTag(TimeStampedModel):
@@ -513,7 +514,7 @@ class OfferVisibilityRule(TimeStampedModel):
         ordering  = ['priority']
 
     def __str__(self):
-        return f"{self.offer.title} | {self.rule_type} {self.operator}"
+        return f"{self.offer or 'Unassigned offer'} | {self.rule_type or 'Unspecified rule'} {self.operator or ''}"
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -532,7 +533,7 @@ class TrafficSource(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return self.name
+        return self.name or 'Unnamed traffic source'
 
 
 class TrackingDomain(TimeStampedModel):
@@ -547,7 +548,7 @@ class TrackingDomain(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return self.domain
+        return self.domain or 'Unnamed tracking domain'
 
 
 class SubID(TimeStampedModel):
@@ -613,7 +614,8 @@ class Click(TimeStampedModel):
         ]
 
     def __str__(self):
-        return f"Click {self.click_token[:12]}... | {self.offer}"
+        token = (self.click_token or 'unassigned')[:12]
+        return f"Click {token} | {self.offer or 'Unassigned offer'}"
 
 
 class Impression(TimeStampedModel):
@@ -650,7 +652,7 @@ class ConversionStatus(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return self.name
+        return self.name or 'Unnamed conversion status'
 
 
 class Conversion(TimeStampedModel):
@@ -775,7 +777,8 @@ class ClickSignature(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return f"Sig {self.signature[:16]}... | {'✓' if self.is_valid else '✗'}"
+        signature = (self.signature or 'unsigned')[:16]
+        return f"Sig {signature} | {'✓' if self.is_valid else '✗'}"
 
 
 class S2SRequest(TimeStampedModel):
@@ -811,7 +814,7 @@ class RedirectLog(TimeStampedModel):
         ordering  = ['-created_at']
 
     def __str__(self):
-        return f"Redirect → {self.final_url[:60]}"
+        return f"Redirect → {(self.final_url or 'No destination')[:60]}"
 
 
 class LeadQualityScore(TimeStampedModel):
@@ -860,7 +863,7 @@ class BlacklistedIP(TimeStampedModel):
     source      = models.CharField(max_length=50, default='manual', help_text="manual | auto | external", null=True, blank=True)
     is_permanent= models.BooleanField(default=False)
     expires_at  = models.DateTimeField(null=True, blank=True)
-    blocked_by  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='blocked_ips')
+    blocked_by  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='offer_inventory_blocked_ips')
 
     class Meta:
         app_label = 'offer_inventory'
@@ -887,7 +890,7 @@ class ProxyList(TimeStampedModel):
 
 class UserRiskProfile(TimeStampedModel):
     """প্রতিটি user-এর fraud risk score।"""
-    user            = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='risk_profile', null=True, blank=True)
+    user            = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offer_inventory_risk_profile', null=True, blank=True)
     risk_score      = models.FloatField(default=0.0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     risk_level      = models.CharField(max_length=10, default='low', help_text="low | medium | high | critical", null=True, blank=True)
     total_flags     = models.PositiveSmallIntegerField(default=0)
@@ -932,7 +935,7 @@ class FraudRule(TimeStampedModel):
 class FraudAttempt(TimeStampedModel):
     """Fraud rule trigger হলে log হয়।"""
     rule        = models.ForeignKey(FraudRule, on_delete=models.SET_NULL, null=True, related_name='attempts')
-    user        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='fraud_attempts')
+    user        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='offer_inventory_fraud_attempts')
     ip_address  = models.GenericIPAddressField(blank=True, null=True)
     description = models.TextField()
     evidence    = models.JSONField(default=dict, blank=True)
@@ -966,7 +969,8 @@ class DeviceFingerprint(TimeStampedModel):
         indexes   = [models.Index(fields=['fingerprint'], name='idx_fingerprint_1174')]
 
     def __str__(self):
-        return f"FP {self.fingerprint[:16]}... | {'⚠' if self.is_flagged else '✓'}"
+        fingerprint = (self.fingerprint or 'unknown')[:16]
+        return f"FP {fingerprint} | {'⚠' if self.is_flagged else '✓'}"
 
 
 class HoneypotLog(TimeStampedModel):
@@ -998,7 +1002,7 @@ class UserAgentBlacklist(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return f"UA Blacklist: {self.pattern[:60]}"
+        return f"UA Blacklist: {(self.pattern or 'Empty pattern')[:60]}"
 
 
 class VPNProvider(TimeStampedModel):
@@ -1012,7 +1016,7 @@ class VPNProvider(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return self.name
+        return self.name or 'Unnamed VPN provider'
 
 
 class BotSignature(TimeStampedModel):
@@ -1069,7 +1073,8 @@ class SecurityIncident(TimeStampedModel):
         ordering  = ['-created_at']
 
     def __str__(self):
-        return f"[{self.severity.upper()}] {self.title}"
+        severity = (self.severity or 'unknown').upper()
+        return f"[{severity}] {self.title or 'Untitled security incident'}"
 
 
 class RateLimitLog(TimeStampedModel):
@@ -1169,7 +1174,8 @@ class PaymentMethod(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return f"{self.user} | {self.provider} | ***{self.account_number[-4:]}"
+        account_suffix = (self.account_number or '')[-4:] or '----'
+        return f"{self.user or 'Unknown user'} | {self.provider or 'Unspecified provider'} | ***{account_suffix}"
 
 
 class RevenueShare(TimeStampedModel):
@@ -1377,7 +1383,7 @@ class WithdrawalRequest(TimeStampedModel):
         CANCELLED = 'cancelled', _('Cancelled')
 
     tenant          = _tenant_fk()
-    user            = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='withdrawal_requests', null=True, blank=True)
+    user            = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offer_inventory_withdrawal_requests', null=True, blank=True)
     payment_method  = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True, related_name='withdrawals')
     payout_batch    = models.ForeignKey(PayoutBatch, on_delete=models.SET_NULL, null=True, blank=True, related_name='withdrawal_requests')
     amount          = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('1'))])
@@ -1387,7 +1393,7 @@ class WithdrawalRequest(TimeStampedModel):
     status          = models.CharField(max_length=15, choices=Status.choices, default=Status.PENDING, null=True, blank=True)
     reference_no    = models.CharField(max_length=100, null=True, blank=True)
     note            = models.TextField(blank=True)
-    processed_by    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_withdrawals')
+    processed_by    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='offer_inventory_processed_withdrawals')
     processed_at    = models.DateTimeField(null=True, blank=True)
     rejected_reason = models.TextField(blank=True)
 
@@ -1429,7 +1435,8 @@ class WalletTransaction(TimeStampedModel):
         indexes   = [models.Index(fields=['user', 'tx_type', 'created_at'], name='idx_user_tx_type_created_a_d55')]
 
     def __str__(self):
-        return f"{self.tx_type.upper()} {self.amount} {self.currency} | {self.user}"
+        tx_type = (self.tx_type or 'unknown').upper()
+        return f"{tx_type} {self.amount} {self.currency} | {self.user}"
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1618,7 +1625,7 @@ class UserAchievement(TimeStampedModel):
 
 class UserReferral(TimeStampedModel):
     """Referral relationship।"""
-    referrer     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referrals_made', null=True, blank=True)
+    referrer     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offer_inventory_referrals_made', null=True, blank=True)
     referred     = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offer_referral_referred_by', null=True, blank=True)
     referral_code= models.CharField(max_length=30, db_index=True, null=True, blank=True)
     is_converted = models.BooleanField(default=False)
@@ -1771,7 +1778,7 @@ class NetworkStat(TimeStampedModel):
         ordering    = ['-date']
 
     def __str__(self):
-        return f"{self.network.name} | {self.date} | {self.revenue}"
+        return f"{self.network or 'Unassigned network'} | {self.date} | {self.revenue}"
 
 
 class ErrorLog(TimeStampedModel):
@@ -1930,7 +1937,8 @@ class BackupLog(TimeStampedModel):
         ordering  = ['-created_at']
 
     def __str__(self):
-        return f"Backup {self.backup_type} | {self.status} | {self.created_at.date()}"
+        created_date = self.created_at.date() if self.created_at else 'unsaved'
+        return f"Backup {self.backup_type} | {self.status} | {created_date}"
 
 
 class APIKeyManager(TimeStampedModel):
@@ -1968,7 +1976,7 @@ class WebhookConfig(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return f"Webhook: {self.name} → {self.url[:60]}"
+        return f"Webhook: {self.name or 'Unnamed webhook'} → {(self.url or 'No URL')[:60]}"
 
 
 class CacheObject(TimeStampedModel):
@@ -2200,7 +2208,8 @@ class BidLog(TimeStampedModel):
         ]
 
     def __str__(self):
-        return f"Bid {self.request_id[:12]} | {'WON' if self.is_won else 'LOSS'} | eCPM={self.ecpm}"
+        request_id = (self.request_id or 'unassigned')[:12]
+        return f"Bid {request_id} | {'WON' if self.is_won else 'LOSS'} | eCPM={self.ecpm}"
 
 
 class DSPConfig(TimeStampedModel):
@@ -2319,7 +2328,7 @@ class AppPlacement(TimeStampedModel):
         app_label = 'offer_inventory'
 
     def __str__(self):
-        return f"{self.app.name} / {self.name}"
+        return f"{self.app or 'Unassigned app'} / {self.name or 'Unnamed placement'}"
 
 
 class PublisherPayout(TimeStampedModel):
@@ -2340,7 +2349,7 @@ class PublisherPayout(TimeStampedModel):
         indexes   = [models.Index(fields=['publisher', 'status'], name='idx_publisher_status_1185')]
 
     def __str__(self):
-        return f"PublisherPayout: {self.publisher.company_name} {self.amount} {self.currency}"
+        return f"PublisherPayout: {self.publisher or 'Unassigned publisher'} {self.amount} {self.currency}"
 
 
 class PublisherRevenue(TimeStampedModel):
@@ -2360,4 +2369,4 @@ class PublisherRevenue(TimeStampedModel):
         unique_together = ('publisher', 'app', 'date')
 
     def __str__(self):
-        return f"Revenue: {self.publisher.company_name} | {self.date} | ${self.gross_revenue}"
+        return f"Revenue: {self.publisher or 'Unassigned publisher'} | {self.date} | ${self.gross_revenue}"

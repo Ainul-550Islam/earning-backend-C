@@ -35,3 +35,16 @@ def generate_personalized_code(user, tenant, discount: int = 10) -> str:
 
 def validate_code_pattern(code: str) -> bool:
     return code.isalnum() and 4 <= len(code) <= 50
+
+# ── Compatibility aliases ─────────────────────────────────────────────────────
+def generate_code(prefix: str = "", length: int = 8) -> str:
+    """Single code — prefix + '-' + random suffix of given length."""
+    import random, string
+    chars = string.ascii_uppercase + string.digits
+    suffix = "".join(random.choices(chars, k=length))
+    return f"{prefix}-{suffix}" if prefix else suffix
+
+
+def bulk_generate(count: int, prefix: str = "", length: int = 8) -> list:
+    """Generate a list of unique promo codes."""
+    return [generate_code(prefix=prefix, length=length) for _ in range(count)]

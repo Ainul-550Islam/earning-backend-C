@@ -40,7 +40,7 @@ class AuditLog:
         self.level = kwargs.get('level', LogLevel.INFO)
         self.success = kwargs.get('success', True)
         self.error_message = kwargs.get('error_message')
-        self.duration_ms = kwargs.get('duration_ms')
+        self.response_time_ms = kwargs.get('response_time_ms')
         
         # Add system metadata
         self.metadata.update({
@@ -73,7 +73,7 @@ class AuditLog:
             'level': self.level,
             'success': self.success,
             'error_message': self.error_message,
-            'duration_ms': self.duration_ms
+            'response_time_ms': self.response_time_ms
         }
     
     @classmethod
@@ -95,7 +95,7 @@ class AuditLog:
             level=data.get('level', LogLevel.INFO),
             success=data.get('success', True),
             error_message=data.get('error_message'),
-            duration_ms=data.get('duration_ms')
+            duration_ms=data.get('response_time_ms')
         )
 
 

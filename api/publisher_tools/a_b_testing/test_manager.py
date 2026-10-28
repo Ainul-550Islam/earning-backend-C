@@ -155,6 +155,7 @@ class ABTest(TimeStampedModel):
     metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_ab_tests'
         verbose_name = _('A/B Test')
         verbose_name_plural = _('A/B Tests')
@@ -355,6 +356,7 @@ class ABTestVariant(TimeStampedModel):
     fill_rate = models.DecimalField(max_digits=6,  decimal_places=4, default=Decimal('0.0000'))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_ab_test_variants'
         verbose_name = _('A/B Test Variant')
         verbose_name_plural = _('A/B Test Variants')

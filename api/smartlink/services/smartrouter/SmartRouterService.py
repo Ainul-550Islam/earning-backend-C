@@ -228,7 +228,7 @@ class SmartRouterService:
             raw_score = cached.get('score', 0.0)
         else:
             try:
-                from ...models import OfferScoreCache
+                from api.smartlink.models import OfferScoreCache
                 obj = OfferScoreCache.objects.get(
                     offer_id=offer_id, country=country, device_type=device_type
                 )

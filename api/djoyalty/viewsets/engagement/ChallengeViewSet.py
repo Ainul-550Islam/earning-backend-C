@@ -10,8 +10,9 @@ from ...models.core import Customer
 from ...serializers.ChallengeSerializer import ChallengeSerializer, ChallengeParticipantSerializer
 from ...services.engagement.ChallengeService import ChallengeService
 from ...pagination import DjoyaltyPagePagination
+from ...mixins import DjoyaltyBaseViewSet
 
-class ChallengeViewSet(viewsets.ModelViewSet):
+class ChallengeViewSet(DjoyaltyBaseViewSet, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Challenge.objects.all().order_by('-start_date')
     serializer_class = ChallengeSerializer
@@ -25,7 +26,7 @@ class ChallengeViewSet(viewsets.ModelViewSet):
             participant = ChallengeService.join(customer, int(pk))
             return Response(ChallengeParticipantSerializer(participant).data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return self.err(str(e))
 
     @action(detail=True, methods=['post'])
     def update_progress(self, request, pk=None):
@@ -35,4 +36,4 @@ class ChallengeViewSet(viewsets.ModelViewSet):
         participant = ChallengeService.update_progress(customer, int(pk), Decimal(str(value)))
         if participant:
             return Response(ChallengeParticipantSerializer(participant).data)
-        return Response({'error': 'Not a participant'}, status=status.HTTP_404_NOT_FOUND)
+        return self.not_found('Not a participant')

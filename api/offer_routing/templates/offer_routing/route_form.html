@@ -1,0 +1,13 @@
+{% extends "offer_routing/_base.html" %}
+{% block title %}{% if object %}Edit{% else %}Create{% endif %} Route{% endblock %}
+{% block content %}
+<h1>{% if object %}Edit Route: {{ object.name }}{% else %}Create Route{% endif %}</h1>
+<div class="card"><div class="card-body">
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{% url 'offer_routing:route-list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+</div></div>
+{% endblock %}

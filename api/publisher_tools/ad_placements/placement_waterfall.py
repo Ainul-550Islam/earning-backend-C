@@ -23,6 +23,7 @@ class PlacementWaterfallConfig(TimeStampedModel):
     passback_tag         = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_placement_waterfall_configs"
         verbose_name = _("Placement Waterfall Config")
 
@@ -41,7 +42,7 @@ def get_placement_waterfall(placement) -> List[Dict]:
     # Fall back to ad unit mediation group
     try:
         group = placement.ad_unit.mediation_group
-        from api.publisher_tools.services import MediationService
+        from publisher_tools.services import MediationService
         items = MediationService.get_active_waterfall(group)
         return [{"network": item.network.name, "priority": item.priority, "floor_ecpm": float(item.floor_ecpm)} for item in items]
     except Exception:

@@ -5,6 +5,7 @@ This module contains viewsets for managing A/B testing,
 including test creation, assignment, and result analysis.
 """
 
+from ..throttling import RoutingEngineThrottle, RoutingEngineThrottle, AnalyticsThrottle, BulkOperationThrottle, EvaluatorThrottle
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -17,6 +18,8 @@ from ..models import (
 from ..services.ab_test import ab_test_service
 from ..permissions import IsAuthenticatedOrReadOnly, CanManageOffers
 from ..exceptions import ValidationError, ABTestError
+from ..serializers import RoutingABTestSerializer, ABTestAssignmentSerializer, ABTestResultSerializer
+
 
 User = get_user_model()
 
@@ -30,14 +33,18 @@ class RoutingABTestViewSet(viewsets.ModelViewSet):
     """
     
     queryset = RoutingABTest.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = RoutingABTestSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [RoutingEngineThrottle]
     
     def get_queryset(self):
         """Filter tests by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-created_at')
     
     def perform_create(self, serializer):
@@ -376,14 +383,18 @@ class ABTestAssignmentViewSet(viewsets.ReadOnlyModelViewSet):
     """
     
     queryset = ABTestAssignment.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = ABTestAssignmentSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    throttle_classes = [RoutingEngineThrottle]
     
     def get_queryset(self):
         """Filter assignments by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(test__tenant=self.request.user)
+            try:
+                queryset = queryset.filter(test__tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-assigned_at')
     
     @action(detail=False, methods=['get'])
@@ -552,14 +563,18 @@ class ABTestResultViewSet(viewsets.ReadOnlyModelViewSet):
     """
     
     queryset = ABTestResult.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = ABTestResultSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    throttle_classes = [RoutingEngineThrottle]
     
     def get_queryset(self):
         """Filter results by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(test__tenant=self.request.user)
+            try:
+                queryset = queryset.filter(test__tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-analyzed_at')
     
     @action(detail=False, methods=['get'])

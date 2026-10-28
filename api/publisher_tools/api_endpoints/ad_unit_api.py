@@ -15,7 +15,7 @@ class AdUnitBulkAPIView(APIView):
         unit_ids = request.data.get("unit_ids", [])
         if not unit_ids or not action:
             return Response({"success": False, "message": "unit_ids and action required."}, status=400)
-        from api.publisher_tools.models import AdUnit
+        from publisher_tools.models import AdUnit
         publisher = request.user.publisher_profile if not request.user.is_staff else None
         qs = AdUnit.objects.filter(unit_id__in=unit_ids)
         if publisher:
@@ -50,7 +50,7 @@ class AdTagGeneratorView(APIView):
         tag_type = request.data.get("tag_type", "javascript")
         if not unit_ids:
             return Response({"success": False, "message": "unit_ids required."}, status=400)
-        from api.publisher_tools.models import AdUnit
+        from publisher_tools.models import AdUnit
         try:
             publisher = request.user.publisher_profile
         except Exception:
@@ -77,7 +77,7 @@ class AdUnitOptimizationView(APIView):
             publisher = request.user.publisher_profile
         except Exception:
             return Response({"success": False, "message": "No publisher profile."}, status=404)
-        from api.publisher_tools.optimization_tools.yield_optimizer import (
+        from publisher_tools.optimization_tools.yield_optimizer import (
             optimize_floor_prices, calculate_revenue_opportunity,
         )
         floor_suggestions = optimize_floor_prices(publisher)

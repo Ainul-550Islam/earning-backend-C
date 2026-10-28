@@ -140,10 +140,20 @@ class ChannelType(TextChoices):
 
 
 class BotTriggerType(TextChoices):
-    KEYWORD  = "KEYWORD",  _("Keyword Match")
-    REGEX    = "REGEX",    _("Regex Match")
-    ALWAYS   = "ALWAYS",   _("Always Respond")
-    NEW_USER = "NEW_USER", _("New User Greeting")
+    KEYWORD       = "KEYWORD",  _("Keyword Match")
+    REGEX         = "REGEX",    _("Regex Match")
+    ALWAYS        = "ALWAYS",   _("Always Respond")
+    NEW_USER      = "NEW_USER", _("New User Greeting")
+    SLASH_COMMAND = "SLASHCMD", _("Slash Command")  # Part 20: e.g. "/offer 123"
+
+
+class InteractiveBlockType(TextChoices):
+    """Block types a bot can attach to a message (Part 20). Kept small and
+    Slack-Block-Kit-flavoured on purpose — this is deliberately not trying
+    to cover every future case, just the two that cover CPA-platform needs
+    (accept/decline an offer, pick from a short list of options)."""
+    BUTTON      = "BUTTON",      _("Button")
+    SELECT_MENU = "SELECT_MENU", _("Select Menu")
 
 
 class MessagePriority(TextChoices):
@@ -268,3 +278,15 @@ class MessageTemplateCategory(TextChoices):
     PERFORMANCE = "performance", _("Performance")
     SYSTEM      = "system",      _("System")
     CUSTOM      = "custom",      _("Custom")
+
+
+class AuditAction(TextChoices):
+    """Part 21 (world-system audit): what a compliance AuditLogEntry
+    records happened."""
+    DATA_EXPORTED            = "DATA_EXPORTED",            _("Data Exported")
+    MESSAGE_DELETED          = "MESSAGE_DELETED",          _("Message Deleted")
+    CHAT_DELETED             = "CHAT_DELETED",             _("Chat Deleted")
+    CLEANUP_SKIPPED_HOLD     = "CLEANUP_SKIPPED_HOLD",     _("Cleanup Skipped (Legal Hold)")
+    LEGAL_HOLD_APPLIED       = "LEGAL_HOLD_APPLIED",       _("Legal Hold Applied")
+    LEGAL_HOLD_RELEASED      = "LEGAL_HOLD_RELEASED",      _("Legal Hold Released")
+    RETENTION_POLICY_CHANGED = "RETENTION_POLICY_CHANGED", _("Retention Policy Changed")

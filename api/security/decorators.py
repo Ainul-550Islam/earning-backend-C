@@ -1,14 +1,233 @@
 # api/security/decorators.py
+"""
+Enhanced Security Decorators with comprehensive defensive coding
+Author: System Security Team
+Version: 2.0.0
+"""
+
 from functools import wraps
 from django.utils.decorators import method_decorator
-from django.db import DatabaseError
+from django.db import DatabaseError, transaction
 from django.core.cache import cache
+from django.http import JsonResponse, HttpResponse
+from django.contrib.auth import get_user_model
+from django.utils import timezone
 from typing import Callable, Any, Dict, Optional, Union
 import logging
 import time
 import functools
+import json
+import hashlib
+
+from .models import SecurityLog, MaintenanceMode, AppVersion
+from .utils.cache_manager import BulletproofDecorator
+from .exceptions import SecurityException
 
 logger = logging.getLogger(__name__)
+
+
+# ==================== CRITICAL SECURITY DECORATORS ====================
+
+def validate_request_params(required_params=None, optional_params=None):
+    """
+    Validate request parameters decorator
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            # Get parameters based on request method
+            if request.method == 'GET':
+                params = request.GET
+            else:
+                try:
+                    params = json.loads(request.body) if request.body else {}
+                except json.JSONDecodeError:
+                    params = request.POST
+            
+            # Check required parameters
+            if required_params:
+                missing = [param for param in required_params if param not in params]
+                if missing:
+                    return JsonResponse({
+                        'error': f'Missing required parameters: {missing}',
+                        'code': 'MISSING_PARAMETERS'
+                    }, status=400)
+            
+            # Validate parameter types if specified in optional_params
+            if optional_params:
+                for param, expected_type in optional_params.items():
+                    if param in params:
+                        value = params[param]
+                        try:
+                            # Type conversion/validation
+                            if expected_type == int:
+                                params[param] = int(value)
+                            elif expected_type == float:
+                                params[param] = float(value)
+                            elif expected_type == bool:
+                                if isinstance(value, str):
+                                    params[param] = value.lower() in ['true', '1', 'yes']
+                                else:
+                                    params[param] = bool(value)
+                            elif expected_type == list and isinstance(value, str):
+                                params[param] = json.loads(value)
+                        except (ValueError, TypeError, json.JSONDecodeError):
+                            return JsonResponse({
+                                'error': f'Invalid type for parameter: {param}. Expected {expected_type}',
+                                'code': 'INVALID_PARAMETER_TYPE'
+                            }, status=400)
+            
+            # Add validated params to request object
+            request.validated_params = params
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def check_maintenance_mode():
+    """
+    Check if maintenance mode is active
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            try:
+                # Check maintenance mode
+                if MaintenanceMode.is_maintenance_active():
+                    # Allow admin access if configured
+                    maintenance = MaintenanceMode.objects.latest('started_at')
+                    if not (maintenance.allow_admin_access and request.user.is_staff):
+                        return JsonResponse({
+                            'error': 'Service is under maintenance',
+                            'message': maintenance.message_to_users,
+                            'expected_end_time': maintenance.expected_end_time.isoformat() if maintenance.expected_end_time else None,
+                            'code': 'MAINTENANCE_MODE'
+                        }, status=503)
+            except Exception as e:
+                # Graceful degradation - continue if maintenance check fails
+                logging.warning(f"Maintenance mode check failed: {str(e)}")
+            
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def validate_app_version():
+    """
+    Validate app version from headers
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            # Get version from headers
+            app_version = request.headers.get('X-App-Version', '1.0.0')
+            app_platform = request.headers.get('X-App-Platform', 'android')
+            version_code = request.headers.get('X-Version-Code', 1)
+            
+            try:
+                # Validate version
+                version_info = AppVersion.check_version(
+                    platform=app_platform,
+                    version_code=int(version_code)
+                )
+                
+                if version_info.get('force_update'):
+                    return JsonResponse({
+                        'error': 'Update required',
+                        'message': version_info.get('message'),
+                        'download_url': version_info.get('download_url'),
+                        'latest_version': version_info.get('latest_version'),
+                        'code': 'UPDATE_REQUIRED'
+                    }, status=426)  # 426 Upgrade Required
+                
+                if not version_info.get('is_allowed'):
+                    return JsonResponse({
+                        'error': 'Version not supported',
+                        'message': version_info.get('message'),
+                        'download_url': version_info.get('download_url'),
+                        'latest_version': version_info.get('latest_version'),
+                        'code': 'VERSION_NOT_SUPPORTED'
+                    }, status=400)
+                
+                # Add version info to request
+                request.version_info = version_info
+                
+            except (ValueError, TypeError):
+                # Graceful degradation for version validation errors
+                pass
+            except Exception as e:
+                logging.error(f"Version validation error: {str(e)}")
+            
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def security_audit(action_type=None):
+    """
+    Security audit decorator
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            start_time = time.time()
+            
+            try:
+                response = view_func(request, *args, **kwargs)
+                status_code = getattr(response, 'status_code', 200)
+                
+                # Log security audit
+                SecurityLog.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
+                    security_type=action_type or f'view_{view_func.__name__}',
+                    severity='info',
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    description=f'Security audit: {view_func.__name__}',
+                    metadata={
+                        'view': view_func.__name__,
+                        'method': request.method,
+                        'path': request.path,
+                        'status_code': status_code,
+                        'duration_ms': int((time.time() - start_time) * 1000)
+                    }
+                )
+                
+                return response
+                
+            except Exception as e:
+                # Log security exception
+                SecurityLog.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
+                    security_type='security_exception',
+                    severity='high',
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    description=f'Security exception in {view_func.__name__}: {str(e)}',
+                    metadata={
+                        'view': view_func.__name__,
+                        'method': request.method,
+                        'path': request.path,
+                        'exception': str(e),
+                        'duration_ms': int((time.time() - start_time) * 1000)
+                    }
+                )
+                raise
+        
+        return wrapper
+    return decorator
+
+
+# Custom exceptions for defensive coding
+class RateLimitExceeded(SecurityException):
+    """Rate limit exceeded exception"""
+    pass
+
+class SuspiciousActivityDetected(SecurityException):
+    """Suspicious activity detected"""
+    pass
+
+class ValidationFailed(SecurityException):
+    """Validation failed exception"""
+    pass
 
 
 def safe_getattr(obj: Any, attr: str, default: Any = None) -> Any:
@@ -36,22 +255,75 @@ def safe_dict_get(data: Dict[str, Any], key: str, default: Any = None) -> Any:
         return default
 
 
-class BulletproofDecorator:
+def security_cache(timeout: int = 300, key_prefix: str = 'security') -> Callable:
     """
-    Base class for all bulletproof decorators
-    Implements all defensive coding patterns
+    Enhanced security caching decorator
     """
-    
-    @staticmethod
-    def log_error(func_name: str, error: Exception) -> None:
-        """Graceful error logging"""
-        try:
-            logger.error(f"Error in {func_name}: {error}", exc_info=True)
-        except Exception:
-            # Even logging can fail - ultimate graceful degradation
-            print(f"Critical: Failed to log error in {func_name}: {error}")
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                # Generate cache key
+                cache_key_data = f"{func.__name__}:{str(args)}:{str(sorted(kwargs.items()))}"
+                cache_key_hash = hashlib.sha256(cache_key_data.encode()).hexdigest()
+                cache_key = f"{key_prefix}:{cache_key_hash}"
+                
+                # Check cache
+                cached_result = cache.get(cache_key)
+                if cached_result is not None:
+                    logger.debug(f"Cache hit for {func.__name__}")
+                    return cached_result
+                
+                # Execute function
+                result = func(*args, **kwargs)
+                
+                # Cache result
+                cache.set(cache_key, result, timeout)
+                logger.debug(f"Cached result for {func.__name__} (timeout: {timeout}s)")
+                
+                return result
+                
+            except Exception as e:
+                logger.error(f"Caching error in {func.__name__}: {e}", exc_info=True)
+                return func(*args, **kwargs)
+        
+        return wrapper
+    return decorator
 
 
+def require_permissions(permissions: list) -> Callable:
+    """
+    Enhanced permission checking decorator
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(request, *args, **kwargs):
+            try:
+                user = getattr(request, 'user', None)
+                if not user or not user.is_authenticated:
+                    logger.warning(f"Unauthenticated access attempt to {request.path}")
+                    return JsonResponse({'error': 'Authentication required'}, status=401)
+                
+                # Check permissions
+                user_permissions = set(user.permissions.all()) if hasattr(user, 'permissions') else set()
+                required_permissions = set(permissions)
+                
+                if not required_permissions.issubset(user_permissions):
+                    missing_permissions = required_permissions - user_permissions
+                    logger.warning(
+                        f"Permission denied for {user.username}: "
+                        f"missing {list(missing_permissions)}"
+                    )
+                    return JsonResponse({'error': 'Permission denied'}, status=403)
+                
+                return func(request, *args, **kwargs)
+                
+            except Exception as e:
+                logger.error(f"Permission check error: {e}", exc_info=True)
+                return JsonResponse({'error': 'Permission check failed'}, status=500)
+        
+        return wrapper
+    return decorator
 def audit_action(action_type: str, 
                  log_errors: bool = True,
                  default_response: Any = None) -> Callable:
@@ -893,4 +1165,3 @@ def create_graceful_error_response(func_name: str,
     
     
    
-

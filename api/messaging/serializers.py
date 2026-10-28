@@ -120,9 +120,17 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         fields = [
             "id", "chat", "sender", "sender_name", "content", "message_type",
             "status", "attachments", "reply_to", "is_edited", "edited_at",
-            "is_deleted", "metadata", "created_at",
+            "is_deleted", "is_forwarded", "metadata", "created_at",
+            # Part 20 (world-system audit): buttons/select-menus a bot
+            # attached to this message, if any. Read-only - written only by
+            # services.render_interactive_blocks() inside process_bot_triggers()
+            # / process_bot_interaction(), never directly by a client.
+            "interactive_blocks",
         ]
-        read_only_fields = ["id", "status", "is_edited", "edited_at", "created_at"]
+        read_only_fields = [
+            "id", "status", "is_edited", "edited_at", "created_at",
+            "interactive_blocks",
+        ]
 
     def get_sender_name(self, obj: ChatMessage) -> str:
         if not obj.sender:
@@ -213,6 +221,58 @@ class AdminBroadcastSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_audience_filter(self, value):
+        """
+        Validate audience_filter dict keys and value types.
+        Prevents malformed filter dicts from reaching the broadcast service.
+        """
+        if value is None or value == {}:
+            return value or {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("audience_filter must be a JSON object.")
+
+        ALLOWED_KEYS = {
+            "countries", "languages", "min_balance", "max_balance",
+            "registration_after", "registration_before", "is_verified",
+            "tags", "exclude_tags", "affiliate_ids", "exclude_affiliate_ids",
+            "min_conversions", "max_conversions", "offer_ids",
+        }
+        unknown = set(value.keys()) - ALLOWED_KEYS
+        if unknown:
+            raise serializers.ValidationError(
+                f"audience_filter contains unknown keys: {sorted(unknown)}. "
+                f"Allowed keys: {sorted(ALLOWED_KEYS)}"
+            )
+        list_fields = {"countries", "languages", "tags", "exclude_tags",
+                       "affiliate_ids", "exclude_affiliate_ids", "offer_ids"}
+        for field in list_fields:
+            if field in value and not isinstance(value[field], list):
+                raise serializers.ValidationError(
+                    f"audience_filter.{field} must be a list."
+                )
+        for field in ("min_balance", "max_balance", "min_conversions", "max_conversions"):
+            if field in value:
+                try:
+                    if float(value[field]) < 0:
+                        raise serializers.ValidationError(
+                            f"audience_filter.{field} must be non-negative."
+                        )
+                except (TypeError, ValueError):
+                    raise serializers.ValidationError(
+                        f"audience_filter.{field} must be a number."
+                    )
+        return value
+
+    def validate_scheduled_at(self, value):
+        """Reject scheduled_at in the past."""
+        if value is not None:
+            from django.utils import timezone
+            if value <= timezone.now():
+                raise serializers.ValidationError(
+                    "scheduled_at must be a future datetime."
+                )
+        return value
+
 
 # ---------------------------------------------------------------------------
 # SupportThread
@@ -243,13 +303,15 @@ class SupportThreadSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     priority_display = serializers.CharField(source="get_priority_display", read_only=True)
     is_open_for_reply = serializers.BooleanField(read_only=True)
+    is_closed = serializers.BooleanField(read_only=True)
+    is_resolved = serializers.BooleanField(read_only=True)
     messages = SupportMessageSerializer(many=True, read_only=True)
 
     class Meta:
         model = SupportThread
         fields = [
             "id", "user", "assigned_agent", "subject", "status", "status_display",
-            "priority", "priority_display", "is_open_for_reply",
+            "priority", "priority_display", "is_open_for_reply", "is_closed", "is_resolved",
             "last_reply_at", "resolved_at", "closed_at",
             "messages", "metadata", "created_at", "updated_at",
         ]
@@ -310,7 +372,7 @@ class UserInboxSerializer(serializers.ModelSerializer):
 from .models import (
     MessageReaction, UserPresence, CallSession,
     AnnouncementChannel, ScheduledMessage, MessagePin,
-    BotConfig, MessagingWebhook, UserBlock, MessageTranslation, DeviceToken,
+    BotConfig, BotInteraction, MessagingWebhook, UserBlock, MessageTranslation, DeviceToken,
 )
 
 
@@ -372,6 +434,22 @@ class ScheduledMessageSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "sender", "status", "created_at"]
 
+    def validate_scheduled_for(self, value):
+        """Reject scheduled_for dates in the past."""
+        from django.utils import timezone
+        if value <= timezone.now():
+            raise serializers.ValidationError(
+                "scheduled_for must be a future datetime. "
+                "Provide a datetime at least 60 seconds from now."
+            )
+        return value
+
+    def validate_content(self, value):
+        """Reject empty content for scheduled messages."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Content cannot be empty.")
+        return value.strip()
+
 
 class MessagePinSerializer(serializers.ModelSerializer):
     class Meta:
@@ -387,8 +465,32 @@ class BotConfigSerializer(serializers.ModelSerializer):
             "id", "name", "chat", "trigger_type", "trigger_value",
             "response_template", "is_active", "priority",
             "delay_seconds", "created_by", "created_at",
+            # Part 20 (world-system audit): SLASH_COMMAND arg documentation
+            # and interactive response blocks (buttons/select-menus). Both
+            # default to [] so existing KEYWORD/REGEX/ALWAYS/NEW_USER bots
+            # are completely unaffected - a bot with no response_blocks
+            # sends a plain-text reply exactly as it did before Part 20.
+            "command_args_schema", "response_blocks",
         ]
         read_only_fields = ["id", "created_by", "created_at"]
+
+
+class BotInteractionSerializer(serializers.ModelSerializer):
+    """Part 20 (world-system audit): log entry for one interactive-component
+    click (button / select-menu pick) on a bot message. Created by
+    services.process_bot_interaction() via BotInteractionView - not
+    intended to be created directly through this serializer, but it's
+    registered the same way BotResponseSerializer is, for admin/monitoring
+    read access via BotInteractionViewSet.
+    """
+
+    class Meta:
+        model = BotInteraction
+        fields = [
+            "id", "source_message", "bot", "user",
+            "action_id", "value", "resulting_message", "created_at",
+        ]
+        read_only_fields = ["id", "bot", "resulting_message", "created_at"]
 
 
 class MessagingWebhookSerializer(serializers.ModelSerializer):
@@ -399,6 +501,97 @@ class MessagingWebhookSerializer(serializers.ModelSerializer):
             "failure_count", "last_triggered_at", "created_at",
         ]
         read_only_fields = ["id", "failure_count", "last_triggered_at", "created_at"]
+
+    def validate_url(self, value):
+        """
+        Validate webhook URL for:
+        1. Must use HTTPS scheme (HTTP is rejected — webhooks carry signed payloads
+           but HTTPS prevents MitM interception of webhook content).
+        2. SSRF protection — reject requests to private/internal IP ranges,
+           loopback addresses, cloud metadata endpoints, and non-routable networks.
+        """
+        import ipaddress
+        from urllib.parse import urlparse
+
+        parsed = urlparse(value)
+
+        # Enforce HTTPS
+        if parsed.scheme != "https":
+            raise serializers.ValidationError(
+                "Webhook URL must use HTTPS. HTTP URLs are not allowed — "
+                "webhook payloads contain sensitive data and must be encrypted in transit."
+            )
+
+        hostname = parsed.hostname or ""
+        if not hostname:
+            raise serializers.ValidationError("Webhook URL must have a valid hostname.")
+
+        # SSRF: reject known internal/cloud metadata hostnames
+        BLOCKED_HOSTNAMES = {
+            "localhost",
+            "metadata.google.internal",
+            "metadata.internal",
+            "169.254.169.254",      # AWS/GCP/Azure instance metadata
+            "100.100.100.200",      # Alibaba Cloud metadata
+            "instance-data",
+        }
+        if hostname.lower() in BLOCKED_HOSTNAMES:
+            raise serializers.ValidationError(
+                f"Webhook URL points to a blocked hostname: {hostname!r}. "
+                "Internal and cloud metadata endpoints are not allowed."
+            )
+
+        # SSRF: reject private/loopback IP ranges if the hostname looks like an IP
+        try:
+            ip = ipaddress.ip_address(hostname)
+            BLOCKED_RANGES = [
+                ipaddress.ip_network("127.0.0.0/8"),     # loopback
+                ipaddress.ip_network("10.0.0.0/8"),      # private class A
+                ipaddress.ip_network("172.16.0.0/12"),   # private class B
+                ipaddress.ip_network("192.168.0.0/16"),  # private class C
+                ipaddress.ip_network("169.254.0.0/16"),  # link-local / metadata
+                ipaddress.ip_network("::1/128"),         # IPv6 loopback
+                ipaddress.ip_network("fc00::/7"),        # IPv6 unique local
+                ipaddress.ip_network("fe80::/10"),       # IPv6 link-local
+            ]
+            for blocked in BLOCKED_RANGES:
+                if ip in blocked:
+                    raise serializers.ValidationError(
+                        f"Webhook URL points to a private or reserved IP address ({ip}). "
+                        "Only publicly routable IP addresses are allowed."
+                    )
+        except ValueError:
+            # Not an IP address — hostname will resolve at delivery time.
+            # We cannot do full DNS resolution here without blocking the request.
+            # The delivery task should implement a post-DNS SSRF check.
+            pass
+
+        return value
+
+    def validate_events(self, value):
+        """Validate that all subscribed event types are known."""
+        VALID_EVENTS = {
+            "message.sent", "message.edited", "message.deleted",
+            "message.delivered", "message.read", "message.forwarded",
+            "reaction.added", "reaction.removed",
+            "call.started", "call.ended",
+            "broadcast.sent",
+            "support.created", "support.resolved",
+            "cpa.conversion", "cpa.payout",
+        }
+        if not isinstance(value, list):
+            raise serializers.ValidationError("events must be a list of event type strings.")
+        unknown = [e for e in value if e not in VALID_EVENTS]
+        if unknown:
+            raise serializers.ValidationError(
+                f"Unknown event type(s): {unknown}. "
+                f"Valid types: {sorted(VALID_EVENTS)}"
+            )
+        if not value:
+            raise serializers.ValidationError(
+                "events cannot be empty. Subscribe to at least one event type."
+            )
+        return value
 
 
 class UserBlockSerializer(serializers.ModelSerializer):
@@ -556,3 +749,349 @@ class AffiliateThreadSerializer(serializers.ModelSerializer):
             "id", "affiliate_unread", "manager_unread",
             "last_message_at", "last_message_by", "created_at",
         ]
+
+
+# ── 10 Missing Serializers ────────────────────────────────────────────────────
+
+from .models import (  # noqa: E402  (already imported above, safe to re-import)
+    BotResponse,
+    ChannelMember,
+    ChatMention,
+    MediaAttachment,
+    MessageReport,
+    MessageSearchIndex,
+    NotificationRead,
+    PollVote,
+    UserDevice,
+    WebhookDelivery,
+)
+
+
+class BotResponseSerializer(serializers.ModelSerializer):
+    """Log entry for every auto-reply the bot sent."""
+
+    class Meta:
+        model = BotResponse
+        fields = [
+            "id",
+            "bot",
+            "trigger_message",
+            "sent_message",
+            "was_successful",
+            "error",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+
+class ChannelMemberSerializer(serializers.ModelSerializer):
+    """Membership record linking a User to an AnnouncementChannel."""
+
+    class Meta:
+        model = ChannelMember
+        fields = [
+            "id",
+            "channel",
+            "user",
+            "is_admin",
+            "notification_preference",
+            "joined_at",
+        ]
+        read_only_fields = ["id", "joined_at"]
+
+
+class ChatMentionSerializer(serializers.ModelSerializer):
+    """Denormalised @mention record for fast mention-feed queries."""
+
+    class Meta:
+        model = ChatMention
+        fields = [
+            "id",
+            "message",
+            "chat",
+            "mentioned_user",
+            "mentioned_by",
+            "is_read",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+
+class MediaAttachmentSerializer(serializers.ModelSerializer):
+    """Uploaded file with processing state (pending → ready/failed)."""
+
+    best_url = serializers.ReadOnlyField()
+    is_image = serializers.ReadOnlyField()
+    is_video = serializers.ReadOnlyField()
+    is_audio = serializers.ReadOnlyField()
+
+    class Meta:
+        model = MediaAttachment
+        fields = [
+            "id",
+            "uploaded_by",
+            "message",
+            "original_filename",
+            "file_key",
+            "original_url",
+            "compressed_url",
+            "thumbnail_url",
+            "webp_url",
+            "best_url",
+            "mimetype",
+            "file_size",
+            "width",
+            "height",
+            "duration_seconds",
+            "status",
+            "is_nsfw",
+            "nsfw_score",
+            "is_virus_scanned",
+            "is_virus_free",
+            "processing_error",
+            "blurhash",
+            "is_image",
+            "is_video",
+            "is_audio",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "status",
+            "is_nsfw",
+            "nsfw_score",
+            "is_virus_scanned",
+            "is_virus_free",
+            "processing_error",
+            "best_url",
+            "is_image",
+            "is_video",
+            "is_audio",
+            "created_at",
+        ]
+
+
+class MessageReportSerializer(serializers.ModelSerializer):
+    """User-submitted report for an abusive/spam message."""
+
+    class Meta:
+        model = MessageReport
+        fields = [
+            "id",
+            "message",
+            "reported_by",
+            "reason",
+            "details",
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "moderator_note",
+            "action_taken",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "reported_by",
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "created_at",
+        ]
+
+    def validate_reason(self, value: str) -> str:
+        valid = [
+            MessageReport.REASON_SPAM,
+            MessageReport.REASON_ABUSE,
+            MessageReport.REASON_HARASSMENT,
+            MessageReport.REASON_NSFW,
+            MessageReport.REASON_MISINFORM,
+            MessageReport.REASON_OTHER,
+        ]
+        if value not in valid:
+            raise serializers.ValidationError(
+                _(f"Invalid reason. Valid choices: {valid}")
+            )
+        return value
+
+
+class MessageSearchIndexSerializer(serializers.ModelSerializer):
+    """DB-level full-text search index entry (Elasticsearch fallback)."""
+
+    class Meta:
+        model = MessageSearchIndex
+        fields = ["id", "message", "chat", "search_text", "indexed_at"]
+        read_only_fields = ["id", "indexed_at"]
+
+
+class NotificationReadSerializer(serializers.ModelSerializer):
+    """Tracks when a user opened or clicked a CPABroadcast."""
+
+    class Meta:
+        model = NotificationRead
+        fields = ["id", "broadcast", "user", "opened_at", "clicked_at"]
+        read_only_fields = ["id", "opened_at"]
+
+
+class PollVoteSerializer(serializers.ModelSerializer):
+    """A single vote cast by a user on a POLL-type ChatMessage."""
+
+    class Meta:
+        model = PollVote
+        fields = ["id", "message", "user", "option_id", "created_at"]
+        read_only_fields = ["id", "user", "created_at"]
+
+    def validate(self, attrs: dict) -> dict:
+        from .choices import MessageType
+
+        msg = attrs.get("message")
+        if msg and msg.message_type != MessageType.POLL:
+            raise serializers.ValidationError(
+                {"message": _("Can only vote on POLL type messages.")}
+            )
+        return attrs
+
+
+class UserDeviceSerializer(serializers.ModelSerializer):
+    """Detailed device record for security and multi-device management."""
+
+    class Meta:
+        model = UserDevice
+        fields = [
+            "id",
+            "user",
+            "device_id",
+            "device_name",
+            "platform",
+            "os_version",
+            "app_version",
+            "ip_address",
+            "location_city",
+            "location_country",
+            "is_trusted",
+            "is_active",
+            "first_login_at",
+            "last_active_at",
+        ]
+        read_only_fields = ["id", "user", "first_login_at", "last_active_at"]
+
+    def validate_device_id(self, value: str) -> str:
+        if not value or not value.strip():
+            raise serializers.ValidationError(_("device_id must not be empty."))
+        return value
+
+
+class WebhookDeliverySerializer(serializers.ModelSerializer):
+    """Log record for every outbound webhook delivery attempt."""
+
+    class Meta:
+        model = WebhookDelivery
+        fields = [
+            "id",
+            "webhook",
+            "event_type",
+            "payload",
+            "response_status",
+            "response_body",
+            "attempt_count",
+            "is_successful",
+            "delivered_at",
+            "next_retry_at",
+            "error",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+
+# ── 3 Missing Model Serializers ───────────────────────────────────────────────
+
+class AffiliateConversationThreadSerializer(serializers.ModelSerializer):
+    """Direct messaging thread between an affiliate and their manager."""
+    class Meta:
+        model = AffiliateConversationThread
+        fields = [
+            "id", "affiliate", "manager", "chat",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class MessageLinkPreviewSerializer(serializers.ModelSerializer):
+    """Link preview record attached to a specific message position."""
+    preview_detail = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MessageLinkPreview
+        fields = [
+            "id", "message", "preview", "preview_detail",
+            "position", "is_dismissed",
+        ]
+        read_only_fields = ["id"]
+
+    def get_preview_detail(self, obj):
+        if obj.preview:
+            return {
+                "url": obj.preview.url,
+                "title": obj.preview.title,
+                "description": obj.preview.description,
+                "image_url": obj.preview.image_url,
+                "domain": obj.preview.domain,
+                "favicon_url": obj.preview.favicon_url,
+                "is_safe": obj.preview.is_safe,
+            }
+        return None
+
+
+class StoryHighlightSerializer(serializers.ModelSerializer):
+    """Named collection of archived stories shown on a user's profile."""
+    story_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        read_only=True,
+        source="stories",
+    )
+
+    class Meta:
+        model = StoryHighlight
+        fields = [
+            "id", "user", "title", "cover_url",
+            "order", "story_ids", "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+
+# ===========================================================================
+# Part 21 (world-system audit): Compliance Audit Trail & Retention
+# ===========================================================================
+from .models import AuditLogEntry, RetentionPolicy, LegalHold
+
+
+class AuditLogEntrySerializer(serializers.ModelSerializer):
+    """Read-only by design - nothing in this app updates or deletes an
+    AuditLogEntry after creation. Only ever instantiated by
+    AuditLogViewSet below, never used to accept writes."""
+
+    class Meta:
+        model = AuditLogEntry
+        fields = [
+            "id", "actor", "action", "target_type", "target_id",
+            "metadata", "created_at",
+        ]
+        read_only_fields = fields
+
+
+class RetentionPolicySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RetentionPolicy
+        fields = [
+            "id", "chat_message_retention_days", "updated_by", "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "updated_by", "created_at", "updated_at"]
+
+
+class LegalHoldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LegalHold
+        fields = [
+            "id", "chat", "user", "reason", "applied_by",
+            "is_active", "released_at", "released_by", "created_at",
+        ]
+        read_only_fields = ["id", "applied_by", "is_active", "released_at", "released_by", "created_at"]

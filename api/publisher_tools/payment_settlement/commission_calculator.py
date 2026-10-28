@@ -14,6 +14,11 @@ def calculate_platform_share(gross_revenue: Decimal, revenue_share_pct: Decimal)
     return (gross_revenue - publisher).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
 
 
+def calculate_platform_commission(gross_revenue: Decimal, revenue_share_pct: Decimal) -> Decimal:
+    """Alias used by payment_settlement exports and views."""
+    return calculate_platform_share(gross_revenue, revenue_share_pct)
+
+
 def calculate_tiered_commission(gross_revenue: Decimal, tier: str = "standard") -> Dict:
     """Tier-based commission calculation।"""
     tiers = {

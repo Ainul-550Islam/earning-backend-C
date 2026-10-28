@@ -15,8 +15,8 @@ class TranslationGlossaryService:
                  is_brand_term: bool = False) -> Optional[object]:
         """Glossary term add করে"""
         try:
-            from ..models.translation import TranslationGlossary, TranslationGlossaryEntry
-            from ..models.core import Language
+            from api.localization.models.translation import TranslationGlossary, TranslationGlossaryEntry
+            from api.localization.models.core import Language
             source_lang = Language.objects.filter(code=source_lang_code).first()
             if not source_lang:
                 return None
@@ -46,7 +46,7 @@ class TranslationGlossaryService:
                          domain: str = '') -> List[Dict]:
         """নির্দিষ্ট language pair-এর জন্য glossary তুলে দেয়"""
         try:
-            from ..models.translation import TranslationGlossary, TranslationGlossaryEntry
+            from api.localization.models.translation import TranslationGlossary, TranslationGlossaryEntry
             qs = TranslationGlossary.objects.filter(source_language__code=source_lang_code)
             if domain:
                 qs = qs.filter(domain=domain)

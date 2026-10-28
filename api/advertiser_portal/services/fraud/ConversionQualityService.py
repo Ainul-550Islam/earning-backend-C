@@ -4,6 +4,7 @@ Conversion Quality Service
 Service for scoring conversion quality,
 including behavioral analysis and validation.
 """
+from django.db import models
 
 import logging
 from typing import Dict, List, Optional, Any

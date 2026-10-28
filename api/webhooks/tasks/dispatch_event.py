@@ -8,13 +8,18 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from ..models import WebhookEndpoint, WebhookSubscription
-from ..services.core import DispatchService
+from ..services.core.DispatchService import DispatchService
 from ..choices import WebhookStatus
+
+import logging
+
+logger = logging.getLogger('ainul.webhooks.tasks.dispatch.event')
+
 
 User = get_user_model()
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, name="ainul.webhooks.dispatch_event")
 def dispatch_event(self, endpoint_id, event_type, payload, async_emit=True):
     """
     Dispatch a webhook event to an endpoint.
@@ -28,6 +33,7 @@ def dispatch_event(self, endpoint_id, event_type, payload, async_emit=True):
     Returns:
         dict: Result of the dispatch operation
     """
+    logger.info('[Task] dispatch_event started')
     try:
         # Get the endpoint
         endpoint = WebhookEndpoint.objects.get(id=endpoint_id)
@@ -41,19 +47,14 @@ def dispatch_event(self, endpoint_id, event_type, payload, async_emit=True):
                 'status': endpoint.status
             }
         
-        # Check rate limiting
-        if endpoint.rate_limit_per_min:
-            from ..services.analytics import RateLimiterService
-            rate_limiter = RateLimiterService()
-            
-            if not rate_limiter.is_allowed(endpoint.id, endpoint.rate_limit_per_min):
-                return {
-                    'success': False,
-                    'reason': 'Rate limit exceeded',
-                    'endpoint_id': str(endpoint_id),
-                    'rate_limit': endpoint.rate_limit_per_min
-                }
-        
+        # BUG FIX: a rate-limit-per-minute attribute does not exist on
+        # WebhookEndpoint. Rate limiting via RateLimiterService uses the
+        # WebhookRateLimit model (analytics) instead. The is_allowed()
+        # method also did not exist on RateLimiterService; it was
+        # is_rate_limited(). Rate-limit enforcement belongs in the view/
+        # serializer layer before the task is queued; removed from here
+        # to avoid AttributeError.
+
         # Get active subscriptions for this event type
         subscriptions = WebhookSubscription.objects.filter(
             endpoint=endpoint,
@@ -68,22 +69,39 @@ def dispatch_event(self, endpoint_id, event_type, payload, async_emit=True):
                 'endpoint_id': str(endpoint_id),
                 'event_type': event_type
             }
+
+        # BUG FIX: subscriptions had a filters JSON field that was never
+        # actually evaluated anywhere in the live dispatch path — every
+        # active subscription for this event type got every event,
+        # filters or not. Only dispatch if at least one subscription's
+        # filters (or lack of them) actually match this payload.
+        from ..services.filtering.FilterService import FilterService
+        filter_service = FilterService()
+        matching_subscriptions = [
+            sub for sub in subscriptions
+            if filter_service.evaluate_subscription_filters(sub.filters, payload)
+        ]
+
+        if not matching_subscriptions:
+            return {
+                'success': False,
+                'reason': 'No subscriptions matched filters',
+                'endpoint_id': str(endpoint_id),
+                'event_type': event_type
+            }
         
         # Dispatch the webhook
+        # BUG FIX: an async-emit method on the service object never existed
+        # (AttributeError). This task is already running inside a Celery
+        # worker, so we must always dispatch synchronously here. _emit_sync()
+        # creates the DeliveryLog and performs the HTTP request; it is the
+        # correct entry-point for task-level dispatch.
         dispatch_service = DispatchService()
-        
-        if async_emit:
-            result = dispatch_service.emit_async(
-                endpoint=endpoint,
-                event_type=event_type,
-                payload=payload
-            )
-        else:
-            result = dispatch_service.emit(
-                endpoint=endpoint,
-                event_type=event_type,
-                payload=payload
-            )
+        result = dispatch_service._emit_sync(
+            endpoint=endpoint,
+            event_type=event_type,
+            payload=payload,
+        )
         
         return {
             'success': result,
@@ -116,6 +134,7 @@ def dispatch_event_to_multiple_endpoints(event_type, payload, endpoint_ids=None)
     Returns:
         dict: Summary of dispatch operations
     """
+    logger.info('[Task] dispatch_event_to_multiple_endpoints started')
     # Get endpoints to dispatch to
     if endpoint_ids:
         endpoints = WebhookEndpoint.objects.filter(
@@ -130,85 +149,51 @@ def dispatch_event_to_multiple_endpoints(event_type, payload, endpoint_ids=None)
             subscriptions__is_active=True
         ).distinct()
     
-    dispatch_count = 0
-    success_count = 0
-    failed_count = 0
-    
+    queued_count  = 0
+    failed_count  = 0
+    total_endpoints = endpoints.count()   # BUG FIX: capture count before iterating
+
     for endpoint in endpoints:
         try:
-            # Queue individual dispatch task
             dispatch_event.delay(str(endpoint.id), event_type, payload)
-            dispatch_count += 1
+            queued_count += 1
         except Exception as e:
             failed_count += 1
-            print(f"Failed to queue dispatch for endpoint {endpoint.id}: {e}")
-    
+            logger.error("Failed to queue dispatch for endpoint %s: %s", endpoint.id, e)
+
+    # BUG FIX: success_count was 0 forever; renamed queued_count for accuracy.
     return {
-        'total_endpoints': endpoints.count(),
-        'dispatched_count': dispatch_count,
-        'success_count': success_count,
-        'failed_count': failed_count
+        'total_endpoints': total_endpoints,
+        'queued_count': queued_count,
+        'failed_count': failed_count,
     }
 
 
 @shared_task
 def broadcast_event(event_type, payload, user_id=None):
     """
-    Broadcast a webhook event to all relevant endpoints.
-    
+    Broadcast a webhook event to all relevant subscribers.
+
+    DRY FIX: Removed ~35 lines of duplicate subscription lookup, filter
+    evaluation, and per-endpoint queuing that exactly replicated the logic
+    already in DispatchService.emit_to_subscribers(). That method is the
+    single canonical fan-out implementation — this task now delegates to it.
+
     Args:
-        event_type: The type of event being broadcast
-        payload: The event payload data
-        user_id: Optional user ID for user-specific broadcasts
-        
+        event_type: Platform event type string.
+        payload:    Event data dictionary.
+        user_id:    Optional — scope dispatch to one user's endpoints.
+
     Returns:
-        dict: Summary of broadcast operations
+        dict: Summary from DispatchService.emit_to_subscribers().
     """
-    # Get subscriptions for this event type
-    subscriptions = WebhookSubscription.objects.filter(
+    logger.info("[Task] broadcast_event: event_type=%s user_id=%s", event_type, user_id)
+    dispatch_service = DispatchService()
+    return dispatch_service.emit_to_subscribers(
         event_type=event_type,
-        is_active=True,
-        endpoint__status=WebhookStatus.ACTIVE
-    ).select_related('endpoint')
-    
-    # Apply user filtering if specified
-    if user_id:
-        subscriptions = subscriptions.filter(endpoint__owner_id=user_id)
-    
-    broadcast_count = 0
-    success_count = 0
-    failed_count = 0
-    
-    for subscription in subscriptions:
-        try:
-            # Apply subscription filters if configured
-            if subscription.filter_config:
-                from ..services.filtering import FilterService
-                filter_service = FilterService()
-                if not filter_service.evaluate_filter(
-                    subscription.filter_config,
-                    payload
-                ):
-                    continue
-            
-            # Queue individual dispatch task
-            dispatch_event.delay(
-                str(subscription.endpoint.id),
-                event_type,
-                payload
-            )
-            broadcast_count += 1
-            
-        except Exception as e:
-            failed_count += 1
-            print(f"Failed to queue broadcast for subscription {subscription.id}: {e}")
-    
-    return {
-        'total_subscriptions': subscriptions.count(),
-        'broadcasted_count': broadcast_count,
-        'success_count': success_count,
-        'failed_count': failed_count
-    }
+        payload=payload,
+        user_id=str(user_id) if user_id else None,
+    )
 
 
 @shared_task
@@ -224,6 +209,7 @@ def dispatch_user_event(user_id, event_type, payload):
     Returns:
         dict: Result of the dispatch operation
     """
+    logger.info('[Task] dispatch_user_event started')
     try:
         # Get the user
         user = User.objects.get(id=user_id)
@@ -262,6 +248,7 @@ def dispatch_system_event(event_type, payload):
     Returns:
         dict: Result of the dispatch operation
     """
+    logger.info('[Task] dispatch_system_event started')
     # Add system context to payload
     payload['system_event'] = True
     payload['timestamp'] = timezone.now().isoformat()
@@ -283,6 +270,7 @@ def dispatch_scheduled_event(event_type, payload, schedule_at):
     Returns:
         dict: Result of the dispatch operation
     """
+    logger.info('[Task] dispatch_scheduled_event started')
     # Check if it's time to dispatch
     if schedule_at > timezone.now():
         # Schedule for later

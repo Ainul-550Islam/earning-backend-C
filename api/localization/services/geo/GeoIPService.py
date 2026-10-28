@@ -13,7 +13,7 @@ class GeoIPService:
         """IP থেকে country/city/tz পাওয়ার main method"""
         try:
             # 1. Database lookup
-            from ..models.geo import GeoIPMapping
+            from api.localization.models.geo import GeoIPMapping
             mapping = GeoIPMapping.lookup(ip_address)
             if mapping:
                 return self._mapping_to_dict(mapping)
@@ -87,7 +87,7 @@ class GeoIPService:
             country_code = result.get('country_code', '')
             if not country_code:
                 return None
-            from ..models.geo import CountryLanguage
+            from api.localization.models.geo import CountryLanguage
             official = CountryLanguage.objects.filter(
                 country__code=country_code, is_official=True
             ).order_by('-speaker_percentage').first()

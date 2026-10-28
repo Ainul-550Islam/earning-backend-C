@@ -78,7 +78,7 @@ class SmartLinkCacheService:
         Pre-warm cache for a list of slugs.
         Called by warmup_cache management command and cache_warmup_tasks.
         """
-        from ...models import SmartLink
+        from api.smartlink.models import SmartLink
         smartlinks = SmartLink.objects.filter(
             slug__in=slugs, is_active=True, is_archived=False
         ).select_related('offer_pool', 'targeting_rule', 'fallback', 'rotation_config')
@@ -93,7 +93,7 @@ class SmartLinkCacheService:
 
     def warmup_all_active(self):
         """Pre-warm cache for all active SmartLinks."""
-        from ...models import SmartLink
+        from api.smartlink.models import SmartLink
         slugs = list(SmartLink.objects.filter(
             is_active=True, is_archived=False
         ).values_list('slug', flat=True))

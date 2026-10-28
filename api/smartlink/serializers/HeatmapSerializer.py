@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import ClickHeatmap
+from api.smartlink.models import ClickHeatmap
 
 
 class HeatmapSerializer(serializers.ModelSerializer):

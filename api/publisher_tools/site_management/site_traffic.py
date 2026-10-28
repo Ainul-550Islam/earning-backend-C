@@ -22,6 +22,7 @@ class SiteTrafficSnapshot(TimeStampedModel):
     anomaly_reason   = models.CharField(max_length=200, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_traffic_snapshots'
         verbose_name = _('Traffic Snapshot')
         unique_together = [['site', 'snapshot_hour']]
@@ -59,6 +60,7 @@ class TrafficAnomaly(TimeStampedModel):
     action_taken     = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_traffic_anomalies'
         verbose_name = _('Traffic Anomaly')
         ordering = ['-detected_at']

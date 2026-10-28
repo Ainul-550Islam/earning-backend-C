@@ -169,16 +169,6 @@ class WebhookEventTypeSubscriptionSerializer(serializers.Serializer):
     endpoint_id = serializers.UUIDField()
     is_active = serializers.BooleanField(default=True)
     
-    def validate_event_type(self, value):
-        """Validate event type."""
-        if not value:
-            raise serializers.ValidationError("Event type is required.")
-        
-        # Validate event type format (e.g., 'user.created')
-        if '.' not in value:
-            raise serializers.ValidationError("Event type must be in format 'domain.event'.")
-        
-        return value
     
     def validate_endpoint_id(self, value):
         """Validate endpoint ID."""
@@ -293,16 +283,6 @@ class WebhookEventTypeValidateSerializer(serializers.Serializer):
     
     event_type = serializers.CharField()
     
-    def validate_event_type(self, value):
-        """Validate event type."""
-        if not value:
-            raise serializers.ValidationError("Event type is required.")
-        
-        # Validate event type format (e.g., 'user.created')
-        if '.' not in value:
-            raise serializers.ValidationError("Event type must be in format 'domain.event'.")
-        
-        return value
 
 
 class WebhookEventTypeValidateResultSerializer(serializers.Serializer):

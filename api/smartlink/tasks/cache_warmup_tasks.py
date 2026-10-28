@@ -28,7 +28,7 @@ def invalidate_smartlink_cache(slug: str):
 @shared_task(name='smartlink.warmup_offer_pool_cache', queue='default')
 def warmup_offer_pool_cache():
     """Pre-warm offer pool cache for all active SmartLinks."""
-    from ..models import SmartLink
+    from api.smartlink.models import SmartLink
     from ..services.core.SmartLinkCacheService import SmartLinkCacheService
     svc = SmartLinkCacheService()
     active = SmartLink.objects.filter(is_active=True, is_archived=False)

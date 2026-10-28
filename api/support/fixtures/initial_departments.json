@@ -1,0 +1,80 @@
+[
+  {
+    "model": "support.department",
+    "pk": 1,
+    "fields": {
+      "name": "General Support",
+      "slug": "general",
+      "routing_rule": "least_busy",
+      "auto_assign": true,
+      "is_active": true,
+      "email_address": "",
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.department",
+    "pk": 2,
+    "fields": {
+      "name": "Payment Support",
+      "slug": "payment",
+      "routing_rule": "skill_match",
+      "auto_assign": true,
+      "is_active": true,
+      "email_address": "",
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.department",
+    "pk": 3,
+    "fields": {
+      "name": "Technical Support",
+      "slug": "technical",
+      "routing_rule": "least_busy",
+      "auto_assign": true,
+      "is_active": true,
+      "email_address": "",
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.department",
+    "pk": 4,
+    "fields": {
+      "name": "Fraud & Security",
+      "slug": "fraud",
+      "routing_rule": "skill_match",
+      "auto_assign": false,
+      "is_active": true,
+      "email_address": "",
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.department",
+    "pk": 5,
+    "fields": {
+      "name": "KYC Verification",
+      "slug": "kyc",
+      "routing_rule": "skill_match",
+      "auto_assign": false,
+      "is_active": true,
+      "email_address": "",
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.department",
+    "pk": 6,
+    "fields": {
+      "name": "CPA Disputes",
+      "slug": "disputes",
+      "routing_rule": "least_busy",
+      "auto_assign": true,
+      "is_active": true,
+      "email_address": "",
+      "tenant": null
+    }
+  }
+]

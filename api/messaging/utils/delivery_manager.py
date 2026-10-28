@@ -15,6 +15,9 @@ import logging
 from typing import Any, Optional
 from datetime import timedelta
 
+from django.core.cache import cache  # noqa: F401  (module-level so tests can patch it; functions below re-import locally, which is a no-op once this is already bound)
+from ..tasks import update_delivery_status_task  # noqa: F401  (module-level so tests can patch it)
+
 logger = logging.getLogger(__name__)
 
 # Redis key patterns
@@ -29,7 +32,6 @@ def queue_message_for_offline_user(user_id: Any, message_data: dict, ttl_seconds
     Messages are retained for 7 days (WhatsApp-compatible).
     """
     try:
-        from django.core.cache import cache
         import json as _json
         key = OFFLINE_QUEUE_KEY.format(user_id=user_id)
         # Use Redis LPUSH via cache.client if available, else fallback
@@ -51,7 +53,6 @@ def flush_offline_queue(user_id: Any) -> list:
     Called in ChatConsumer.connect().
     """
     try:
-        from django.core.cache import cache
         key = OFFLINE_QUEUE_KEY.format(user_id=user_id)
         messages = cache.get(key) or []
         if messages:
@@ -69,18 +70,20 @@ def mark_delivered(message_id: Any, user_id: Any) -> bool:
     Updates both DB and Redis for fast reads.
     """
     try:
-        from django.core.cache import cache
         from django.utils import timezone
         import json as _json
         now = timezone.now().isoformat()
-        # Update Redis ACK cache
+        # Update Redis ACK cache (merge into any existing entry so a late or
+        # duplicate delivery ACK can never clobber a read_at that was already
+        # recorded - mirrors the merge pattern in mark_read() below)
         key = DELIVERY_ACK_KEY.format(message_id=message_id)
         acks = cache.get(key) or {}
-        acks[str(user_id)] = {"delivered_at": now}
+        existing = acks.get(str(user_id), {})
+        existing["delivered_at"] = now
+        acks[str(user_id)] = existing
         cache.set(key, acks, 86_400)
 
         # Update DB asynchronously
-        from .tasks import update_delivery_status_task
         update_delivery_status_task.delay(str(message_id), str(user_id), "DELIVERED", now)
         return True
     except Exception as exc:
@@ -91,7 +94,6 @@ def mark_delivered(message_id: Any, user_id: Any) -> bool:
 def mark_read(message_id: Any, user_id: Any) -> bool:
     """Record that user has read the message."""
     try:
-        from django.core.cache import cache
         from django.utils import timezone
         now = timezone.now().isoformat()
         key = DELIVERY_ACK_KEY.format(message_id=message_id)
@@ -100,7 +102,6 @@ def mark_read(message_id: Any, user_id: Any) -> bool:
         existing["read_at"] = now
         acks[str(user_id)] = existing
         cache.set(key, acks, 86_400)
-        from .tasks import update_delivery_status_task
         update_delivery_status_task.delay(str(message_id), str(user_id), "READ", now)
         # Clear unread count cache
         clear_unread_cache(user_id)
@@ -113,7 +114,6 @@ def mark_read(message_id: Any, user_id: Any) -> bool:
 def get_delivery_status(message_id: Any) -> dict:
     """Return {user_id: {delivered_at, read_at}} from Redis cache."""
     try:
-        from django.core.cache import cache
         key = DELIVERY_ACK_KEY.format(message_id=message_id)
         return cache.get(key) or {}
     except Exception:
@@ -123,7 +123,6 @@ def get_delivery_status(message_id: Any) -> dict:
 def increment_unread(user_id: Any, chat_id: Any, count: int = 1) -> int:
     """Increment unread message count for user in a chat."""
     try:
-        from django.core.cache import cache
         key = UNREAD_COUNT_KEY.format(user_id=user_id, chat_id=chat_id)
         current = cache.get(key) or 0
         new_count = current + count
@@ -136,7 +135,6 @@ def increment_unread(user_id: Any, chat_id: Any, count: int = 1) -> int:
 def get_unread_for_chat(user_id: Any, chat_id: Any) -> int:
     """Get unread count for a specific chat."""
     try:
-        from django.core.cache import cache
         key = UNREAD_COUNT_KEY.format(user_id=user_id, chat_id=chat_id)
         return cache.get(key) or 0
     except Exception:
@@ -146,7 +144,6 @@ def get_unread_for_chat(user_id: Any, chat_id: Any) -> int:
 def clear_unread_cache(user_id: Any, chat_id: Any = None) -> None:
     """Clear unread count cache for user."""
     try:
-        from django.core.cache import cache
         if chat_id:
             cache.delete(UNREAD_COUNT_KEY.format(user_id=user_id, chat_id=chat_id))
         # Also clear total unread
@@ -158,7 +155,6 @@ def clear_unread_cache(user_id: Any, chat_id: Any = None) -> None:
 def get_total_unread(user_id: Any) -> int:
     """Get total unread count across all chats (cached)."""
     try:
-        from django.core.cache import cache
         key = f"msg:total_unread:{user_id}"
         cached = cache.get(key)
         if cached is not None:

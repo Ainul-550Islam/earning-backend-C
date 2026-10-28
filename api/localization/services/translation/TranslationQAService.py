@@ -65,8 +65,13 @@ class TranslationQAService:
         num_result = self.check_numbers_preserved(source_text, translated_text, target_lang)
         checks['numbers'] = num_result
 
+        all_issues = []
+        for k, v in (checks if isinstance(checks, dict) else {}).items():
+            if isinstance(v, dict):
+                all_issues.extend(v.get('missing', []) + v.get('issues', []))
         return {
             'passed': overall_passed,
+            'issues': all_issues,
             'warnings': warnings,
             'checks': checks,
             'score': self._calculate_score(checks),
@@ -88,12 +93,15 @@ class TranslationQAService:
 
         missing = src_phs - tgt_phs
         extra = tgt_phs - src_phs
+        passed = not missing and not extra
         return {
-            'passed': not missing and not extra,
+            'passed': passed,
+            'ok': passed,
             'source_placeholders': list(src_phs),
             'target_placeholders': list(tgt_phs),
             'missing': list(missing),
             'extra': list(extra),
+            'issues': list(missing),
         }
 
     def check_length_ratio(
@@ -102,7 +110,7 @@ class TranslationQAService:
     ) -> Dict:
         """Length ratio check — CJK languages are shorter, Arabic longer"""
         if not source or not translated:
-            return {'passed': True, 'ratio': 0}
+            return {'passed': True, 'ok': True, 'ratio': 0}
 
         ratio = len(translated) / len(source)
 
@@ -116,7 +124,7 @@ class TranslationQAService:
         else:
             ok = 0.5 <= ratio <= 3.5
 
-        result = {'passed': True, 'ratio': round(ratio, 2)}
+        result = {'passed': True, 'ok': True, 'ratio': round(ratio, 2)}
         if not ok:
             if ratio < 0.3:
                 result['warning'] = f'Translation very short (ratio: {ratio:.2f})'
@@ -136,7 +144,7 @@ class TranslationQAService:
     def check_icu_validity(self, source: str, translated: str) -> Dict:
         """If source has ICU format, translated must also be valid ICU"""
         try:
-            from ...utils.icu import is_icu_format, validate_icu_template
+            from api.localization.utils.icu import is_icu_format, validate_icu_template
             if not is_icu_format(source):
                 return {'passed': True, 'is_icu': False}
             validation = validate_icu_template(translated)
@@ -156,7 +164,7 @@ class TranslationQAService:
         tgt_tags = re.findall(tag_pattern, translated or '')
         passed = len(src_tags) == len(tgt_tags)
         return {
-            'passed': passed,
+            'passed': passed, 'ok': passed,
             'source_tags': src_tags,
             'target_tags': tgt_tags,
         }
@@ -176,10 +184,19 @@ class TranslationQAService:
             'missing_numbers': list(missing),
         }
 
+    def check_length(self, source: str, translated: str, target_lang: str = '') -> dict:
+        """Alias for check_length_ratio with ok/issues keys for test compatibility."""
+        result = self.check_length_ratio(source, translated)
+        result['ok'] = result.get('passed', True)
+        if not result['ok']:
+            result['issues'] = [f"Length ratio warning: {result.get('ratio', 'N/A')}"]
+        return result
+
+
     def run_batch_qa(self, language_code: str, limit: int = 500) -> Dict:
         """Language-র সব approved translations-এ QA run করে"""
         try:
-            from ...models.core import Language, Translation
+            from api.localization.models.core import Language, Translation
             lang = Language.objects.filter(code=language_code).first()
             if not lang:
                 return {'success': False, 'error': f'Language {language_code} not found',

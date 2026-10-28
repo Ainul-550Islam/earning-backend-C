@@ -3,6 +3,7 @@ api/ad_networks/tests/test_serializers.py
 Tests for all serializers in the ad_networks module
 SaaS-ready with tenant support
 """
+from django.utils import timezone
 
 import pytest
 from django.test import TestCase

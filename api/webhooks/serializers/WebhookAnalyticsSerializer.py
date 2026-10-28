@@ -2,12 +2,19 @@
 
 This serializer handles webhook analytics CRUD operations
 including statistics and performance metrics.
+
+FIX: Removed a second, dead copy of WebhookHealthLogSerializer that lived
+here (same name as the real serializers.WebhookHealthSerializer.py, and
+the one actually re-exported by the package). Confirmed unused anywhere
+in the codebase, and would have raised AssertionError on instantiation
+regardless (its own read_only_fields named 'created_at', a field absent
+from its own fields list).
 """
 
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 
-from ..models import WebhookAnalytics, WebhookHealthLog, WebhookEventStat, WebhookRateLimit, WebhookRetryAnalysis
+from ..models import WebhookAnalytics, WebhookEventStat, WebhookRateLimit, WebhookRetryAnalysis
 
 
 class WebhookAnalyticsSerializer(serializers.ModelSerializer):
@@ -44,40 +51,6 @@ class WebhookAnalyticsSerializer(serializers.ModelSerializer):
                 data['performance_rating'] = 'Poor'
         else:
             data['performance_rating'] = 'Unknown'
-        
-        return data
-
-
-class WebhookHealthLogSerializer(serializers.ModelSerializer):
-    """Serializer for webhook health log CRUD operations."""
-    
-    class Meta:
-        model = WebhookHealthLog
-        fields = [
-            'id', 'endpoint', 'checked_at', 'is_healthy',
-            'response_time_ms', 'status_code', 'error',
-        ]
-        read_only_fields = ['id', 'created_at']
-    
-    def to_representation(self, instance):
-        """Customize health log representation."""
-        data = super().to_representation(instance)
-        
-        # Add status display
-        data['status_display'] = 'Healthy' if instance.is_healthy else 'Unhealthy'
-        
-        # Add response time category
-        if instance.response_time_ms:
-            if instance.response_time_ms < 100:
-                data['response_time_category'] = 'Excellent'
-            elif instance.response_time_ms < 500:
-                data['response_time_category'] = 'Good'
-            elif instance.response_time_ms < 1000:
-                data['response_time_category'] = 'Fair'
-            else:
-                data['response_time_category'] = 'Poor'
-        else:
-            data['response_time_category'] = 'Unknown'
         
         return data
 

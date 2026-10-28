@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 def get_app_performance_summary(app, days: int = 30) -> dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     agg = PublisherEarning.objects.filter(app=app, date__gte=start).aggregate(
         revenue=Sum("publisher_revenue"), impressions=Sum("impressions"),
@@ -31,7 +31,7 @@ def get_app_performance_summary(app, days: int = 30) -> dict:
 
 
 def get_app_revenue_by_format(app, days: int = 30) -> list:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     return list(
         PublisherEarning.objects.filter(app=app, date__gte=start)
@@ -42,7 +42,7 @@ def get_app_revenue_by_format(app, days: int = 30) -> list:
 
 
 def get_app_top_countries(app, days: int = 30, limit: int = 10) -> list:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     return list(
         PublisherEarning.objects.filter(app=app, date__gte=start)

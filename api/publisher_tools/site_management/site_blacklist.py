@@ -1,6 +1,7 @@
 # api/publisher_tools/site_management/site_blacklist.py
 """Site Blacklist — Domain and content blocking for sites."""
 from django.db import models
+from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from core.models import TimeStampedModel
@@ -18,9 +19,10 @@ class SiteBlacklistEntry(TimeStampedModel):
     reason          = models.TextField(blank=True)
     is_active       = models.BooleanField(default=True, db_index=True)
     expires_at      = models.DateTimeField(null=True, blank=True)
-    added_by        = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    added_by        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_blacklist_entries'
         verbose_name = _('Site Blacklist Entry')
         ordering = ['-created_at']

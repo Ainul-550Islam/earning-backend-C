@@ -26,6 +26,7 @@ class AdNetworkConfig(TimeStampedModel):
     total_impressions = models.BigIntegerField(default=0)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_ad_network_configs"
         verbose_name = _("Ad Network Config")
         unique_together = [["publisher", "network"]]
@@ -47,7 +48,7 @@ def get_enabled_networks(publisher) -> List:
 
 def get_network_performance(publisher, days: int = 30) -> List[Dict]:
     """Network performance comparison।"""
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from datetime import timedelta
     from django.db.models import Sum, Avg
     start = timezone.now().date() - timedelta(days=days)

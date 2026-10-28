@@ -3,6 +3,7 @@
 This module contains the ViewSet for inbound webhook log management.
 """
 
+from datetime import timedelta
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -10,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 
-from ..models import InboundWebhookLog, InboundWebhook
+from ..models import InboundWebhookLog, InboundWebhook, InboundWebhookError
 from ..serializers import (
     InboundWebhookLogSerializer,
     InboundWebhookLogListSerializer,
@@ -18,7 +19,8 @@ from ..serializers import (
     InboundWebhookLogStatsSerializer,
     InboundWebhookLogProcessSerializer,
     InboundWebhookLogFilterSerializer,
-    InboundWebhookLogBatchSerializer
+    InboundWebhookLogBatchSerializer,
+    InboundWebhookErrorSerializer,
 )
 from ..permissions import IsOwnerOrReadOnly
 from ..filters import InboundWebhookLogFilter
@@ -114,6 +116,21 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
         })
     
     @action(detail=True, methods=['get'])
+    def errors(self, request, pk=None):
+        """
+        List structured InboundWebhookError records for this log.
+
+        Distinct from `error_message` (a plain string on the log itself,
+        already surfaced by the ViewSet-level `error_analysis` action) —
+        this returns the richer InboundWebhookError rows (error_type,
+        error_code, error_details) which previously had no endpoint at all.
+        """
+        log = self.get_object()
+        error_records = InboundWebhookError.objects.filter(log=log).order_by('-created_at')
+        serializer = InboundWebhookErrorSerializer(error_records, many=True)
+        return Response({'count': error_records.count(), 'results': serializer.data})
+
+    @action(detail=True, methods=['get'], url_path='validation-result')
     def validation_result(self, request, pk=None):
         """Get validation result for an inbound webhook log."""
         log = self.get_object()
@@ -166,7 +183,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
             'success_rate': round(success_rate, 2)
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-inbound')
     def by_inbound(self, request):
         """Get logs by inbound webhook ID."""
         inbound_id = request.query_params.get('inbound_id')
@@ -177,7 +194,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
         
         try:
             inbound = InboundWebhook.objects.get(id=inbound_id, created_by=request.user)
-        except InboundWebhook.DoesNotExist:
+        except (InboundWebhook.DoesNotExist, ValueError):
             return Response({
                 'error': 'Inbound webhook not found'
             }, status=status.HTTP_404_NOT_FOUND)
@@ -192,7 +209,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-source')
     def by_source(self, request):
         """Get logs by source."""
         source = request.query_params.get('source')
@@ -211,7 +228,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-status')
     def by_status(self, request):
         """Get logs by processing status."""
         processed = request.query_params.get('processed')
@@ -228,7 +245,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-signature-validity')
     def by_signature_validity(self, request):
         """Get logs by signature validity."""
         signature_valid = request.query_params.get('signature_valid')
@@ -249,7 +266,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
     def recent(self, request):
         """Get recent inbound webhook logs."""
         hours = int(request.query_params.get('hours', 24))
-        since = timezone.now() - timezone.timedelta(hours=hours)
+        since = timezone.now() - timedelta(hours=hours)
         
         logs = self.get_queryset().filter(created_at__gte=since)
         
@@ -274,7 +291,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='invalid-signatures')
     def invalid_signatures(self, request):
         """Get logs with invalid signatures."""
         logs = self.get_queryset().filter(signature_valid=False)
@@ -287,7 +304,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-process')
     def bulk_process(self, request):
         """Process multiple inbound webhook logs."""
         log_ids = request.data.get('log_ids', [])
@@ -322,7 +339,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
             'processed_count': processed_count
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-revalidate')
     def bulk_revalidate(self, request):
         """Revalidate signatures for multiple logs."""
         log_ids = request.data.get('log_ids', [])
@@ -372,12 +389,12 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
     def trends(self, request):
         """Get inbound webhook log trends."""
         days = int(request.query_params.get('days', 7))
-        since = timezone.now() - timezone.timedelta(days=days)
+        since = timezone.now() - timedelta(days=days)
         
         # Get daily trends
         trends = []
         for day in range(days):
-            date = (timezone.now() - timezone.timedelta(days=day)).date()
+            date = (timezone.now() - timedelta(days=day)).date()
             
             day_logs = self.get_queryset().filter(created_at__date=date)
             total_count = day_logs.count()
@@ -398,7 +415,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
             'days': days
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='error-analysis')
     def error_analysis(self, request):
         """Get error analysis for inbound webhook logs."""
         # Get logs with errors
@@ -426,7 +443,7 @@ class InboundWebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
             ]
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='ip-analysis')
     def ip_analysis(self, request):
         """Get IP address analysis for inbound webhook logs."""
         # Get logs with IP addresses

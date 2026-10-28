@@ -1,6 +1,7 @@
 # api/payment_gateways/bonuses/BonusEngine.py
 from decimal import Decimal
 import logging
+from api.payment_gateways.bonuses.models import PerformanceTier
 logger = logging.getLogger(__name__)
 
 

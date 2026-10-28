@@ -4,6 +4,7 @@ S2S Postback Service
 Service for managing server-to-server postbacks,
 including configuration, testing, and validation.
 """
+from django.db import models
 
 import logging
 import secrets

@@ -4,6 +4,7 @@ Security Tasks
 This module contains Celery tasks for security-related operations including
 API key management, security monitoring, and audit logging.
 """
+from django.db import models
 
 from celery import shared_task
 from django.utils import timezone

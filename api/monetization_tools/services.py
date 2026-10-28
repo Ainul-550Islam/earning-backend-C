@@ -3,6 +3,7 @@ api/monetization_tools/services.py
 =====================================
 Business logic layer — keeps views thin.
 """
+from django.db import models
 
 import logging
 from decimal import Decimal
@@ -33,6 +34,20 @@ from .enums import (
     SubscriptionStatus, PaymentStatus, SpinWheelType, PrizeType,
     AchievementCategory,
 )
+from api.monetization_tools.models import PayoutRequest
+from api.monetization_tools.models import ReferralLink
+from api.monetization_tools.models import ReferralCommission
+from api.monetization_tools.models import Coupon
+from api.monetization_tools.models import MonetizationConfig
+from api.monetization_tools.models import FraudAlert
+from api.monetization_tools.models import AdPerformanceHourly
+from api.monetization_tools.models import AdNetworkDailyStat
+from api.monetization_tools.models import PublisherAccount
+from api.monetization_tools.models import AdCreative
+from api.monetization_tools.models import PointLedgerSnapshot
+from api.monetization_tools.models import ImpressionLog
+from api.monetization_tools.models import ClickLog
+from api.monetization_tools.models import ConversionLog
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

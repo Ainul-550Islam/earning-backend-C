@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import SmartLinkDailyStat, SmartLinkStat
+from api.smartlink.models import SmartLinkDailyStat, SmartLinkStat
 
 
 class SmartLinkStatSerializer(serializers.ModelSerializer):

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from ..models.publisher import PublisherSmartLink, PublisherSubID, PublisherAllowList, PublisherBlockList
+from api.smartlink.models.publisher import PublisherSmartLink, PublisherSubID, PublisherAllowList, PublisherBlockList
 
 
 @admin.register(PublisherSmartLink)

@@ -2,7 +2,7 @@ import logging
 import datetime
 from django.db.models import Sum, Count
 from django.utils import timezone
-from ...models import ClickHeatmap, SmartLink, Click
+from api.smartlink.models import ClickHeatmap, SmartLink, Click
 
 logger = logging.getLogger('smartlink.heatmap')
 

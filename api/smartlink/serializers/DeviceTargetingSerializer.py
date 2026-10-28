@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import DeviceTargeting
+from api.smartlink.models import DeviceTargeting
 
 
 class DeviceTargetingSerializer(serializers.ModelSerializer):

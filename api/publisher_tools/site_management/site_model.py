@@ -26,6 +26,7 @@ class SiteContentPolicy(TimeStampedModel):
     policy_score             = models.IntegerField(default=0)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_content_policies'
         verbose_name = _('Site Content Policy')
 
@@ -56,6 +57,7 @@ class SiteTechnology(TimeStampedModel):
     detected_at      = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_technologies'
         verbose_name = _('Site Technology')
 

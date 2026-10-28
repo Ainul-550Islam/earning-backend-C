@@ -16,10 +16,10 @@ class PaymentAPIView(APIView):
         except Exception:
             return Response({"success": False, "message": "No publisher profile."}, status=404)
 
-        from api.publisher_tools.payment_settlement.payment_history import (
+        from publisher_tools.payment_settlement.payment_history import (
             get_payment_history, get_payment_summary, get_lifetime_payment_stats,
         )
-        from api.publisher_tools.payment_settlement.threshold_manager import get_all_thresholds
+        from publisher_tools.payment_settlement.threshold_manager import get_all_thresholds
         return Response({"success": True, "data": {
             "summary":          get_payment_summary(publisher),
             "lifetime_stats":   get_lifetime_payment_stats(publisher),
@@ -38,7 +38,7 @@ class PayoutRequestAPIView(APIView):
             publisher = request.user.publisher_profile
         except Exception:
             return Response({"success": False, "message": "No publisher profile."}, status=404)
-        from api.publisher_tools.payment_settlement.payout_manager import check_payout_eligibility
+        from publisher_tools.payment_settlement.payout_manager import check_payout_eligibility
         return Response({"success": True, "data": check_payout_eligibility(publisher)})
 
     def post(self, request):
@@ -52,7 +52,7 @@ class PayoutRequestAPIView(APIView):
         notes           = request.data.get("notes", "")
         if not amount or not bank_account_id:
             return Response({"success": False, "message": "amount and bank_account_id required."}, status=400)
-        from api.publisher_tools.payment_settlement.payout_manager import process_payout_request
+        from publisher_tools.payment_settlement.payout_manager import process_payout_request
         result = process_payout_request(publisher, Decimal(str(amount)), bank_account_id, notes)
         status_code = 201 if result.get("success") else 400
         return Response({"success": result.get("success"), "data": result}, status=status_code)
@@ -63,13 +63,13 @@ class InvoiceDownloadAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, invoice_number=None):
-        from api.publisher_tools.models import PublisherInvoice
+        from publisher_tools.models import PublisherInvoice
         try:
             publisher = request.user.publisher_profile
             invoice   = PublisherInvoice.objects.get(invoice_number=invoice_number, publisher=publisher)
         except Exception:
             return Response({"success": False, "message": "Invoice not found."}, status=404)
-        from api.publisher_tools.payment_settlement.invoice_generator import generate_invoice_html
+        from publisher_tools.payment_settlement.invoice_generator import generate_invoice_html
         html = generate_invoice_html(invoice)
         return Response({"success": True, "data": {
             "invoice_number": invoice.invoice_number,

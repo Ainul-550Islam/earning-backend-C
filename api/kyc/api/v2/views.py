@@ -8,6 +8,7 @@ from django.utils import timezone
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def v2_kyc_status(request):
     """v2 — Rich status with risk profile, steps, notifications"""
@@ -44,8 +45,6 @@ def v2_kyc_status(request):
 
     return Response(base)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def v2_kyc_admin_dashboard(request):
     """v2 Admin — Comprehensive dashboard with charts data"""
@@ -89,8 +88,6 @@ def v2_kyc_admin_dashboard(request):
         ],
     })
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def v2_kyc_read_notification(request, notif_id):
     """Mark a notification as read"""
@@ -102,9 +99,6 @@ def v2_kyc_read_notification(request, notif_id):
         return Response({'message': 'Marked as read'})
     except KYCNotificationLog.DoesNotExist:
         return Response({'error': 'Not found'}, status=404)
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def v2_kyc_risk_leaderboard(request):
     """Top 20 highest-risk KYCs"""

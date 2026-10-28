@@ -44,6 +44,7 @@ from .choices import (
     PresenceStatus,
     ScheduledMessageStatus,
     ReactionEmoji,
+    MessagePriority,
 )
 from .constants import (
     MAX_MESSAGE_LENGTH,
@@ -75,6 +76,8 @@ from .exceptions import (
     SupportThreadLimitError,
     UserNotFoundError,
     RateLimitError,
+    BotNotFoundError,
+    PermissionDeniedError,
 )
 from .models import (
     InternalChat,
@@ -82,6 +85,7 @@ from .models import (
     ChatMessage,
     AdminBroadcast,
     SupportThread,
+    AuditAction,
     SupportMessage,
     UserInbox,
     MessageReaction,
@@ -94,12 +98,27 @@ from .models import (
     PollVote,
     BotConfig,
     BotResponse,
+    BotInteraction,
     MessagingWebhook,
     WebhookDelivery,
     MessageTranslation,
     UserBlock,
     DeviceToken,
+    UserStory,
+    StoryView,
+    StoryHighlight,
+    VoiceMessageTranscription,
+    LinkPreview,
+    MessageLinkPreview,
+    MediaAttachment,
+    DisappearingMessageConfig,
+    MessageEditHistory,
+    MessageSearchIndex,
+    ScheduledMessage,
 )
+from api.messaging.models import AuditLogEntry
+from api.messaging.models import RetentionPolicy
+from api.messaging.models import LegalHold
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -110,6 +129,8 @@ User = get_user_model()
 # ---------------------------------------------------------------------------
 
 def _get_user_or_raise(user_id: Any) -> Any:
+    """Look up a User by pk, raising UserNotFoundError (not DoesNotExist)
+    so every caller gets one consistent exception type to catch."""
     if user_id is None:
         raise UserNotFoundError("user_id must not be None.")
     try:
@@ -121,6 +142,8 @@ def _get_user_or_raise(user_id: Any) -> Any:
 
 
 def _get_chat_or_raise(chat_id: Any) -> InternalChat:
+    """Look up an InternalChat by pk, raising ChatNotFoundError (not
+    DoesNotExist) so every caller gets one consistent exception type."""
     if chat_id is None:
         raise ChatNotFoundError("chat_id must not be None.")
     try:
@@ -132,6 +155,8 @@ def _get_chat_or_raise(chat_id: Any) -> InternalChat:
 
 
 def _assert_chat_participant(chat: InternalChat, user_id: Any) -> ChatParticipant:
+    """Raise ChatAccessDeniedError unless user_id is a current (not left)
+    participant of chat; otherwise return their ChatParticipant row."""
     try:
         return ChatParticipant.objects.get(chat=chat, user_id=user_id, left_at__isnull=True)
     except ChatParticipant.DoesNotExist:
@@ -140,15 +165,23 @@ def _assert_chat_participant(chat: InternalChat, user_id: Any) -> ChatParticipan
         )
 
 
-def _check_message_rate_limit(user_id: Any) -> None:
-    from datetime import timedelta
-    since = timezone.now() - timedelta(seconds=60)
-    count = ChatMessage.objects.filter(sender_id=user_id, created_at__gte=since).count()
-    if count >= MAX_MESSAGES_PER_MINUTE:
-        raise RateLimitError(
-            f"User pk={user_id!r} has sent {count} messages in the last 60 seconds. "
-            f"Limit is {MAX_MESSAGES_PER_MINUTE}."
-        )
+def _check_message_rate_limit(user_id: Any, ip: Optional[str] = None) -> None:
+    """Raise RateLimitError if user_id (and/or ip) has exceeded
+    MAX_MESSAGES_PER_MINUTE. See the comment below for why this delegates
+    to utils.rate_limiter rather than implementing its own check."""
+    # BUG FIX (DRY): this used to reimplement rate limiting from scratch
+    # via a raw ChatMessage COUNT query over a 60s window, completely
+    # separate from utils.rate_limiter.check_message_rate() - which is
+    # what WebSocket sends (consumers.py) actually use. Two different
+    # algorithms enforcing the same MAX_MESSAGES_PER_MINUTE rule meant
+    # REST-API and WebSocket message sends were rate-limited
+    # inconsistently (different windows/mechanics, and the DB-count
+    # version had no IP-limit and didn't share block-state with
+    # block_user_rate_limit/is_user_blocked_by_rate_limit). Both raise
+    # the same messaging.exceptions.RateLimitError, so this is a
+    # same-exception-type drop-in replacement for every existing caller.
+    from .utils.rate_limiter import check_message_rate
+    check_message_rate(user_id=user_id, ip=ip)
 
 
 def _check_user_blocked(sender_id: Any, chat: InternalChat) -> None:
@@ -170,6 +203,9 @@ def _check_user_blocked(sender_id: Any, chat: InternalChat) -> None:
 
 @transaction.atomic
 def create_direct_chat(user_id_a: Any, user_id_b: Any) -> InternalChat:
+    """Get or create the 1:1 chat between two users - idempotent, so
+    calling this twice for the same pair returns the same InternalChat
+    rather than creating a duplicate."""
     if user_id_a is None or user_id_b is None:
         raise MessagingError("Both user_id_a and user_id_b are required.")
     if str(user_id_a) == str(user_id_b):
@@ -195,6 +231,9 @@ def create_direct_chat(user_id_a: Any, user_id_b: Any) -> InternalChat:
 
 @transaction.atomic
 def create_group_chat(*, creator_id: Any, name: str, member_ids: Sequence[Any]) -> InternalChat:
+    """Create a new group chat: creator becomes OWNER, everyone else in
+    member_ids becomes a MEMBER (creator_id is de-duped out of member_ids
+    if the caller included it, so they're never added twice)."""
     if not name or not name.strip():
         raise MessagingError("Group chat name must not be empty.")
 
@@ -230,11 +269,18 @@ def send_chat_message(
     poll_data: Optional[dict] = None,
     location_data: Optional[dict] = None,
     metadata: Optional[dict] = None,
+    priority: Optional[str] = None,
+    ip: Optional[str] = None,
 ) -> ChatMessage:
+    """Send a message in chat_id on behalf of sender_id: validates
+    membership, rate limits, blocks and content length, then creates the
+    ChatMessage, fans it out to participants' inboxes, fires the
+    chat_message_sent signal (bot triggers, search indexing), and bumps
+    thread_reply_count when it's a thread reply."""
     chat = _get_chat_or_raise(chat_id)
     chat.assert_active()
     _assert_chat_participant(chat, sender_id)
-    _check_message_rate_limit(sender_id)
+    _check_message_rate_limit(sender_id, ip=ip)
     _check_user_blocked(sender_id, chat)
 
     if message_type == MessageType.TEXT:
@@ -264,6 +310,7 @@ def send_chat_message(
         poll_data=poll_data,
         location_data=location_data,
         metadata=metadata or {},
+        priority=priority or MessagePriority.NORMAL,
     )
     message.full_clean()
     message.save()
@@ -288,11 +335,18 @@ def send_chat_message(
     # Process bot triggers
     _process_bot_triggers_async(message)
 
+    # Audit fix (Part 19): index the new message for search. See
+    # _queue_message_index docstring - this was never wired in before.
+    _queue_message_index(message)
+
     logger.info("send_chat_message: msg=%s chat=%s sender=%s type=%s", message.id, chat_id, sender_id, message_type)
     return message
 
 
 def _fanout_message_to_inboxes(message: ChatMessage, chat: InternalChat, sender_id: Any) -> None:
+    """Create a UserInbox row for every participant except the sender, so
+    the message shows up in their notification inbox. ignore_conflicts=True
+    on the bulk_create makes this safe to call more than once."""
     participants = list(
         ChatParticipant.objects.filter(chat=chat, left_at__isnull=True)
         .exclude(user_id=sender_id)
@@ -323,11 +377,14 @@ def get_chat_messages(
     before_id: Optional[Any] = None,
     limit: int = DEFAULT_PAGE_SIZE,
 ) -> list:
+    """Return up to `limit` non-deleted messages in chat_id, newest first,
+    for a user who must already be a participant. before_id turns this
+    into cursor-based pagination (only messages older than that message)."""
     chat = _get_chat_or_raise(chat_id)
     _assert_chat_participant(chat, user_id)
 
     limit = min(limit, MAX_MESSAGES_FETCH)
-    qs = ChatMessage.objects.filter(chat=chat).select_related("sender", "reply_to")
+    qs = ChatMessage.objects.filter(chat=chat, deleted_at__isnull=True).select_related("sender", "reply_to")
 
     if before_id:
         try:
@@ -339,8 +396,30 @@ def get_chat_messages(
     return list(qs.order_by("-created_at")[:limit])
 
 
+def mark_chat_read(*, chat_id: Any, user_id: Any) -> "ChatParticipant":
+    """
+    Clears the unread badge for one chat by updating the requesting user's
+    ChatParticipant.last_read_at (what InternalChatViewSet.mark_read's own
+    docstring has always promised it does).
+
+    Previously this endpoint called mark_inbox_items_read() instead, which
+    operates on the unrelated UserInbox notifications model and never
+    touches ChatParticipant.last_read_at — so last_read_at could never be
+    advanced through any reachable code path, and unread-message counts
+    (computed from it in InternalChatSerializer / ChatMessageQuerySet.
+    unread_for_user) could only ever grow, never clear.
+    """
+    chat = _get_chat_or_raise(chat_id)
+    participant = _assert_chat_participant(chat, user_id)
+    participant.mark_read()
+    return participant
+
+
+
 @transaction.atomic
 def delete_chat_message(*, message_id: Any, requesting_user_id: Any) -> ChatMessage:
+    """Soft-delete a message: allowed for the original sender, or a chat
+    ADMIN/OWNER on someone else's message. De-indexes it from search too."""
     try:
         message = ChatMessage.objects.select_related("chat").get(pk=message_id)
     except ChatMessage.DoesNotExist:
@@ -359,6 +438,12 @@ def delete_chat_message(*, message_id: Any, requesting_user_id: Any) -> ChatMess
             raise ChatAccessDeniedError("Only message sender or chat admin can delete a message.")
 
     message.soft_delete(deleted_by_id=requesting_user_id)
+
+    # Audit fix (Part 19): deindex from search. soft_delete() bulk-.update()s
+    # the row directly (never calls .save()), so nothing downstream of it
+    # ever ran - see _queue_message_deindex docstring.
+    _queue_message_deindex(message.id)
+
     return message
 
 
@@ -421,8 +506,19 @@ def remove_reaction(*, message_id: Any, user_id: Any, emoji: str) -> bool:
     return deleted_count > 0
 
 
-def get_message_reactions(message_id: Any) -> dict:
-    """Return reaction counts grouped by emoji."""
+def get_message_reactions(message_id: Any, requesting_user_id: Any) -> dict:
+    """Return reaction counts grouped by emoji.
+
+    SECURITY: requesting_user_id is required and checked - this used to
+    take only message_id and returned data for any message on the
+    platform to any authenticated caller, regardless of chat membership.
+    """
+    try:
+        message = ChatMessage.objects.select_related("chat").get(pk=message_id)
+    except ChatMessage.DoesNotExist:
+        raise MessageNotFoundError(f"ChatMessage {message_id!r} not found.")
+    _assert_chat_participant(message.chat, requesting_user_id)
+
     from django.db.models import Count
     reactions = (
         MessageReaction.objects
@@ -448,14 +544,21 @@ def update_presence(*, user_id: Any, status: str, platform: str = "web") -> User
     )
 
     now = timezone.now()
-    UserPresence.objects.filter(pk=presence.pk).update(
-        status=status,
-        last_seen_at=now,
-        last_seen_on=platform,
-        updated_at=now,
-    )
-    presence.status = status
-    presence.last_seen_at = now
+    if status == PresenceStatus.ONLINE:
+        presence.go_online(platform=platform)
+    elif status == PresenceStatus.OFFLINE:
+        presence.go_offline()
+    else:
+        # AWAY / BUSY have no dedicated model method (yet) — keep the
+        # original direct update for these.
+        UserPresence.objects.filter(pk=presence.pk).update(
+            status=status,
+            last_seen_at=now,
+            last_seen_on=platform,
+            updated_at=now,
+        )
+        presence.status = status
+        presence.last_seen_at = now
 
     # Cache for fast reads
     cache_key = f"presence:{user_id}"
@@ -491,8 +594,15 @@ def get_presence(user_id: Any) -> dict:
         return {"status": PresenceStatus.OFFLINE, "last_seen_at": None}
 
 
-def get_chat_presences(chat_id: Any) -> dict:
-    """Return {user_id: presence_dict} for all participants in a chat."""
+def get_chat_presences(chat_id: Any, requesting_user_id: Any) -> dict:
+    """Return {user_id: presence_dict} for all participants in a chat.
+
+    Requires the requesting user to be a participant — previously this had
+    no authorization check at all, so any authenticated user could view
+    presence info for any chat by guessing/knowing its UUID.
+    """
+    chat = _get_chat_or_raise(chat_id)
+    _assert_chat_participant(chat, requesting_user_id)
     participant_ids = list(
         ChatParticipant.objects.filter(chat_id=chat_id, left_at__isnull=True)
         .values_list("user_id", flat=True)
@@ -564,6 +674,8 @@ def initiate_call(
 
 @transaction.atomic
 def accept_call(*, call_id: Any, user_id: Any) -> CallSession:
+    """Move a RINGING call to ONGOING and stamp started_at. Rejects any
+    other current status (already answered elsewhere, already ended)."""
     try:
         call = CallSession.objects.get(pk=call_id)
     except CallSession.DoesNotExist:
@@ -581,6 +693,8 @@ def accept_call(*, call_id: Any, user_id: Any) -> CallSession:
 
 @transaction.atomic
 def decline_call(*, call_id: Any, user_id: Any) -> CallSession:
+    """End a still-RINGING call with status=DECLINED (0-second duration)
+    and fire call_ended. Only valid while the call hasn't been answered."""
     try:
         call = CallSession.objects.get(pk=call_id)
     except CallSession.DoesNotExist:
@@ -595,6 +709,8 @@ def decline_call(*, call_id: Any, user_id: Any) -> CallSession:
 
 @transaction.atomic
 def end_call(*, call_id: Any, user_id: Any) -> CallSession:
+    """End a RINGING or ONGOING call with status=ENDED, recording its
+    actual duration, and fire call_ended."""
     try:
         call = CallSession.objects.get(pk=call_id)
     except CallSession.DoesNotExist:
@@ -608,6 +724,8 @@ def end_call(*, call_id: Any, user_id: Any) -> CallSession:
 
 
 def _get_default_ice_servers() -> list:
+    """STUN/TURN servers for new calls: settings.WEBRTC_ICE_SERVERS if the
+    host project set one, else a public Google STUN server as a fallback."""
     from django.conf import settings
     return getattr(settings, "WEBRTC_ICE_SERVERS", [
         {"urls": "stun:stun.l.google.com:19302"},
@@ -650,6 +768,16 @@ def pin_message(*, message_id: Any, chat_id: Any, pinned_by_id: Any) -> MessageP
 
 @transaction.atomic
 def unpin_message(*, message_id: Any, chat_id: Any, unpinned_by_id: Any) -> bool:
+    """Unpin a message. Requires the same admin/owner role pin_message requires
+    — previously this had no permission check at all (any authenticated user
+    could unpin any message in any chat), which let a regular member undo an
+    admin-only action.
+    """
+    chat = _get_chat_or_raise(chat_id)
+    participant = _assert_chat_participant(chat, unpinned_by_id)
+    if participant.role not in (ParticipantRole.ADMIN, ParticipantRole.OWNER):
+        raise ChatAccessDeniedError("Only chat admins can unpin messages.")
+
     deleted_count, _ = MessagePin.objects.filter(
         message_id=message_id, chat_id=chat_id
     ).delete()
@@ -664,7 +792,12 @@ def unpin_message(*, message_id: Any, chat_id: Any, unpinned_by_id: Any) -> bool
     return deleted_count > 0
 
 
-def get_pinned_messages(chat_id: Any) -> list:
+def get_pinned_messages(chat_id: Any, requesting_user_id: Any) -> list:
+    """Return all pins for a chat. Requires the requesting user to be a
+    participant — previously this had no authorization check at all.
+    """
+    chat = _get_chat_or_raise(chat_id)
+    _assert_chat_participant(chat, requesting_user_id)
     return list(
         MessagePin.objects.filter(chat_id=chat_id)
         .select_related("message", "pinned_by")
@@ -680,12 +813,18 @@ def get_pinned_messages(chat_id: Any) -> list:
 def forward_message(*, message_id: Any, target_chat_id: Any, forwarded_by_id: Any) -> ChatMessage:
     """Forward a message to another chat."""
     try:
-        original = ChatMessage.objects.get(pk=message_id)
+        original = ChatMessage.objects.select_related("chat").get(pk=message_id)
     except ChatMessage.DoesNotExist:
         raise MessageNotFoundError(f"Message {message_id} not found.")
 
     if original.is_deleted:
         raise MessageDeletedError("Cannot forward a deleted message.")
+
+    # SECURITY: must be a participant of the SOURCE chat to read/forward
+    # its content - send_chat_message() below already checks membership
+    # of the TARGET chat, but nothing previously verified the forwarder
+    # was even allowed to see the original message in the first place.
+    _assert_chat_participant(original.chat, forwarded_by_id)
 
     forwarded = send_chat_message(
         chat_id=target_chat_id,
@@ -752,6 +891,8 @@ def schedule_message(
 
 @transaction.atomic
 def cancel_scheduled_message(*, scheduled_id: Any, user_id: Any) -> ScheduledMessage:
+    """Cancel a still-PENDING scheduled message. Only the original sender
+    may cancel it, and only before it's actually been sent/failed."""
     try:
         sched = ScheduledMessage.objects.get(pk=scheduled_id)
     except ScheduledMessage.DoesNotExist:
@@ -768,37 +909,41 @@ def cancel_scheduled_message(*, scheduled_id: Any, user_id: Any) -> ScheduledMes
     return sched
 
 
-@transaction.atomic
 def send_scheduled_message_now(*, scheduled_id: Any) -> ChatMessage:
     """Called by Celery task to actually send the scheduled message."""
     try:
-        sched = ScheduledMessage.objects.select_for_update().get(
-            pk=scheduled_id, status=ScheduledMessageStatus.PENDING
-        )
+        with transaction.atomic():
+            sched = ScheduledMessage.objects.select_for_update().get(
+                pk=scheduled_id, status=ScheduledMessageStatus.PENDING
+            )
+            msg = send_chat_message(
+                chat_id=sched.chat_id,
+                sender_id=sched.sender_id,
+                content=sched.content,
+                message_type=sched.message_type,
+                attachments=sched.attachments,
+            )
+            ScheduledMessage.objects.filter(pk=sched.pk).update(
+                status=ScheduledMessageStatus.SENT,
+                sent_message=msg,
+            )
     except ScheduledMessage.DoesNotExist:
         raise MessagingError(f"Scheduled message {scheduled_id} not found or not pending.")
-
-    try:
-        msg = send_chat_message(
-            chat_id=sched.chat_id,
-            sender_id=sched.sender_id,
-            content=sched.content,
-            message_type=sched.message_type,
-            attachments=sched.attachments,
-        )
-        ScheduledMessage.objects.filter(pk=sched.pk).update(
-            status=ScheduledMessageStatus.SENT,
-            sent_message=msg,
-        )
-        from .signals import scheduled_message_sent
-        scheduled_message_sent.send(sender=ScheduledMessage, scheduled_msg=sched, sent_message=msg)
-        return msg
     except Exception as exc:
-        ScheduledMessage.objects.filter(pk=sched.pk).update(
+        # The atomic block above has already rolled back any partial
+        # send side-effects. This update runs in a fresh transaction (we're
+        # no longer inside the atomic block that failed) so the FAILED
+        # status actually persists instead of being rolled back along with
+        # everything else.
+        ScheduledMessage.objects.filter(pk=scheduled_id).update(
             status=ScheduledMessageStatus.FAILED,
             error=str(exc)[:500],
         )
         raise
+
+    from .signals import scheduled_message_sent
+    scheduled_message_sent.send(sender=ScheduledMessage, scheduled_msg=sched, sent_message=msg)
+    return msg
 
 
 # ---------------------------------------------------------------------------
@@ -815,9 +960,13 @@ def translate_message(*, message_id: Any, target_language: str, user_id: Any) ->
         raise MessagingError(f"Unsupported language: {target_language}. Supported: {SUPPORTED_TRANSLATION_LANGUAGES}")
 
     try:
-        message = ChatMessage.objects.get(pk=message_id)
+        message = ChatMessage.objects.select_related("chat").get(pk=message_id)
     except ChatMessage.DoesNotExist:
         raise MessageNotFoundError(f"ChatMessage {message_id} not found.")
+
+    # SECURITY: without this, any authenticated user could read the full
+    # translated content of any private message on the platform by id.
+    _assert_chat_participant(message.chat, user_id)
 
     # Return cached translation if exists
     cached = MessageTranslation.objects.filter(
@@ -896,6 +1045,9 @@ def _call_translation_provider(text: str, target_lang: str) -> tuple[str, str]:
 
 @transaction.atomic
 def block_user(*, blocker_id: Any, blocked_id: Any, reason: str = "") -> UserBlock:
+    """Block blocked_id on blocker_id's behalf (idempotent create - raises
+    if already blocked rather than silently no-op'ing, so callers know
+    whether their action actually did something)."""
     if str(blocker_id) == str(blocked_id):
         raise MessagingError("Cannot block yourself.")
 
@@ -917,6 +1069,8 @@ def block_user(*, blocker_id: Any, blocked_id: Any, reason: str = "") -> UserBlo
 
 @transaction.atomic
 def unblock_user(*, blocker_id: Any, blocked_id: Any) -> bool:
+    """Remove blocker_id's block on blocked_id, if one exists. Returns
+    whether a block was actually removed."""
     deleted_count, _ = UserBlock.objects.filter(
         blocker_id=blocker_id, blocked_id=blocked_id
     ).delete()
@@ -927,6 +1081,7 @@ def unblock_user(*, blocker_id: Any, blocked_id: Any) -> bool:
 
 
 def is_user_blocked(blocker_id: Any, blocked_id: Any) -> bool:
+    """Whether blocker_id currently has blocked_id blocked."""
     return UserBlock.objects.filter(blocker_id=blocker_id, blocked_id=blocked_id).exists()
 
 
@@ -943,6 +1098,9 @@ def create_channel(
     channel_type: str = "PUBLIC",
     tenant=None,
 ) -> AnnouncementChannel:
+    """Create a broadcast-style announcement channel; creator is added as
+    its first (admin) member. name is slugified into a unique slug,
+    appending -1/-2/... if it collides with an existing channel."""
     creator = _get_user_or_raise(created_by_id)
     base_slug = slugify(name)[:80] or "channel"
     slug = base_slug
@@ -970,6 +1128,8 @@ def create_channel(
 
 @transaction.atomic
 def subscribe_channel(*, channel_id: Any, user_id: Any) -> ChannelMember:
+    """Add user_id as a channel member (idempotent) and bump
+    subscriber_count only on the first, real subscription."""
     try:
         channel = AnnouncementChannel.objects.get(pk=channel_id)
     except AnnouncementChannel.DoesNotExist:
@@ -995,6 +1155,8 @@ def subscribe_channel(*, channel_id: Any, user_id: Any) -> ChannelMember:
 
 @transaction.atomic
 def unsubscribe_channel(*, channel_id: Any, user_id: Any) -> bool:
+    """Remove user_id's channel membership, if any, and decrement
+    subscriber_count to match. Returns whether they were actually a member."""
     deleted_count, _ = ChannelMember.objects.filter(
         channel_id=channel_id, user_id=user_id
     ).delete()
@@ -1052,9 +1214,13 @@ def create_poll(
 def vote_on_poll(*, message_id: Any, user_id: Any, option_id: str) -> PollVote:
     """Cast or update a vote on a poll."""
     try:
-        message = ChatMessage.objects.get(pk=message_id, message_type=MessageType.POLL)
+        message = ChatMessage.objects.select_related("chat").get(pk=message_id, message_type=MessageType.POLL)
     except ChatMessage.DoesNotExist:
         raise MessageNotFoundError(f"Poll message {message_id} not found.")
+
+    # SECURITY: without this, a non-participant could vote on a poll in
+    # a chat they have no access to, corrupting its results.
+    _assert_chat_participant(message.chat, user_id)
 
     poll_data = message.poll_data or {}
     option_ids = [o["id"] for o in poll_data.get("options", [])]
@@ -1077,12 +1243,18 @@ def vote_on_poll(*, message_id: Any, user_id: Any, option_id: str) -> PollVote:
     return vote
 
 
-def get_poll_results(message_id: Any) -> dict:
-    """Return poll results as {option_id: {text, votes, percentage}}."""
+def get_poll_results(message_id: Any, requesting_user_id: Any) -> dict:
+    """Return poll results as {option_id: {text, votes, percentage}}.
+
+    SECURITY: requesting_user_id is required and checked - this used to
+    take only message_id and exposed poll question/results for any
+    message on the platform to any authenticated caller.
+    """
     try:
-        message = ChatMessage.objects.get(pk=message_id, message_type=MessageType.POLL)
+        message = ChatMessage.objects.select_related("chat").get(pk=message_id, message_type=MessageType.POLL)
     except ChatMessage.DoesNotExist:
         raise MessageNotFoundError(f"Poll message {message_id} not found.")
+    _assert_chat_participant(message.chat, requesting_user_id)
 
     from django.db.models import Count
     votes = dict(
@@ -1125,6 +1297,90 @@ def _process_bot_triggers_async(message: ChatMessage) -> None:
         logger.warning("Could not queue bot trigger task: %s", exc)
 
 
+def _queue_message_index(message: ChatMessage) -> None:
+    """
+    Queue Elasticsearch (re)indexing in Celery (non-blocking).
+
+    Audit finding (Part 19): index_message_task has existed in tasks.py
+    all along, but nothing on the live send/edit path ever called it -
+    the only callers were the manual sync_search_index command and
+    bulk_reindex_task. A message sent (or edited) after the last manual
+    reindex was therefore invisible to search until someone ran one of
+    those by hand. Mirrors _process_bot_triggers_async's fire-and-forget
+    shape: an indexing hiccup must never fail the send/edit request the
+    user is actually waiting on.
+    """
+    try:
+        from .tasks import index_message_task
+        index_message_task.delay(str(message.id))
+    except Exception as exc:
+        logger.warning("Could not queue message index task: %s", exc)
+
+
+def _queue_message_deindex(message_id: Any) -> None:
+    """
+    Queue Elasticsearch deindexing in Celery (non-blocking).
+
+    Audit finding (Part 19): same root cause as _queue_message_index,
+    mirrored - delete_from_index_task also existed but was never called
+    from soft_delete()'s call sites, so a "deleted" message's original
+    content stayed permanently searchable in ES (and in the
+    MessageSearchIndex DB-fallback table, which delete_from_index_task
+    also clears) even though the DB row itself was correctly sanitized.
+    """
+    try:
+        from .tasks import delete_from_index_task
+        delete_from_index_task.delay(str(message_id))
+    except Exception as exc:
+        logger.warning("Could not queue message deindex task: %s", exc)
+
+
+def _render_bot_placeholders(
+    text: str, *, sender_name: str, chat_name: str, args: Optional[list[str]] = None, value: str = "",
+) -> str:
+    """Substitute placeholders shared by BotConfig.response_template and
+    response_blocks. {user_name}/{chat_name} predate Part 20. {arg0},
+    {arg1}, ... (slash-command positional args) and {value} (the value of
+    whichever interactive block the user clicked) were added in Part 20.
+
+    An unmatched placeholder is left as literal text rather than raising -
+    str.replace() is already a no-op when the substring isn't present, so
+    e.g. a KEYWORD bot's template referencing {arg0} degrades to showing
+    "{arg0}" instead of a 500. Bot templates are admin-authored content,
+    not user input, so this is a config-quality issue for BotConfigError
+    validation to catch (see BotConfigViewSet), not something to raise on
+    at send time and risk dropping an otherwise-valid reply.
+    """
+    rendered = text.replace("{user_name}", sender_name).replace("{chat_name}", chat_name)
+    rendered = rendered.replace("{value}", value)
+    for i, a in enumerate(args or []):
+        rendered = rendered.replace(f"{{arg{i}}}", str(a))
+    return rendered
+
+
+def render_interactive_blocks(
+    blocks: list[dict], *, sender_name: str, chat_name: str, args: Optional[list[str]] = None, value: str = "",
+) -> list[dict]:
+    """Render BotConfig.response_blocks into the interactive_blocks that get
+    attached to the sent ChatMessage - same placeholder substitution as
+    _render_bot_placeholders(), applied to each block's label/value.
+
+    Returns a new list (input is never mutated) so a single BotConfig row
+    can be safely reused as the template for many different renders.
+    """
+    import copy
+    rendered: list[dict] = []
+    for block in (blocks or []):
+        b = copy.deepcopy(block)
+        for field in ("label", "value"):
+            if isinstance(b.get(field), str):
+                b[field] = _render_bot_placeholders(
+                    b[field], sender_name=sender_name, chat_name=chat_name, args=args, value=value,
+                )
+        rendered.append(b)
+    return rendered
+
+
 def process_bot_triggers(message_id: Any) -> list[BotResponse]:
     """
     Check all active BotConfigs and send matching auto-replies.
@@ -1138,9 +1394,15 @@ def process_bot_triggers(message_id: Any) -> list[BotResponse]:
     if message.is_deleted or message.message_type == MessageType.SYSTEM:
         return []
 
+    # SECURITY (world-system audit): this used to match ALL active bots
+    # platform-wide for chat__isnull=True ("global") bots, with no tenant
+    # filter at all - a global bot created by one tenant would fire in
+    # every other tenant's chats too. tenant=message.tenant scopes
+    # "global" to mean "global within the bot's own tenant".
     from .choices import BotTriggerType
     bots = BotConfig.objects.filter(
-        is_active=True
+        is_active=True,
+        tenant=message.tenant,
     ).filter(
         models_Q(chat=message.chat) | models_Q(chat__isnull=True)
     ).order_by("-priority")
@@ -1150,6 +1412,11 @@ def process_bot_triggers(message_id: Any) -> list[BotResponse]:
         triggered = False
         content = message.content or ""
 
+        # Part 20 (world-system audit): slash commands, e.g. a message whose
+        # content is "/offer 4471" matches a bot with trigger_type=SLASH_COMMAND
+        # and trigger_value="offer" (leading "/" on trigger_value is optional
+        # and stripped, so either "offer" or "/offer" works when configuring one).
+        cmd_args: list[str] = []
         if bot.trigger_type == BotTriggerType.KEYWORD:
             triggered = bot.trigger_value.lower() in content.lower()
         elif bot.trigger_type == BotTriggerType.REGEX:
@@ -1159,16 +1426,31 @@ def process_bot_triggers(message_id: Any) -> list[BotResponse]:
                 logger.warning("Bot %s has invalid regex: %s", bot.id, bot.trigger_value)
         elif bot.trigger_type == BotTriggerType.ALWAYS:
             triggered = True
+        elif bot.trigger_type == BotTriggerType.SLASH_COMMAND:
+            tokens = content.strip().split()
+            first = tokens[0].lower() if tokens else ""
+            triggered = first == f"/{bot.trigger_value.lower().lstrip('/')}"
+            if triggered:
+                cmd_args = tokens[1:]
 
         if not triggered:
             continue
 
-        # Build response text
+        # Build response text + (Part 20) any attached interactive blocks.
+        # {arg0}, {arg1}, ... expose the slash-command's positional args;
+        # {user_name}/{chat_name} are unchanged from before Part 20.
         sender_name = ""
         if message.sender:
             sender_name = getattr(message.sender, "get_full_name", lambda: "")() or str(message.sender)
-        response_text = bot.response_template.replace("{user_name}", sender_name).replace(
-            "{chat_name}", message.chat.name or "this chat"
+        chat_name = message.chat.name or "this chat"
+        response_text = _render_bot_placeholders(
+            bot.response_template, sender_name=sender_name, chat_name=chat_name, args=cmd_args,
+        )
+        rendered_blocks = (
+            render_interactive_blocks(
+                bot.response_blocks, sender_name=sender_name, chat_name=chat_name, args=cmd_args,
+            )
+            if bot.response_blocks else []
         )
 
         try:
@@ -1181,6 +1463,7 @@ def process_bot_triggers(message_id: Any) -> list[BotResponse]:
                 chat=message.chat,
                 content=response_text,
                 message_type=MessageType.BOT,
+                interactive_blocks=rendered_blocks,
                 tenant=message.tenant,
             )
             bot_resp = BotResponse.objects.create(
@@ -1192,28 +1475,121 @@ def process_bot_triggers(message_id: Any) -> list[BotResponse]:
             )
             responses.append(bot_resp)
             logger.info("Bot %s replied to msg %s in chat %s", bot.id, message_id, message.chat_id)
+
+            # Audit fix (Part 19): bot_response_sent had a real @receiver
+            # but nothing ever called .send() on it.
+            from .signals import bot_response_sent
+            bot_response_sent.send(sender=BotResponse, bot_response=bot_resp)
         except Exception as exc:
-            BotResponse.objects.create(
+            bot_resp = BotResponse.objects.create(
                 bot=bot,
                 trigger_message=message,
                 was_successful=False,
                 error=str(exc)[:500],
                 tenant=message.tenant,
             )
+            responses.append(bot_resp)
             logger.error("Bot %s failed for msg %s: %s", bot.id, message_id, exc)
 
     return responses
+
+
+def process_bot_interaction(*, message_id: Any, action_id: str, value: str, user_id: Any) -> BotInteraction:
+    """
+    Part 20 (world-system audit): handle a user clicking a button / picking
+    a select-menu option that a bot attached to one of its messages.
+
+    Before Part 20, BotConfig could only ever fire once, off the message
+    that triggered it (process_bot_triggers) - there was no way for a user
+    to act on what the bot sent back, which is the core interaction loop
+    every real bot platform (Slack/Discord/Teams) is built around. This is
+    that loop's other half: click -> record (BotInteraction) -> optionally
+    react (a follow-up BOT message, same shape as a triggered response).
+
+    Re-clicking the same action on the same message updates the existing
+    BotInteraction (value, resulting_message) instead of accumulating
+    duplicate rows - same update_or_create idempotency as vote_on_poll().
+    """
+    try:
+        message = ChatMessage.objects.select_related("chat", "tenant").get(
+            pk=message_id, message_type=MessageType.BOT,
+        )
+    except ChatMessage.DoesNotExist:
+        raise MessageNotFoundError(f"Bot message {message_id} not found.")
+
+    # SECURITY: same reasoning as vote_on_poll's participant check - without
+    # this, any authenticated user could click buttons on bot messages in
+    # chats they are not a member of.
+    _assert_chat_participant(message.chat, user_id)
+
+    blocks = message.interactive_blocks or []
+    block = next((b for b in blocks if b.get("action_id") == action_id), None)
+    if block is None:
+        raise BotNotFoundError(
+            f"No interactive block with action_id={action_id!r} on message {message_id}."
+        )
+
+    try:
+        bot = BotResponse.objects.select_related("bot").get(sent_message=message).bot
+    except BotResponse.DoesNotExist:
+        # Data-integrity edge case: a BOT-type message with interactive_blocks
+        # but no BotResponse row pointing at it (e.g. hand-inserted via admin).
+        raise BotNotFoundError(f"No bot owns message {message_id}; cannot process interaction.")
+
+    resulting_message = None
+    if bot.response_template:
+        actor = _get_user_or_raise(user_id)
+        sender_name = getattr(actor, "get_full_name", lambda: "")() or str(actor)
+        response_text = _render_bot_placeholders(
+            bot.response_template,
+            sender_name=sender_name,
+            chat_name=message.chat.name or "this chat",
+            value=value or block.get("value", ""),
+        )
+        resulting_message = ChatMessage.objects.create(
+            chat=message.chat,
+            content=response_text,
+            message_type=MessageType.BOT,
+            tenant=message.tenant,
+        )
+
+    interaction, _created = BotInteraction.objects.update_or_create(
+        source_message=message,
+        action_id=action_id,
+        user_id=user_id,
+        defaults={
+            "bot": bot,
+            "value": value or "",
+            "resulting_message": resulting_message,
+            "tenant": message.tenant,
+        },
+    )
+
+    # A dedicated signal, not bot_response_sent - BotInteraction has a
+    # resulting_message field, not sent_message, and on_bot_response_sent's
+    # receiver reads bot_response.sent_message_id directly, so reusing that
+    # signal here would AttributeError inside the receiver on every click.
+    from .signals import bot_interaction_processed
+    bot_interaction_processed.send(sender=BotInteraction, interaction=interaction)
+
+    return interaction
 
 
 # ---------------------------------------------------------------------------
 # Webhook Dispatcher (NEW)
 # ---------------------------------------------------------------------------
 
-def dispatch_webhook_event(event_type: str, payload: dict) -> None:
-    """Dispatch a webhook event to all registered listeners. Non-blocking via Celery."""
+def dispatch_webhook_event(event_type: str, payload: dict, webhook_id: Any = None) -> None:
+    """
+    Dispatch a webhook event to all registered listeners. Non-blocking via Celery.
+
+    Pass webhook_id to scope delivery to a single MessagingWebhook (e.g. the
+    "send a test event" action) instead of fanning out to every webhook
+    subscribed to event_type.
+    """
     try:
         from .tasks import dispatch_webhook_task
-        dispatch_webhook_task.delay(event_type, payload)
+        dispatch_webhook_task.delay(event_type, payload, webhook_id=webhook_id)
     except Exception as exc:
         logger.warning("Could not queue webhook dispatch: %s", exc)
 
@@ -1232,6 +1608,8 @@ def create_broadcast(
     audience_filter: Optional[dict] = None,
     scheduled_at=None,
 ) -> AdminBroadcast:
+    """Create a DRAFT AdminBroadcast - doesn't send it or resolve its
+    audience yet, that's send_broadcast()'s job."""
     creator = _get_user_or_raise(created_by_id)
     broadcast = AdminBroadcast(
         title=title.strip(),
@@ -1251,6 +1629,11 @@ def create_broadcast(
 
 @transaction.atomic
 def send_broadcast(broadcast_id: Any, *, actor_id: Optional[Any] = None) -> dict:
+    """Resolve a DRAFT/SCHEDULED broadcast's audience, deliver it to every
+    recipient's inbox in MAX_BATCH_BROADCAST_SIZE batches (updating
+    delivered_count as it goes so progress survives a mid-send crash),
+    then transition to SENT. Any exception marks the broadcast FAILED and
+    re-raises as BroadcastSendError."""
     try:
         broadcast = AdminBroadcast.objects.select_for_update().get(pk=broadcast_id)
     except AdminBroadcast.DoesNotExist:
@@ -1302,6 +1685,9 @@ def send_broadcast(broadcast_id: Any, *, actor_id: Optional[Any] = None) -> dict
 
 
 def _resolve_broadcast_audience(broadcast: AdminBroadcast):
+    """Return the pk queryset of users broadcast should be delivered to,
+    per its audience_type: everyone, users active in the last 30 days, or
+    an explicit audience_filter['user_ids'] list."""
     qs = User.objects.all()
     if broadcast.audience_type == BroadcastAudienceType.ACTIVE_USERS:
         from datetime import timedelta
@@ -1325,6 +1711,8 @@ def create_support_thread(
     initial_message: str,
     priority: str = SupportThreadPriority.NORMAL,
 ) -> SupportThread:
+    """Open a new support thread with its first message, enforcing
+    MAX_SUPPORT_THREADS_PER_USER open threads per user at a time."""
     user = _get_user_or_raise(user_id)
 
     open_count = SupportThread.objects.filter(
@@ -1374,6 +1762,10 @@ def reply_to_support_thread(
     is_agent: bool = False,
     is_internal_note: bool = False,
 ) -> SupportMessage:
+    """Post a reply in an open support thread. An agent's first reply to
+    an OPEN thread (or reply to one WAITING_USER) auto-transitions it to
+    IN_PROGRESS; a non-internal-note agent reply fires support_reply_posted
+    (which is what actually notifies the user)."""
     try:
         thread = SupportThread.objects.select_for_update().get(pk=thread_id)
     except SupportThread.DoesNotExist:
@@ -1412,6 +1804,9 @@ def reply_to_support_thread(
 
 @transaction.atomic
 def assign_support_thread(*, thread_id: Any, agent_id: Any, assigner_id: Any) -> SupportThread:
+    """Assign (or reassign) a support thread to an agent. Doesn't change
+    the thread's status - only reply_to_support_thread()'s first agent
+    reply moves it to IN_PROGRESS."""
     try:
         thread = SupportThread.objects.get(pk=thread_id)
     except SupportThread.DoesNotExist:
@@ -1441,6 +1836,10 @@ def _create_inbox_item(
     metadata: Optional[dict] = None,
     tenant=None,
 ) -> Optional[UserInbox]:
+    """Create one UserInbox notification row. Swallows and logs any
+    failure rather than raising, since this is a side effect of some other
+    action (a message send, a broadcast) that shouldn't itself fail just
+    because a notification couldn't be written - returns None on failure."""
     try:
         return UserInbox.objects.create(
             user_id=user_id,
@@ -1458,6 +1857,9 @@ def _create_inbox_item(
 
 @transaction.atomic
 def mark_inbox_items_read(*, user_id: Any, item_ids: Optional[Sequence[Any]] = None) -> int:
+    """Mark user_id's unread inbox items as read - either specific
+    item_ids, or every unread item if item_ids is omitted. Returns how
+    many rows were actually updated."""
     now = timezone.now()
     qs = UserInbox.objects.filter(user_id=user_id, is_read=False)
     if item_ids:
@@ -1468,6 +1870,7 @@ def mark_inbox_items_read(*, user_id: Any, item_ids: Optional[Sequence[Any]] = N
 
 
 def get_unread_count(user_id: Any) -> int:
+    """Count of user_id's unread, non-archived inbox items."""
     return UserInbox.objects.filter(user_id=user_id, is_read=False, is_archived=False).count()
 
 
@@ -1559,7 +1962,22 @@ def edit_message_with_history(
     # Apply the edit
     message.mark_edited(new_content)
 
+    # Audit fix (Part 19): reindex with the new content. mark_edited()
+    # bulk-.update()s the row directly (never calls .save()), so the
+    # search index (both real ES and the MessageSearchIndex DB fallback,
+    # index_message_task refreshes both) kept showing the pre-edit text
+    # forever otherwise.
+    _queue_message_index(message)
+
     logger.info("edit_message_with_history: msg=%s edit#%d by user=%s", message_id, edit_count, user_id)
+
+    # Audit fix (Part 19): message_edited_with_history had a real
+    # @receiver (broadcasts a "message.edited" WS event to chat
+    # participants) but nothing ever called .send() on it - live clients
+    # never found out a message they were viewing had been edited.
+    from .signals import message_edited_with_history
+    message_edited_with_history.send(sender=ChatMessage, message=message, edit_history=history)
+
     return message, history
 
 
@@ -1615,6 +2033,14 @@ def set_disappearing_messages(
 
     logger.info("set_disappearing_messages: chat=%s enabled=%s ttl=%s by=%s",
                 chat_id, is_enabled, ttl_seconds, enabled_by_id)
+
+    # Audit fix (Part 19): disappearing_config_changed had a real
+    # @receiver (broadcasts a "chat.disappearing_changed" WS event) but
+    # nothing ever called .send() on it - participants' clients never
+    # found out the setting had changed until they reloaded.
+    from .signals import disappearing_config_changed
+    disappearing_config_changed.send(sender=DisappearingMessageConfig, config=config, chat=chat)
+
     return config
 
 
@@ -1623,11 +2049,26 @@ def expire_disappearing_messages() -> int:
     Delete messages that have exceeded their disappearing TTL.
     Called by Celery beat task every 5 minutes.
     Returns count of messages deleted.
+
+    Audit fix (Part 19): same root cause as the cleanup_chats.py ES
+    orphan bug (management/commands/cleanup_chats.py) - .update() is a
+    bulk QuerySet operation, it never calls ChatMessage.save() and never
+    fires a signal, so nothing here ever told Elasticsearch (or the
+    MessageSearchIndex DB-fallback table) that this content had
+    disappeared. The DB row was sanitized correctly; the original,
+    pre-disappear content stayed permanently searchable everywhere else.
+    Deindexes (rather than re-indexing the "[This message has
+    disappeared]" placeholder) to match how every other message-removal
+    path treats a gone message: it stops being findable via search,
+    it doesn't show a stub.
     """
-    from .models import DisappearingMessageConfig
+    from .models import DisappearingMessageConfig, MessageSearchIndex
     from datetime import timedelta
+    from .utils.search_engine import delete_from_index
 
     total_deleted = 0
+    total_deindexed = 0
+    total_deindex_errors = 0
     configs = DisappearingMessageConfig.objects.filter(is_enabled=True)
     now = timezone.now()
 
@@ -1638,7 +2079,13 @@ def expire_disappearing_messages() -> int:
             created_at__lt=cutoff,
             status__in=[MessageStatus.SENT, MessageStatus.DELIVERED, MessageStatus.READ],
         )
-        count = messages.count()
+        # Message IDs must be collected BEFORE the .update() below -
+        # once status flips to DELETED these rows drop out of the
+        # status__in filter above and can never be found through it
+        # again (identical reasoning to cleanup_chats.py's pre-delete
+        # id collection).
+        message_ids = list(messages.values_list("id", flat=True))
+        count = len(message_ids)
         messages.update(
             status=MessageStatus.DELETED,
             content="[This message has disappeared]",
@@ -1648,8 +2095,41 @@ def expire_disappearing_messages() -> int:
         )
         total_deleted += count
 
+        # Deindex from real Elasticsearch. Best-effort per message, same
+        # as cleanup_chats.py: one ES hiccup on message #400 of 500
+        # shouldn't make the other 499 look like they failed too, and it
+        # must never make the DB-level "disappear" (already committed
+        # above) look like it failed.
+        for message_id in message_ids:
+            try:
+                ok = delete_from_index(str(message_id))
+            except Exception as exc:
+                ok = False
+                logger.warning(
+                    "expire_disappearing_messages: failed to deindex message=%s err=%s",
+                    message_id, exc,
+                )
+            if ok:
+                total_deindexed += 1
+            else:
+                total_deindex_errors += 1
+
+        # Clear the DB-fallback search index too. Unlike cleanup_chats.py
+        # (which hard-deletes the ChatMessage row and gets this for free
+        # via MessageSearchIndex's OneToOneField(on_delete=CASCADE)),
+        # this path only sanitizes the row in place, so the cascade never
+        # fires - without this, admins browsing MessageSearchIndexViewSet
+        # would still see the original pre-disappear text. A single bulk
+        # delete, not per-message: this is a local DB operation with none
+        # of the network-flakiness that justifies the per-message loop above.
+        if message_ids:
+            MessageSearchIndex.objects.filter(message_id__in=message_ids).delete()
+
     if total_deleted:
-        logger.info("expire_disappearing_messages: deleted %d messages", total_deleted)
+        logger.info(
+            "expire_disappearing_messages: deleted %d messages, deindexed %d (%d errors)",
+            total_deleted, total_deindexed, total_deindex_errors,
+        )
     return total_deleted
 
 
@@ -1672,6 +2152,10 @@ def create_story(
     music_track: Optional[dict] = None,
     tenant=None,
 ) -> "UserStory":
+    """Create a 24-hour story, enforcing STORY_MAX_PER_USER_PER_DAY and
+    the per-type required field (content for text, media_url for
+    image/video). expires_at defaults to now+24h via the model's own
+    save() if not set explicitly here."""
     from .models import UserStory
     from .constants import STORY_TTL_HOURS, STORY_MAX_PER_USER_PER_DAY
     from datetime import timedelta
@@ -1712,13 +2196,36 @@ def create_story(
 
 @transaction.atomic
 def view_story(*, story_id: Any, viewer_id: Any) -> "StoryView":
-    """Record a story view. Increments view count."""
-    from .models import UserStory, StoryView
+    """Record a story view. Increments view count.
+
+    SECURITY (world-system audit, Part 20 follow-up): previously any
+    authenticated user with a story_id could record a view regardless of
+    tenant or contact relationship - get_active_stories_for_contacts()
+    already scopes what a user is *shown* to people they share a chat
+    with, but view_story() itself never re-checked that on the write
+    path, so a story_id obtained any other way (leaked, logged, guessed)
+    could be viewed by anyone. UUIDs make this hard to exploit blindly,
+    but "hard to guess" isn't the same guarantee as "authorized" - same
+    class of gap as the viewset tenant-filtering fix, just on a single
+    object instead of a list.
+    """
+    from .models import UserStory, StoryView, ChatParticipant
 
     try:
         story = UserStory.objects.get(pk=story_id, is_active=True)
     except UserStory.DoesNotExist:
         raise MessagingError(f"Story {story_id} not found or expired.")
+
+    if str(viewer_id) != str(story.user_id):
+        shares_a_chat = ChatParticipant.objects.filter(
+            chat__participants__user_id=story.user_id,
+            user_id=viewer_id,
+            left_at__isnull=True,
+        ).exists()
+        if not shares_a_chat:
+            raise ChatAccessDeniedError(
+                "Cannot view a story from a user you don't share a chat with."
+            )
 
     if story.is_expired:
         raise MessagingError("This story has expired.")
@@ -1773,6 +2280,11 @@ def reply_to_story(
         except Exception as exc:
             logger.warning("reply_to_story: could not send DM: %s", exc)
 
+    # Audit fix (Part 19): story_replied had a real @receiver but nothing
+    # ever called .send() on it.
+    from .signals import story_replied
+    story_replied.send(sender=StoryView, view=view)
+
     return view
 
 
@@ -1805,10 +2317,6 @@ def get_active_stories_for_contacts(user_id: Any) -> list:
             is_active=True,
             expires_at__gt=now,
         )
-        .exclude(
-            visibility="except",
-            visibility_user_ids__contains=[user_id],
-        )
         .select_related("user")
         .prefetch_related(
             Prefetch("views", queryset=StoryView.objects.filter(viewer_id=user_id), to_attr="my_views")
@@ -1816,11 +2324,22 @@ def get_active_stories_for_contacts(user_id: Any) -> list:
         .order_by("user_id", "created_at")
     )
 
-    # Group by user
+    # Group by user. The "except" visibility exclusion (hide this story from
+    # specific user_ids) is applied here in Python rather than via
+    # .exclude(visibility_user_ids__contains=[user_id]) because the
+    # JSONField `contains` lookup is not supported on SQLite — only on
+    # Postgres/MySQL/Oracle — which crashed this endpoint entirely under
+    # SQLite. Filtering after fetch produces identical results on every
+    # backend.
     from itertools import groupby
     grouped = []
-    for uid, user_stories in groupby(stories, key=lambda s: s.user_id):
-        story_list = list(user_stories)
+    for uid, rows in groupby(stories, key=lambda s: s.user_id):
+        story_list = [
+            s for s in rows
+            if not (s.visibility == "except" and user_id in (s.visibility_user_ids or []))
+        ]
+        if not story_list:
+            continue
         grouped.append({
             "user_id": uid,
             "user": story_list[0].user,
@@ -1906,6 +2425,29 @@ def fetch_and_save_link_previews(message_id: Any) -> list:
         previews.append(preview)
 
     logger.info("fetch_and_save_link_previews: msg=%s found %d previews", message_id, len(previews))
+
+    # Audit fix (Part 19): link_previews_fetched had a real @receiver
+    # (broadcasts a "message.link_previews" WS event so open chat clients
+    # append the preview without a reload) but nothing ever called
+    # .send() on it. The receiver reads dict keys (p.get("url", ...)),
+    # not model attributes, so previews are converted here rather than
+    # passed as the raw LinkPreview instances above.
+    from .signals import link_previews_fetched
+    link_previews_fetched.send(
+        sender=LinkPreview,
+        message=message,
+        previews=[
+            {
+                "url": p.url,
+                "title": p.title,
+                "description": p.description,
+                "image_url": p.image_url,
+                "site_name": p.site_name,
+            }
+            for p in previews
+        ],
+    )
+
     return previews
 
 
@@ -1913,7 +2455,6 @@ def fetch_and_save_link_previews(message_id: Any) -> list:
 # Voice Message
 # ---------------------------------------------------------------------------
 
-@transaction.atomic
 def process_voice_message(message_id: Any) -> "VoiceMessageTranscription":
     """
     Process an AUDIO type message:
@@ -1945,7 +2486,9 @@ def process_voice_message(message_id: Any) -> "VoiceMessageTranscription":
     if not audio_url:
         raise MessagingError("Audio attachment has no URL.")
 
-    # Create or update transcription record (mark as processing)
+    # Create or update transcription record (mark as processing). Deliberately
+    # outside any atomic block below so this "work started" marker persists
+    # even if the download/transcribe step that follows fails.
     transcription, _ = VoiceMessageTranscription.objects.update_or_create(
         message=message,
         defaults={
@@ -1956,36 +2499,55 @@ def process_voice_message(message_id: Any) -> "VoiceMessageTranscription":
     )
 
     try:
-        # Download audio data
-        resp = requests.get(audio_url, timeout=30)
-        resp.raise_for_status()
-        audio_data = resp.content
+        with transaction.atomic():
+            # Download audio data
+            resp = requests.get(audio_url, timeout=30)
+            resp.raise_for_status()
+            audio_data = resp.content
 
-        # Generate waveform
-        waveform = generate_waveform(audio_data)
-        duration = get_audio_duration(audio_data)
+            # Generate waveform
+            waveform = generate_waveform(audio_data)
+            duration = get_audio_duration(audio_data)
 
-        # Transcribe
-        stt_provider = getattr(settings, "STT_PROVIDER", "whisper")
-        result = transcribe_audio(audio_data, provider=stt_provider)
+            # Transcribe
+            stt_provider = getattr(settings, "STT_PROVIDER", "whisper")
+            result = transcribe_audio(audio_data, provider=stt_provider)
 
-        VoiceMessageTranscription.objects.filter(pk=transcription.pk).update(
-            transcribed_text=result.get("text", ""),
-            language=result.get("language", ""),
-            confidence=result.get("confidence", 0.0),
-            provider=result.get("provider", stt_provider),
-            duration_seconds=duration,
-            waveform_data=waveform,
-            is_processing=False,
-            error=result.get("error", ""),
-        )
-        transcription.transcribed_text = result.get("text", "")
-        transcription.waveform_data = waveform
-        transcription.is_processing = False
+            VoiceMessageTranscription.objects.filter(pk=transcription.pk).update(
+                transcribed_text=result.get("text", ""),
+                language=result.get("language", ""),
+                confidence=result.get("confidence", 0.0),
+                provider=result.get("provider", stt_provider),
+                duration_seconds=duration,
+                waveform_data=waveform,
+                is_processing=False,
+                error=result.get("error", ""),
+            )
+            transcription.transcribed_text = result.get("text", "")
+            transcription.waveform_data = waveform
+            transcription.is_processing = False
+            # Audit fix (Part 19): language/duration_seconds were written
+            # to the DB via .update() above but never mirrored onto this
+            # in-memory object like the three fields above already were -
+            # on_voice_message_transcribed's receiver reads both straight
+            # off this object, so without this it would have broadcast an
+            # empty language and a stale/zero duration even once wired up.
+            transcription.language = result.get("language", "")
+            transcription.duration_seconds = duration
 
         logger.info("process_voice_message: msg=%s transcribed %d chars", message_id, len(result.get("text", "")))
 
+        # Audit fix (Part 19): voice_message_transcribed had a real
+        # @receiver (broadcasts a "voice.transcribed" WS event) but
+        # nothing ever called .send() on it.
+        from .signals import voice_message_transcribed
+        voice_message_transcribed.send(sender=VoiceMessageTranscription, transcription=transcription)
+
     except Exception as exc:
+        # The atomic block above has already rolled back any partial
+        # success-update; this write runs in its own transaction (we're no
+        # longer inside the atomic block that failed) so the failure is
+        # actually recorded instead of vanishing along with everything else.
         VoiceMessageTranscription.objects.filter(pk=transcription.pk).update(
             is_processing=False,
             error=str(exc)[:500],
@@ -1994,3 +2556,165 @@ def process_voice_message(message_id: Any) -> "VoiceMessageTranscription":
         raise
 
     return transcription
+
+# ===========================================================================
+# Part 21 (world-system audit): Compliance Audit Trail & Retention
+# ===========================================================================
+
+def log_audit_event(
+    *, actor_id: Any, action: str, target_type: str, target_id: Any,
+    tenant_id: Any, metadata: Optional[dict] = None,
+) -> "AuditLogEntry":
+    """Write one AuditLogEntry. Called from cleanup_chats (deletions +
+    hold-skips), export_data_gdpr (exports), and apply_legal_hold /
+    release_legal_hold / set_retention_policy below - the paths a
+    world-system compliance audit actually checks for.
+
+    Takes tenant_id (not a tenant instance) so callers that only have an
+    id in hand - e.g. cleanup_chats, which bulk-fetches (chat_id, tenant_id)
+    pairs via values_list() rather than loading full Tenant rows - don't
+    need an extra fetch just to log. Deliberately does not raise on a bad
+    actor_id (a system/cron action has none) - actor is nullable for
+    exactly that reason. Does not wrap in try/except: if writing the audit
+    log itself fails, the caller should know, not silently proceed as if
+    it were logged.
+    """
+    from .models import AuditLogEntry
+    return AuditLogEntry.objects.create(
+        actor_id=actor_id,
+        action=action,
+        target_type=target_type,
+        target_id=str(target_id),
+        tenant_id=tenant_id,
+        metadata=metadata or {},
+    )
+
+
+def get_retention_policy(tenant: Any) -> "RetentionPolicy":
+    """Get-or-create a tenant's retention policy. The created default has
+    chat_message_retention_days=None (unlimited) - a tenant that has never
+    configured this explicitly must never have data start expiring as a
+    side effect of merely looking up their policy.
+    """
+    from .models import RetentionPolicy
+    policy, _created = RetentionPolicy.objects.get_or_create(tenant=tenant)
+    return policy
+
+
+def set_retention_policy(
+    *, tenant: Any, chat_message_retention_days: Optional[int], updated_by_id: Any,
+) -> "RetentionPolicy":
+    """Set (or clear, with None) how many days of chat messages tenant
+    keeps before cleanup_chats/cleanup_messaging deletes them. Logs a
+    RETENTION_POLICY_CHANGED audit event since this directly controls
+    data-deletion behaviour."""
+    from .models import RetentionPolicy
+
+    if chat_message_retention_days is not None and chat_message_retention_days < 1:
+        raise MessagingError("chat_message_retention_days must be at least 1, or None for unlimited.")
+
+    policy, _created = RetentionPolicy.objects.update_or_create(
+        tenant=tenant,
+        defaults={
+            "chat_message_retention_days": chat_message_retention_days,
+            "updated_by_id": updated_by_id,
+        },
+    )
+    log_audit_event(
+        actor_id=updated_by_id, action=AuditAction.RETENTION_POLICY_CHANGED,
+        target_type="RetentionPolicy", target_id=policy.id, tenant_id=policy.tenant_id,
+        metadata={"chat_message_retention_days": chat_message_retention_days},
+    )
+    return policy
+
+
+def apply_legal_hold(
+    *, tenant: Any, chat_id: Optional[Any] = None, user_id: Optional[Any] = None,
+    reason: str, applied_by_id: Any,
+) -> "LegalHold":
+    """Apply a legal hold on a chat and/or a user, exempting it from
+    cleanup_chats deletion (see chats_under_legal_hold()) until
+    release_legal_hold() is called. Requires at least one of chat_id/
+    user_id and a non-empty reason; logs a LEGAL_HOLD_APPLIED audit event."""
+    from .models import LegalHold
+
+    if not chat_id and not user_id:
+        raise MessagingError("apply_legal_hold requires chat_id and/or user_id.")
+    if not reason or not reason.strip():
+        raise MessagingError("apply_legal_hold requires a reason.")
+
+    hold = LegalHold.objects.create(
+        tenant=tenant, chat_id=chat_id, user_id=user_id,
+        reason=reason.strip(), applied_by_id=applied_by_id, is_active=True,
+    )
+    log_audit_event(
+        actor_id=applied_by_id, action=AuditAction.LEGAL_HOLD_APPLIED,
+        target_type="LegalHold", target_id=hold.id, tenant_id=hold.tenant_id,
+        metadata={"chat_id": str(chat_id) if chat_id else None,
+                  "user_id": str(user_id) if user_id else None, "reason": reason.strip()},
+    )
+    return hold
+
+
+def release_legal_hold(*, hold_id: Any, released_by_id: Any, tenant_id: Any) -> "LegalHold":
+    """SECURITY (world-system audit, Part 21 follow-up): tenant_id is
+    required and checked here, at the service layer, not left to the
+    caller (viewset) to enforce - the original version looked the hold up
+    by pk alone with no tenant check at all, and the viewset's release
+    action passed pk straight through without ever calling
+    self.get_object() (which would have applied get_queryset()'s tenant
+    filter). Together that meant any admin, from any tenant, could
+    release any OTHER tenant's legal hold just by knowing its id - the
+    exact class of bug the rest of this audit has been about. Checking
+    tenant here means it's enforced even if some other future caller
+    (another view, a script, a shell) makes the same mistake the viewset did.
+    """
+    from .models import LegalHold
+
+    try:
+        hold = LegalHold.objects.get(pk=hold_id, is_active=True)
+    except LegalHold.DoesNotExist:
+        raise MessagingError(f"No active LegalHold with id={hold_id}.")
+
+    if str(hold.tenant_id) != str(tenant_id):
+        raise PermissionDeniedError("Cannot release a legal hold belonging to a different tenant.")
+
+    hold.is_active = False
+    hold.released_at = timezone.now()
+    hold.released_by_id = released_by_id
+    hold.save(update_fields=["is_active", "released_at", "released_by", "updated_at"])
+
+    log_audit_event(
+        actor_id=released_by_id, action=AuditAction.LEGAL_HOLD_RELEASED,
+        target_type="LegalHold", target_id=hold.id, tenant_id=hold.tenant_id,
+        metadata={"chat_id": str(hold.chat_id) if hold.chat_id else None,
+                  "user_id": str(hold.user_id) if hold.user_id else None},
+    )
+    return hold
+
+
+def chats_under_legal_hold(chat_ids: Optional[list] = None):
+    """Return the queryset of chat IDs that must NOT be deleted: either
+    the chat itself is under an active hold, or a participant is
+    (a user-level hold protects everything they're part of). Used by
+    cleanup_chats to exclude held chats from its deletion queryset.
+    """
+    from .models import LegalHold, ChatParticipant
+
+    active = LegalHold.objects.filter(is_active=True)
+    chat_held = active.filter(chat_id__isnull=False)
+    if chat_ids is not None:
+        chat_held = chat_held.filter(chat_id__in=chat_ids)
+    held_chat_ids = set(chat_held.values_list("chat_id", flat=True))
+
+    user_held = active.filter(user_id__isnull=False)
+    held_user_ids = list(user_held.values_list("user_id", flat=True))
+    if held_user_ids:
+        participant_chats = ChatParticipant.objects.filter(
+            user_id__in=held_user_ids, left_at__isnull=True,
+        )
+        if chat_ids is not None:
+            participant_chats = participant_chats.filter(chat_id__in=chat_ids)
+        held_chat_ids.update(participant_chats.values_list("chat_id", flat=True))
+
+    return held_chat_ids

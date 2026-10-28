@@ -1,3 +1,4 @@
+import csv
 # admin.py - সম্পূর্ণ Bulletproof + Colorful Design
 
 from django.contrib import admin
@@ -1589,7 +1590,6 @@ class BackupAdmin(admin.ModelAdmin):
         'backup_type',
         'storage_type',
         'database_name',
-        'is_verified',
         'is_healthy',
         'encryption_enabled',
         'compression_enabled',
@@ -1657,7 +1657,7 @@ class BackupAdmin(admin.ModelAdmin):
         ('[STATS] Health & Verification', {
             'fields': (
                 ('is_healthy', 'health_score'),
-                ('is_verified', 'verified_at'),
+                ('verified_at'),
                 ('verification_method', 'verification_notes'),
                 ('error_message',),
             ),
@@ -2887,8 +2887,10 @@ Backup_admin_site.register(BackupNotificationConfig, BackupNotificationConfigAdm
 # admin.site = admin_site
 
 def _force_register_backup():
+    """Register backup models with Django admin (self-contained, no cross-app dependency)."""
     try:
-        from api.admin_panel.admin import admin_site as modern_site
+        from django.contrib import admin as default_admin
+        modern_site = default_admin.site
         if modern_site is None:
             return
         pairs = [(Backup, BackupAdmin), (BackupStorageLocation, BackupStorageLocationAdmin), (BackupSchedule, BackupScheduleAdmin), (BackupRestoration, BackupRestorationAdmin), (BackupLog, BackupLogAdmin), (DeltaBackupTracker, DeltaBackupTrackerAdmin), (RetentionPolicy, RetentionPolicyAdmin), (BackupNotificationConfig, BackupNotificationConfigAdmin)]
@@ -2900,6 +2902,6 @@ def _force_register_backup():
                     registered += 1
             except Exception as ex:
                 pass
-        print(f"[OK] backup registered {registered} models")
+        logger.info(f"[OK] backup registered {registered} models")
     except Exception as e:
-        print(f"[WARN] backup: {e}")
+        logger.warning(f"[WARN] backup: {e}")

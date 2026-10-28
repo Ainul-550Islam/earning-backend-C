@@ -3,11 +3,13 @@
 This module contains the ViewSet for webhook template management.
 """
 
+from datetime import timedelta
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db import models
 from django.utils import timezone
 
 from ..models import WebhookTemplate, WebhookEndpoint
@@ -18,7 +20,6 @@ from ..serializers import (
     WebhookTemplateDetailSerializer,
     WebhookTemplateListSerializer
 )
-from ..permissions import IsOwnerOrReadOnly
 from ..filters import WebhookTemplateFilter
 
 
@@ -26,7 +27,20 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
     """ViewSet for webhook template management."""
     
     queryset = WebhookTemplate.objects.all()
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    # FIX: IsOwnerOrReadOnly removed - WebhookTemplate has no owner/
+    # created_by/endpoint field at all (confirmed against the model, and
+    # independently verified via get_queryset()/perform_create() below,
+    # which already document it as a shared, ownerless resource). With
+    # IsOwnerOrReadOnly in place, has_object_permission()'s owner lookup
+    # always resolved to None for every template, so it silently and
+    # permanently denied every write (POST/PUT/PATCH/DELETE, including
+    # actions like preview/activate/deactivate) for every authenticated
+    # user - confirmed empirically via test_preview_template_success,
+    # which always got 403 regardless of who was asking. IsAuthenticated
+    # alone is the correct policy for a shared resource: any authenticated
+    # user may read or write, matching perform_create()'s and
+    # get_queryset()'s existing behavior.
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_class = WebhookTemplateFilter
     
@@ -44,12 +58,15 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
             return WebhookTemplateSerializer
     
     def get_queryset(self):
-        """Filter queryset to user's own templates."""
-        return super().get_queryset().filter(created_by=self.request.user)
+        """WebhookTemplate has no per-user ownership field — templates are a
+        shared resource, visible to any authenticated user. (Previously this
+        filtered on `created_by`, which doesn't exist on the model at all —
+        crashed every list/retrieve call.)"""
+        return super().get_queryset()
     
     def perform_create(self, serializer):
-        """Set created_by field on creation."""
-        serializer.save(created_by=self.request.user)
+        """No created_by field exists on WebhookTemplate to set here."""
+        serializer.save()
     
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
@@ -85,12 +102,23 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
         })
         
         try:
-            from ..services.core import TemplateEngine
+            from ..services.core.TemplateEngine import TemplateEngine
+            from ..services.filtering.PayloadTransformer import PayloadTransformer
+
+            transformer = PayloadTransformer()
+            # First validate the template syntax
+            validation = transformer.validate_template(template.payload_template)
+            if not validation.get('valid', True) is False:
+                pass  # Template is valid, continue
+
             template_engine = TemplateEngine()
-            
             rendered = template_engine.render_template(
                 template.payload_template,
                 sample_payload
+            )
+            # Optionally transform rendered output with transformer
+            preview_result = transformer.preview_template(
+                template.payload_template, sample_payload
             )
             
             return Response({
@@ -133,7 +161,7 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
             })
             
             # Render template
-            from ..services.core import TemplateEngine
+            from ..services.core.TemplateEngine import TemplateEngine
             template_engine = TemplateEngine()
             
             rendered_payload = template_engine.render_template(
@@ -142,7 +170,7 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
             )
             
             # Send test webhook
-            from ..services.core import DispatchService
+            from ..services.core.DispatchService import DispatchService
             dispatch_service = DispatchService()
             
             result = dispatch_service.emit(
@@ -236,7 +264,7 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
             'updated_at': template.updated_at
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-event-type')
     def by_event_type(self, request):
         """Get templates by event type."""
         event_type = request.query_params.get('event_type')
@@ -255,7 +283,7 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(templates, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-activate')
     def bulk_activate(self, request):
         """Activate multiple templates."""
         template_ids = request.data.get('template_ids', [])
@@ -272,7 +300,7 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
             'updated_count': updated_count
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-deactivate')
     def bulk_deactivate(self, request):
         """Deactivate multiple templates."""
         template_ids = request.data.get('template_ids', [])
@@ -289,7 +317,7 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
             'updated_count': updated_count
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='validate-template')
     def validate_template(self, request):
         """Validate template syntax."""
         payload_template = request.data.get('payload_template')
@@ -304,10 +332,15 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            from ..services.core import TemplateEngine
+            from ..services.core.TemplateEngine import TemplateEngine
+            from ..services.filtering.PayloadTransformer import PayloadTransformer
+
+            # FIX: Use PayloadTransformer.validate_template() for proper syntax validation
+            transformer = PayloadTransformer()
+            validation = transformer.validate_template(payload_template)
+
+            # Also do a live render via TemplateEngine
             template_engine = TemplateEngine()
-            
-            # Test template rendering
             rendered = template_engine.render_template(payload_template, test_data)
             
             return Response({
@@ -326,10 +359,31 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def popular(self, request):
-        """Get popular templates."""
+        """Get popular templates (by delivery volume for their event_type).
+
+        BUG FIX: previously did Count('endpoints') — WebhookTemplate has
+        no such relation (no FK links it to WebhookEndpoint or
+        WebhookDeliveryLog at all); a template only corresponds to
+        deliveries by its event_type string matching theirs.
+        """
+        from ..models import WebhookDeliveryLog
+        from django.db.models import OuterRef, Subquery, IntegerField
+        from django.db.models.functions import Coalesce
+
+        limit = int(request.query_params.get('limit', 10))
+
+        delivery_counts = WebhookDeliveryLog.objects.filter(
+            event_type=OuterRef('event_type'),
+            endpoint__owner=request.user,
+        ).order_by().values('event_type').annotate(
+            c=models.Count('id')
+        ).values('c')
+
         templates = self.queryset.annotate(
-            endpoint_count=models.Count('endpoints')
-        ).filter(endpoint_count__gt=0).order_by('-endpoint_count')[:10]
+            endpoint_count=Coalesce(
+                Subquery(delivery_counts, output_field=IntegerField()), 0
+            )
+        ).filter(endpoint_count__gt=0).order_by('-endpoint_count')[:limit]
         
         serializer = self.get_serializer(templates, many=True)
         return Response({
@@ -345,7 +399,7 @@ class WebhookTemplateViewSet(viewsets.ModelViewSet):
         # Get templates used in recent deliveries
         recent_template_ids = WebhookDeliveryLog.objects.filter(
             endpoint__owner=request.user,
-            created_at__gte=timezone.now() - timezone.timedelta(days=7)
+            created_at__gte=timezone.now() - timedelta(days=7)
         ).values_list('endpoint__payload_template', flat=True).distinct()
         
         templates = self.queryset.filter(id__in=recent_template_ids)

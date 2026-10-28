@@ -48,6 +48,8 @@ async def authenticate_websocket_user(scope: dict) -> Any:
 
 
 def _extract_token_from_scope(scope: dict) -> str:
+    from urllib.parse import unquote_plus
+
     query_string = scope.get("query_string", b"")
     if isinstance(query_string, bytes):
         query_string = query_string.decode("utf-8", errors="replace")
@@ -55,7 +57,15 @@ def _extract_token_from_scope(scope: dict) -> str:
     for part in query_string.split("&"):
         if "=" in part:
             k, _, v = part.partition("=")
-            params[k.strip().lower()] = v.strip()
+            # Part 6 audit fix: values were never URL-decoded. JWTs
+            # (base64url) and DRF tokens (hex) don't contain characters
+            # that need percent-encoding, so the primary token= path
+            # happened to work regardless - but the Bearer <token>
+            # fallback below needs a literal space, and any real client
+            # (browser URLSearchParams, Python urlencode, etc.) percent-
+            # or plus-encodes a space in a query value. Without decoding,
+            # that fallback could never actually match a real request.
+            params[unquote_plus(k.strip()).lower()] = unquote_plus(v.strip())
     token = params.get("token", "")
     if token:
         return token

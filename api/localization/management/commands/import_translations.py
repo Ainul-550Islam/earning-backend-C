@@ -23,7 +23,7 @@ class Command(BaseCommand):
             raise CommandError(f"File not found: {file_path}")
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        from localization.services.translation.TranslationImportService import TranslationImportService
+        from api.localization.services.translation.TranslationImportService import TranslationImportService
         service = TranslationImportService()
         if dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN — no changes will be saved"))

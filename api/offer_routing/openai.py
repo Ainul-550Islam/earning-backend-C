@@ -13,8 +13,14 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-import openai
-from openai import OpenAI
+try:
+    import openai
+    from openai import OpenAI
+    _OPENAI_AVAILABLE = True
+except ImportError:
+    openai = None
+    OpenAI = None
+    _OPENAI_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -34,6 +40,9 @@ class OpenAIClient:
     def _initialize_client(self):
         """Initialize OpenAI client."""
         try:
+            if not _OPENAI_AVAILABLE:
+                logger.warning("openai package not installed; OpenAI features disabled")
+                return
             if self.api_key:
                 self.client = OpenAI(api_key=self.api_key)
                 logger.info("OpenAI client initialized successfully")

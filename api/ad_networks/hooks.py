@@ -1,3 +1,5 @@
+from typing import Optional, Any, List, Dict, Union
+from abc import ABC, abstractmethod
 """
 api/ad_networks/hooks.py
 Hook system for ad networks module

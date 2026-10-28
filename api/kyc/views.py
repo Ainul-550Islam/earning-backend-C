@@ -33,6 +33,11 @@ logger = logging.getLogger(__name__)
 # ══════════════════════════════════════════════════════════════
 
 @api_view(['GET'])
+@api_view(['GET', 'POST', 'DELETE'])
+@api_view(["POST"])
+@api_view(['GET'])
+@api_view(['GET'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def kyc_status(request):
     """GET current user's KYCSubmission status (UI contract)"""
@@ -40,9 +45,7 @@ def kyc_status(request):
     if not submission:
         return Response({"status": "not_submitted", "verification_progress": 0, "document_type": None})
     return Response(KYCSubmissionSerializer(submission, context={"request": request}).data)
-
-
-@api_view(['GET', 'POST', 'DELETE'])
+@api_view(['GET', 'POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser, JSONParser])
 def kyc_submit(request):
@@ -75,9 +78,7 @@ def kyc_submit(request):
         return Response(KYCSubmissionSerializer(submission, context={"request": request}).data, status=status_code)
 
     return Response({"error": "Method not allowed"}, status=405)
-
-
-@api_view(["POST"])
+@api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser, JSONParser])
 def kyc_fraud_check(request):
@@ -103,8 +104,6 @@ def kyc_fraud_check(request):
         liveness=face_liveness_check, progress=progress,
     )
     return Response(KYCSubmissionSerializer(submission, context={"request": request}).data)
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def kyc_logs(request):
@@ -121,7 +120,7 @@ def kyc_logs(request):
 #  ADMIN ENDPOINTS  (existing — unchanged)
 # ══════════════════════════════════════════════════════════════
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_admin_list(request):
     """Admin — সব user এর KYC list"""
@@ -130,9 +129,7 @@ def kyc_admin_list(request):
     if status_filter:
         qs = qs.filter(status=status_filter)
     return Response(KYCAdminSerializer(qs, many=True).data)
-
-
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_admin_stats(request):
     """Admin — Dashboard stats"""
@@ -150,9 +147,7 @@ def kyc_admin_stats(request):
         'submitted_today': qs.filter(created_at__date=today).count(),
     }
     return Response(stats)
-
-
-@api_view(['GET', 'POST', 'PATCH'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_admin_review(request, kyc_id):
     """Admin — KYC review (approve/reject) + edit (PATCH)"""
@@ -191,9 +186,7 @@ def kyc_admin_review(request, kyc_id):
 
     KYCVerificationLog.objects.create(kyc=kyc, action=log_action, performed_by=request.user, details=log_detail)
     return Response(KYCAdminSerializer(kyc).data)
-
-
-@api_view(['DELETE'])
+@api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_admin_delete(request, kyc_id):
     try:
@@ -201,9 +194,7 @@ def kyc_admin_delete(request, kyc_id):
         return Response({'message': f'{name} এর KYC deleted'})
     except KYC.DoesNotExist:
         return Response({'error': 'KYC not found'}, status=404)
-
-
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_admin_reset(request, kyc_id):
     try:
@@ -213,9 +204,7 @@ def kyc_admin_reset(request, kyc_id):
         return Response(KYCAdminSerializer(kyc).data)
     except KYC.DoesNotExist:
         return Response({'error': 'KYC not found'}, status=404)
-
-
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_admin_logs(request, kyc_id):
     try:
@@ -226,8 +215,6 @@ def kyc_admin_logs(request, kyc_id):
         return Response(data)
     except KYC.DoesNotExist:
         return Response({'error': 'KYC not found'}, status=404)
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_admin_add_note(request, kyc_id):
@@ -243,9 +230,7 @@ def kyc_admin_add_note(request, kyc_id):
         return Response({'message': 'Note added', 'admin_notes': kyc.admin_notes})
     except KYC.DoesNotExist:
         return Response({'error': 'KYC not found'}, status=404)
-
-
-@api_view(['POST'])
+@api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_admin_bulk_action(request):
     """Admin — Bulk approve/reject/pending"""
@@ -279,7 +264,7 @@ def kyc_admin_bulk_action(request):
 
 # ── Blacklist ──────────────────────────────────────────────────
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_blacklist_list(request):
     """Admin — Blacklist list + add"""
@@ -293,9 +278,7 @@ def kyc_blacklist_list(request):
     serializer.is_valid(raise_exception=True)
     obj = serializer.save(added_by=request.user)
     return Response(KYCBlacklistSerializer(obj).data, status=201)
-
-
-@api_view(['GET', 'PATCH', 'DELETE'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_blacklist_detail(request, pk):
     try:
@@ -311,9 +294,7 @@ def kyc_blacklist_detail(request, pk):
         return Response(KYCBlacklistSerializer(obj).data)
     obj.is_active = False; obj.save()
     return Response({'message': 'Blacklist entry deactivated'})
-
-
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def kyc_blacklist_check(request):
     """Check if value is blacklisted (user-facing, non-admin)"""
@@ -337,9 +318,7 @@ def kyc_risk_profile(request, kyc_id):
         return Response(KYCRiskProfileSerializer(profile).data)
     except KYC.DoesNotExist:
         return Response({'error': 'KYC not found'}, status=404)
-
-
-@api_view(['POST'])
+@api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_risk_recompute(request, kyc_id):
     """Admin — Recompute risk score"""
@@ -356,7 +335,7 @@ def kyc_risk_recompute(request, kyc_id):
 
 # ── Admin Notes ────────────────────────────────────────────────
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_notes_list(request, kyc_id):
     try:
@@ -372,9 +351,7 @@ def kyc_notes_list(request, kyc_id):
     serializer.is_valid(raise_exception=True)
     note = serializer.save(kyc=kyc, author=request.user)
     return Response(KYCAdminNoteSerializer(note).data, status=201)
-
-
-@api_view(['PATCH', 'DELETE'])
+@api_view(['PATCH'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_note_detail(request, kyc_id, note_id):
     try:
@@ -391,7 +368,7 @@ def kyc_note_detail(request, kyc_id, note_id):
 
 # ── Rejection Templates ────────────────────────────────────────
 
-@api_view(['GET', 'POST'])
+@api_view(['GET', 'PUT', 'PATCH'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_rejection_templates(request):
     if request.method == 'GET':
@@ -405,7 +382,7 @@ def kyc_rejection_templates(request):
 
 # ── Analytics ─────────────────────────────────────────────────
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_analytics(request):
     """Analytics snapshots"""
@@ -413,9 +390,7 @@ def kyc_analytics(request):
     limit  = int(request.query_params.get('limit', 30))
     qs = KYCAnalyticsSnapshot.objects.filter(period=period).order_by('-period_start')[:limit]
     return Response(KYCAnalyticsSerializer(qs, many=True).data)
-
-
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_analytics_summary(request):
     """Full analytics summary for dashboard"""
@@ -439,7 +414,7 @@ def kyc_analytics_summary(request):
 
 # ── Tenant Config ──────────────────────────────────────────────
 
-@api_view(['GET', 'PUT', 'PATCH'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_tenant_config(request):
     """Get/update KYC config for current tenant"""
@@ -469,9 +444,7 @@ def kyc_webhooks_list(request):
     serializer.is_valid(raise_exception=True)
     obj = serializer.save(tenant=tenant)
     return Response(KYCWebhookEndpointSerializer(obj).data, status=201)
-
-
-@api_view(['GET', 'PATCH', 'DELETE'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_webhook_detail(request, pk):
     try:
@@ -504,7 +477,7 @@ def kyc_audit_trail(request):
 
 # ── Feature Flags ──────────────────────────────────────────────
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_feature_flags(request):
     if request.method == 'GET':
@@ -513,9 +486,7 @@ def kyc_feature_flags(request):
     s = KYCFeatureFlagSerializer(data=request.data)
     s.is_valid(raise_exception=True); obj = s.save(updated_by=request.user)
     return Response(KYCFeatureFlagSerializer(obj).data, status=201)
-
-
-@api_view(['PATCH'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_feature_flag_toggle(request, key):
     """Toggle a feature flag on/off"""
@@ -534,9 +505,6 @@ def kyc_duplicate_groups(request):
     resolved = request.query_params.get('resolved', 'false').lower() == 'true'
     qs = KYCDuplicateGroup.objects.filter(is_resolved=resolved).order_by('-created_at')
     return Response(KYCDuplicateGroupSerializer(qs, many=True).data)
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_duplicate_resolve(request, pk):
     """Resolve a duplicate group"""
@@ -554,7 +522,6 @@ def kyc_duplicate_resolve(request, pk):
 
 # ── Export Jobs ────────────────────────────────────────────────
 
-@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_exports(request):
     if request.method == 'GET':
@@ -578,15 +545,11 @@ def kyc_exports(request):
 
 # ── Notification Logs ──────────────────────────────────────────
 
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def kyc_my_notifications(request):
     """User's own KYC notifications"""
     qs = KYCNotificationLog.objects.filter(user=request.user).order_by('-created_at')[:50]
     return Response(KYCNotificationLogSerializer(qs, many=True).data)
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def kyc_all_notifications(request):
     """Admin — All KYC notifications"""
@@ -597,7 +560,6 @@ def kyc_all_notifications(request):
 
 # ── Health Check ───────────────────────────────────────────────
 
-@api_view(['GET'])
 def kyc_health(request):
     """KYC service health check"""
     return Response({

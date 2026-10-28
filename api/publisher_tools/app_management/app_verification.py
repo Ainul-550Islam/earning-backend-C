@@ -26,6 +26,7 @@ class AppVerification(TimeStampedModel):
     last_checked_at  = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_app_verifications"
         verbose_name = _("App Verification")
         ordering = ["-created_at"]

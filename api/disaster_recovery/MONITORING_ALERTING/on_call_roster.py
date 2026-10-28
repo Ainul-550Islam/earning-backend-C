@@ -124,4 +124,3 @@ class OnCallRoster:
         days_since = (dt - self._rotation_start).days
         idx = (days_since // self.rotation_days) % len(self._people)
         return self._people[idx]
-

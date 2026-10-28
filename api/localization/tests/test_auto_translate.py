@@ -12,7 +12,7 @@ class AutoTranslationServiceTest(TestCase):
             make_translation(key=key, language=self.src_lang, value=f'Source text {i}')
 
     def test_translate_missing_dry_run(self):
-        from localization.services.translation.AutoTranslationService import AutoTranslationService
+        from api.localization.services.translation.AutoTranslationService import AutoTranslationService
         result = AutoTranslationService().translate_missing('at-tgt', limit=10, dry_run=True)
         self.assertTrue(result['success'])
         self.assertTrue(result['dry_run'])
@@ -20,33 +20,33 @@ class AutoTranslationServiceTest(TestCase):
         self.assertIn('translated', result)
 
     def test_dry_run_no_db_changes(self):
-        from localization.services.translation.AutoTranslationService import AutoTranslationService
-        from localization.models.core import Translation
+        from api.localization.services.translation.AutoTranslationService import AutoTranslationService
+        from api.localization.models.core import Translation
         before = Translation.objects.filter(language=self.tgt_lang).count()
         AutoTranslationService().translate_missing('at-tgt', limit=10, dry_run=True)
         after = Translation.objects.filter(language=self.tgt_lang).count()
         self.assertEqual(before, after)
 
     def test_translate_missing_invalid_language(self):
-        from localization.services.translation.AutoTranslationService import AutoTranslationService
+        from api.localization.services.translation.AutoTranslationService import AutoTranslationService
         result = AutoTranslationService().translate_missing('xx-invalid', limit=5)
         self.assertFalse(result['success'])
         self.assertIn('error', result)
 
     def test_missing_count_correct(self):
-        from localization.services.translation.AutoTranslationService import AutoTranslationService
+        from api.localization.services.translation.AutoTranslationService import AutoTranslationService
         result = AutoTranslationService().translate_missing('at-tgt', limit=100, dry_run=True)
         self.assertGreaterEqual(result.get('total_missing', 0), 5)
 
     def test_result_structure(self):
-        from localization.services.translation.AutoTranslationService import AutoTranslationService
+        from api.localization.services.translation.AutoTranslationService import AutoTranslationService
         result = AutoTranslationService().translate_missing('at-tgt', limit=5, dry_run=True)
         required = ['success', 'language', 'total_missing', 'translated', 'failed', 'dry_run']
         for field in required:
             self.assertIn(field, result)
 
     def test_limit_respected(self):
-        from localization.services.translation.AutoTranslationService import AutoTranslationService
+        from api.localization.services.translation.AutoTranslationService import AutoTranslationService
         result = AutoTranslationService().translate_missing('at-tgt', limit=2, dry_run=True)
         self.assertTrue(result['success'])
         # translated count should not exceed limit

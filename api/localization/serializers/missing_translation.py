@@ -6,5 +6,10 @@ class MissingTranslationSerializer(serializers.ModelSerializer):
     class Meta:
         from ..models.translation import MissingTranslation
         model = MissingTranslation
-        fields = '__all__'
+        fields = [
+            'id', 'created_at', 'updated_at',
+            'key', 'language', 'context', 'request_path',
+            'resolved', 'resolved_at',
+            'occurrence_count', 'last_seen_at',
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'occurrence_count', 'last_seen_at']

@@ -4,6 +4,7 @@ Campaign Service
 Comprehensive service for managing advertising campaigns,
 including creation, lifecycle management, and optimization.
 """
+from django.db import models
 
 import logging
 from typing import Dict, List, Optional, Any

@@ -11,13 +11,17 @@ Push traffic has unique characteristics:
 Supports major push networks:
 PropellerAds, Zeropark, RichPush, EvaDav, Adsterra
 """
+from api.smartlink.integrations.base import IntegrationBase
 import logging
 from django.core.cache import cache
 
 logger = logging.getLogger('smartlink.integrations.push')
 
 
-class PushNotificationRouter:
+class PushNotificationRouter(IntegrationBase):
+    integration_name = "PushRouter"
+    default_timeout  = 10
+
     """
     Specialized routing logic for push notification traffic.
     Automatically applies push-optimized settings.

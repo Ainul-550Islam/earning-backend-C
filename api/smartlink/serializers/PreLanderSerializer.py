@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import PreLander
+from api.smartlink.models import PreLander
 
 
 class PreLanderSerializer(serializers.ModelSerializer):

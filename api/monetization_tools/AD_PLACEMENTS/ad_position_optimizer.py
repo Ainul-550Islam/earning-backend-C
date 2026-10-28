@@ -1,4 +1,5 @@
 """AD_PLACEMENTS/ad_position_optimizer.py — Optimizes ad position selection."""
+from typing import Optional
 from decimal import Decimal
 from typing import List
 

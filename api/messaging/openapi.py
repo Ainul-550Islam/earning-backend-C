@@ -44,6 +44,9 @@ except ImportError:
         def __init__(self, *a, **kw): pass
     class OpenApiExample:
         def __init__(self, *a, **kw): pass
+    class OpenApiTypes:
+        OBJECT = "object"
+        STR = "string"
 
 
 # ── Schema decorators for key endpoints ───────────────────────────────────────
@@ -156,3 +159,43 @@ UPLOAD_SCHEMA = extend_schema(
         415: OpenApiResponse(description="Mimetype not allowed"),
     },
 ) if HAS_SPECTACULAR else lambda f: f
+
+
+# ── Schema-safe get_serializer_class() mixin ───────────────────────────────────
+#
+# Several ViewSets build their Response(...) bodies from plain dicts and never
+# call self.get_serializer() at runtime, so they correctly have no
+# serializer_class - harmless for real requests. But GenericViewSet's own
+# get_serializer_class() unconditionally asserts serializer_class is not
+# None, and drf-spectacular calls get_serializer_class() while introspecting
+# every view to build the OpenAPI schema (manage.py spectacular, and the
+# live /schema/, /docs/, /redoc/ endpoints in urls.py) - so every one of
+# these viewsets raised an AssertionError there, even though the viewset
+# itself works fine.
+#
+# swagger_fake_view is set to True by drf-spectacular specifically (and
+# only) while introspecting a view outside of any real request, so
+# branching on it cannot change real request behaviour - this is
+# drf-spectacular's own documented mechanism for exactly this situation
+# (see its FAQ: "My get_queryset()/get_serializer_class() doesn't work
+# with schema generation").
+from rest_framework import serializers as _drf_serializers  # noqa: E402
+
+
+class SchemaSafeSerializerClassMixin:
+    """Mix in BEFORE the DRF viewset base class, e.g.
+    class FooViewSet(SchemaSafeSerializerClassMixin, viewsets.GenericViewSet):
+    Falls back to an empty placeholder serializer only while drf-spectacular
+    is introspecting the view for schema generation."""
+
+    def get_serializer_class(self):
+        if getattr(self, "swagger_fake_view", False):
+            # A bare `serializers.Serializer` has no distinguishing name of
+            # its own, so drf-spectacular can't derive a schema component
+            # name from it (it comes out empty, and every viewset using
+            # this mixin would collide on the same one). Name it after the
+            # viewset instead - still just an empty placeholder, but with a
+            # valid, unique component name in the generated schema.
+            name = f"{type(self).__name__}PlaceholderSerializer"
+            return type(name, (_drf_serializers.Serializer,), {})
+        return super().get_serializer_class()

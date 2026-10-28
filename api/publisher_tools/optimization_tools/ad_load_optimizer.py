@@ -15,7 +15,7 @@ AD_DENSITY_RECOMMENDATIONS = {
 
 def analyze_ad_load(site) -> Dict:
     """Site-এর ad load analyze করে।"""
-    from api.publisher_tools.models import AdUnit, AdPlacement
+    from publisher_tools.models import AdUnit, AdPlacement
     active_units = AdUnit.objects.filter(site=site, status="active").count()
     active_placements = AdPlacement.objects.filter(ad_unit__site=site, is_active=True).count()
     recommendations = AD_DENSITY_RECOMMENDATIONS.get(site.category, AD_DENSITY_RECOMMENDATIONS["default"])

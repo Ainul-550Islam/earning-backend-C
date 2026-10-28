@@ -55,7 +55,7 @@ class Creative(AdvertiserPortalBaseModel, StatusModel, AuditModel, TrackingModel
     # Creative Type and Format
     creative_type = models.CharField(
         max_length=50,
-        choices=CreativeTypeEnum.choices,
+        choices=CreativeTypeEnum.choices(),
         db_index=True,
         help_text="Type of creative"
     )

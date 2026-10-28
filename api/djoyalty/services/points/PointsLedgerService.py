@@ -10,10 +10,14 @@ logger = logging.getLogger(__name__)
 class PointsLedgerService:
     @staticmethod
     def get_balance_from_ledger(customer) -> Decimal:
-        result = PointsLedger.objects.filter(customer=customer).aggregate(
-            total=Sum('points', filter=Q(txn_type='credit')) - Sum('points', filter=Q(txn_type='debit'))
-        )
-        return result.get('total') or Decimal('0')
+        """
+        Compute balance from ledger: sum(credits) - sum(debits).
+        Fix: separate aggregations (Django ORM does not support Sum-Sum arithmetic inline).
+        """
+        qs = PointsLedger.objects.filter(customer=customer)
+        credits = qs.filter(txn_type='credit').aggregate(t=Sum('points'))['t'] or Decimal('0')
+        debits  = qs.filter(txn_type='debit').aggregate(t=Sum('points'))['t'] or Decimal('0')
+        return credits - debits
 
     @staticmethod
     def get_expiring_points(customer, days=30) -> Decimal:

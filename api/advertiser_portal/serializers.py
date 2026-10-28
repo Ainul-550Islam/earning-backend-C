@@ -7,6 +7,7 @@ including advertisers, campaigns, offers, tracking, billing, and reporting.
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
@@ -659,9 +660,22 @@ class InvalidClickLogSerializer(BaseSerializer):
         fields = [
             'id', 'advertiser', 'offer', 'ip_address', 'user_agent',
             'referrer', 'click_id', 'fraud_type', 'fraud_reason',
+            'created_at', 'updated_at'
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-# ... (rest of the code remains the same)
+
+class ClickFraudSignalSerializer(BaseSerializer):
+    """Serializer for ClickFraudSignal model."""
+    
+    class Meta:
+        model = ClickFraudSignal
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class OfferQualityScoreSerializer(BaseSerializer):
+    """Serializer for OfferQualityScore model."""
     
     offer_title = serializers.CharField(source='offer.title', read_only=True)
     

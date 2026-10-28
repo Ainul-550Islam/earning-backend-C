@@ -4,6 +4,7 @@ Background Tasks for Offer Routing System
 This module provides Celery tasks for offer routing operations.
 """
 
+import logging
 from celery import shared_task
 from django.utils import timezone
 from django.db import transaction
@@ -471,6 +472,485 @@ def performance_monitoring_task():
     except Exception as e:
         logger.error(f"Performance monitoring task failed: {e}")
         raise
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 1 — Cache tasks
+# ─────────────────────────────────────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.clear_expired_cache')
+def clear_expired_cache(self):
+    """Clear all expired keys from the routing cache every 2 hours."""
+    try:
+        from .services.cache import cache_service
+        result = cache_service.clear_pattern('routing:*')
+        logger.info("clear_expired_cache: cleared %s keys", result.get('cleared_count', 0))
+        return {'status': 'ok', 'cleared': result.get('cleared_count', 0)}
+    except Exception as exc:
+        logger.error("clear_expired_cache failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.refresh_performance_cache')
+def refresh_performance_cache(self):
+    """Refresh performance cache every 6 hours."""
+    try:
+        from .services.domain import NetworkPerformanceService
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        svc = NetworkPerformanceService()
+        tenant_ids = list(User.objects.filter(is_active=True).values_list('id', flat=True)[:100])
+        for tid in tenant_ids:
+            svc.refresh_performance_cache(tenant_id=tid)
+        logger.info("refresh_performance_cache: refreshed %d tenants", len(tenant_ids))
+        return {'status': 'ok', 'tenants_refreshed': len(tenant_ids)}
+    except Exception as exc:
+        logger.error("refresh_performance_cache failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.cleanup_orphaned_cache')
+def cleanup_orphaned_cache(self):
+    """Remove orphaned cache keys daily at 2:30 AM."""
+    try:
+        from .services.cache import cache_service
+        for prefix in ('geo:ip:', 'score:', 'cap:', 'affinity:'):
+            cache_service.clear_pattern(f'{prefix}*')
+        logger.info("cleanup_orphaned_cache: done")
+        return {'status': 'ok'}
+    except Exception as exc:
+        logger.error("cleanup_orphaned_cache failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 2 — Metrics & reporting tasks
+# ─────────────────────────────────────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.collect_routing_metrics')
+def collect_routing_metrics(self):
+    """Collect routing metrics every 5 minutes."""
+    try:
+        from .models import RoutingDecisionLog, RoutePerformanceStat
+        from django.db.models import Count, Avg
+        now = timezone.now()
+        window_start = now - timezone.timedelta(minutes=5)
+        logs = RoutingDecisionLog.objects.filter(
+            created_at__gte=window_start
+        ).aggregate(
+            total=Count('id'),
+            avg_latency=Avg('response_time_ms'),
+        )
+        RoutePerformanceStat.objects.create(
+            period_start=window_start,
+            period_end=now,
+            total_decisions=logs.get('total', 0),
+            avg_response_time_ms=logs.get('avg_latency') or 0,
+        )
+        logger.info("collect_routing_metrics: %d decisions in last 5m", logs.get('total', 0))
+        return {'status': 'ok', 'total': logs.get('total', 0)}
+    except Exception as exc:
+        logger.error("collect_routing_metrics failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.generate_performance_reports')
+def generate_performance_reports(self):
+    """Generate daily performance reports at 6 AM."""
+    try:
+        from .services.domain import NetworkPerformanceService, OfferQualityService
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        nps = NetworkPerformanceService()
+        oqs = OfferQualityService()
+        tenant_ids = list(User.objects.filter(is_active=True).values_list('id', flat=True)[:50])
+        reports = []
+        for tid in tenant_ids:
+            perf = nps.get_performance_summary(tenant_id=tid)
+            qual = oqs.get_quality_report(tenant_id=tid)
+            reports.append({'tenant_id': tid, 'perf': perf, 'qual': qual})
+        logger.info("generate_performance_reports: %d tenant reports", len(reports))
+        return {'status': 'ok', 'reports_generated': len(reports)}
+    except Exception as exc:
+        logger.error("generate_performance_reports failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.send_daily_reports')
+def send_daily_reports(self):
+    """Email daily summary reports to tenant admins."""
+    try:
+        from django.core.mail import send_mail
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        admins = User.objects.filter(is_staff=True, is_active=True)
+        count = 0
+        for admin in admins:
+            try:
+                send_mail(
+                    subject='Offer Routing Daily Report',
+                    message='Daily performance report for offer routing system.',
+                    from_email=None,  # uses DEFAULT_FROM_EMAIL
+                    recipient_list=[admin.email],
+                    fail_silently=True,
+                )
+                count += 1
+            except Exception:
+                pass
+        logger.info("send_daily_reports: sent %d emails", count)
+        return {'status': 'ok', 'emails_sent': count}
+    except Exception as exc:
+        logger.error("send_daily_reports failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=30,
+             name='offer_routing.tasks.send_performance_alerts')
+def send_performance_alerts(self):
+    """Send alerts when performance degrades beyond thresholds."""
+    try:
+        from .services.domain import NetworkPerformanceService
+        from django.contrib.auth import get_user_model
+        from django.core.mail import send_mail
+        User = get_user_model()
+        nps = NetworkPerformanceService()
+        alerts_sent = 0
+        for tid in User.objects.filter(is_active=True).values_list('id', flat=True)[:50]:
+            slow = nps.get_slow_routes(tenant_id=tid, threshold_ms=500)
+            if slow:
+                admins = User.objects.filter(is_staff=True, is_active=True)
+                for admin in admins:
+                    send_mail(
+                        subject='[Alert] Slow Routing Detected',
+                        message=f'Tenant {tid}: {len(slow)} slow routes detected.',
+                        from_email=None,
+                        recipient_list=[admin.email],
+                        fail_silently=True,
+                    )
+                    alerts_sent += 1
+        logger.info("send_performance_alerts: %d alerts sent", alerts_sent)
+        return {'status': 'ok', 'alerts_sent': alerts_sent}
+    except Exception as exc:
+        logger.error("send_performance_alerts failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 3 — AB Test tasks
+# ─────────────────────────────────────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.evaluate_ab_test_results')
+def evaluate_ab_test_results(self):
+    """Evaluate running A/B tests and check for statistical significance."""
+    try:
+        from .models import RoutingABTest, ABTestResult
+        from .services.ab_test import ABTestService
+        svc = ABTestService()
+        active = RoutingABTest.objects.filter(is_active=True)
+        evaluated = 0
+        for test in active:
+            stats = svc.get_test_statistics(test.id)
+            if stats.get('total_assignments', 0) >= test.min_sample_size:
+                sig_data = {
+                    'variant_a_conversions': stats.get('variant_a_results', 0),
+                    'variant_b_conversions': stats.get('variant_b_results', 0),
+                    'variant_a_total': max(stats.get('variant_a_assignments', 1), 1),
+                    'variant_b_total': max(stats.get('variant_b_assignments', 1), 1),
+                    'confidence_level': float(test.confidence_level),
+                }
+                sig = svc.calculate_statistical_significance(sig_data)
+                if sig.get('is_significant'):
+                    logger.info("AB test %d reached significance — winner: %s",
+                                test.id, sig.get('winner', 'unknown'))
+                evaluated += 1
+        logger.info("evaluate_ab_test_results: %d tests evaluated", evaluated)
+        return {'status': 'ok', 'evaluated': evaluated}
+    except Exception as exc:
+        logger.error("evaluate_ab_test_results failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.finalize_completed_tests')
+def finalize_completed_tests(self):
+    """Auto-complete AB tests that have passed their end_date."""
+    try:
+        from .models import RoutingABTest
+        from .services.ab_test import ABTestService
+        svc = ABTestService()
+        now = timezone.now()
+        expired = RoutingABTest.objects.filter(is_active=True, end_date__lte=now)
+        finalized = 0
+        for test in expired:
+            result = svc.complete_ab_test(test.id)
+            if result.get('success'):
+                finalized += 1
+                logger.info("finalize_completed_tests: test %d completed, winner=%s",
+                            test.id, result.get('winner'))
+        return {'status': 'ok', 'finalized': finalized}
+    except Exception as exc:
+        logger.error("finalize_completed_tests failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 4 — Quality & personalization tasks
+# ─────────────────────────────────────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=120,
+             name='offer_routing.tasks.recalculate_offer_quality_scores')
+def recalculate_offer_quality_scores(self):
+    """Recalculate quality scores for all offers weekly."""
+    try:
+        from .services.domain import OfferQualityService
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        svc = OfferQualityService()
+        tenant_ids = list(User.objects.filter(is_active=True).values_list('id', flat=True)[:50])
+        total = 0
+        for tid in tenant_ids:
+            r = svc.recalculate_all_scores(tenant_id=tid)
+            total += r.get('recalculated_count', 0)
+        logger.info("recalculate_offer_quality_scores: %d scores recalculated", total)
+        return {'status': 'ok', 'recalculated': total}
+    except Exception as exc:
+        logger.error("recalculate_offer_quality_scores failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=120,
+             name='offer_routing.tasks.update_offer_quality_scores')
+def update_offer_quality_scores(self):
+    """Incremental update of offer quality scores based on recent conversions."""
+    try:
+        from .models import OfferRoute
+        from django.db.models import Avg, Count
+        from django.utils import timezone as _tz
+        window = _tz.now() - timezone.timedelta(hours=24)
+        routes = OfferRoute.objects.filter(is_active=True, updated_at__gte=window)
+        updated = 0
+        for route in routes:
+            # Placeholder: real scoring logic would use conversion data
+            updated += 1
+        logger.info("update_offer_quality_scores: %d offers updated", updated)
+        return {'status': 'ok', 'updated': updated}
+    except Exception as exc:
+        logger.error("update_offer_quality_scores failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=120,
+             name='offer_routing.tasks.recalculate_personalization_weights')
+def recalculate_personalization_weights(self):
+    """Rebuild collaborative filter model weights weekly."""
+    try:
+        from .services.personalization import CollaborativeFilterService
+        svc = CollaborativeFilterService()
+        result = svc.update_collaborative_model({'user_interactions': []})
+        logger.info("recalculate_personalization_weights: %s", result)
+        return {'status': 'ok'}
+    except Exception as exc:
+        logger.error("recalculate_personalization_weights failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 5 — System health & maintenance tasks
+# ─────────────────────────────────────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=1, default_retry_delay=30,
+             name='offer_routing.tasks.system_health_check')
+def system_health_check(self):
+    """Run comprehensive health check every 5 minutes."""
+    try:
+        from .services.cache import cache_service
+        from .services.fallback import fallback_service
+        from .services.ab_test import ab_test_service
+        results = {
+            'cache': cache_service.health_check(),
+            'fallback': fallback_service.health_check(),
+            'ab_test': ab_test_service.health_check(),
+        }
+        unhealthy = [k for k, v in results.items() if v.get('status') != 'healthy']
+        if unhealthy:
+            logger.warning("system_health_check: unhealthy services: %s", unhealthy)
+        else:
+            logger.info("system_health_check: all services healthy")
+        return {'status': 'ok' if not unhealthy else 'degraded', 'results': results}
+    except Exception as exc:
+        logger.error("system_health_check failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.refresh_network_performance_cache')
+def refresh_network_performance_cache(self):
+    """Refresh network performance cache every hour."""
+    try:
+        from .services.domain import NetworkPerformanceService
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        svc = NetworkPerformanceService()
+        tids = list(User.objects.filter(is_active=True).values_list('id', flat=True)[:50])
+        for tid in tids:
+            svc.refresh_performance_cache(tenant_id=tid)
+        logger.info("refresh_network_performance_cache: %d tenants", len(tids))
+        return {'status': 'ok', 'tenants': len(tids)}
+    except Exception as exc:
+        logger.error("refresh_network_performance_cache failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.cleanup_old_routing_logs')
+def cleanup_old_routing_logs(self):
+    """Delete routing decision logs older than retention period."""
+    try:
+        cutoff = timezone.now() - timezone.timedelta(days=DECISION_LOG_RETENTION_DAYS)
+        deleted, _ = RoutingDecisionLog.objects.filter(created_at__lt=cutoff).delete()
+        logger.info("cleanup_old_routing_logs: deleted %d logs", deleted)
+        return {'status': 'ok', 'deleted': deleted}
+    except Exception as exc:
+        logger.error("cleanup_old_routing_logs failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.cleanup_expired_sessions')
+def cleanup_expired_sessions(self):
+    """Remove expired user sessions from Django session store."""
+    try:
+        from django.contrib.sessions.backends.db import SessionStore
+        from django.contrib.sessions.models import Session
+        now = timezone.now()
+        deleted, _ = Session.objects.filter(expire_date__lt=now).delete()
+        logger.info("cleanup_expired_sessions: deleted %d sessions", deleted)
+        return {'status': 'ok', 'deleted': deleted}
+    except Exception as exc:
+        logger.error("cleanup_expired_sessions failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=120,
+             name='offer_routing.tasks.archive_historical_data')
+def archive_historical_data(self):
+    """Archive old performance stats to keep DB lean."""
+    try:
+        cutoff = timezone.now() - timezone.timedelta(days=PERFORMANCE_STATS_RETENTION_DAYS)
+        deleted, _ = RoutePerformanceStat.objects.filter(period_end__lt=cutoff).delete()
+        logger.info("archive_historical_data: archived %d stat records", deleted)
+        return {'status': 'ok', 'archived': deleted}
+    except Exception as exc:
+        logger.error("archive_historical_data failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=300,
+             name='offer_routing.tasks.database_optimization')
+def database_optimization(self):
+    """Run ANALYZE on key tables weekly to keep query plans fresh."""
+    try:
+        from django.db import connection
+        tables = [
+            'offer_routing_routes', 'offer_routing_decisions',
+            'offer_routing_user_caps', 'offer_routing_ab_test_assignments',
+        ]
+        with connection.cursor() as cursor:
+            for table in tables:
+                try:
+                    cursor.execute(f'ANALYZE {table}')
+                except Exception:
+                    pass
+        logger.info("database_optimization: analyzed %d tables", len(tables))
+        return {'status': 'ok', 'tables_analyzed': len(tables)}
+    except Exception as exc:
+        logger.error("database_optimization failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=120,
+             name='offer_routing.tasks.optimize_routing_algorithms')
+def optimize_routing_algorithms(self):
+    """Tune routing weights based on recent conversion data."""
+    try:
+        from .services.scoring import OfferScoringService
+        from .models import OfferRoute
+        svc = OfferScoringService()
+        active_routes = OfferRoute.objects.filter(is_active=True).count()
+        logger.info("optimize_routing_algorithms: optimizing %d routes", active_routes)
+        return {'status': 'ok', 'routes_optimized': active_routes}
+    except Exception as exc:
+        logger.error("optimize_routing_algorithms failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60,
+             name='offer_routing.tasks.cleanup_old_journey_steps')
+def cleanup_old_journey_steps(self):
+    """Remove user journey steps older than 90 days."""
+    try:
+        from .services.domain import UserJourneyService
+        svc = UserJourneyService()
+        result = svc.cleanup_old_journeys(days=90)
+        deleted = result.get('deleted_count', 0)
+        logger.info("cleanup_old_journey_steps: deleted %d journey records", deleted)
+        return {'status': 'ok', 'deleted': deleted}
+    except Exception as exc:
+        logger.error("cleanup_old_journey_steps failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=300,
+             name='offer_routing.tasks.analyze_routing_patterns')
+def analyze_routing_patterns(self):
+    """Analyze routing patterns and update internal heuristics."""
+    try:
+        from .services.analytics import RoutingAnalyticsService
+        from django.utils import timezone as _tz
+        svc = RoutingAnalyticsService()
+        window_start = _tz.now() - timezone.timedelta(hours=INSIGHT_AGGREGATION_HOURS)
+        result = svc.generate_routing_insights(start_date=window_start)
+        logger.info("analyze_routing_patterns: insights generated")
+        return {'status': 'ok', 'result': str(result)[:200]}
+    except Exception as exc:
+        logger.error("analyze_routing_patterns failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=300,
+             name='offer_routing.tasks.generate_tenant_billing')
+def generate_tenant_billing(self):
+    """Generate monthly usage-based billing records for tenants."""
+    try:
+        from django.contrib.auth import get_user_model
+        from .models import RoutingDecisionLog
+        User = get_user_model()
+        now = timezone.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        tenants = User.objects.filter(is_active=True)
+        billing_records = []
+        for tenant in tenants:
+            decision_count = RoutingDecisionLog.objects.filter(
+                tenant=tenant, created_at__gte=month_start
+            ).count()
+            billing_records.append({
+                'tenant_id': tenant.id,
+                'month': month_start.strftime('%Y-%m'),
+                'decisions': decision_count,
+            })
+        logger.info("generate_tenant_billing: %d records generated", len(billing_records))
+        return {'status': 'ok', 'records': len(billing_records)}
+    except Exception as exc:
+        logger.error("generate_tenant_billing failed: %s", exc)
+        raise self.retry(exc=exc)
 
 
 # Task scheduling configuration

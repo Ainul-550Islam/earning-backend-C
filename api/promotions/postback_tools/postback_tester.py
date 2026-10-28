@@ -138,6 +138,7 @@ class PostbackTester:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def test_postback_view(request):
     """POST /api/promotions/postback-tools/test/"""
@@ -154,25 +155,18 @@ def test_postback_view(request):
     )
     return Response(result)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def postback_logs_view(request):
     """GET /api/promotions/postback-tools/logs/"""
     tester = PostbackTester()
     return Response({'logs': tester.get_postback_logs(request.user.id)})
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def postback_template_view(request):
     """GET /api/promotions/postback-tools/template/?platform=appsflyer"""
     tester = PostbackTester()
     platform = request.query_params.get('platform', 'custom')
     return Response(tester.generate_postback_url_template(platform))
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def validate_postback_url_view(request):
     """POST /api/promotions/postback-tools/validate/"""

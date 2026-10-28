@@ -64,9 +64,6 @@ def json_feed_view(request):
         limit=int(request.query_params.get('limit', 100)),
     )
     return Response(data)
-
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def xml_feed_view(request):
     api_key = request.query_params.get('api_key', '')

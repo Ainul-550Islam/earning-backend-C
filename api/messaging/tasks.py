@@ -36,8 +36,8 @@ BACKOFF_MULTIPLIER: int  = 2
 
 # ── 1. Message Delivery ───────────────────────────────────────────────────────
 
-@shared_task(name="messaging.update_delivery_status")
-def update_delivery_status_task(message_id: str, user_id: str, status: str, timestamp: str) -> dict:
+@shared_task(bind=True, max_retries=3, name="messaging.update_delivery_status")
+def update_delivery_status_task(self, message_id: str, user_id: str, status: str, timestamp: str) -> dict:
     """
     Update delivery/read status in DB. DB-agnostic (PostgreSQL + MySQL + SQLite).
     """
@@ -57,6 +57,8 @@ def update_delivery_status_task(message_id: str, user_id: str, status: str, time
         return {"ok": True, "message_id": message_id, "status": status}
     except Exception as exc:
         logger.error("update_delivery_status_task: %s", exc)
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc, countdown=5)
         return {"ok": False, "error": str(exc)}
 
 
@@ -159,17 +161,24 @@ def scan_media_virus_task(media_id: str) -> dict:
 
 # ── 3. Search Indexing ────────────────────────────────────────────────────────
 
-@shared_task(name="messaging.index_message")
-def index_message_task(message_id: str) -> dict:
+@shared_task(bind=True, max_retries=3, name="messaging.index_message")
+def index_message_task(self, message_id: str) -> dict:
     """Index a single message in Elasticsearch after it's sent."""
     from .models import ChatMessage
     try:
         msg = ChatMessage.objects.get(pk=message_id)
-        if msg.is_deleted:
-            return {"ok": False, "reason": "deleted"}
+    except ChatMessage.DoesNotExist as exc:
+        # Permanent condition — retrying can never fix a message that
+        # doesn't exist, so fail immediately rather than burn retries.
+        logger.error("index_message_task: msg=%s err=%s", message_id, exc)
+        return {"ok": False, "error": str(exc)}
 
+    if msg.is_deleted:
+        return {"ok": False, "reason": "deleted"}
+
+    try:
         # Elasticsearch index
-        from .utils.search_engine import index_message
+        from .utils.search_engine import index_message, upsert_search_index_row
         ok = index_message(
             message_id=str(msg.id),
             chat_id=str(msg.chat_id),
@@ -180,20 +189,15 @@ def index_message_task(message_id: str) -> dict:
             tenant_id=msg.tenant_id,
         )
 
-        # Also update DB fallback search index
-        from .models import MessageSearchIndex
-        MessageSearchIndex.objects.update_or_create(
-            message=msg,
-            defaults={
-                "chat": msg.chat,
-                "search_text": (msg.content or "").lower().strip(),
-                "tenant": msg.tenant,
-            },
-        )
+        # Also update DB fallback/admin-browse search index (shared
+        # helper - see upsert_search_index_row docstring)
+        upsert_search_index_row(msg)
 
         return {"ok": ok, "message_id": message_id}
     except Exception as exc:
         logger.error("index_message_task: msg=%s err=%s", message_id, exc)
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc, countdown=10)
         return {"ok": False, "error": str(exc)}
 
 
@@ -214,7 +218,7 @@ def bulk_reindex_task(chat_id: str = None, days: int = 90) -> dict:
     Run this when ES index is reset or new index created.
     """
     from .models import ChatMessage, MessageStatus
-    from .utils.search_engine import index_message, ensure_index_exists
+    from .utils.search_engine import index_message, ensure_index_exists, upsert_search_index_row
     from django.utils import timezone
     from datetime import timedelta
 
@@ -232,7 +236,14 @@ def bulk_reindex_task(chat_id: str = None, days: int = 90) -> dict:
     errors = 0
     for msg in qs.iterator(chunk_size=500):
         try:
-            index_message(
+            # index_message() catches its own exceptions and returns
+            # True/False rather than raising (see its docstring) - the
+            # try/except here only ever caught failures building the
+            # call's own arguments or from upsert_search_index_row, so a
+            # real ES write failure (or ES simply being unconfigured)
+            # was previously discarded and every message still counted
+            # as "indexed". Check the return value explicitly instead.
+            es_ok = index_message(
                 message_id=str(msg.id),
                 chat_id=str(msg.chat_id),
                 sender_id=str(msg.sender_id) if msg.sender_id else "",
@@ -241,7 +252,14 @@ def bulk_reindex_task(chat_id: str = None, days: int = 90) -> dict:
                 created_at=msg.created_at.isoformat(),
                 tenant_id=msg.tenant_id,
             )
-            indexed += 1
+            # Keep the DB-side admin browse index (MessageSearchIndex)
+            # in sync too - see upsert_search_index_row docstring for
+            # why this can't be left to index_message() alone.
+            upsert_search_index_row(msg)
+            if es_ok:
+                indexed += 1
+            else:
+                errors += 1
         except Exception:
             errors += 1
 
@@ -300,7 +318,8 @@ def send_scheduled_broadcasts() -> dict:
     name="messaging.notify_new_chat_message",
 )
 def notify_new_chat_message(self, message_id: Any) -> bool:
-    from .models import ChatMessage, ChatParticipant
+    from .models import ChatMessage, ChatParticipant, UserPresence
+    from .choices import PresenceStatus
     from .utils.notifier import notify_user_new_message
     from .utils.delivery_manager import queue_message_for_offline_user, get_total_unread
 
@@ -325,15 +344,31 @@ def notify_new_chat_message(self, message_id: Any) -> bool:
     for p in participants:
         user_id = p.user_id
 
-        # Queue for offline delivery
-        from .utils.notifier import send_websocket_event
-        is_online = send_websocket_event(
-            group_name=f"chat_{str(msg.chat_id).replace('-', '')}",
-            event_type="ping_check",
-            data={},
-        )
+        # Determine actual online status via UserPresence (the real presence
+        # mechanism this codebase uses everywhere else — see ChatConsumer.
+        # connect/disconnect, PresenceConsumer, services.update_presence).
+        #
+        # This replaces a broken previous implementation that called
+        # send_websocket_event(event_type="ping_check", ...) and used its
+        # return value as "is_online". That was wrong on two counts:
+        #   1. No consumer anywhere defines a "ping_check" handler, so
+        #      Channels' dispatch() raised ValueError for every currently
+        #      connected participant in the group, killing their live
+        #      WebSocket connection — i.e. every message sent into an
+        #      active group chat would silently disconnect every OTHER
+        #      simultaneously-connected participant.
+        #   2. channel_layer.group_send() is fire-and-forget; its return
+        #      value only reflects whether the broadcast call itself
+        #      succeeded, never whether anyone is actually listening on
+        #      the group — so it could never have measured presence
+        #      correctly even with a handler in place.
+        is_online = UserPresence.objects.filter(
+            user_id=user_id, status=PresenceStatus.ONLINE,
+        ).exists()
 
-        # Push notification
+        # Push notification (still sent regardless of WS status — OS-level
+        # push is normally wanted even for a backgrounded/WS-connected
+        # client, e.g. mobile app not in foreground).
         notify_user_new_message(
             user_id=user_id,
             chat_id=str(msg.chat_id),
@@ -341,15 +376,19 @@ def notify_new_chat_message(self, message_id: Any) -> bool:
             preview=preview,
         )
 
-        # Queue offline message
-        queue_message_for_offline_user(user_id, {
-            "type": "chat_message_new",
-            "message_id": str(msg.id),
-            "chat_id": str(msg.chat_id),
-            "sender_name": sender_name,
-            "preview": preview,
-            "created_at": msg.created_at.isoformat(),
-        })
+        # Queue offline message — only for users who are not connected
+        # (queue_message_for_offline_user's own docstring: "for a user who
+        # is not connected"). Previously this ran unconditionally for every
+        # participant regardless of online status.
+        if not is_online:
+            queue_message_for_offline_user(user_id, {
+                "type": "chat_message_new",
+                "message_id": str(msg.id),
+                "chat_id": str(msg.chat_id),
+                "sender_name": sender_name,
+                "preview": preview,
+                "created_at": msg.created_at.isoformat(),
+            })
 
     return True
 
@@ -456,7 +495,7 @@ def cleanup_presence() -> dict:
     bind=True, max_retries=DEFAULT_MAX_RETRIES, default_retry_delay=30,
     name="messaging.dispatch_webhook",
 )
-def dispatch_webhook_task(self, event_type: str, payload: dict) -> dict:
+def dispatch_webhook_task(self, event_type: str, payload: dict, webhook_id: str = None) -> dict:
     import json
     import requests as _req
     from django.utils import timezone
@@ -464,9 +503,21 @@ def dispatch_webhook_task(self, event_type: str, payload: dict) -> dict:
     from .models import MessagingWebhook, WebhookDelivery
     from .constants import WEBHOOK_TIMEOUT_SECONDS, WEBHOOK_SIGNATURE_HEADER
 
-    webhooks = MessagingWebhook.objects.filter(
-        is_active=True, failure_count__lt=10
-    ).filter(events__contains=[event_type])
+    if webhook_id:
+        # Targeted single-webhook send (e.g. the admin "test" action) — bypass
+        # the is_active/failure_count/event-subscription filters below since
+        # the caller explicitly named this webhook.
+        webhooks = MessagingWebhook.objects.filter(pk=webhook_id)
+    else:
+        # Filtered in Python rather than .filter(events__contains=[event_type])
+        # because the JSONField `contains` lookup is not supported on SQLite
+        # (Postgres/MySQL/Oracle only), which silently broke every webhook
+        # dispatch under SQLite (the exception is swallowed by
+        # dispatch_webhook_event's try/except, so nothing ever surfaced it).
+        webhooks = [
+            w for w in MessagingWebhook.objects.filter(is_active=True, failure_count__lt=10)
+            if event_type in (w.events or [])
+        ]
 
     delivered = 0
     failed = 0
@@ -499,6 +550,12 @@ def dispatch_webhook_task(self, event_type: str, payload: dict) -> dict:
             failed += 1
         delivery.attempt_count = self.request.retries + 1
         delivery.save()
+
+        # Audit fix (Part 19): webhook_delivery_attempted had a real
+        # @receiver (logs a warning on failed deliveries) but nothing
+        # ever called .send() on it.
+        from .signals import webhook_delivery_attempted
+        webhook_delivery_attempted.send(sender=WebhookDelivery, delivery=delivery)
 
     return {"event": event_type, "delivered": delivered, "failed": failed}
 
@@ -741,3 +798,138 @@ def scan_for_spam_task() -> dict:
             flagged += 1
 
     return {"scanned": msgs.count(), "flagged": flagged}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fix 1: retry_webhook_delivery_task
+# Previously: WebhookDeliveryViewSet.retry() called this task but it did not
+# exist → ImportError at runtime for any admin clicking "retry".
+# ─────────────────────────────────────────────────────────────────────────────
+
+@shared_task(
+    bind=True,
+    max_retries=3,
+    default_retry_delay=60,
+    name="messaging.retry_webhook_delivery",
+)
+def retry_webhook_delivery_task(self, delivery_id: str) -> dict:
+    """
+    Retry a single failed webhook delivery.
+
+    Fetches the WebhookDelivery row, re-dispatches the stored payload
+    to the webhook URL, and updates delivery status.
+
+    Called by:
+      - WebhookDeliveryViewSet.retry() (admin action)
+
+    Args:
+        delivery_id: UUID string of the WebhookDelivery to retry.
+
+    Returns:
+        {"delivery_id": str, "success": bool, "status_code": int|None}
+    """
+    import requests
+    import hmac
+    import hashlib
+    import json
+    from django.utils import timezone
+    from .models import WebhookDelivery
+
+    try:
+        delivery = WebhookDelivery.objects.select_related("webhook").get(pk=delivery_id)
+    except WebhookDelivery.DoesNotExist:
+        logger.error("retry_webhook_delivery_task: delivery %s not found", delivery_id)
+        return {"delivery_id": delivery_id, "success": False, "status_code": None}
+
+    webhook = delivery.webhook
+    if not webhook.is_active:
+        logger.info("retry_webhook_delivery_task: webhook %s is inactive, skipping", webhook.id)
+        return {"delivery_id": delivery_id, "success": False, "status_code": None, "reason": "webhook_inactive"}
+
+    payload = delivery.payload or {}
+    payload_bytes = json.dumps(payload, default=str).encode("utf-8")
+
+    # Guard: an empty secret produces a valid but meaningless HMAC — reject it.
+    if not webhook.secret:
+        logger.error(
+            "retry_webhook_delivery_task: webhook %s has no secret configured. "
+            "Cannot sign delivery %s. Set a strong random secret on the webhook.",
+            webhook.id, delivery_id,
+        )
+        WebhookDelivery.objects.filter(pk=delivery.pk).update(
+            response_body="Webhook secret not configured.",
+            is_successful=False,
+        )
+        return {"delivery_id": delivery_id, "success": False, "status_code": None,
+                "reason": "webhook_secret_not_configured"}
+
+    # HMAC-SHA256 signature — use hmac.new() (stdlib, correct API).
+    # Arguments: key (bytes), msg (bytes), digestmod (callable or str).
+    # Note: hmac.new() is the correct stdlib function (not deprecated).
+    # The underlying class hmac.HMAC() is also valid but less idiomatic here.
+    signature = hmac.new(
+        webhook.secret.encode("utf-8"),
+        payload_bytes,
+        hashlib.sha256,
+    ).hexdigest()
+
+    headers = {
+        "Content-Type":      "application/json",
+        "X-Messaging-Event": delivery.event_type or "",
+        "X-Signature-256":   f"sha256={signature}",
+        "X-Delivery-Id":     str(delivery.id),
+        "X-Retry-Attempt":   str(delivery.attempt_count + 1),
+    }
+
+    try:
+        resp = requests.post(
+            webhook.url,
+            data=payload_bytes,
+            headers=headers,
+            timeout=10,
+        )
+        success = 200 <= resp.status_code < 300
+
+        WebhookDelivery.objects.filter(pk=delivery.pk).update(
+            response_status=resp.status_code,
+            response_body=resp.text[:2000] if resp.text else "",
+            is_successful=success,
+            delivered_at=timezone.now() if success else None,
+            attempt_count=delivery.attempt_count + 1,
+        )
+
+        if success:
+            # Reset failure counter on the webhook if this retry succeeded
+            from django.db.models import F
+            MessagingWebhook_cls = webhook.__class__
+            MessagingWebhook_cls.objects.filter(pk=webhook.pk).update(
+                failure_count=0
+            )
+            logger.info(
+                "retry_webhook_delivery_task: delivery=%s success status=%d",
+                delivery_id, resp.status_code,
+            )
+        else:
+            logger.warning(
+                "retry_webhook_delivery_task: delivery=%s failed status=%d attempt=%d",
+                delivery_id, resp.status_code, delivery.attempt_count + 1,
+            )
+            if self.request.retries < self.max_retries and not success:
+                raise self.retry(countdown=60 * (2 ** self.request.retries))
+
+        return {
+            "delivery_id": delivery_id,
+            "success": success,
+            "status_code": resp.status_code,
+        }
+
+    except requests.RequestException as exc:
+        logger.error("retry_webhook_delivery_task: delivery=%s network error: %s", delivery_id, exc)
+        WebhookDelivery.objects.filter(pk=delivery.pk).update(
+            response_body=str(exc)[:2000],
+            is_successful=False,
+            attempt_count=delivery.attempt_count + 1,
+        )
+        try:
+            raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
+        except self.MaxRetriesExceededError:
+            return {"delivery_id": delivery_id, "success": False, "status_code": None, "error": str(exc)}

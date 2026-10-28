@@ -8,7 +8,7 @@ ALL_GW = (('bkash','bKash'),('nagad','Nagad'),('sslcommerz','SSLCommerz'),
           ('stripe','Stripe'),('paypal','PayPal'))
 
 class FraudAlert(TimeStampedModel):
-    user       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='fraud_alerts')
+    user       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='fraud_alerts_pg')
     gateway    = models.CharField(max_length=20, choices=ALL_GW)
     amount     = models.DecimalField(max_digits=10, decimal_places=2)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
@@ -30,7 +30,7 @@ class BlockedIP(TimeStampedModel):
     ip_address = models.GenericIPAddressField(unique=True)
     reason     = models.TextField()
     is_active  = models.BooleanField(default=True)
-    blocked_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='blocked_ips')
+    blocked_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='blocked_ips_pg')
     expires_at = models.DateTimeField(null=True, blank=True)
     class Meta: verbose_name='Blocked IP'; verbose_name_plural='Blocked IPs'
     def __str__(self): return f'BlockedIP {self.ip_address}'

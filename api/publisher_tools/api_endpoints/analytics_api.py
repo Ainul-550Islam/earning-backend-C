@@ -24,20 +24,20 @@ class AnalyticsAPIView(APIView):
         dimension   = request.query_params.get("dimension", "date")
         granularity = request.query_params.get("granularity", "daily")
 
-        from api.publisher_tools.performance_analytics.publisher_dashboard import get_earnings_chart_data
-        from api.publisher_tools.utils import get_date_range
+        from publisher_tools.performance_analytics.publisher_dashboard import get_earnings_chart_data
+        from publisher_tools.utils import get_date_range
         start_date, end_date = get_date_range(period)
 
         if dimension == "date":
             data = get_earnings_chart_data(publisher, period, metric)
         elif dimension == "country":
-            from api.publisher_tools.performance_analytics.ecpm_analyzer import get_ecpm_by_country
+            from publisher_tools.performance_analytics.ecpm_analyzer import get_ecpm_by_country
             data = get_ecpm_by_country(publisher, start_date, end_date)
         elif dimension == "ad_unit":
-            from api.publisher_tools.performance_analytics.revenue_tracker import get_top_performing_units
+            from publisher_tools.performance_analytics.revenue_tracker import get_top_performing_units
             data = get_top_performing_units(publisher)
         elif dimension == "format":
-            from api.publisher_tools.performance_analytics.CTR_analyzer import get_ctr_by_format
+            from publisher_tools.performance_analytics.CTR_analyzer import get_ctr_by_format
             data = get_ctr_by_format(publisher)
         else:
             data = get_earnings_chart_data(publisher, period, metric)
@@ -61,18 +61,18 @@ class ReportAPIView(APIView):
             return Response({"success": False, "message": "No publisher profile."}, status=404)
 
         if report_type == "daily":
-            from api.publisher_tools.performance_analytics.daily_report import generate_daily_report
+            from publisher_tools.performance_analytics.daily_report import generate_daily_report
             from datetime import timedelta
             report_date = timezone.now().date() - timedelta(days=1)
             data = generate_daily_report(publisher, report_date)
         elif report_type == "weekly":
-            from api.publisher_tools.performance_analytics.weekly_report import generate_weekly_report
+            from publisher_tools.performance_analytics.weekly_report import generate_weekly_report
             data = generate_weekly_report(publisher)
         elif report_type == "monthly":
-            from api.publisher_tools.performance_analytics.monthly_report import generate_monthly_report
+            from publisher_tools.performance_analytics.monthly_report import generate_monthly_report
             data = generate_monthly_report(publisher)
         elif report_type == "forecast":
-            from api.publisher_tools.performance_analytics.revenue_forecast import forecast_next_month
+            from publisher_tools.performance_analytics.revenue_forecast import forecast_next_month
             data = forecast_next_month(publisher)
         else:
             return Response({"success": False, "message": f"Unknown report type: {report_type}"}, status=400)
@@ -90,7 +90,7 @@ class EarningsSummaryAPIView(APIView):
         except Exception:
             return Response({"success": False, "message": "No publisher profile."}, status=404)
 
-        from api.publisher_tools.models import PublisherEarning
+        from publisher_tools.models import PublisherEarning
         from django.db.models import Sum
         from datetime import timedelta, date
 

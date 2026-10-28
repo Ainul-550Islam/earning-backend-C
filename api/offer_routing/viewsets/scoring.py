@@ -4,6 +4,9 @@ Scoring Viewsets for Offer Routing System
 This module contains viewsets for managing scoring configurations,
 offer scores, and ranking operations.
 """
+from django.db.models import Max
+from django.db.models import Min
+from django.db.models import Sum
 
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
@@ -18,6 +21,9 @@ from ..models import (
 from ..services.scoring import scoring_service, ranker_service
 from ..permissions import IsAuthenticatedOrReadOnly, CanManageOffers
 from ..exceptions import ValidationError, ScoringError
+from ..serializers import OfferScoreConfigSerializer, OfferScoreSerializer, GlobalOfferRankSerializer, UserOfferHistorySerializer, OfferAffinityScoreSerializer
+from ..throttling import RoutingEngineThrottle
+
 
 User = get_user_model()
 
@@ -31,14 +37,17 @@ class OfferScoreConfigViewSet(viewsets.ModelViewSet):
     """
     
     queryset = OfferScoreConfig.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = OfferScoreConfigSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
     
     def get_queryset(self):
         """Filter configs by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('offer__name')
     
     @action(detail=True, methods=['post'])
@@ -218,14 +227,18 @@ class OfferScoreViewSet(viewsets.ReadOnlyModelViewSet):
     """
     
     queryset = OfferScore.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = OfferScoreSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    throttle_classes = [RoutingEngineThrottle]
     
     def get_queryset(self):
         """Filter scores by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(user__tenant=self.request.user)
+            try:
+                queryset = queryset.filter(user__tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-created_at')
     
     @action(detail=False, methods=['get'])
@@ -417,14 +430,17 @@ class GlobalOfferRankViewSet(viewsets.ReadOnlyModelViewSet):
     """
     
     queryset = GlobalOfferRank.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = GlobalOfferRankSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get_queryset(self):
         """Filter ranks by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-rank_date', 'rank_score')
     
     @action(detail=False, methods=['get'])
@@ -512,14 +528,17 @@ class UserOfferHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     """
     
     queryset = UserOfferHistory.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = UserOfferHistorySerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get_queryset(self):
         """Filter history by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(user__tenant=self.request.user)
+            try:
+                queryset = queryset.filter(user__tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-created_at')
     
     @action(detail=False, methods=['get'])

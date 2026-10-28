@@ -3,6 +3,8 @@ api/ad_networks/managers.py
 Custom Django managers for ad networks models
 SaaS-ready with tenant support
 """
+from django.db.models import Max
+from django.db.models import Min
 
 from django.db import models
 from django.db.models import Q, Count, Sum, Avg, F, ExpressionWrapper, FloatField

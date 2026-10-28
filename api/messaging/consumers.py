@@ -233,8 +233,15 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 await self._error(f"Message blocked: {reason}", "content_blocked")
                 return
 
-        # Rate limit check
-        await self._check_rate_limit()
+        # BUG FIX: rate limiting used to be checked here (via
+        # self._check_rate_limit()) AND again inside services.send_chat_message()
+        # (via _check_message_rate_limit -> utils.rate_limiter.check_message_rate),
+        # both incrementing the exact same cache counter - so every WebSocket
+        # message counted twice against the per-minute limit, halving it in
+        # practice (30/min effectively became ~15/min). Now checked exactly
+        # once, inside send_chat_message, with the client IP passed through
+        # so the IP-based limit that used to live only here isn't lost.
+        client_ip = self.scope.get("client", ["", 0])[0]
 
         # Save to DB + fanout
         message = await self._save_message(
@@ -248,6 +255,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             thread_id=thread_id,
             poll_data=poll_data,
             location_data=location_data,
+            priority=priority,
+            ip=client_ip,
         )
 
         # Build broadcast payload
@@ -318,10 +327,12 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         message_id = content.get("message_id")
         if message_id:
             await self._record_delivered(message_id)
+            sender_id = await self._get_message_sender_id(message_id)
             # Notify sender that message was delivered
             await self.channel_layer.group_send(self.group_name, {
                 "type": "chat_delivery_ack",
                 "message_id": str(message_id),
+                "sender_id": str(sender_id) if sender_id is not None else None,
                 "user_id": str(self.user.pk),
                 "status": "DELIVERED",
             })
@@ -476,7 +487,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def chat_delivery_ack(self, event: dict) -> None:
         # Only send to the original sender
-        if event.get("sender_id") == str(self.user.pk) or True:
+        if event.get("sender_id") == str(self.user.pk):
             await self.send_json({**event, "type": "chat.delivery.ack"})
 
     async def chat_read_receipt(self, event: dict) -> None:
@@ -498,6 +509,28 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def message_unpinned(self, event: dict) -> None:
         await self.send_json({**event.get("data", event), "type": "chat.message.unpinned"})
 
+    # Audit fix (Part 19): the 4 handlers below did not exist at all.
+    # Each one's corresponding receiver in receivers.py already called
+    # send_websocket_event() with an event_type that Channels maps
+    # straight to one of these exact method names - with no method
+    # present, group_send() raised ValueError: No handler for message
+    # type X for every client connected to the group. All 4 receivers
+    # were only reachable once this session's signal-wiring fix made
+    # their signals fire for the first time, so this was a dormant bug:
+    # broken since whenever these receivers were written, never actually
+    # exercised until now.
+    async def chat_disappearing_changed(self, event: dict) -> None:
+        await self.send_json({**event.get("data", event), "type": "chat.disappearing_changed"})
+
+    async def voice_transcribed(self, event: dict) -> None:
+        await self.send_json({**event.get("data", event), "type": "voice.transcribed"})
+
+    async def message_forwarded(self, event: dict) -> None:
+        await self.send_json({**event.get("data", event), "type": "message.forwarded"})
+
+    async def message_link_previews(self, event: dict) -> None:
+        await self.send_json({**event.get("data", event), "type": "message.link_previews"})
+
     async def presence_changed(self, event: dict) -> None:
         await self.send_json({**event.get("data", event), "type": "chat.presence.changed"})
 
@@ -515,6 +548,31 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def device_sync_message(self, event: dict) -> None:
         """Sync a message sent from another device."""
         await self.send_json({**event, "type": "chat.cross_device.message"})
+
+    # CPA postback events (Part 6 audit fix): notify_conversion_via_ws
+    # (utils/postback_tracker.py) has always sent event_type="cpa.conversion"
+    # to the correct per-user group (user_devices_{affiliate_id}, matching
+    # _user_devices_group() exactly), but no consumer anywhere defined a
+    # cpa_conversion() handler method - unlike every sibling event above.
+    # Channels' AsyncConsumer.dispatch() does getattr(self, event["type"])
+    # and raises ValueError when nothing matches, so this event has never
+    # been successfully delivered to any connected client; real-time
+    # conversion notifications for affiliates were silently undeliverable.
+    async def cpa_conversion(self, event: dict) -> None:
+        """A CPA postback fired for this user - relay it to the client."""
+        await self.send_json({**event.get("data", event), "type": "cpa.conversion.received"})
+
+    # Audit fix (Part 19): same bug, one entry over. tasks_cpa.py's
+    # deliver_cpa_notification_task sends event_type="cpa.notification" to
+    # this same user_devices_{id} group - Channels maps that to handler
+    # name cpa_notification, which never existed (only cpa_conversion
+    # did). Reachable today via the conversion_received/postback_failed
+    # signals (the only two CPA signals actually wired to fire in this
+    # module - see signals_cpa.py), and will be reachable for the rest
+    # once the owning offers/affiliates app fires the other 13.
+    async def cpa_notification(self, event: dict) -> None:
+        """A CPANotification record was created for this user - relay it."""
+        await self.send_json({**event.get("data", event), "type": "cpa.notification.received"})
 
     # ── DB Helpers ─────────────────────────────────────────────────────────────
 
@@ -556,6 +614,15 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         mark_delivered(message_id=message_id, user_id=self.user.pk)
 
     @database_sync_to_async
+    def _get_message_sender_id(self, message_id: str) -> Optional[Any]:
+        from .models import ChatMessage
+        return (
+            ChatMessage.objects.filter(pk=message_id)
+            .values_list("sender_id", flat=True)
+            .first()
+        )
+
+    @database_sync_to_async
     def _record_read(self, message_id: str) -> None:
         from .utils.delivery_manager import mark_read
         mark_read(message_id=message_id, user_id=self.user.pk)
@@ -576,12 +643,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         return should_auto_moderate(content, user_id=self.user.pk)
 
     @database_sync_to_async
-    def _check_rate_limit(self) -> None:
-        from .utils.rate_limiter import check_message_rate
-        client_ip = self.scope.get("client", ["", 0])[0]
-        check_message_rate(user_id=self.user.pk, ip=client_ip)
-
-    @database_sync_to_async
     def _add_reaction(self, message_id, emoji, custom_emoji):
         from . import services
         services.add_reaction(
@@ -597,13 +658,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def _get_reaction_counts(self, message_id) -> dict:
         from . import services
-        return services.get_message_reactions(message_id)
+        return services.get_message_reactions(message_id, self.user.pk)
 
     @database_sync_to_async
     def _vote_poll(self, message_id, option_id) -> dict:
         from . import services
         services.vote_on_poll(message_id=message_id, user_id=self.user.pk, option_id=option_id)
-        return services.get_poll_results(message_id)
+        return services.get_poll_results(message_id, self.user.pk)
 
     @database_sync_to_async
     def _forward_message(self, message_id, target_chat_id):
@@ -718,8 +779,16 @@ class SupportConsumer(AsyncJsonWebsocketConsumer):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive_json(self, content: Any, **kwargs) -> None:
-        msg_type = content.get("type", "")
+        # Audit fix (Part 19): content.get() ran before try/except, so
+        # non-dict input (e.g. the client sending a bare string or list
+        # instead of {"type": ...}) raised AttributeError *outside* the
+        # exception handler below and crashed the connection uncleanly.
+        # Matches ChatConsumer's already-established isinstance guard.
+        if not isinstance(content, dict):
+            await self._error("Invalid message format.", "invalid_format")
+            return
         try:
+            msg_type = content.get("type", "")
             if msg_type == "support.message":
                 await self._handle_reply(content)
             elif msg_type == "support.typing":
@@ -851,28 +920,56 @@ class PresenceConsumer(AsyncJsonWebsocketConsumer):
         await self._go_offline()
 
     async def receive_json(self, content: Any, **kwargs) -> None:
-        msg_type = content.get("type", "")
-        if msg_type == "presence.ping":
-            await self._go_online()
-            await self.send_json({"type": "presence.pong"})
-        elif msg_type == "presence.away":
-            await self._set_status(PresenceStatus.AWAY)
-        elif msg_type == "presence.busy":
-            await self._set_status(PresenceStatus.BUSY)
-        elif msg_type == "presence.custom_status":
-            await self._set_custom_status(
-                custom_status=content.get("custom_status", ""),
-                emoji=content.get("emoji", ""),
-            )
-        elif msg_type == "presence.invisible":
-            await self._set_invisible(content.get("invisible", False))
-        elif msg_type == "presence.bulk_get":
-            user_ids = content.get("user_ids", [])
-            presences = await self._bulk_get_presence(user_ids[:50])
-            await self.send_json({"type": "presence.bulk_response", "presences": presences})
+        # Audit fix (Part 19): this handler had no isinstance guard and no
+        # exception handling at all - malformed input or any error inside
+        # _go_online/_set_status/_set_custom_status/_set_invisible/
+        # _bulk_get_presence crashed the connection uncleanly instead of
+        # returning a clean error. Matches ChatConsumer's established
+        # isinstance-guard + try/except pattern.
+        if not isinstance(content, dict):
+            await self._error("Invalid message format.", "invalid_format")
+            return
+        try:
+            msg_type = content.get("type", "")
+            if msg_type == "presence.ping":
+                await self._go_online()
+                await self.send_json({"type": "presence.pong"})
+            elif msg_type == "presence.away":
+                await self._set_status(PresenceStatus.AWAY)
+            elif msg_type == "presence.busy":
+                await self._set_status(PresenceStatus.BUSY)
+            elif msg_type == "presence.custom_status":
+                await self._set_custom_status(
+                    custom_status=content.get("custom_status", ""),
+                    emoji=content.get("emoji", ""),
+                )
+            elif msg_type == "presence.invisible":
+                await self._set_invisible(content.get("invisible", False))
+            elif msg_type == "presence.bulk_get":
+                user_ids = content.get("user_ids", [])
+                presences = await self._bulk_get_presence(user_ids[:50])
+                await self.send_json({"type": "presence.bulk_response", "presences": presences})
+            else:
+                await self._error(f"Unknown type: {msg_type!r}", "unknown_type")
+        except Exception as exc:
+            logger.exception("PresenceConsumer.receive_json: %s", exc)
+            await self._error("Internal error.")
+
+    async def _error(self, detail: str, code: str = "error") -> None:
+        await self.send_json({"type": "error", "code": code, "detail": detail})
 
     async def presence_update(self, event: dict) -> None:
         await self.send_json({**event.get("data", event), "type": "presence.update"})
+
+    # Audit fix (Part 19): on_story_created (receivers.py) broadcasts to
+    # this consumer's own presence_{user_id} group (multi-device sync:
+    # your other sessions learn your story posted) with
+    # event_type="story.created", which Channels maps to a handler named
+    # story_created - it didn't exist, so this was a dormant crash for
+    # every one of that user's other connected sessions, invisible until
+    # this session's signal-wiring fix made it reachable for the first time.
+    async def story_created(self, event: dict) -> None:
+        await self.send_json({**event.get("data", event), "type": "story.created"})
 
     @database_sync_to_async
     def _go_online(self):
@@ -973,34 +1070,46 @@ class CallConsumer(AsyncJsonWebsocketConsumer):
             })
 
     async def receive_json(self, content: Any, **kwargs) -> None:
-        msg_type = content.get("type", "")
-        SIGNAL_TYPES = {
-            "call.offer":            "call_offer_relay",
-            "call.answer":           "call_answer_relay",
-            "call.ice_candidate":    "call_ice_relay",
-            "call.mute":             "call_mute_relay",
-            "call.camera_toggle":    "call_camera_relay",
-            "call.screen_share":     "call_screen_share_relay",
-            "call.screen_share_stop":"call_screen_share_stop_relay",
-            "call.recording_start":  "call_recording_relay",
-            "call.recording_stop":   "call_recording_relay",
-        }
-        if msg_type in SIGNAL_TYPES:
-            await self.channel_layer.group_send(self.group_name, {
-                "type": SIGNAL_TYPES[msg_type],
-                "from_user_id": str(self.user.pk),
-                "room_id": self.room_id,
-                "payload": content,
-            })
-        elif msg_type == "call.end":
-            await self._end_call()
-            await self.channel_layer.group_send(self.group_name, {
-                "type": "call_ended",
-                "ended_by": str(self.user.pk),
-                "room_id": self.room_id,
-            })
-        else:
-            await self.send_json({"type": "error", "detail": f"Unknown: {msg_type}"})
+        # Audit fix (Part 19): this handler had no isinstance guard and no
+        # exception handling - malformed input or any error inside the
+        # relay/end-call logic crashed the connection uncleanly instead of
+        # returning a clean error. Matches ChatConsumer's established
+        # isinstance-guard + try/except pattern.
+        if not isinstance(content, dict):
+            await self._error("Invalid message format.", "invalid_format")
+            return
+        try:
+            msg_type = content.get("type", "")
+            SIGNAL_TYPES = {
+                "call.offer":            "call_offer_relay",
+                "call.answer":           "call_answer_relay",
+                "call.ice_candidate":    "call_ice_relay",
+                "call.mute":             "call_mute_relay",
+                "call.camera_toggle":    "call_camera_relay",
+                "call.screen_share":     "call_screen_share_relay",
+                "call.screen_share_stop":"call_screen_share_stop_relay",
+                "call.recording_start":  "call_recording_relay",
+                "call.recording_stop":   "call_recording_relay",
+            }
+            if msg_type in SIGNAL_TYPES:
+                await self.channel_layer.group_send(self.group_name, {
+                    "type": SIGNAL_TYPES[msg_type],
+                    "from_user_id": str(self.user.pk),
+                    "room_id": self.room_id,
+                    "payload": content,
+                })
+            elif msg_type == "call.end":
+                await self._end_call()
+                await self.channel_layer.group_send(self.group_name, {
+                    "type": "call_ended",
+                    "ended_by": str(self.user.pk),
+                    "room_id": self.room_id,
+                })
+            else:
+                await self._error(f"Unknown type: {msg_type!r}", "unknown_type")
+        except Exception as exc:
+            logger.exception("CallConsumer.receive_json: %s", exc)
+            await self._error("Internal error.")
 
     # Group message handlers
     async def call_offer_relay(self, event: dict) -> None:
@@ -1039,6 +1148,9 @@ class CallConsumer(AsyncJsonWebsocketConsumer):
 
     async def call_peer_left(self, event: dict) -> None:
         await self.send_json({**event, "type": "call.peer_left"})
+
+    async def _error(self, detail: str, code: str = "error") -> None:
+        await self.send_json({"type": "error", "code": code, "detail": detail})
 
     @database_sync_to_async
     def _verify_room_access(self) -> bool:

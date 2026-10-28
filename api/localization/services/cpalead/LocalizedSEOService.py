@@ -22,7 +22,7 @@ class LocalizedSEOService:
     def get_localized_meta(self, page_type: str, language_code: str, context: Dict) -> Dict:
         """Page-এর localized meta tags পাওয়া।"""
         try:
-            from ..models.content import LocalizedSEO
+            from api.localization.models.content import LocalizedSEO
             seo = LocalizedSEO.objects.filter(
                 content_type=page_type,
                 object_id=str(context.get("id", "")),
@@ -46,7 +46,7 @@ class LocalizedSEOService:
     def generate_locale_sitemap(self, base_url: str) -> str:
         """Multi-language XML sitemap generate করে।"""
         try:
-            from ..models.core import Language
+            from api.localization.models.core import Language
             langs = Language.objects.filter(is_active=True).values_list("code", flat=True)
             lines = [
                 '<?xml version="1.0" encoding="UTF-8"?>',

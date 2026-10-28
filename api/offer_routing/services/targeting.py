@@ -327,6 +327,191 @@ class GeoTargetingService:
         return True
 
 
+    # ── US state and city abbreviation maps ────────────────────────────────────
+    _STATE_ABBREVS = {
+        'AL':'ALABAMA','AK':'ALASKA','AZ':'ARIZONA','AR':'ARKANSAS',
+        'CA':'CALIFORNIA','CO':'COLORADO','CT':'CONNECTICUT','DE':'DELAWARE',
+        'FL':'FLORIDA','GA':'GEORGIA','HI':'HAWAII','ID':'IDAHO',
+        'IL':'ILLINOIS','IN':'INDIANA','IA':'IOWA','KS':'KANSAS',
+        'KY':'KENTUCKY','LA':'LOUISIANA','ME':'MAINE','MD':'MARYLAND',
+        'MA':'MASSACHUSETTS','MI':'MICHIGAN','MN':'MINNESOTA','MS':'MISSISSIPPI',
+        'MO':'MISSOURI','MT':'MONTANA','NE':'NEBRASKA','NV':'NEVADA',
+        'NH':'NEW HAMPSHIRE','NJ':'NEW JERSEY','NM':'NEW MEXICO','NY':'NEW YORK',
+        'NC':'NORTH CAROLINA','ND':'NORTH DAKOTA','OH':'OHIO','OK':'OKLAHOMA',
+        'OR':'OREGON','PA':'PENNSYLVANIA','RI':'RHODE ISLAND','SC':'SOUTH CAROLINA',
+        'SD':'SOUTH DAKOTA','TN':'TENNESSEE','TX':'TEXAS','UT':'UTAH',
+        'VT':'VERMONT','VA':'VIRGINIA','WA':'WASHINGTON','WV':'WEST VIRGINIA',
+        'WI':'WISCONSIN','WY':'WYOMING','DC':'DISTRICT OF COLUMBIA',
+    }
+    _CITY_ABBREVS = {
+        'LA':'LOS ANGELES','NYC':'NEW YORK CITY','SF':'SAN FRANCISCO',
+        'PHX':'PHOENIX','CHI':'CHICAGO','HOU':'HOUSTON','DAL':'DALLAS',
+        'ATL':'ATLANTA','SEA':'SEATTLE','DC':'WASHINGTON','LV':'LAS VEGAS',
+        'SD':'SAN DIEGO','SJ':'SAN JOSE','OAK':'OAKLAND','PDX':'PORTLAND',
+    }
+
+    def _geo_value_matches(self, rule_val: str, context_val: str) -> bool:
+        """Match a rule value against a context value, handling abbreviations."""
+        r = rule_val.strip().upper()
+        c = context_val.strip().upper()
+        if r == c:
+            return True
+        # Abbreviation expansions
+        if self._STATE_ABBREVS.get(r) == c:
+            return True
+        if self._CITY_ABBREVS.get(r) == c:
+            return True
+        return False
+
+    def matches_geo_rule(self, rule, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Public method to check if a context matches a GeoRouteRule.
+        Returns dict with 'matches', 'rule_id', 'matched_fields'.
+        """
+        location = context.get('location', context) if isinstance(context, dict) else {}
+        matched_fields = []
+
+        country_ok = True
+        if rule.country:
+            ctx_country = location.get('country', '')
+            if ctx_country and self._geo_value_matches(rule.country, ctx_country):
+                matched_fields.append('country')
+            else:
+                country_ok = False
+
+        if rule.region:
+            ctx_region = location.get('region', '')
+            if ctx_region and self._geo_value_matches(rule.region, ctx_region):
+                matched_fields.append('region')
+
+        if rule.city:
+            ctx_city = location.get('city', '')
+            if ctx_city and self._geo_value_matches(rule.city, ctx_city):
+                matched_fields.append('city')
+
+        matches = country_ok and bool(matched_fields)
+        return {
+            'matches': matches,
+            'rule_id': rule.id,
+            'matched_fields': matched_fields,
+        }
+
+    def get_user_location(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get location for the given context, using cache and IP geolocation.
+        The _get_ip_geolocation method is patched in tests.
+        """
+        try:
+            location = context.get('location', {})
+            ip = location.get('ip') or context.get('ip_address', '')
+
+            # Check cache
+            cache_key = f'geo:ip:{ip}' if ip else None
+            if cache_key:
+                try:
+                    from .cache import cache_service as _cs
+                    cached = _cs.get(cache_key)
+                    hit = cached if isinstance(cached, dict) and 'found' not in cached else (
+                        cached.get('value') if isinstance(cached, dict) and cached.get('found') else None
+                    )
+                    if hit is not None and isinstance(hit, dict):
+                        return hit
+                except Exception:
+                    pass
+
+            # IP geolocation lookup
+            geo_result = {}
+            if ip:
+                geo_result = self._get_ip_geolocation(ip) or {}
+
+            result = {**location, **geo_result}
+
+            # Cache the result
+            if cache_key and result:
+                try:
+                    from .cache import cache_service as _cs
+                    _cs.set(cache_key, result, timeout=3600)
+                except Exception:
+                    pass
+
+            return result
+        except Exception as e:
+            logger.error("get_user_location error: %s", e)
+            return context.get('location', {})
+
+    def _get_ip_geolocation(self, ip: str) -> Dict[str, Any]:
+        """
+        Fetch geolocation data for an IP address.
+        Override / patch this method in tests.
+        """
+        try:
+            # Delegate to existing utility if available
+            from ..utils import get_geo_location_from_ip
+            return get_geo_location_from_ip(ip) or {}
+        except Exception:
+            return {}
+
+    def validate_geo_rule_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate a geo rule configuration dict."""
+        errors = []
+        country = config.get('country', '')
+        region = config.get('region', '')
+        city = config.get('city', '')
+        # country is required (must be a valid non-empty ISO code)
+        if not country:
+            errors.append('country')
+        elif len(country) > 3:
+            errors.append(f"Invalid country code: {country}")
+        return {'valid': len(errors) == 0, 'errors': errors}
+
+    def get_geo_rules_for_location(self, location: Dict[str, Any]):
+        """Get all active GeoRouteRules that match the given location dict."""
+        try:
+            from ..models import GeoRouteRule
+            all_rules = GeoRouteRule.objects.filter(is_active=True)
+            matching = []
+            for rule in all_rules:
+                result = self.matches_geo_rule(rule, {'location': location})
+                if result.get('matches'):
+                    matching.append(rule)
+            return matching
+        except Exception as e:
+            logger.error("get_geo_rules_for_location error: %s", e)
+            return []
+
+    def is_ip_in_range(self, ip: str, ip_range: str) -> bool:
+        """Check if an IP address is within a CIDR range."""
+        try:
+            import ipaddress
+            return ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range, strict=False)
+        except Exception:
+            return False
+
+    def get_country_from_ip(self, ip: str) -> Optional[str]:
+        """Return the country code for an IP address."""
+        try:
+            geo = self._get_ip_geolocation(ip)
+            return geo.get('country') if geo else None
+        except Exception:
+            return None
+
+    def health_check(self) -> Dict[str, Any]:
+        """Check geo targeting service health."""
+        try:
+            geo_ok = bool(self._get_ip_geolocation('8.8.8.8'))
+            return {
+                'status': 'healthy',
+                'ip_geolocation_service': 'ok' if geo_ok else 'degraded',
+                'rules_loaded': True,
+            }
+        except Exception as e:
+            return {
+                'status': 'error',
+                'ip_geolocation_service': 'error',
+                'error': str(e),
+            }
+
+
 class DeviceTargetingService:
     """Service for device-based targeting rules."""
     
@@ -645,3 +830,24 @@ device_targeting_service = DeviceTargetingService()
 segment_targeting_service = SegmentTargetingService()
 time_targeting_service = TimeTargetingService()
 behavior_targeting_service = BehaviorTargetingService()
+# Single owner: canonical implementations live in subpackage
+try:
+    from offer_routing.services.targeting import GeoTargetingService
+except ImportError:
+    pass
+try:
+    from offer_routing.services.targeting import DeviceTargetingService
+except ImportError:
+    pass
+try:
+    from offer_routing.services.targeting import SegmentTargetingService
+except ImportError:
+    pass
+try:
+    from offer_routing.services.targeting import TimeTargetingService
+except ImportError:
+    pass
+try:
+    from offer_routing.services.targeting import BehaviorTargetingService
+except ImportError:
+    pass

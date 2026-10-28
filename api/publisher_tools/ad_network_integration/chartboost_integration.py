@@ -36,6 +36,7 @@ class ChartboostConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_chartboost_configs"
         verbose_name = _("Chartboost Config")
         unique_together = [["publisher"]]

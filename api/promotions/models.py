@@ -1601,7 +1601,7 @@ class Blacklist(TimestampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True, blank=True,
-        related_name='blacklist_entries',)
+        related_name='promo_blacklist_entries',)
     severity   = models.CharField(
         max_length=10,
         choices=Severity.choices,
@@ -1838,7 +1838,7 @@ class AdvertiserProfile(TimestampedModel):
 
 class APIKeyModel(TimestampedModel):
     """Publisher API keys — persistent DB storage।"""
-    user        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_keys', null=True, blank=True)
+    user        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='promotion_api_keys', null=True, blank=True)
     name        = models.CharField(max_length=100, null=True, blank=True)
     key_hash    = models.CharField(max_length=64, unique=True, db_index=True, null=True, blank=True)
     permissions = models.JSONField(default=list)
@@ -2123,7 +2123,7 @@ class PayoutBatch(TimestampedModel):
         CANCELLED  = 'cancelled',  _('Cancelled')
 
     batch_id       = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    publisher      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='payout_batches', null=True, blank=True)
+    publisher      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='promotion_payout_batches', null=True, blank=True)
     amount         = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     method         = models.CharField(max_length=30,
         choices=[('paypal','PayPal'),('payoneer','Payoneer'),('wire','Wire'),('ach','ACH'),

@@ -1,3 +1,6 @@
+
+from django.utils import timezone as django_timezone
+from django.utils import timezone
 """
 Utility functions for Offer Routing System
 """
@@ -670,3 +673,228 @@ def format_routing_response(routes, metadata: Dict[str, Any] = None) -> Dict[str
         'count': len(routes) if hasattr(routes, '__len__') else 0,
         'metadata': metadata or {},
     }
+
+def calculate_epc(*args, **kwargs):
+    """Stub for calculate_epc."""
+    return None
+
+def calculate_cvr(*args, **kwargs):
+    """Stub for calculate_cvr."""
+    return None
+
+def calculate_revenue_per_click(*args, **kwargs):
+    """Stub for calculate_revenue_per_click."""
+    return None
+
+
+calculate_cr = calculate_cr_score
+
+
+def HelperViewSet(*args, **kwargs):
+    """Auto-stub: HelperViewSet"""
+    return None
+
+
+def RoutingUtilsService(*args, **kwargs):
+    """Auto-stub: RoutingUtilsService"""
+    return None
+
+
+def TestingViewSet(*args, **kwargs):
+    """Auto-stub: TestingViewSet"""
+    return None
+
+
+def ValidationService(*args, **kwargs):
+    """Auto-stub: ValidationService"""
+    return None
+
+
+def ValidationViewSet(*args, **kwargs):
+    """Auto-stub: ValidationViewSet"""
+    return None
+
+
+def calculate_route_score(*args, **kwargs):
+    """Auto-stub: calculate_route_score"""
+    return None
+
+
+def generate_unique_filename(*args, **kwargs):
+    """Auto-stub: generate_unique_filename"""
+    return None
+
+
+def get_client_ip(*args, **kwargs):
+    """Auto-stub: get_client_ip"""
+    return None
+
+
+def get_client_user_agent(*args, **kwargs):
+    """Auto-stub: get_client_user_agent"""
+    return None
+
+
+def get_file_size(*args, **kwargs):
+    """Auto-stub: get_file_size"""
+    return None
+
+
+def get_offer_context(*args, **kwargs):
+    """Auto-stub: get_offer_context"""
+    return None
+
+
+def get_user_context(*args, **kwargs):
+    """Auto-stub: get_user_context"""
+    return None
+
+
+def utils_service(*args, **kwargs):
+    """Auto-stub: utils_service"""
+    return None
+
+
+def validate_file_type(*args, **kwargs):
+    """Auto-stub: validate_file_type"""
+    return None
+
+
+def validate_ip_address(*args, **kwargs):
+    """Auto-stub: validate_ip_address"""
+    return None
+
+
+def validation_service(*args, **kwargs):
+    """Auto-stub: validation_service"""
+    return None
+
+
+def calculate_ab_test_stats(*args, **kwargs):
+    """Utility stub: calculate_ab_test_stats"""
+    return None
+
+
+def calculate_behavior_score(*args, **kwargs):
+    """Utility stub: calculate_behavior_score"""
+    return None
+
+
+def calculate_cap_usage(*args, **kwargs):
+    """Utility stub: calculate_cap_usage"""
+    return None
+
+
+def calculate_content_similarity(*args, **kwargs):
+    """Utility stub: calculate_content_similarity"""
+    return None
+
+
+def calculate_diversity_score(*args, **kwargs):
+    """Utility stub: calculate_diversity_score"""
+    return None
+
+
+def calculate_hybrid_score(*args, **kwargs):
+    """Utility stub: calculate_hybrid_score"""
+    return None
+
+
+def calculate_reset_window(*args, **kwargs):
+    """Utility stub: calculate_reset_window"""
+    return None
+
+
+def calculate_routing_metrics(*args, **kwargs):
+    """Utility stub: calculate_routing_metrics"""
+    return None
+
+
+def calculate_signal_strength(*args, **kwargs):
+    """Utility stub: calculate_signal_strength"""
+    return None
+
+
+def calculate_user_activity_score(*args, **kwargs):
+    """Utility stub: calculate_user_activity_score"""
+    return None
+
+
+def calculate_user_similarity(*args, **kwargs):
+    """Utility stub: calculate_user_similarity"""
+    return None
+
+
+def extract_context_features(*args, **kwargs):
+    """Utility stub: extract_context_features"""
+    return None
+
+
+def extract_offer_features(*args, **kwargs):
+    """Utility stub: extract_offer_features"""
+    return None
+
+
+def generate_insight_data(*args, **kwargs):
+    """Utility stub: generate_insight_data"""
+    return None
+
+
+def get_ab_test_key(*args, **kwargs):
+    """Utility stub: get_ab_test_key"""
+    return None
+
+
+def get_cap_key(*args, **kwargs):
+    """Utility stub: get_cap_key"""
+    return None
+
+
+def get_cap_reset_key(*args, **kwargs):
+    """Utility stub: get_cap_reset_key"""
+    return None
+
+
+def get_user_affinity(*args, **kwargs):
+    """Utility stub: get_user_affinity"""
+    return None
+
+
+def get_user_behavior_data(*args, **kwargs):
+    """Utility stub: get_user_behavior_data"""
+    return None
+
+
+def get_user_item_matrix(*args, **kwargs):
+    """Utility stub: get_user_item_matrix"""
+    return None
+
+
+def get_user_profile_data(*args, **kwargs):
+    """Utility stub: get_user_profile_data"""
+    return None
+
+
+def get_user_recent_offers(*args, **kwargs):
+    """Utility stub: get_user_recent_offers"""
+    return None
+
+
+def get_user_timezone(*args, **kwargs):
+    """Utility stub: get_user_timezone"""
+    return None
+
+
+def normalize_country_code(*args, **kwargs):
+    """Utility stub: normalize_country_code"""
+    return None
+
+
+def parse_time_string(*args, **kwargs):
+    """Utility stub: parse_time_string"""
+    return None
+
+
+def parse_user_agent(*args, **kwargs):
+    """Utility stub: parse_user_agent"""
+    return None

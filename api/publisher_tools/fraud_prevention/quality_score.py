@@ -6,7 +6,7 @@ from datetime import timedelta
 
 def calculate_publisher_quality_score(publisher) -> Dict:
     """Publisher-এর overall traffic quality score।"""
-    from api.publisher_tools.models import TrafficSafetyLog, PublisherEarning
+    from publisher_tools.models import TrafficSafetyLog, PublisherEarning
     from django.db.models import Sum, Count, Avg
     from django.utils import timezone
     start = timezone.now().date() - timedelta(days=30)

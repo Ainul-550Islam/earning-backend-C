@@ -270,7 +270,7 @@ class CouponSerializer(serializers.ModelSerializer):
             "discount_value", "min_order_amount", "max_discount_amount",
             "valid_from", "valid_until", "usage_limit", "usage_per_user",
             "used_count", "is_active", "is_valid", "is_public",
-            "applicable_to",
+            "applicable_to", "applicable_categories", "applicable_products",
         ]
         read_only_fields = ["used_count"]
 

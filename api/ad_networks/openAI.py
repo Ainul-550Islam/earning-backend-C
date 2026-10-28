@@ -28,6 +28,7 @@ except ImportError:
 from .models import Offer, UserOfferEngagement, OfferConversion, OfferReward
 from .choices import OfferStatus, EngagementStatus, ConversionStatus, RewardStatus
 from .constants import CACHE_TIMEOUTS
+from api.ad_networks.models import OfferClick
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

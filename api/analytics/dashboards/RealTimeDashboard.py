@@ -1,3 +1,5 @@
+from django.db.models import Max
+from django.db.models.functions import TruncDate
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional

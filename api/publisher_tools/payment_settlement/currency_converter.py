@@ -45,3 +45,8 @@ def format_amount(amount: Decimal, currency: str) -> str:
     symbols = {"USD": "$", "EUR": "€", "GBP": "£", "BDT": "৳", "INR": "₹"}
     symbol = symbols.get(currency.upper(), currency.upper() + " ")
     return f"{symbol}{float(amount):,.2f}"
+
+# Alias: __init__.py exports this name but nothing in the app currently calls
+# it (confirmed via a full publisher_tools grep for "convert_currency(") —
+# this just satisfies the import so startup doesn't log a warning.
+convert_currency = convert

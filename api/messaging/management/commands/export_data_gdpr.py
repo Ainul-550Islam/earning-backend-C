@@ -27,9 +27,9 @@ class Command(BaseCommand):
             self.stderr.write(self.style.ERROR(f"User {user_id} not found."))
             return
 
-        self.stdout.write(f"Exporting data for user: {user.username} (id={user_id})")
+        self.stderr.write(f"Exporting data for user: {user.username} (id={user_id})")
 
-        from messaging.models import (
+        from api.messaging.models import (
             ChatMessage, ChatParticipant, UserInbox, SupportThread,
             SupportMessage, MessageReaction, UserPresence, CallSession,
             UserBlock, DeviceToken, CPANotification, AffiliateConversationThread,
@@ -67,7 +67,7 @@ class Command(BaseCommand):
 
         # Messages sent
         for msg in ChatMessage.objects.filter(sender_id=user_id).only(
-            "id", "chat_id", "content", "message_type", "created_at", "is_deleted"
+            "id", "chat_id", "content", "message_type", "created_at", "status"
         ):
             data["messages_sent"].append({
                 "message_id": str(msg.id),
@@ -75,6 +75,16 @@ class Command(BaseCommand):
                 "content": msg.content if not msg.is_deleted else "[deleted]",
                 "message_type": msg.message_type,
                 "created_at": msg.created_at.isoformat(),
+            })
+
+        # Reactions
+        for reaction in MessageReaction.objects.filter(user_id=user_id).select_related("message"):
+            data["reactions"].append({
+                "message_id": str(reaction.message_id),
+                "chat_id": str(reaction.message.chat_id),
+                "emoji": reaction.emoji,
+                "custom_emoji": reaction.custom_emoji,
+                "created_at": reaction.created_at.isoformat(),
             })
 
         # Support threads
@@ -104,6 +114,28 @@ class Command(BaseCommand):
                 "title": item.title,
                 "is_read": item.is_read,
                 "created_at": item.created_at.isoformat(),
+            })
+
+        # Blocked users (users this account has blocked - UserBlock.blocker's
+        # own related_name is literally "blocked_users", matching this key)
+        for block in UserBlock.objects.filter(blocker_id=user_id).select_related("blocked"):
+            data["blocked_users"].append({
+                "blocked_user_id": str(block.blocked_id),
+                "blocked_username": block.blocked.username,
+                "reason": block.reason,
+                "created_at": block.created_at.isoformat(),
+            })
+
+        # Device tokens
+        for token in DeviceToken.objects.filter(user_id=user_id):
+            data["device_tokens"].append({
+                "id": str(token.id),
+                "platform": token.platform,
+                "device_name": token.device_name,
+                "token": token.token,
+                "is_active": token.is_active,
+                "created_at": token.created_at.isoformat(),
+                "last_used_at": token.last_used_at.isoformat() if token.last_used_at else None,
             })
 
         # CPA notifications
@@ -139,6 +171,27 @@ class Command(BaseCommand):
             })
 
         output = json.dumps(data, indent=2, ensure_ascii=False)
+
+        # Part 21 (world-system audit): record that this export happened -
+        # a GDPR Article 20 export is exactly the kind of event a
+        # compliance audit trail exists to answer "did this happen, when,
+        # for whom" about. tenant_id comes from the user's own
+        # participant rows since a GDPR export command takes --user-id,
+        # not a tenant - falls back to None (no ChatParticipant found)
+        # rather than raising, since the export itself has already
+        # succeeded by this point and shouldn't be blocked by this.
+        from api.messaging.models import ChatParticipant
+        from api.messaging.choices import AuditAction
+        from messaging import services as messaging_services
+        tenant_id = (
+            ChatParticipant.objects.filter(user_id=user_id)
+            .values_list("tenant_id", flat=True).first()
+        )
+        messaging_services.log_audit_event(
+            actor_id=user_id, action=AuditAction.DATA_EXPORTED,
+            target_type="User", target_id=user_id, tenant_id=tenant_id,
+            metadata={"format": options["format"], "message_count": len(data["messages_sent"])},
+        )
 
         if options["output"]:
             with open(options["output"], "w") as f:

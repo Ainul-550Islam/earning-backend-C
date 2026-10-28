@@ -4,6 +4,7 @@ Exposure Statistics Tasks
 Periodic tasks for generating daily exposure statistics
 in the offer routing system.
 """
+from django.db import models
 
 import logging
 from typing import Dict, List, Any, Optional

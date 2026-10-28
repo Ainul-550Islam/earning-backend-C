@@ -29,6 +29,7 @@ class AdSizePreset(TimeStampedModel):
     avg_ecpm_multiplier = models.DecimalField(max_digits=4, decimal_places=2, default=1.00, help_text="vs baseline eCPM")
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_ad_size_presets"
         verbose_name = _("Ad Size Preset")
         ordering = ["-is_iab_standard", "name"]

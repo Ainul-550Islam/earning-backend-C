@@ -30,8 +30,8 @@ class ClickTrackingServiceTest(TestCase):
             'final_url': 'https://offer.example.com/?sub1=campaign_001',
         }
 
-    @patch('smartlink.services.click.ClickDeduplicationService.ClickDeduplicationService.is_duplicate', return_value=False)
-    @patch('smartlink.services.click.ClickDeduplicationService.ClickDeduplicationService.mark_seen')
+    @patch('api.smartlink.services.click.ClickDeduplicationService.ClickDeduplicationService.is_duplicate', return_value=False)
+    @patch('api.smartlink.services.click.ClickDeduplicationService.ClickDeduplicationService.mark_seen')
     def test_click_created_with_metadata(self, mock_mark, mock_dedup):
         from ..models import Click, ClickMetadata
         click = self.service.record(self.sl.pk, None, self.context)
@@ -43,9 +43,18 @@ class ClickTrackingServiceTest(TestCase):
         self.assertEqual(meta.sub1, 'campaign_001')
         self.assertEqual(meta.sub2, 'adset_002')
 
-    @patch('smartlink.services.click.ClickDeduplicationService.ClickDeduplicationService.is_duplicate', return_value=True)
+    @patch('api.smartlink.services.click.ClickDeduplicationService.ClickDeduplicationService.is_duplicate', return_value=True)
     def test_duplicate_click_not_unique(self, mock_dedup):
-        click = self.service.record(self.sl.pk, None, self.context)
+        """When dedup service says duplicate, click.is_unique must be False.
+        Note: dedup only runs when enable_unique_click=True AND offer_id is provided.
+        """
+        from offer_inventory.models import Offer
+        offer = Offer.objects.create(name='Test')
+        # Enable unique-click tracking on the SmartLink
+        from ..models import SmartLink
+        SmartLink.objects.filter(pk=self.sl.pk).update(enable_unique_click=True)
+        self.sl.refresh_from_db()
+        click = self.service.record(self.sl.pk, offer.pk, self.context)
         if click:
             self.assertFalse(click.is_unique)
 

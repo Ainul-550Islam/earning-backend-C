@@ -203,6 +203,7 @@ class UserPaymentMethodAdmin(ModelAdmin):
         'account_number_masked',
         'account_name',
         'is_verified',      # ← সরাসরি ফিল্ড (custom method নয়)
+        # 'is_primary',  # field removed       # ← সরাসরি ফিল্ড (custom method নয়)
         'verification_badge',
         'primary_badge',
         'created_at_display',
@@ -212,6 +213,7 @@ class UserPaymentMethodAdmin(ModelAdmin):
     list_filter = (
         MethodTypeFilter,
         VerifiedMethodFilter,
+        # 'is_primary',  # field removed
         'created_at'
     )
     
@@ -247,6 +249,7 @@ class UserPaymentMethodAdmin(ModelAdmin):
         ('Verification & Settings', {
             'fields': (
                 'is_verified',
+                # 'is_primary',  # field removed
                 'verified_at',
             ),
             'classes': ('unfold-card',),
@@ -1042,7 +1045,7 @@ class WalletAdmin(ModelAdmin):
 
 # ==================== WITHDRAWAL ADMIN ====================
 
-@admin.register(Withdrawal)
+# @admin.register(Withdrawal)
 class WithdrawalAdmin(ModelAdmin):
     """Admin interface for Withdrawal"""
     
@@ -1261,6 +1264,7 @@ class WithdrawalAdmin(ModelAdmin):
     
     
     # ==================== 3. WITHDRAWAL REQUEST ADMIN (FIXED) ====================
+@admin.register(WithdrawalRequest)
 class WithdrawalRequestAdmin(admin.ModelAdmin):
     """
     💸 Withdrawal Request Admin - Complete & Bulletproof
@@ -1274,7 +1278,7 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
     ]
     
     list_filter = [
-        'status', 'method',
+        'status', # 'method',  # field removed
         ('created_at', admin.DateFieldListFilter),
     ]
     
@@ -1298,7 +1302,8 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
             'fields': ('amount', 'fee', 'net_amount_calculated')
         }),
         ('💳 Payment Details', {
-            'fields': ('method', 'account_number', 'admin_note')
+            'fields': ('account_number', 'admin_note'),  # method field removed
+            'classes': ('unfold-card',),
         }),
         ('[STATS] Status', {
             'fields': ('status',)
@@ -1460,17 +1465,17 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
                         amount=-withdrawal.amount,
                         status='approved',
                         description=f"Withdrawal #{withdrawal.id}",
-                        balance_before=withdrawal.user.wallet.balance,
+                        balance_before=withdrawal.user.wallet.current_balance,
                         created_by=request.user,
                         approved_by=request.user,
                         approved_at=timezone.now()
                     )
                     
                     # Update wallet balance
-                    withdrawal.user.wallet.balance -= withdrawal.amount
+                    withdrawal.user.wallet.current_balance -= withdrawal.amount
                     withdrawal.user.wallet.save()
                     
-                    txn.balance_after = withdrawal.user.wallet.balance
+                    txn.balance_after = withdrawal.user.wallet.current_balance
                     txn.save()
                     
                     # Update withdrawal request
@@ -1539,7 +1544,9 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
 
 def _force_register_wallet():
     try:
-        from api.admin_panel.admin import admin_site as modern_site
+        from .adapters.outbound import get_admin_site as _get_admin_site
+        from .adapters.outbound import get_admin_site as _get_admin_site
+        modern_site = _get_admin_site()
         if modern_site is None:
             return
         pairs = [(UserPaymentMethod, UserPaymentMethodAdmin), (WalletTransaction, WalletTransactionAdmin), (WalletWebhookLog, WalletWebhookLogAdmin), (Wallet, WalletAdmin), (Withdrawal, WithdrawalAdmin), (WithdrawalRequest, WithdrawalRequestAdmin)]
@@ -1553,4 +1560,5 @@ def _force_register_wallet():
                 pass
         print(f"[OK] wallet registered {registered} models")
     except Exception as e:
-        print(f"[WARN] wallet: {e}")
+        print(f"[WARN] wallet: {e}"
+              )

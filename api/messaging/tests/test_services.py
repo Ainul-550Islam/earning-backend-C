@@ -45,8 +45,10 @@ class TestCreateDirectChat(TestCase):
 
     def test_returns_existing_chat_if_already_exists(self):
         chat1 = services.create_direct_chat(self.user_a.pk, self.user_b.pk)
+        # Second call must return the same chat
         chat2 = services.create_direct_chat(self.user_a.pk, self.user_b.pk)
-        self.assertEqual(str(chat1.id), str(chat2.id))
+        self.assertEqual(str(chat1.id), str(chat2.id),
+            "create_direct_chat should return existing DM, not create a new one")
 
     def test_raises_if_same_user(self):
         with self.assertRaises(MessagingError):
@@ -219,7 +221,7 @@ class TestMessageReactions(TestCase):
         services.add_reaction(message_id=str(self.msg.id), user_id=self.user.pk, emoji="👍")
         services.add_reaction(message_id=str(self.msg.id), user_id=user2.pk, emoji="👍")
         services.add_reaction(message_id=str(self.msg.id), user_id=user2.pk, emoji="❤️")
-        counts = services.get_message_reactions(str(self.msg.id))
+        counts = services.get_message_reactions(str(self.msg.id), self.user.pk)
         self.assertEqual(counts.get("👍"), 2)
         self.assertEqual(counts.get("❤️"), 1)
 
@@ -237,8 +239,11 @@ class TestUserPresence(TestCase):
         self.assertEqual(result["status"], "OFFLINE")
 
     def test_invisible_shows_offline(self):
+        from django.core.cache import cache
         presence = services.update_presence(user_id=self.user.pk, status="ONLINE")
         UserPresence.objects.filter(pk=presence.pk).update(is_invisible=True)
+        # Clear cache so get_presence reads fresh from DB
+        cache.delete(f"presence:{self.user.pk}")
         result = services.get_presence(self.user.pk)
         self.assertEqual(result["status"], "OFFLINE")
 
@@ -450,6 +455,6 @@ class TestPollServices(TestCase):
             question="Which?", options=["X", "Y"],
         )
         services.vote_on_poll(message_id=str(poll.id), user_id=self.voter.pk, option_id="0")
-        results = services.get_poll_results(str(poll.id))
+        results = services.get_poll_results(str(poll.id), self.voter.pk)
         self.assertEqual(results["total_votes"], 1)
         self.assertEqual(results["options"]["0"]["votes"], 1)

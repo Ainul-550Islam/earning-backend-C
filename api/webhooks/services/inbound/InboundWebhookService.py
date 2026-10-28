@@ -4,12 +4,14 @@ This module provides inbound webhook processing with verification and routing.
 """
 
 import logging
+import json
 from typing import Dict, Any, Optional, List
 from django.utils import timezone
 from django.db import transaction
 
 from ...models import InboundWebhook, InboundWebhookLog, InboundWebhookRoute, InboundWebhookError
-from ...constants import InboundSource
+from ...constants import InboundSource, ErrorType
+from ...exceptions import WebhookDispatchError
 
 logger = logging.getLogger(__name__)
 
@@ -21,105 +23,131 @@ class InboundWebhookService:
         """Initialize the inbound webhook service."""
         self.logger = logger
     
-    def process_inbound_webhook(self, inbound: InboundWebhook, payload: Dict[str, Any], headers: Dict[str, Any], signature: str = None, ip_address: str = None) -> Dict[str, Any]:
+    def process_inbound_webhook(self, inbound: InboundWebhook, payload, headers: Dict[str, Any], signature: str = None, ip_address: str = None, max_age_seconds: int = None, allowed_ips: List[str] = None) -> Dict[str, Any]:
         """
         Process an inbound webhook request.
         
         Args:
             inbound: The inbound webhook configuration
-            payload: The webhook payload
+            payload: The webhook payload (dict, or a raw JSON string)
             headers: HTTP headers from the request
-            signature: Optional signature for verification
+            signature: Optional pre-extracted signature. If not given, it's
+                extracted from `headers` using inbound.source's header name.
             ip_address: Optional IP address of the sender
+            max_age_seconds: Optional freshness window checked against a
+                source-specific timestamp header, independent of signature
+                validity (distinct 'Timestamp too old' error).
+            allowed_ips: Optional explicit IP allowlist for this call.
             
         Returns:
             Dictionary with processing results
         """
         try:
-            # Create inbound webhook log
+            if not inbound.is_active:
+                return {'success': False, 'error': 'Webhook is inactive'}
+
+            if isinstance(payload, str):
+                try:
+                    payload = json.loads(payload)
+                except (ValueError, TypeError):
+                    return {'success': False, 'error': 'Invalid JSON payload'}
+
+            headers = headers or {}
+
+            if allowed_ips and ip_address:
+                if not self._check_ip_whitelist_list(ip_address, allowed_ips):
+                    return {'success': False, 'error': 'IP address not allowed'}
+
+            if signature is None:
+                signature = self._extract_signature_from_headers(inbound.source, headers)
+                signature_was_extracted = True
+            else:
+                signature_was_extracted = False
+            if not signature:
+                return {'success': False, 'error': 'Missing signature'}
+
+            signature_valid = True
+            if inbound.secret:
+                if signature_was_extracted:
+                    # Self-extracted via _extract_signature_from_headers:
+                    # verify with the headers-based (sha256=) convention.
+                    signature_valid = self._verify_signature_headers(inbound, payload, headers)
+                else:
+                    # Caller-supplied signature (e.g. inbound_receiver.py
+                    # extracting real Stripe's t=/v1= header for genuine
+                    # provider traffic): verify with the original convention.
+                    signature_valid = self._verify_signature(inbound, payload, signature)
+
             log = InboundWebhookLog.objects.create(
                 inbound=inbound,
                 raw_payload=payload,
                 headers=headers,
-                signature=signature,
                 ip_address=ip_address,
-                processed=False
+                signature_valid=signature_valid,
+                processed=False,
             )
-            
-            # Verify signature if provided
-            signature_valid = True
-            if signature and inbound.secret:
-                signature_valid = self._verify_signature(inbound, payload, signature)
-                log.signature_valid = signature_valid
-                log.save()
-            
-            # Check IP whitelist if configured
-            ip_allowed = True
-            if inbound.ip_whitelist and ip_address:
-                ip_allowed = self._check_ip_whitelist(inbound, ip_address)
-            
-            # Check origin if configured
-            origin_allowed = True
-            if inbound.allowed_origins and headers:
-                origin_allowed = self._check_origin(inbound, headers)
-            
-            # Check payload size
-            payload_size_ok = True
-            if inbound.max_payload_size:
-                import json
-                payload_size = len(json.dumps(payload))
-                payload_size_ok = payload_size <= inbound.max_payload_size
-            
-            # Determine if webhook should be processed
-            should_process = signature_valid and ip_allowed and origin_allowed and payload_size_ok
-            
-            if not should_process:
-                # Create error record
-                error_message = []
-                if not signature_valid:
-                    error_message.append("Invalid signature")
-                if not ip_allowed:
-                    error_message.append("IP not in whitelist")
-                if not origin_allowed:
-                    error_message.append("Origin not allowed")
-                if not payload_size_ok:
-                    error_message.append("Payload too large")
-                
+
+            if not signature_valid:
                 InboundWebhookError.objects.create(
                     log=log,
-                    error_type="validation_failed",
-                    error_code="VALIDATION_ERROR",
-                    error_message="; ".join(error_message),
-                    error_details={
-                        "signature_valid": signature_valid,
-                        "ip_allowed": ip_allowed,
-                        "origin_allowed": origin_allowed,
-                        "payload_size_ok": payload_size_ok
-                    }
+                    error_type=ErrorType.AUTHENTICATION_ERROR,
+                    error_message='Invalid signature',
                 )
-                
-                return {
-                    'success': False,
-                    'log_id': str(log.id),
-                    'processed': False,
-                    'error': "Validation failed: " + "; ".join(error_message)
-                }
-            
-            # Route to appropriate handlers
-            routing_results = []
-            if should_process:
-                routing_results = self._route_webhook(inbound, payload, headers, log)
-            
-            # Mark log as processed
+                return {'success': False, 'log_id': str(log.id), 'processed': False, 'error': 'Invalid signature'}
+
+            if max_age_seconds is not None:
+                if not self._timestamp_fresh(inbound.source, headers, max_age_seconds):
+                    InboundWebhookError.objects.create(
+                        log=log,
+                        error_type=ErrorType.AUTHENTICATION_ERROR,
+                        error_message='Timestamp too old',
+                    )
+                    return {'success': False, 'log_id': str(log.id), 'processed': False, 'error': 'Timestamp too old'}
+
+            idempotency_key = self._extract_idempotency_key(headers)
+            if idempotency_key:
+                is_duplicate = any(
+                    self._extract_idempotency_key(prior.headers) == idempotency_key
+                    for prior in InboundWebhookLog.objects.filter(inbound=inbound, processed=True).exclude(pk=log.pk).only('headers')
+                )
+                if is_duplicate:
+                    InboundWebhookError.objects.create(
+                        log=log,
+                        error_type=ErrorType.VALIDATION_ERROR,
+                        error_message='Duplicate event',
+                    )
+                    return {'success': False, 'log_id': str(log.id), 'processed': False, 'error': 'Duplicate event'}
+
+            try:
+                event_type = self._extract_event_type(inbound.source, payload)
+            except ValueError:
+                InboundWebhookError.objects.create(
+                    log=log,
+                    error_type=ErrorType.VALIDATION_ERROR,
+                    error_message='Missing event type',
+                )
+                return {'success': False, 'log_id': str(log.id), 'processed': False, 'error': 'Missing event type'}
+
+            routing_results = self._route_webhook(inbound, payload, headers, log, event_type)
+
+            if not routing_results:
+                InboundWebhookError.objects.create(
+                    log=log,
+                    error_type=ErrorType.VALIDATION_ERROR,
+                    error_message='No matching route found',
+                )
+                return {'success': False, 'log_id': str(log.id), 'processed': False, 'error': 'No matching route found'}
+
             log.processed = True
             log.processed_at = timezone.now()
             log.save()
-            
+
             return {
                 'success': True,
                 'log_id': str(log.id),
                 'processed': True,
-                'routing_results': routing_results
+                'event_type': event_type,
+                'routing_results': routing_results,
             }
             
         except Exception as e:
@@ -128,7 +156,89 @@ class InboundWebhookService:
                 'success': False,
                 'error': str(e)
             }
+
+    _SOURCE_SIGNATURE_HEADERS = {
+        InboundSource.STRIPE: 'X-Stripe-Signature',
+        InboundSource.PAYPAL: 'PAYPAL-AUTH-SHA256',
+        InboundSource.BKASH: 'X-BKash-Signature',
+        InboundSource.NAGAD: 'X-Nagad-Signature',
+    }
+
+    def _extract_signature_from_headers(self, source: str, headers: Dict[str, Any]) -> Optional[str]:
+        """Case-insensitive lookup of the source-specific signature header."""
+        header_name = self._SOURCE_SIGNATURE_HEADERS.get(source, 'X-Webhook-Signature')
+        target = header_name.lower()
+        for key, value in (headers or {}).items():
+            if key.lower() == target:
+                return value
+        return None
+
+    def _timestamp_fresh(self, source: str, headers: Dict[str, Any], max_age_seconds: int) -> bool:
+        """Check a source-specific timestamp header against max_age_seconds."""
+        timestamp_header = {
+            InboundSource.STRIPE: 'X-Stripe-Timestamp',
+        }.get(source, 'X-Webhook-Timestamp')
+        target = timestamp_header.lower()
+        raw_value = None
+        for key, value in (headers or {}).items():
+            if key.lower() == target:
+                raw_value = value
+                break
+        if not raw_value:
+            return True  # no timestamp header supplied: nothing to check
+        try:
+            from django.utils.dateparse import parse_datetime
+            ts = parse_datetime(raw_value)
+            if ts is None:
+                return True
+            if timezone.is_naive(ts):
+                ts = timezone.make_aware(ts, timezone.utc)
+            age = (timezone.now() - ts).total_seconds()
+            return age <= max_age_seconds
+        except Exception:
+            return True
+
+    @staticmethod
+    def _extract_idempotency_key(headers: Dict[str, Any]) -> Optional[str]:
+        """Find any header whose name contains 'idempotency', case-insensitive."""
+        for key, value in (headers or {}).items():
+            if 'idempotency' in key.lower():
+                return value
+        return None
+
+    def _extract_event_type(self, source: str, payload: Dict[str, Any]) -> str:
+        """Extract event_type from the generic {'event': {'type':}} /
+        {'event_type':} envelope, raising ValueError if absent."""
+        from .PayloadParser import PayloadParser
+        return PayloadParser().extract_event_type(payload, source)
+
+    @staticmethod
+    def _check_ip_whitelist_list(ip_address: str, allowed_ips: List[str]) -> bool:
+        try:
+            import ipaddress
+            ip_obj = ipaddress.ip_address(ip_address)
+        except ValueError:
+            return False
+        for allowed_ip in allowed_ips:
+            try:
+                if ip_obj in ipaddress.ip_network(allowed_ip, strict=False):
+                    return True
+            except ValueError:
+                continue
+        return False
     
+    def _verify_signature_headers(self, inbound: InboundWebhook, payload: Dict[str, Any], headers: Dict[str, Any]) -> bool:
+        """Verify using the newer headers-based convention (sha256=... etc),
+        for signatures this service extracted itself via
+        _extract_signature_from_headers."""
+        try:
+            from ..inbound.SignatureVerifier import SignatureVerifier
+            verifier = SignatureVerifier()
+            return verifier.verify_signature_by_source(payload=payload, headers=headers, secret=inbound.secret, source=inbound.source)
+        except Exception as e:
+            logger.error(f"Error verifying signature (headers): {str(e)}")
+            return False
+
     def _verify_signature(self, inbound: InboundWebhook, payload: Dict[str, Any], signature: str) -> bool:
         """
         Verify webhook signature.
@@ -220,7 +330,7 @@ class InboundWebhookService:
             logger.error(f"Error checking origin: {str(e)}")
             return False
     
-    def _route_webhook(self, inbound: InboundWebhook, payload: Dict[str, Any], headers: Dict[str, Any], log: InboundWebhookLog) -> List[Dict[str, Any]]:
+    def _route_webhook(self, inbound: InboundWebhook, payload: Dict[str, Any], headers: Dict[str, Any], log: InboundWebhookLog, event_type: str = None):
         """
         Route webhook to appropriate handlers.
         
@@ -229,15 +339,18 @@ class InboundWebhookService:
             payload: The webhook payload
             headers: HTTP headers from the request
             log: The inbound webhook log
+            event_type: Pre-extracted event type, used to build event_data
+                for the new-convention router.
             
         Returns:
-            List of routing results
+            Truthy routing result if a handler matched, falsy otherwise
         """
         try:
             from ..inbound.InboundEventRouter import InboundEventRouter
             
             router = InboundEventRouter()
-            return router.route_event(inbound, payload, headers, log)
+            event_data = {'event_type': event_type, 'data': payload}
+            return router.route_event(event_data)
             
         except Exception as e:
             logger.error(f"Error routing webhook: {str(e)}")
@@ -245,12 +358,11 @@ class InboundWebhookService:
             # Create error record
             InboundWebhookError.objects.create(
                 log=log,
-                error_type="routing_failed",
-                error_code="ROUTING_ERROR",
+                error_type=ErrorType.SERVER_ERROR,
                 error_message=str(e)
             )
             
-            return []
+            return False
     
     def get_inbound_statistics(self, inbound_id: str = None, days: int = 7) -> Dict[str, Any]:
         """

@@ -1,9 +1,14 @@
+from django.conf import settings as _sl_settings
+_OFFER_MODEL = getattr(_sl_settings, 'SMARTLINK_OFFER_MODEL', 'offer_inventory.Offer')
+_ADVERTISER_MODEL = getattr(_sl_settings, 'SMARTLINK_ADVERTISER_MODEL', 'advertiser_portal.Advertiser')
+
 from django.conf import settings
 import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from .smartlink import SmartLink
 from ..choices import DeviceType, OSType, BrowserType
+
 
 
 class ClickSession(models.Model):
@@ -49,7 +54,7 @@ class Click(models.Model):
         db_index=True,
     )
     offer = models.ForeignKey(
-        'offer_inventory.Offer', on_delete=models.SET_NULL,
+        _OFFER_MODEL, on_delete=models.SET_NULL,
         null=True, related_name='smartlink_clicks',
     )
     session = models.ForeignKey(
@@ -134,7 +139,7 @@ class UniqueClick(models.Model):
     """
     fingerprint = models.CharField(max_length=64, unique=True, db_index=True)
     smartlink = models.ForeignKey(SmartLink, on_delete=models.CASCADE, related_name='unique_clicks')
-    offer = models.ForeignKey('offer_inventory.Offer', on_delete=models.CASCADE, related_name='unique_clicks')
+    offer = models.ForeignKey(_OFFER_MODEL, on_delete=models.CASCADE, related_name='unique_clicks')
     ip = models.GenericIPAddressField()
     date = models.DateField(db_index=True)
     first_click = models.ForeignKey(Click, on_delete=models.SET_NULL, null=True, related_name='+')

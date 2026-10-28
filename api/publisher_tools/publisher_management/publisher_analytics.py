@@ -16,7 +16,7 @@ def get_publisher_overview(publisher, period: str = 'last_30_days') -> Dict:
     সব key metrics একসাথে।
     """
     from ..models import PublisherEarning, Site, App
-    from ...utils import get_date_range, calculate_ecpm, calculate_ctr
+    from ..utils import get_date_range, calculate_ecpm, calculate_ctr
 
     start_date, end_date = get_date_range(period)
 

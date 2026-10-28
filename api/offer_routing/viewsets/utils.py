@@ -5,6 +5,7 @@ This module contains utility viewsets for validation,
 testing, and helper operations.
 """
 
+from ..throttling import BulkOperationThrottle, RoutingEngineThrottle, AnalyticsThrottle, BulkOperationThrottle, EvaluatorThrottle
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -28,6 +29,7 @@ class ValidationViewSet(viewsets.ViewSet):
     """
     
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [BulkOperationThrottle]
     
     @action(detail=False, methods=['post'])
     def validate_offer_data(self, request):
@@ -216,6 +218,7 @@ class TestingViewSet(viewsets.ViewSet):
     """
     
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [BulkOperationThrottle]
     
     @action(detail=False, methods=['post'])
     def test_route_with_user(self, request):
@@ -522,6 +525,7 @@ class HelperViewSet(viewsets.ViewSet):
     """
     
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [BulkOperationThrottle]
     
     @action(detail=False, methods=['get'])
     def generate_user_hash(self, request):

@@ -912,3 +912,6 @@ class KYCFeatureFlag(models.Model):
             return obj.value if obj.is_enabled else default
         except cls.DoesNotExist:
             return default
+
+# Backwards-compatible alias: other apps import KYCProfile
+KYCProfile = KYC

@@ -1,36 +1,56 @@
 # api/djoyalty/choices.py
 """
-Django CharField choices — সব Enum-style constants এখানে।
+Djoyalty -- all choice constants।
+LedgerEntry types, sources, tier ranks, etc.
 """
 
-# ==================== TXN TYPE ====================
+# ─── Ledger Transaction Types ───
+LEDGER_CREDIT = 'credit'
+LEDGER_DEBIT = 'debit'
 
-TXN_TYPE_FULL = 'full'
-TXN_TYPE_DISCOUNT = 'discount'
-TXN_TYPE_EARN = 'earn'
-TXN_TYPE_BURN = 'burn'
-TXN_TYPE_ADJUSTMENT = 'adjustment'
-TXN_TYPE_EXPIRY = 'expiry'
-TXN_TYPE_TRANSFER_IN = 'transfer_in'
-TXN_TYPE_TRANSFER_OUT = 'transfer_out'
-TXN_TYPE_REFUND = 'refund'
-TXN_TYPE_BONUS = 'bonus'
-
-TXN_TYPE_CHOICES = [
-    (TXN_TYPE_FULL, 'Full Price'),
-    (TXN_TYPE_DISCOUNT, 'Discount'),
-    (TXN_TYPE_EARN, 'Points Earn'),
-    (TXN_TYPE_BURN, 'Points Burn / Redeem'),
-    (TXN_TYPE_ADJUSTMENT, 'Manual Adjustment'),
-    (TXN_TYPE_EXPIRY, 'Points Expiry'),
-    (TXN_TYPE_TRANSFER_IN, 'Transfer In'),
-    (TXN_TYPE_TRANSFER_OUT, 'Transfer Out'),
-    (TXN_TYPE_REFUND, 'Refund'),
-    (TXN_TYPE_BONUS, 'Bonus Points'),
+LEDGER_TXN_TYPE_CHOICES = [
+    (LEDGER_CREDIT, 'Credit'),
+    (LEDGER_DEBIT, 'Debit'),
 ]
 
-# ==================== LOYALTY TIER ====================
+# ─── Ledger Sources ───
+LEDGER_SOURCE_PURCHASE = 'purchase'
+LEDGER_SOURCE_REFERRAL = 'referral'
+LEDGER_SOURCE_BONUS = 'bonus'
+LEDGER_SOURCE_OFFER = 'offer'
+LEDGER_SOURCE_REDEMPTION = 'redemption'
+LEDGER_SOURCE_EXPIRY = 'expiry'
+LEDGER_SOURCE_TRANSFER = 'transfer'
+LEDGER_SOURCE_ADMIN = 'admin'
+LEDGER_SOURCE_SUBSCRIPTION = 'subscription'
+LEDGER_SOURCE_BADGE = 'badge'
+LEDGER_SOURCE_STREAK = 'streak'
+LEDGER_SOURCE_CHALLENGE = 'challenge'
+LEDGER_SOURCE_MILESTONE = 'milestone'
+LEDGER_SOURCE_COALITION = 'coalition'
+LEDGER_SOURCE_PARTNER = 'partner'
+LEDGER_SOURCE_CONVERSION = 'conversion'
 
+LEDGER_SOURCE_CHOICES = [
+    (LEDGER_SOURCE_PURCHASE, 'Purchase'),
+    (LEDGER_SOURCE_REFERRAL, 'Referral'),
+    (LEDGER_SOURCE_BONUS, 'Bonus'),
+    (LEDGER_SOURCE_OFFER, 'Offer'),
+    (LEDGER_SOURCE_REDEMPTION, 'Redemption'),
+    (LEDGER_SOURCE_EXPIRY, 'Expiry'),
+    (LEDGER_SOURCE_TRANSFER, 'Transfer'),
+    (LEDGER_SOURCE_ADMIN, 'Admin'),
+    (LEDGER_SOURCE_SUBSCRIPTION, 'Subscription'),
+    (LEDGER_SOURCE_BADGE, 'Badge'),
+    (LEDGER_SOURCE_STREAK, 'Streak'),
+    (LEDGER_SOURCE_CHALLENGE, 'Challenge'),
+    (LEDGER_SOURCE_MILESTONE, 'Milestone'),
+    (LEDGER_SOURCE_COALITION, 'Coalition'),
+    (LEDGER_SOURCE_PARTNER, 'Partner'),
+    (LEDGER_SOURCE_CONVERSION, 'Conversion'),
+]
+
+# ─── Tier Names ───
 TIER_BRONZE = 'bronze'
 TIER_SILVER = 'silver'
 TIER_GOLD = 'gold'
@@ -38,13 +58,14 @@ TIER_PLATINUM = 'platinum'
 TIER_DIAMOND = 'diamond'
 
 TIER_CHOICES = [
-    (TIER_BRONZE, '🥉 Bronze'),
-    (TIER_SILVER, '🥈 Silver'),
-    (TIER_GOLD, '🥇 Gold'),
-    (TIER_PLATINUM, '💎 Platinum'),
-    (TIER_DIAMOND, '💠 Diamond'),
+    (TIER_BRONZE, 'Bronze'),
+    (TIER_SILVER, 'Silver'),
+    (TIER_GOLD, 'Gold'),
+    (TIER_PLATINUM, 'Platinum'),
+    (TIER_DIAMOND, 'Diamond'),
 ]
 
+# Tier rank mapping -- higher = better tier
 TIER_RANK = {
     TIER_BRONZE: 1,
     TIER_SILVER: 2,
@@ -53,330 +74,376 @@ TIER_RANK = {
     TIER_DIAMOND: 5,
 }
 
-# ==================== POINTS LEDGER ====================
-
-LEDGER_CREDIT = 'credit'
-LEDGER_DEBIT = 'debit'
-
-LEDGER_TYPE_CHOICES = [
-    (LEDGER_CREDIT, 'Credit'),
-    (LEDGER_DEBIT, 'Debit'),
+TIER_RANK_CHOICES = [
+    (1, 'Bronze'),
+    (2, 'Silver'),
+    (3, 'Gold'),
+    (4, 'Platinum'),
+    (5, 'Diamond'),
 ]
 
-LEDGER_SOURCE_PURCHASE = 'purchase'
-LEDGER_SOURCE_BONUS = 'bonus'
-LEDGER_SOURCE_REFERRAL = 'referral'
-LEDGER_SOURCE_CAMPAIGN = 'campaign'
-LEDGER_SOURCE_ADMIN = 'admin'
-LEDGER_SOURCE_EXPIRY = 'expiry'
-LEDGER_SOURCE_REDEMPTION = 'redemption'
-LEDGER_SOURCE_TRANSFER = 'transfer'
-LEDGER_SOURCE_REFUND = 'refund'
-LEDGER_SOURCE_STREAK = 'streak'
-LEDGER_SOURCE_BADGE = 'badge'
-LEDGER_SOURCE_CHALLENGE = 'challenge'
-LEDGER_SOURCE_MILESTONE = 'milestone'
+# ─── Tier Change Types ───
+TIER_CHANGE_UPGRADE = 'upgrade'
+TIER_CHANGE_DOWNGRADE = 'downgrade'
+TIER_CHANGE_INITIAL = 'initial'
+TIER_CHANGE_MANUAL = 'manual'
 
-LEDGER_SOURCE_CHOICES = [
-    (LEDGER_SOURCE_PURCHASE, 'Purchase'),
-    (LEDGER_SOURCE_BONUS, 'Bonus'),
-    (LEDGER_SOURCE_REFERRAL, 'Referral'),
-    (LEDGER_SOURCE_CAMPAIGN, 'Campaign'),
-    (LEDGER_SOURCE_ADMIN, 'Admin Adjustment'),
-    (LEDGER_SOURCE_EXPIRY, 'Points Expiry'),
-    (LEDGER_SOURCE_REDEMPTION, 'Redemption'),
-    (LEDGER_SOURCE_TRANSFER, 'Transfer'),
-    (LEDGER_SOURCE_REFUND, 'Refund'),
-    (LEDGER_SOURCE_STREAK, 'Daily Streak'),
-    (LEDGER_SOURCE_BADGE, 'Badge Unlock'),
-    (LEDGER_SOURCE_CHALLENGE, 'Challenge Completion'),
-    (LEDGER_SOURCE_MILESTONE, 'Milestone'),
+TIER_CHANGE_CHOICES = [
+    (TIER_CHANGE_UPGRADE, 'Upgrade'),
+    (TIER_CHANGE_DOWNGRADE, 'Downgrade'),
+    (TIER_CHANGE_INITIAL, 'Initial'),
+    (TIER_CHANGE_MANUAL, 'Manual'),
 ]
 
-# ==================== EARN RULE ====================
-
+# ─── Earn Rule Types ───
 EARN_RULE_FIXED = 'fixed'
 EARN_RULE_PERCENTAGE = 'percentage'
 EARN_RULE_MULTIPLIER = 'multiplier'
-EARN_RULE_BONUS = 'bonus'
-EARN_RULE_CATEGORY = 'category'
 
 EARN_RULE_TYPE_CHOICES = [
     (EARN_RULE_FIXED, 'Fixed Points'),
     (EARN_RULE_PERCENTAGE, 'Percentage of Spend'),
     (EARN_RULE_MULTIPLIER, 'Multiplier'),
-    (EARN_RULE_BONUS, 'Bonus Points'),
-    (EARN_RULE_CATEGORY, 'Category-Based'),
 ]
 
-EARN_RULE_TRIGGER_PURCHASE = 'purchase'
-EARN_RULE_TRIGGER_SIGNUP = 'signup'
-EARN_RULE_TRIGGER_BIRTHDAY = 'birthday'
-EARN_RULE_TRIGGER_REFERRAL = 'referral'
-EARN_RULE_TRIGGER_REVIEW = 'review'
-EARN_RULE_TRIGGER_CHECKIN = 'checkin'
-EARN_RULE_TRIGGER_CUSTOM = 'custom'
+# ─── Earn Rule Triggers ───
+TRIGGER_PURCHASE = 'purchase'
+TRIGGER_OFFER = 'offer'
+TRIGGER_LOGIN = 'login'
+TRIGGER_REFERRAL = 'referral'
+TRIGGER_BIRTHDAY = 'birthday'
+TRIGGER_SIGNUP = 'signup'
+TRIGGER_REVIEW = 'review'
+TRIGGER_SOCIAL_SHARE = 'social_share'
 
-EARN_RULE_TRIGGER_CHOICES = [
-    (EARN_RULE_TRIGGER_PURCHASE, 'Purchase'),
-    (EARN_RULE_TRIGGER_SIGNUP, 'Sign Up'),
-    (EARN_RULE_TRIGGER_BIRTHDAY, 'Birthday'),
-    (EARN_RULE_TRIGGER_REFERRAL, 'Referral'),
-    (EARN_RULE_TRIGGER_REVIEW, 'Write a Review'),
-    (EARN_RULE_TRIGGER_CHECKIN, 'Check In'),
-    (EARN_RULE_TRIGGER_CUSTOM, 'Custom Event'),
+TRIGGER_CHOICES = [
+    (TRIGGER_PURCHASE, 'Purchase'),
+    (TRIGGER_OFFER, 'Offer Completion'),
+    (TRIGGER_LOGIN, 'Login'),
+    (TRIGGER_REFERRAL, 'Referral'),
+    (TRIGGER_BIRTHDAY, 'Birthday'),
+    (TRIGGER_SIGNUP, 'Signup'),
+    (TRIGGER_REVIEW, 'Review'),
+    (TRIGGER_SOCIAL_SHARE, 'Social Share'),
 ]
 
-# ==================== REDEMPTION ====================
-
-REDEMPTION_STATUS_PENDING = 'pending'
-REDEMPTION_STATUS_APPROVED = 'approved'
-REDEMPTION_STATUS_REJECTED = 'rejected'
-REDEMPTION_STATUS_CANCELLED = 'cancelled'
-REDEMPTION_STATUS_COMPLETED = 'completed'
-
-REDEMPTION_STATUS_CHOICES = [
-    (REDEMPTION_STATUS_PENDING, '⏳ Pending'),
-    (REDEMPTION_STATUS_APPROVED, '✅ Approved'),
-    (REDEMPTION_STATUS_REJECTED, '❌ Rejected'),
-    (REDEMPTION_STATUS_CANCELLED, '🚫 Cancelled'),
-    (REDEMPTION_STATUS_COMPLETED, '🎉 Completed'),
-]
-
-REDEMPTION_TYPE_VOUCHER = 'voucher'
-REDEMPTION_TYPE_CASHBACK = 'cashback'
-REDEMPTION_TYPE_PRODUCT = 'product'
-REDEMPTION_TYPE_GIFTCARD = 'giftcard'
-REDEMPTION_TYPE_DONATION = 'donation'
+# ─── Redemption Types ───
+REDEMPTION_CASHBACK = 'cashback'
+REDEMPTION_VOUCHER = 'voucher'
+REDEMPTION_PRODUCT = 'product'
+REDEMPTION_GIFT = 'gift'
+REDEMPTION_DONATION = 'donation'
 
 REDEMPTION_TYPE_CHOICES = [
-    (REDEMPTION_TYPE_VOUCHER, '🎫 Voucher'),
-    (REDEMPTION_TYPE_CASHBACK, '💵 Cashback'),
-    (REDEMPTION_TYPE_PRODUCT, '📦 Product'),
-    (REDEMPTION_TYPE_GIFTCARD, '🎁 Gift Card'),
-    (REDEMPTION_TYPE_DONATION, '❤️ Donation'),
+    (REDEMPTION_CASHBACK, 'Cashback'),
+    (REDEMPTION_VOUCHER, 'Voucher'),
+    (REDEMPTION_PRODUCT, 'Product'),
+    (REDEMPTION_GIFT, 'Gift'),
+    (REDEMPTION_DONATION, 'Donation'),
 ]
 
-# ==================== VOUCHER ====================
+# ─── Redemption Status ───
+REDEMPTION_PENDING = 'pending'
+REDEMPTION_APPROVED = 'approved'
+REDEMPTION_REJECTED = 'rejected'
+REDEMPTION_FULFILLED = 'fulfilled'
+REDEMPTION_CANCELLED = 'cancelled'
 
-VOUCHER_STATUS_ACTIVE = 'active'
-VOUCHER_STATUS_USED = 'used'
-VOUCHER_STATUS_EXPIRED = 'expired'
-VOUCHER_STATUS_CANCELLED = 'cancelled'
-
-VOUCHER_STATUS_CHOICES = [
-    (VOUCHER_STATUS_ACTIVE, '✅ Active'),
-    (VOUCHER_STATUS_USED, '✔️ Used'),
-    (VOUCHER_STATUS_EXPIRED, '⌛ Expired'),
-    (VOUCHER_STATUS_CANCELLED, '🚫 Cancelled'),
+REDEMPTION_STATUS_CHOICES = [
+    (REDEMPTION_PENDING, 'Pending'),
+    (REDEMPTION_APPROVED, 'Approved'),
+    (REDEMPTION_REJECTED, 'Rejected'),
+    (REDEMPTION_FULFILLED, 'Fulfilled'),
+    (REDEMPTION_CANCELLED, 'Cancelled'),
 ]
 
-VOUCHER_TYPE_PERCENT = 'percent'
-VOUCHER_TYPE_FIXED = 'fixed'
-VOUCHER_TYPE_FREE_SHIPPING = 'free_shipping'
-VOUCHER_TYPE_BOGO = 'bogo'
+# ─── Voucher Types ───
+VOUCHER_PERCENT = 'percent'
+VOUCHER_FIXED = 'fixed'
+VOUCHER_FREE_SHIPPING = 'free_shipping'
+VOUCHER_PRODUCT = 'product'
 
 VOUCHER_TYPE_CHOICES = [
-    (VOUCHER_TYPE_PERCENT, '% Percentage Discount'),
-    (VOUCHER_TYPE_FIXED, '$ Fixed Discount'),
-    (VOUCHER_TYPE_FREE_SHIPPING, '🚚 Free Shipping'),
-    (VOUCHER_TYPE_BOGO, '🛒 Buy One Get One'),
+    (VOUCHER_PERCENT, 'Percentage Discount'),
+    (VOUCHER_FIXED, 'Fixed Discount'),
+    (VOUCHER_FREE_SHIPPING, 'Free Shipping'),
+    (VOUCHER_PRODUCT, 'Free Product'),
 ]
 
-# ==================== CAMPAIGN ====================
+# ─── Voucher / GiftCard Status ───
+STATUS_ACTIVE = 'active'
+STATUS_USED = 'used'
+STATUS_EXPIRED = 'expired'
+STATUS_CANCELLED = 'cancelled'
 
-CAMPAIGN_STATUS_DRAFT = 'draft'
-CAMPAIGN_STATUS_ACTIVE = 'active'
-CAMPAIGN_STATUS_PAUSED = 'paused'
-CAMPAIGN_STATUS_ENDED = 'ended'
-CAMPAIGN_STATUS_CANCELLED = 'cancelled'
-
-CAMPAIGN_STATUS_CHOICES = [
-    (CAMPAIGN_STATUS_DRAFT, '📝 Draft'),
-    (CAMPAIGN_STATUS_ACTIVE, '🟢 Active'),
-    (CAMPAIGN_STATUS_PAUSED, '⏸️ Paused'),
-    (CAMPAIGN_STATUS_ENDED, '🏁 Ended'),
-    (CAMPAIGN_STATUS_CANCELLED, '🚫 Cancelled'),
+VOUCHER_STATUS_CHOICES = [
+    (STATUS_ACTIVE, 'Active'),
+    (STATUS_USED, 'Used'),
+    (STATUS_EXPIRED, 'Expired'),
+    (STATUS_CANCELLED, 'Cancelled'),
 ]
 
-CAMPAIGN_TYPE_POINTS_MULTIPLIER = 'points_multiplier'
-CAMPAIGN_TYPE_BONUS_POINTS = 'bonus_points'
-CAMPAIGN_TYPE_DOUBLE_POINTS = 'double_points'
-CAMPAIGN_TYPE_FLASH_EARN = 'flash_earn'
-CAMPAIGN_TYPE_REFERRAL_BOOST = 'referral_boost'
-
-CAMPAIGN_TYPE_CHOICES = [
-    (CAMPAIGN_TYPE_POINTS_MULTIPLIER, '✖️ Points Multiplier'),
-    (CAMPAIGN_TYPE_BONUS_POINTS, '➕ Bonus Points'),
-    (CAMPAIGN_TYPE_DOUBLE_POINTS, '✌️ Double Points'),
-    (CAMPAIGN_TYPE_FLASH_EARN, '⚡ Flash Earn'),
-    (CAMPAIGN_TYPE_REFERRAL_BOOST, '👥 Referral Boost'),
-]
-
-# ==================== BADGE ====================
-
-BADGE_TRIGGER_TRANSACTION_COUNT = 'transaction_count'
-BADGE_TRIGGER_TOTAL_SPEND = 'total_spend'
-BADGE_TRIGGER_STREAK_DAYS = 'streak_days'
-BADGE_TRIGGER_REFERRALS = 'referrals'
-BADGE_TRIGGER_TIER_REACHED = 'tier_reached'
-BADGE_TRIGGER_CUSTOM = 'custom'
-
-BADGE_TRIGGER_CHOICES = [
-    (BADGE_TRIGGER_TRANSACTION_COUNT, '💳 Transaction Count'),
-    (BADGE_TRIGGER_TOTAL_SPEND, '💰 Total Spend'),
-    (BADGE_TRIGGER_STREAK_DAYS, '🔥 Streak Days'),
-    (BADGE_TRIGGER_REFERRALS, '👥 Referrals'),
-    (BADGE_TRIGGER_TIER_REACHED, '🏆 Tier Reached'),
-    (BADGE_TRIGGER_CUSTOM, '⚡ Custom'),
-]
-
-# ==================== EVENT ACTIONS ====================
-
-EVENT_ACTION_REGISTER = 'register'
-EVENT_ACTION_LOGIN = 'login'
-EVENT_ACTION_LOGOUT = 'logout'
-EVENT_ACTION_PURCHASE = 'purchase'
-EVENT_ACTION_DISCOUNT_PURCHASE = 'discount_purchase'
-EVENT_ACTION_POINTS_EARN = 'points_earn'
-EVENT_ACTION_POINTS_REDEEM = 'points_redeem'
-EVENT_ACTION_POINTS_EXPIRE = 'points_expire'
-EVENT_ACTION_TIER_UPGRADE = 'tier_upgrade'
-EVENT_ACTION_TIER_DOWNGRADE = 'tier_downgrade'
-EVENT_ACTION_BADGE_UNLOCK = 'badge_unlock'
-EVENT_ACTION_STREAK_MILESTONE = 'streak_milestone'
-EVENT_ACTION_REFERRAL = 'referral'
-EVENT_ACTION_VOUCHER_USE = 'voucher_use'
-EVENT_ACTION_CHALLENGE_COMPLETE = 'challenge_complete'
-EVENT_ACTION_ERROR = 'error'
-
-EVENT_ACTION_CHOICES = [
-    (EVENT_ACTION_REGISTER, 'Register'),
-    (EVENT_ACTION_LOGIN, 'Login'),
-    (EVENT_ACTION_LOGOUT, 'Logout'),
-    (EVENT_ACTION_PURCHASE, 'Purchase'),
-    (EVENT_ACTION_DISCOUNT_PURCHASE, 'Discount Purchase'),
-    (EVENT_ACTION_POINTS_EARN, 'Points Earned'),
-    (EVENT_ACTION_POINTS_REDEEM, 'Points Redeemed'),
-    (EVENT_ACTION_POINTS_EXPIRE, 'Points Expired'),
-    (EVENT_ACTION_TIER_UPGRADE, 'Tier Upgrade'),
-    (EVENT_ACTION_TIER_DOWNGRADE, 'Tier Downgrade'),
-    (EVENT_ACTION_BADGE_UNLOCK, 'Badge Unlocked'),
-    (EVENT_ACTION_STREAK_MILESTONE, 'Streak Milestone'),
-    (EVENT_ACTION_REFERRAL, 'Referral'),
-    (EVENT_ACTION_VOUCHER_USE, 'Voucher Used'),
-    (EVENT_ACTION_CHALLENGE_COMPLETE, 'Challenge Completed'),
-    (EVENT_ACTION_ERROR, 'Error'),
-]
-
-# ==================== NOTIFICATION ====================
-
-NOTIFICATION_TYPE_POINTS_EXPIRY = 'points_expiry'
-NOTIFICATION_TYPE_TIER_CHANGE = 'tier_change'
-NOTIFICATION_TYPE_BADGE_UNLOCK = 'badge_unlock'
-NOTIFICATION_TYPE_CAMPAIGN = 'campaign'
-NOTIFICATION_TYPE_REDEMPTION = 'redemption'
-NOTIFICATION_TYPE_GENERAL = 'general'
-
-NOTIFICATION_TYPE_CHOICES = [
-    (NOTIFICATION_TYPE_POINTS_EXPIRY, '⌛ Points Expiry Warning'),
-    (NOTIFICATION_TYPE_TIER_CHANGE, '🏆 Tier Change'),
-    (NOTIFICATION_TYPE_BADGE_UNLOCK, '🎖️ Badge Unlocked'),
-    (NOTIFICATION_TYPE_CAMPAIGN, '📣 Campaign'),
-    (NOTIFICATION_TYPE_REDEMPTION, '🎁 Redemption Update'),
-    (NOTIFICATION_TYPE_GENERAL, '📢 General'),
-]
-
-NOTIFICATION_CHANNEL_EMAIL = 'email'
-NOTIFICATION_CHANNEL_SMS = 'sms'
-NOTIFICATION_CHANNEL_PUSH = 'push'
-NOTIFICATION_CHANNEL_IN_APP = 'in_app'
-
-NOTIFICATION_CHANNEL_CHOICES = [
-    (NOTIFICATION_CHANNEL_EMAIL, '📧 Email'),
-    (NOTIFICATION_CHANNEL_SMS, '📱 SMS'),
-    (NOTIFICATION_CHANNEL_PUSH, '🔔 Push Notification'),
-    (NOTIFICATION_CHANNEL_IN_APP, '💬 In-App'),
-]
-
-# ==================== FRAUD ====================
-
-FRAUD_RISK_LOW = 'low'
-FRAUD_RISK_MEDIUM = 'medium'
-FRAUD_RISK_HIGH = 'high'
-FRAUD_RISK_CRITICAL = 'critical'
-
-FRAUD_RISK_CHOICES = [
-    (FRAUD_RISK_LOW, '🟢 Low'),
-    (FRAUD_RISK_MEDIUM, '🟡 Medium'),
-    (FRAUD_RISK_HIGH, '🟠 High'),
-    (FRAUD_RISK_CRITICAL, '🔴 Critical'),
-]
-
-FRAUD_ACTION_FLAG = 'flag'
-FRAUD_ACTION_SUSPEND = 'suspend'
-FRAUD_ACTION_BLOCK = 'block'
-FRAUD_ACTION_NOTIFY = 'notify'
-
-FRAUD_ACTION_CHOICES = [
-    (FRAUD_ACTION_FLAG, '⚑ Flag'),
-    (FRAUD_ACTION_SUSPEND, '⏸️ Suspend'),
-    (FRAUD_ACTION_BLOCK, '🚫 Block'),
-    (FRAUD_ACTION_NOTIFY, '🔔 Notify Admin'),
-]
-
-# ==================== CHALLENGE ====================
-
-CHALLENGE_STATUS_ACTIVE = 'active'
-CHALLENGE_STATUS_COMPLETED = 'completed'
-CHALLENGE_STATUS_FAILED = 'failed'
-CHALLENGE_STATUS_UPCOMING = 'upcoming'
-CHALLENGE_STATUS_EXPIRED = 'expired'
-
-CHALLENGE_STATUS_CHOICES = [
-    (CHALLENGE_STATUS_ACTIVE, '🟢 Active'),
-    (CHALLENGE_STATUS_COMPLETED, '✅ Completed'),
-    (CHALLENGE_STATUS_FAILED, '❌ Failed'),
-    (CHALLENGE_STATUS_UPCOMING, '📅 Upcoming'),
-    (CHALLENGE_STATUS_EXPIRED, '⌛ Expired'),
-]
-
-CHALLENGE_TYPE_SPEND = 'spend'
-CHALLENGE_TYPE_VISIT = 'visit'
-CHALLENGE_TYPE_REFERRAL = 'referral'
-CHALLENGE_TYPE_CUSTOM = 'custom'
-
-CHALLENGE_TYPE_CHOICES = [
-    (CHALLENGE_TYPE_SPEND, '💰 Spend Target'),
-    (CHALLENGE_TYPE_VISIT, '📍 Visit Count'),
-    (CHALLENGE_TYPE_REFERRAL, '👥 Referral Count'),
-    (CHALLENGE_TYPE_CUSTOM, '⚡ Custom'),
-]
-
-# ==================== POINTS TRANSFER ====================
-
-TRANSFER_STATUS_PENDING = 'pending'
-TRANSFER_STATUS_COMPLETED = 'completed'
-TRANSFER_STATUS_FAILED = 'failed'
-TRANSFER_STATUS_CANCELLED = 'cancelled'
+# ─── Transfer Status ───
+TRANSFER_PENDING = 'pending'
+TRANSFER_COMPLETED = 'completed'
+TRANSFER_FAILED = 'failed'
+TRANSFER_REVERSED = 'reversed'
 
 TRANSFER_STATUS_CHOICES = [
-    (TRANSFER_STATUS_PENDING, '⏳ Pending'),
-    (TRANSFER_STATUS_COMPLETED, '✅ Completed'),
-    (TRANSFER_STATUS_FAILED, '❌ Failed'),
-    (TRANSFER_STATUS_CANCELLED, '🚫 Cancelled'),
+    (TRANSFER_PENDING, 'Pending'),
+    (TRANSFER_COMPLETED, 'Completed'),
+    (TRANSFER_FAILED, 'Failed'),
+    (TRANSFER_REVERSED, 'Reversed'),
 ]
 
-# ==================== GIFT CARD ====================
+# ─── Conversion Types ───
+CONVERSION_TO_CASH = 'to_cash'
+CONVERSION_FROM_CASH = 'from_cash'
 
-GIFTCARD_STATUS_ACTIVE = 'active'
-GIFTCARD_STATUS_USED = 'used'
-GIFTCARD_STATUS_EXPIRED = 'expired'
-GIFTCARD_STATUS_CANCELLED = 'cancelled'
-
-GIFTCARD_STATUS_CHOICES = [
-    (GIFTCARD_STATUS_ACTIVE, '✅ Active'),
-    (GIFTCARD_STATUS_USED, '✔️ Used'),
-    (GIFTCARD_STATUS_EXPIRED, '⌛ Expired'),
-    (GIFTCARD_STATUS_CANCELLED, '🚫 Cancelled'),
+CONVERSION_TYPE_CHOICES = [
+    (CONVERSION_TO_CASH, 'Points -> Cash'),
+    (CONVERSION_FROM_CASH, 'Cash -> Points'),
 ]
+
+# ─── Campaign Types ───
+CAMPAIGN_MULTIPLIER = 'points_multiplier'
+CAMPAIGN_BONUS = 'bonus_points'
+CAMPAIGN_DOUBLE_POINTS = 'double_points'
+CAMPAIGN_FLASH_EARN = 'flash_earn'
+CAMPAIGN_CHALLENGE = 'challenge'
+
+CAMPAIGN_TYPE_CHOICES = [
+    (CAMPAIGN_MULTIPLIER, 'Points Multiplier'),
+    (CAMPAIGN_BONUS, 'Bonus Points'),
+    (CAMPAIGN_DOUBLE_POINTS, 'Double Points'),
+    (CAMPAIGN_FLASH_EARN, 'Flash Earn'),
+    (CAMPAIGN_CHALLENGE, 'Challenge'),
+]
+
+# ─── Campaign Status ───
+CAMPAIGN_DRAFT = 'draft'
+CAMPAIGN_ACTIVE = 'active'
+CAMPAIGN_ENDED = 'ended'
+CAMPAIGN_PAUSED = 'paused'
+
+CAMPAIGN_STATUS_CHOICES = [
+    (CAMPAIGN_DRAFT, 'Draft'),
+    (CAMPAIGN_ACTIVE, 'Active'),
+    (CAMPAIGN_ENDED, 'Ended'),
+    (CAMPAIGN_PAUSED, 'Paused'),
+]
+
+# ─── Badge Rarity ───
+BADGE_COMMON = 'common'
+BADGE_RARE = 'rare'
+BADGE_EPIC = 'epic'
+BADGE_LEGENDARY = 'legendary'
+
+BADGE_RARITY_CHOICES = [
+    (BADGE_COMMON, 'Common'),
+    (BADGE_RARE, 'Rare'),
+    (BADGE_EPIC, 'Epic'),
+    (BADGE_LEGENDARY, 'Legendary'),
+]
+
+# ─── Challenge Types ───
+CHALLENGE_INDIVIDUAL = 'individual'
+CHALLENGE_TEAM = 'team'
+CHALLENGE_SPEND = 'spend'
+CHALLENGE_TRANSACTION = 'transaction'
+CHALLENGE_LEADERBOARD = 'leaderboard'
+
+CHALLENGE_TYPE_CHOICES = [
+    (CHALLENGE_INDIVIDUAL, 'Individual'),
+    (CHALLENGE_TEAM, 'Team'),
+    (CHALLENGE_SPEND, 'Spend'),
+    (CHALLENGE_TRANSACTION, 'Transaction Count'),
+    (CHALLENGE_LEADERBOARD, 'Leaderboard'),
+]
+
+# ─── Challenge Status ───
+CHALLENGE_DRAFT = 'draft'
+CHALLENGE_ACTIVE = 'active'
+CHALLENGE_ENDED = 'ended'
+CHALLENGE_PAUSED = 'paused'
+
+CHALLENGE_STATUS_CHOICES = [
+    (CHALLENGE_DRAFT, 'Draft'),
+    (CHALLENGE_ACTIVE, 'Active'),
+    (CHALLENGE_ENDED, 'Ended'),
+    (CHALLENGE_PAUSED, 'Paused'),
+]
+
+# ─── Notification Types ───
+NOTIF_EXPIRY = 'expiry'
+NOTIF_TIER_UP = 'tier_up'
+NOTIF_TIER_DOWN = 'tier_down'
+NOTIF_CHALLENGE = 'challenge'
+NOTIF_BADGE = 'badge'
+NOTIF_STREAK = 'streak'
+NOTIF_CAMPAIGN = 'campaign'
+
+NOTIFICATION_TYPE_CHOICES = [
+    (NOTIF_EXPIRY, 'Points Expiry Warning'),
+    (NOTIF_TIER_UP, 'Tier Upgrade'),
+    (NOTIF_TIER_DOWN, 'Tier Downgrade'),
+    (NOTIF_CHALLENGE, 'Challenge Update'),
+    (NOTIF_BADGE, 'Badge Unlocked'),
+    (NOTIF_STREAK, 'Streak Milestone'),
+    (NOTIF_CAMPAIGN, 'Campaign'),
+]
+
+# ─── Fraud Risk Levels ───
+FRAUD_LOW = 'low'
+FRAUD_MEDIUM = 'medium'
+FRAUD_HIGH = 'high'
+FRAUD_CRITICAL = 'critical'
+
+FRAUD_RISK_CHOICES = [
+    (FRAUD_LOW, 'Low'),
+    (FRAUD_MEDIUM, 'Medium'),
+    (FRAUD_HIGH, 'High'),
+    (FRAUD_CRITICAL, 'Critical'),
+]
+
+# ─── Fraud Actions ───
+FRAUD_FLAG = 'flag'
+FRAUD_BLOCK = 'block'
+FRAUD_REVERSE = 'reverse'
+FRAUD_SUSPEND = 'suspend'
+
+FRAUD_ACTION_CHOICES = [
+    (FRAUD_FLAG, 'Flagged'),
+    (FRAUD_BLOCK, 'Blocked'),
+    (FRAUD_REVERSE, 'Points Reversed'),
+    (FRAUD_SUSPEND, 'Account Suspended'),
+]
+
+# ─── Insight Periods ───
+INSIGHT_DAILY = 'daily'
+INSIGHT_WEEKLY = 'weekly'
+INSIGHT_MONTHLY = 'monthly'
+INSIGHT_ANNUAL = 'annual'
+
+INSIGHT_PERIOD_CHOICES = [
+    (INSIGHT_DAILY, 'Daily'),
+    (INSIGHT_WEEKLY, 'Weekly'),
+    (INSIGHT_MONTHLY, 'Monthly'),
+    (INSIGHT_ANNUAL, 'Annual'),
+]
+
+# ─── Tier Config Evaluation Periods ───
+EVAL_ANNUAL = 'annual'
+EVAL_ROLLING = 'rolling'
+
+EVAL_PERIOD_CHOICES = [
+    (EVAL_ANNUAL, 'Annual'),
+    (EVAL_ROLLING, 'Rolling 12 months'),
+]
+
+# ─── Subscription Plans ───
+PLAN_BASIC = 'basic'
+PLAN_PREMIUM = 'premium'
+PLAN_VIP = 'vip'
+
+SUBSCRIPTION_PLAN_CHOICES = [
+    (PLAN_BASIC, 'Basic'),
+    (PLAN_PREMIUM, 'Premium'),
+    (PLAN_VIP, 'VIP'),
+]
+
+# ─── Benefit Types ───
+BENEFIT_DISCOUNT = 'discount'
+BENEFIT_SHIPPING = 'shipping'
+BENEFIT_CASHBACK = 'cashback'
+BENEFIT_PERK = 'perk'
+BENEFIT_ACCESS = 'access'
+BENEFIT_POINTS_BOOST = 'points_boost'
+
+BENEFIT_TYPE_CHOICES = [
+    (BENEFIT_DISCOUNT, 'Discount'),
+    (BENEFIT_SHIPPING, 'Free Shipping'),
+    (BENEFIT_CASHBACK, 'Cashback'),
+    (BENEFIT_PERK, 'Perk'),
+    (BENEFIT_ACCESS, 'Exclusive Access'),
+    (BENEFIT_POINTS_BOOST, 'Points Boost'),
+]
+
+# ─── Milestone Trigger Types ───
+MILESTONE_TOTAL_POINTS = 'total_points'
+MILESTONE_TOTAL_SPEND = 'total_spend'
+MILESTONE_TRANSACTION_COUNT = 'transaction_count'
+MILESTONE_REFERRAL_COUNT = 'referral_count'
+MILESTONE_STREAK_DAYS = 'streak_days'
+
+MILESTONE_TYPE_CHOICES = [
+    (MILESTONE_TOTAL_POINTS, 'Total Points Earned'),
+    (MILESTONE_TOTAL_SPEND, 'Total Spend'),
+    (MILESTONE_TRANSACTION_COUNT, 'Transaction Count'),
+    (MILESTONE_REFERRAL_COUNT, 'Referral Count'),
+    (MILESTONE_STREAK_DAYS, 'Streak Days'),
+]
+
+# ─── Points Alert Types ───
+ALERT_LOW_BALANCE = 'low_balance'
+ALERT_EXPIRY_WARNING = 'expiry_warning'
+ALERT_TIER_PROGRESS = 'tier_progress'
+
+ALERT_TYPE_CHOICES = [
+    (ALERT_LOW_BALANCE, 'Low Balance'),
+    (ALERT_EXPIRY_WARNING, 'Expiry Warning'),
+    (ALERT_TIER_PROGRESS, 'Tier Progress'),
+]
+
+# ─── Segment Types ───
+SEGMENT_TIER = 'tier'
+SEGMENT_GEO = 'geo'
+SEGMENT_ACTIVITY = 'activity'
+SEGMENT_PURCHASE = 'purchase'
+
+SEGMENT_TYPE_CHOICES = [
+    (SEGMENT_TIER, 'Tier'),
+    (SEGMENT_GEO, 'Geographic'),
+    (SEGMENT_ACTIVITY, 'Activity'),
+    (SEGMENT_PURCHASE, 'Purchase'),
+]
+
+# ─── Condition Operators ───
+OP_GT = 'gt'
+OP_GTE = 'gte'
+OP_LT = 'lt'
+OP_LTE = 'lte'
+OP_EQ = 'eq'
+OP_IN = 'in'
+
+OPERATOR_CHOICES = [
+    (OP_GT, 'Greater Than'),
+    (OP_GTE, 'Greater Than or Equal'),
+    (OP_LT, 'Less Than'),
+    (OP_LTE, 'Less Than or Equal'),
+    (OP_EQ, 'Equal'),
+    (OP_IN, 'In'),
+]
+
+# ─── Condition Types ───
+COND_MIN_AMOUNT = 'min_amount'
+COND_TIER = 'tier'
+COND_DAY = 'day'
+COND_OFFER = 'offer'
+
+CONDITION_TYPE_CHOICES = [
+    (COND_MIN_AMOUNT, 'Minimum Amount'),
+    (COND_TIER, 'Tier'),
+    (COND_DAY, 'Day of Week'),
+    (COND_OFFER, 'Offer'),
+]
+
+# FIXED: enums.py (LedgerTxnType, LedgerSource, TierName, etc.) was orphaned
+# Canonical enums now accessible from choices module
+try:
+    from .enums import (
+        LedgerTxnType, LedgerSource, TierName,
+        RedemptionStatus, CashoutStatus, NotificationChannel,
+    )
+except ImportError:
+    pass

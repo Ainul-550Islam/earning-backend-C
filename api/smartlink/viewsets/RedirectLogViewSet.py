@@ -1,10 +1,10 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from ..models import RedirectLog
-from ..serializers.RedirectLogSerializer import RedirectLogSerializer
-from ..pagination import LargeResultsPagination
-from ..permissions import IsPublisher
+from api.smartlink.models import RedirectLog
+from api.smartlink.serializers.RedirectLogSerializer import RedirectLogSerializer
+from api.smartlink.pagination import LargeResultsPagination
+from api.smartlink.permissions import IsPublisher
 
 
 class RedirectLogViewSet(viewsets.ReadOnlyModelViewSet):

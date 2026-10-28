@@ -117,4 +117,3 @@ class EscalationPolicy:
     def get_policy_summary(self) -> dict:
         return {"total_levels": len(self._levels), "severity_intervals": self.SEVERITY_INTERVALS,
                 "levels": self._levels}
-

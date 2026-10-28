@@ -1,163 +1,144 @@
 # api/djoyalty/constants.py
 """
-সব system-wide numeric/string constants — magic numbers নেই।
+Djoyalty -- system-wide constants।
+Business logic defaults, thresholds, and configuration values।
 """
-
 from decimal import Decimal
 
+# ─── Points Engine Defaults ───
+DEFAULT_EARN_RATE = Decimal('1')          # 1 point per 1 currency unit
+DEFAULT_POINT_VALUE = Decimal('0.01')     # 1 point = 0.01 currency
+DEFAULT_POINTS_EXPIRY_DAYS = 365          # Points expire in 1 year
 
-# ==================== POINTS ENGINE ====================
-
-# ১ টাকা খরচে কত পয়েন্ট পাওয়া যাবে (default)
-DEFAULT_EARN_RATE = Decimal('1.0')  # 1 point per 1 unit spend
-
-# ১ পয়েন্টের মূল্য (টাকায়)
-DEFAULT_POINT_VALUE = Decimal('0.01')  # 1 point = 0.01 currency unit
-
-# সর্বনিম্ন redeem পরিমাণ
-MIN_REDEMPTION_POINTS = 100
-
-# একবারে সর্বোচ্চ redeem পরিমাণ
-MAX_REDEMPTION_POINTS = 100_000
-
-# পয়েন্ট expiry (দিনে) — 0 মানে কখনো expire হবে না
-DEFAULT_POINTS_EXPIRY_DAYS = 365  # ১ বছর
-
-# Warning পাঠানো হবে expiry এর কত দিন আগে
-POINTS_EXPIRY_WARNING_DAYS = 30
-
-# ==================== TIER THRESHOLDS ====================
-
+# ─── Tier Thresholds (lifetime_earned points) ───
 TIER_THRESHOLDS = {
-    'bronze': Decimal('0'),
-    'silver': Decimal('500'),
-    'gold': Decimal('2000'),
-    'platinum': Decimal('5000'),
-    'diamond': Decimal('10000'),
+    'bronze':   Decimal('0'),
+    'silver':   Decimal('500'),
+    'gold':     Decimal('2000'),
+    'platinum': Decimal('10000'),
+    'diamond':  Decimal('50000'),
 }
 
-# Tier evaluation period (মাসে)
-TIER_EVALUATION_PERIOD_MONTHS = 12
+# Tier order -- for progression logic
+TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum', 'diamond']
 
-# Tier downgrade protection period (মাসে)
-TIER_DOWNGRADE_PROTECTION_MONTHS = 3
-
-# ==================== EARN RULES ====================
-
-# Default multipliers per tier
-TIER_EARN_MULTIPLIERS = {
-    'bronze': Decimal('1.0'),
-    'silver': Decimal('1.25'),
-    'gold': Decimal('1.5'),
+# Tier multipliers -- bonus earn rate per tier
+TIER_MULTIPLIERS = {
+    'bronze':   Decimal('1.0'),
+    'silver':   Decimal('1.2'),
+    'gold':     Decimal('1.5'),
     'platinum': Decimal('2.0'),
-    'diamond': Decimal('3.0'),
+    'diamond':  Decimal('3.0'),
 }
 
-# Birthday bonus points
-BIRTHDAY_BONUS_POINTS = Decimal('200')
+# ─── Redemption Limits ───
+MIN_REDEMPTION_POINTS = Decimal('100')       # Minimum points to redeem
+MAX_REDEMPTION_PER_DAY = Decimal('50000')    # Max per day per customer
+REDEMPTION_AUTO_APPROVE_THRESHOLD = Decimal('1000')  # Auto-approve below this
 
-# Signup bonus points
-SIGNUP_BONUS_POINTS = Decimal('100')
+# ─── Referral Bonuses ───
+REFERRAL_BONUS_REFERRER = Decimal('200')    # Points for the person who referred
+REFERRAL_BONUS_REFEREE = Decimal('100')     # Points for the new customer
 
-# Referral bonus — referrer পাবে
-REFERRAL_BONUS_REFERRER = Decimal('150')
+# ─── Voucher Defaults ───
+VOUCHER_DEFAULT_VALIDITY_DAYS = 90           # Default voucher validity
 
-# Referral bonus — নতুন customer পাবে
-REFERRAL_BONUS_REFEREE = Decimal('50')
-
-# ==================== STREAK ====================
-
-# Streak reset হবে যদি consecutive দিন miss হয়
-STREAK_RESET_AFTER_DAYS = 1  # ১ দিন miss = reset
-
-# Streak milestone rewards (streak_days → bonus_points)
+# ─── Streak Configuration ───
+STREAK_RESET_AFTER_DAYS = 1                 # Break after missing N days
 STREAK_MILESTONES = {
-    7: Decimal('50'),    # ৭ দিন = ৫০ পয়েন্ট
-    30: Decimal('200'),  # ৩০ দিন = ২০০ পয়েন্ট
-    90: Decimal('500'),  # ৯০ দিন = ৫০০ পয়েন্ট
-    365: Decimal('2000'),  # ১ বছর = ২০০০ পয়েন্ট
+    7:   Decimal('50'),     # 7-day streak -> 50 bonus points
+    30:  Decimal('200'),    # 30-day streak -> 200 bonus points
+    100: Decimal('500'),    # 100-day streak -> 500 bonus points
+    365: Decimal('2000'),   # 365-day streak -> 2000 bonus points
 }
 
-# ==================== VOUCHER ====================
+# ─── Points Expiry Warning ───
+POINTS_EXPIRY_WARNING_DAYS = 30             # Warn N days before expiry
 
-# Voucher code length
-VOUCHER_CODE_LENGTH = 12
+# ─── Fraud Detection ───
+FRAUD_RAPID_TXN_COUNT = 10                  # Flag if N transactions in window
+FRAUD_RAPID_TXN_WINDOW_MINUTES = 15         # Window for rapid txn check
+FRAUD_MAX_DAILY_REDEMPTION = Decimal('10000')  # Max redemption per day (fraud cap)
 
-# Voucher default validity (দিনে)
-VOUCHER_DEFAULT_VALIDITY_DAYS = 30
+# ─── Webhook ───
+WEBHOOK_MAX_RETRIES = 3
+WEBHOOK_RETRY_BACKOFF_SECONDS = [30, 120, 600]   # 30s, 2min, 10min
 
-# Gift card minimum value
-GIFT_CARD_MIN_VALUE = Decimal('50')
+# ─── Cache TTL (seconds) ───
+CACHE_TTL_TIER = 3600           # 1 hour
+CACHE_TTL_BALANCE = 300         # 5 minutes
+CACHE_TTL_LEADERBOARD = 1800    # 30 minutes
+CACHE_TTL_CAMPAIGNS = 600       # 10 minutes
 
-# Gift card maximum value
-GIFT_CARD_MAX_VALUE = Decimal('10000')
-
-# ==================== FRAUD DETECTION ====================
-
-# একদিনে এই পরিমাণের বেশি redeem করলে flag
-FRAUD_MAX_DAILY_REDEMPTION = Decimal('5000')
-
-# এই সময়ের মধ্যে এতটি transaction হলে flag (মিনিটে)
-FRAUD_RAPID_TXN_WINDOW_MINUTES = 5
-FRAUD_RAPID_TXN_COUNT = 10
-
-# অস্বাভাবিক earn rate (একটি purchase এ এতটির বেশি পয়েন্ট)
-FRAUD_MAX_SINGLE_EARN = Decimal('10000')
-
-# ==================== CAMPAIGN ====================
-
-# Campaign participant max (0 = unlimited)
-CAMPAIGN_MAX_PARTICIPANTS_DEFAULT = 0
-
-# Campaign max duration (দিনে)
-CAMPAIGN_MAX_DURATION_DAYS = 365
-
-# ==================== PAGINATION ====================
-
+# ─── Pagination ───
 DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
+LEDGER_PAGE_SIZE = 50
 
-# ==================== CACHE TTL (seconds) ====================
+# ─── Transfer ───
+MAX_TRANSFER_PER_DAY = Decimal('5000')
+TRANSFER_FEE_PERCENT = Decimal('0')         # 0% fee (set to charge if needed)
 
-CACHE_TTL_CUSTOMER_BALANCE = 60 * 5       # ৫ মিনিট
-CACHE_TTL_TIER_INFO = 60 * 60             # ১ ঘন্টা
-CACHE_TTL_LEADERBOARD = 60 * 60           # ১ ঘন্টা
-CACHE_TTL_EARN_RULES = 60 * 30            # ৩০ মিনিট
-CACHE_TTL_CAMPAIGN_ACTIVE = 60 * 10       # ১০ মিনিট
+# ─── Gift Card ───
+GIFT_CARD_CODE_LENGTH = 16
+GIFT_CARD_DEFAULT_VALIDITY_DAYS = 365
 
-# ==================== WEBHOOK ====================
+# ─── Points Reservation ───
+RESERVATION_DEFAULT_HOLD_MINUTES = 30
 
-WEBHOOK_MAX_RETRIES = 5
-WEBHOOK_RETRY_BACKOFF_SECONDS = [10, 30, 60, 300, 900]  # exponential
-WEBHOOK_TIMEOUT_SECONDS = 10
-WEBHOOK_SECRET_LENGTH = 32
+# ─── Admin Adjustment ───
+MAX_ADMIN_ADJUSTMENT_PER_REQUEST = Decimal('100000')
 
-# ==================== TRANSFER ====================
+# ─── Subscription Plans ───
+SUBSCRIPTION_PLANS = {
+    'basic': {
+        'multiplier': Decimal('1.5'),
+        'monthly_fee': Decimal('9.99'),
+        'bonus_points_monthly': Decimal('100'),
+    },
+    'premium': {
+        'multiplier': Decimal('2.0'),
+        'monthly_fee': Decimal('19.99'),
+        'bonus_points_monthly': Decimal('300'),
+    },
+    'vip': {
+        'multiplier': Decimal('3.0'),
+        'monthly_fee': Decimal('49.99'),
+        'bonus_points_monthly': Decimal('1000'),
+    },
+}
 
-# নিজের কাছে transfer করা যাবে না
-TRANSFER_MIN_POINTS = Decimal('10')
-TRANSFER_MAX_POINTS = Decimal('50000')
+# ─── Leaderboard ───
+LEADERBOARD_DEFAULT_LIMIT = 10
+LEADERBOARD_MAX_LIMIT = 100
 
-# ==================== PARTNER ====================
+# ─── Partner Merchant ───
+PARTNER_DEFAULT_EARN_RATE = Decimal('1.0')
+PARTNER_DEFAULT_BURN_RATE = Decimal('1.0')
 
-# Partner sync interval (মিনিটে)
-PARTNER_SYNC_INTERVAL_MINUTES = 60
+# ─── Insight ───
+INSIGHT_DEFAULT_PERIOD = 'daily'
 
-# ==================== REDEMPTION ====================
+# ─── Tenant ───
+DEFAULT_TENANT_SLUG = 'default'
 
-# Auto-approve হবে যদি পয়েন্ট এর বেশি না হয়
-REDEMPTION_AUTO_APPROVE_THRESHOLD = Decimal('1000')
+# ─── API Rate Limits ───
+THROTTLE_RATE_USER = '1000/hour'
+THROTTLE_RATE_BURST = '60/min'
+THROTTLE_RATE_PUBLIC = '200/hour'
 
-# ==================== GDPR / DATA EXPORT ====================
+# ─── Security ───
+API_KEY_LENGTH = 40
+HMAC_SECRET_LENGTH = 32
 
-# Export file validity (ঘন্টায়)
-DATA_EXPORT_EXPIRY_HOURS = 24
+# ─── Downgrade Protection ───
+TIER_DOWNGRADE_PROTECTION_MONTHS = 3
 
-# ==================== SYSTEM ====================
+# ─── Earn Rule Condition ───
+EARN_CONDITION_MIN_AMOUNT = 'min_amount'
+EARN_CONDITION_TIER = 'tier'
+EARN_CONDITION_DAY = 'day'
+EARN_CONDITION_OFFER = 'offer'
 
-DJOYALTY_VERSION = '1.0.0'
-DJOYALTY_APP_LABEL = 'djoyalty'
-
-# Points decimal places
-POINTS_DECIMAL_PLACES = 2
-POINTS_MAX_DIGITS = 12
+# Transfer limits
+MAX_DAILY_TRANSFER_POINTS = Decimal('5000')   # Max P2P transfer per day per customer

@@ -4,6 +4,7 @@ Advertiser Fraud Service
 Service for applying fraud detection to incoming clicks,
 including real-time analysis and prevention.
 """
+from django.db import models
 
 import logging
 from typing import Dict, List, Optional, Any

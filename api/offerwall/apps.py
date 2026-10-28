@@ -1,64 +1,34 @@
-# api/offerwall/apps.py
 from django.apps import AppConfig
+
 
 class OfferwallConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'api.offerwall'
+    name  = 'api.offerwall'
     label = 'offerwall'
-    verbose_name = '🎯 Offerwall Management'
-    
+    verbose_name = '🎯 Offerwall'
+
     def ready(self):
-        """Initialize offerwall app"""
+        # 1. Signals
         try:
-            import api.offerwall.signals
-            print("[OK] Offerwall signals loaded")
+            import api.offerwall.signals  # noqa: F401
         except ImportError:
             pass
-        
-        # Force admin registration with duplicate check
+
+        # 2. Celery tasks (auto-discover)
         try:
-            from django.contrib import admin
-            from .models import Offer, OfferCategory, OfferClick, OfferConversion, OfferProvider, OfferWall
-            
-            print("[LOADING] Checking offerwall admin registration...")
-            
-            try:
-                from .admin import (
-                    OfferProviderAdmin, OfferCategoryAdmin, OfferAdmin,
-                    OfferClickAdmin, OfferConversionAdmin, OfferWallAdmin
-                )
-                
-                models_to_register = {
-                    OfferCategory: OfferCategoryAdmin,
-                    OfferProvider: OfferProviderAdmin,
-                    Offer: OfferAdmin,
-                    OfferClick: OfferClickAdmin,
-                    OfferConversion: OfferConversionAdmin,
-                    OfferWall: OfferWallAdmin,
-                }
-                
-                registered = 0
-                for model, admin_class in models_to_register.items():
-                    if not admin.site.is_registered(model):
-                        try:
-                            admin.site.register(model, admin_class)
-                            registered += 1
-                            print(f"[OK] Registered: {model.__name__} from apps.py")
-                        except Exception as e:
-                            print(f"[WARN] Could not register {model.__name__}: {e}")
-                
-                if registered > 0:
-                    print(f"[OK][OK][OK] {registered} offerwall models registered from apps.py")
-                else:
-                    print("[OK] All offerwall models already registered")
-                    
-            except ImportError as e:
-                print(f"[WARN] Could not import admin classes: {e}")
-                
-        except Exception as e:
-            print(f"[WARN] Offerwall admin registration error: {e}")
-        try:
-            from api.offerwall.admin import _force_register_offerwall
-            _force_register_offerwall()
-        except Exception as e:
+            import api.offerwall.tasks  # noqa: F401
+        except ImportError:
             pass
+
+        # 3. Register all offer processors at startup
+        # FIX: was calling OfferFactory.register_all() which didn't exist.
+        # Method name is auto_register_processors(). Both now work.
+        try:
+            from api.offerwall.services.OfferFactory import (
+                auto_register_processors,
+            )
+            auto_register_processors()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f'[OfferwallConfig] processor registration failed: {e}')

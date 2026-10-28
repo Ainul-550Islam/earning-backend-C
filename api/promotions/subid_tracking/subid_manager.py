@@ -135,9 +135,6 @@ def subid_report_view(request):
         days=int(request.query_params.get('days', 7)),
     )
     return Response(data)
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def generate_subid_url_view(request):
     """GET /api/promotions/subid/generate/?campaign=1&s1=tiktok&s2=video123"""

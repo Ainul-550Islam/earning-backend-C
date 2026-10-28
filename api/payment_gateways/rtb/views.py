@@ -28,8 +28,6 @@ def best_offer(request):
             'alternatives': OfferListSerializer(result['alternatives'], many=True).data,
         }
     })
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def offerwall_offers(request):
     """RTB: Get ranked offer list for offerwall."""

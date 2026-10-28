@@ -11,7 +11,7 @@ class LocaleAnalyticsService:
     def get_conversion_by_language(self, days: int = 30) -> List[Dict]:
         """Language-wise offer completion rates।"""
         try:
-            from ..models.analytics import LocalizationInsight, LanguageUsageStat
+            from api.localization.models.analytics import LocalizationInsight, LanguageUsageStat
             from django.db.models import Sum, F, ExpressionWrapper, FloatField
             from django.utils import timezone
             from datetime import timedelta
@@ -39,7 +39,7 @@ class LocaleAnalyticsService:
     def get_revenue_by_country(self, days: int = 30) -> List[Dict]:
         """Country-wise revenue distribution।"""
         try:
-            from ..models.analytics import GeoInsight
+            from api.localization.models.analytics import GeoInsight
             from django.db.models import Sum
             from django.utils import timezone
             from datetime import timedelta
@@ -60,7 +60,7 @@ class LocaleAnalyticsService:
     def get_language_funnel(self, language_code: str, days: int = 7) -> Dict:
         """Single language conversion funnel।"""
         try:
-            from ..models.analytics import LanguageUsageStat
+            from api.localization.models.analytics import LanguageUsageStat
             from django.db.models import Sum
             from django.utils import timezone
             from datetime import timedelta
@@ -103,7 +103,7 @@ class LocaleAnalyticsService:
     ):
         """Locale event log করে।"""
         try:
-            from ..models.analytics import LocalizationAnalytics
+            from api.localization.models.analytics import LocalizationAnalytics
             LocalizationAnalytics.log_event(
                 event_type=event_type,
                 language_code=language_code,

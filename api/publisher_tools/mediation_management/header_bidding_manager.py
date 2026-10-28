@@ -31,6 +31,7 @@ class PrebidConfig(TimeStampedModel):
     is_active         = models.BooleanField(default=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_prebid_configs"
         verbose_name = _("Prebid Config")
 
@@ -49,7 +50,7 @@ class PrebidConfig(TimeStampedModel):
 
 def get_bidder_configurations(group) -> List[Dict]:
     """Mediation group-এর active header bidding configs।"""
-    from api.publisher_tools.models import HeaderBiddingConfig
+    from publisher_tools.models import HeaderBiddingConfig
     configs = HeaderBiddingConfig.objects.filter(
         mediation_group=group, status="active",
     ).select_related()
@@ -70,7 +71,7 @@ def calculate_bid_win_rate(config) -> float:
 
 
 def get_header_bidding_report(publisher, days: int = 30) -> Dict:
-    from api.publisher_tools.models import HeaderBiddingConfig
+    from publisher_tools.models import HeaderBiddingConfig
     from django.db.models import Sum, Avg
     from datetime import timedelta
     from django.utils import timezone

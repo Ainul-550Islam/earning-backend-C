@@ -293,7 +293,7 @@ class PixelService:
                     advertiser=advertiser,
                     user=created_by,
                     title='Retargeting Pixel Created',
-                    message f'Retargeting pixel "{pixel_name}" has been created.',
+                    message=f'Retargeting pixel "{pixel_name}" has been created.',
                     notification_type='retargeting',
                     priority='medium',
                     channels=['in_app']
@@ -470,7 +470,7 @@ class AudienceSegmentService:
                     advertiser=advertiser,
                     user=created_by,
                     title='Audience Segment Created',
-                    message f'Audience segment "{segment_name}" has been created with {audience_size} users.',
+                    message=f'Audience segment "{segment_name}" has been created with {audience_size} users.',
                     notification_type='retargeting',
                     priority='medium',
                     channels=['in_app']

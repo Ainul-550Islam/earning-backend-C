@@ -11,9 +11,9 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
 
-from ..choices import LeaderboardScope
-from ..constants import DEFAULT_LEADERBOARD_TOP_N, MAX_RANK_VALUE
-from ..exceptions import LeaderboardGenerationError
+from api.gamification.choices import LeaderboardScope
+from api.gamification.constants import DEFAULT_LEADERBOARD_TOP_N, MAX_RANK_VALUE
+from api.gamification.exceptions import LeaderboardGenerationError
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -78,7 +78,7 @@ class LeaderboardGenerator:
         Raises:
             LeaderboardGenerationError: On invalid top_n or unexpected DB errors.
         """
-        from ..models import UserAchievement
+        from api.gamification.models import UserAchievement
 
         if not isinstance(top_n, int) or top_n < 1 or top_n > 1000:
             raise LeaderboardGenerationError(

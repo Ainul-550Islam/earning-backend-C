@@ -33,4 +33,5 @@ from .models_cpalead_extra import (
     WithdrawalWhitelist, SecurityEvent, RefundRequest,
     FraudScore, AMLFlag, EarningOffer, OfferConversion,
     WebhookEndpoint, TaxRecord,
+    SavingsGoal,
 )

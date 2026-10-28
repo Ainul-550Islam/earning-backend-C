@@ -1,4 +1,3 @@
-from django.conf import settings
 """
 Core Models for Offer Routing System
 
@@ -6,6 +5,7 @@ This module contains the core models for offer routing, including
 OfferRoute, RouteCondition, RouteAction and related models.
 """
 
+from django.conf import settings
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -15,6 +15,9 @@ from ..choices import (
     RoutingPriority, RoutingDecisionReason
 )
 from ..constants import DEFAULT_ROUTE_PRIORITY, MAX_OFFERS_PER_ROUTE, MAX_CONDITIONS_PER_ROUTE
+from ..managers import (
+    OfferRouteManager, RouteConditionManager, RouteActionManager
+)
 
 
 def get_user_model_lazy():
@@ -47,6 +50,9 @@ class OfferRoute(models.Model):
     # Timing
     created_at = models.DateTimeField(_('Created At'), auto_now_add=True)
     updated_at = models.DateTimeField(_('Updated At'), auto_now=True)
+    
+    # Custom manager
+    objects = OfferRouteManager()
     
     class Meta:
         db_table = 'offer_routing_routes'
@@ -112,6 +118,9 @@ class RouteCondition(models.Model):
     created_at = models.DateTimeField(_('Created At'), auto_now_add=True)
     updated_at = models.DateTimeField(_('Updated At'), auto_now=True)
     
+    # Custom manager
+    objects = RouteConditionManager()
+    
     class Meta:
         db_table = 'offer_routing_conditions'
         verbose_name = _('Route Condition')
@@ -152,6 +161,9 @@ class RouteAction(models.Model):
     
     created_at = models.DateTimeField(_('Created At'), auto_now_add=True)
     updated_at = models.DateTimeField(_('Updated At'), auto_now=True)
+    
+    # Custom manager
+    objects = RouteActionManager()
     
     class Meta:
         db_table = 'offer_routing_actions'

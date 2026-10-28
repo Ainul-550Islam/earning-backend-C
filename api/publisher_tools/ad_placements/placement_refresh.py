@@ -39,6 +39,7 @@ class PlacementRefreshConfig(TimeStampedModel):
     avg_incremental_ecpm = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal("0.0000"))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_placement_refresh_configs"
         verbose_name = _("Refresh Config")
 

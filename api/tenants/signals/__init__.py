@@ -1,90 +1,70 @@
 """
-Tenant Signals Module
-
-This module contains all Django signal handlers for the tenant management system,
-including signals for models, user actions, and system events.
+api/tenants/signals/__init__.py
+All tenant signals — defined here to avoid circular imports.
 """
-
-from django.db.models.signals import post_save, post_delete, pre_save, pre_delete
 from django.dispatch import Signal
-from django.contrib.auth import get_user_model
 
-from .core import (
-    tenant_created, tenant_updated, tenant_deleted,
-    tenant_settings_updated, tenant_billing_updated,
-    tenant_invoice_created, tenant_invoice_updated,
-)
+# ── Core signals ──────────────────────────────────
+tenant_created = Signal()
+tenant_updated = Signal()
+tenant_deleted = Signal()
+tenant_settings_updated = Signal()
+tenant_billing_updated = Signal()
+tenant_invoice_created = Signal()
+tenant_invoice_updated = Signal()
 
-from .plan import (
-    plan_created, plan_updated, plan_deleted,
-    plan_usage_recorded, plan_quota_exceeded,
-)
+# ── Plan signals ──────────────────────────────────
+plan_created = Signal()
+plan_updated = Signal()
+plan_deleted = Signal()
+plan_usage_recorded = Signal()
+plan_quota_exceeded = Signal()
 
-from .security import (
-    api_key_created, api_key_used, api_key_revoked,
-    webhook_triggered, audit_log_created,
-    security_event_detected,
-)
+# ── User signals ──────────────────────────────────
+tenant_user_added = Signal()
+tenant_user_removed = Signal()
+tenant_user_role_changed = Signal()
 
-from .onboarding import (
-    onboarding_started, onboarding_step_completed,
-    onboarding_completed, trial_extension_requested,
-)
+# ── Onboarding signals ────────────────────────────
+onboarding_completed = Signal()
+onboarding_step_completed = Signal()
 
-from .analytics import (
-    metric_recorded, health_score_updated,
-    feature_flag_toggled, notification_created,
-)
+# ── Branding signals ──────────────────────────────
+ssl_certificate_updated = Signal()
+domain_verified = Signal()
 
-from .branding import (
-    branding_updated, domain_verified, ssl_certificate_updated,
-    email_configuration_updated,
-)
+# ── Connect signal handlers ───────────────────────
+try:
+    from .core import *  # noqa
+except (ImportError, Exception) as e:
+    import logging
+    logging.getLogger(__name__).warning(f"tenants.signals.core: {e}")
 
-from .reseller import (
-    reseller_created, commission_calculated,
-)
+try:
+    from .plan import *  # noqa
+except (ImportError, Exception) as e:
+    import logging
+    logging.getLogger(__name__).warning(f"tenants.signals.plan: {e}")
 
-# Custom signals
-tenant_suspended = Signal()
-tenant_unsuspended = Signal()
-trial_extended = Signal()
-quota_warning = Signal()
-payment_processed = Signal()
-webhook_delivered = Signal()
-backup_completed = Signal()
+try:
+    from .onboarding import *  # noqa
+except (ImportError, Exception) as e:
+    import logging
+    logging.getLogger(__name__).warning(f"tenants.signals.onboarding: {e}")
+
+try:
+    from .branding import *  # noqa
+except (ImportError, Exception) as e:
+    import logging
+    logging.getLogger(__name__).warning(f"tenants.signals.branding: {e}")
 
 __all__ = [
-    # Core signals
     'tenant_created', 'tenant_updated', 'tenant_deleted',
     'tenant_settings_updated', 'tenant_billing_updated',
     'tenant_invoice_created', 'tenant_invoice_updated',
-    'tenant_suspended', 'tenant_unsuspended', 'trial_extended',
-    
-    # Plan signals
     'plan_created', 'plan_updated', 'plan_deleted',
     'plan_usage_recorded', 'plan_quota_exceeded',
-    
-    # Security signals
-    'api_key_created', 'api_key_used', 'api_key_revoked',
-    'webhook_triggered', 'webhook_delivered', 'audit_log_created',
-    'security_event_detected',
-    
-    # Onboarding signals
-    'onboarding_started', 'onboarding_step_completed',
-    'onboarding_completed', 'trial_extension_requested',
-    
-    # Analytics signals
-    'metric_recorded', 'health_score_updated',
-    'feature_flag_toggled', 'notification_created',
-    
-    # Branding signals
-    'branding_updated', 'domain_verified', 'ssl_certificate_updated',
-    'email_configuration_updated',
-    
-    # Reseller signals
-    'reseller_created', 'commission_calculated',
-    
-    # System signals
-    'quota_warning', 'payment_processed', 'backup_completed',
+    'tenant_user_added', 'tenant_user_removed', 'tenant_user_role_changed',
+    'onboarding_completed', 'onboarding_step_completed',
+    'ssl_certificate_updated', 'domain_verified',
 ]

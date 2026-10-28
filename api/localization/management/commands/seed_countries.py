@@ -6,7 +6,7 @@ class Command(BaseCommand):
     help = 'ISO 3166-1 countries seed করে'
 
     def handle(self, *args, **options):
-        from localization.models.core import Country
+        from api.localization.models.core import Country
         # Core countries — frequently used
         countries = [
             {'code':'BD','name':'Bangladesh','native_name':'বাংলাদেশ','phone_code':'+880','phone_digits':10,'flag_emoji':'🇧🇩','code_alpha3':'BGD','continent':'AS','region':'South Asia','capital':'Dhaka','currency_code':'BDT','tld':'.bd','measurement_system':'metric'},
@@ -40,7 +40,7 @@ class Command(BaseCommand):
             {'code':'IQ','name':'Iraq','native_name':'العراق','phone_code':'+964','phone_digits':10,'flag_emoji':'🇮🇶','code_alpha3':'IRQ','continent':'AS','region':'Western Asia','capital':'Baghdad','currency_code':'IQD','tld':'.iq'},
         ]
         created = skipped = 0
-        from localization.models.core import Country
+        from api.localization.models.core import Country
         for c in countries:
             code = c.pop('code')
             _, was_created = Country.objects.get_or_create(code=code, defaults=c)

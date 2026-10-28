@@ -1,3 +1,4 @@
+import logging
 # api/djoyalty/viewsets/core/TxnViewSet.py
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
@@ -10,11 +11,15 @@ from ...pagination import DjoyaltyPagePagination
 from ...permissions import IsAuthenticatedAndActive
 from ...throttles import DjoyaltyUserThrottle
 from ...mixins import DjoyaltyTenantMixin, DjoyaltyAuditMixin
+from ...mixins import DjoyaltyBaseViewSet
 
 
-class TxnViewSet(DjoyaltyTenantMixin, DjoyaltyAuditMixin, viewsets.ModelViewSet):
+logger = logging.getLogger(__name__)
+
+
+class TxnViewSet(DjoyaltyBaseViewSet, DjoyaltyTenantMixin, DjoyaltyAuditMixin, viewsets.ModelViewSet):
     """
-    Transaction CRUD — Tenant isolated, throttled।
+    Transaction CRUD -- Tenant isolated, throttled।
     Custom managers ব্যবহার করে filtering।
     """
     permission_classes = [IsAuthenticatedAndActive]
@@ -49,12 +54,16 @@ class TxnViewSet(DjoyaltyTenantMixin, DjoyaltyAuditMixin, viewsets.ModelViewSet)
 
     @action(detail=False, methods=['get'])
     def summary(self, request):
-        """Transaction summary statistics — tenant scoped।"""
-        qs = self.get_queryset()
-        return Response({
-            'total': qs.count(),
-            'total_value': float(qs.filter(value__gt=0).aggregate(s=Sum('value'))['s'] or 0),
-            'full_price': qs.filter(is_discount=False).count(),
-            'discounted': qs.filter(is_discount=True).count(),
-            'spending': qs.filter(value__lt=0).count(),
-        })
+        """Transaction summary statistics -- tenant scoped।"""
+        try:
+            qs = self.get_queryset()
+            return Response({
+                'total': qs.count(),
+                'total_value': float(qs.filter(value__gt=0).aggregate(s=Sum('value'))['s'] or 0),
+                'full_price': qs.filter(is_discount=False).count(),
+                'discounted': qs.filter(is_discount=True).count(),
+                'spending': qs.filter(value__lt=0).count(),
+            })
+        except Exception as e:
+            logger.error('TxnViewSet.summary error: %s', e)
+            return Response({'error': 'Could not compute transaction summary.'}, status=500)

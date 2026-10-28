@@ -1,4 +1,5 @@
-from api.tenants.mixins import TenantMixin
+from .adapters.outbound import get_tenant_mixin as _get_tenant_mixin
+TenantMixin = _get_tenant_mixin()
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -23,10 +24,17 @@ from .models import (
 from .serializers import (
     WalletSerializer,
     WalletTransactionSerializer,
-    WithdrawalSerializer,
-    UserPaymentMethodSerializer,
-    WalletWebhookLogSerializer
+    WithdrawalRequestSerializer as WithdrawalSerializer,
 )
+from .serializers import WalletTransactionSerializer as WalletWebhookLogSerializer
+try:
+    from .serializers.WalletSerializer import WalletSerializer
+except Exception:
+    pass
+try:
+    from .serializers import WithdrawalMethodSerializer as UserPaymentMethodSerializer
+except Exception:
+    pass
 
 logger = logging.getLogger(__name__)
 

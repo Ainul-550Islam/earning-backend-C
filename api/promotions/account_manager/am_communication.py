@@ -83,6 +83,7 @@ class AMTicketSystem:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def create_ticket_view(request):
     system = AMTicketSystem()
@@ -94,16 +95,11 @@ def create_ticket_view(request):
     )
     return Response(result, status=status.HTTP_201_CREATED)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_tickets_view(request):
     system = AMTicketSystem()
     tickets = system.get_publisher_tickets(request.user.id)
     return Response({'tickets': tickets})
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reply_ticket_view(request, ticket_id):
     system = AMTicketSystem()

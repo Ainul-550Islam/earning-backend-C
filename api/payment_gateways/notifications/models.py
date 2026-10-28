@@ -18,7 +18,7 @@ class InAppNotification(TimeStampedModel):
     def __str__(self): return f'{self.user_id} — {self.title}'
 
 class DeviceToken(TimeStampedModel):
-    user      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='device_tokens')
+    user      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='device_tokens_pg')
     token     = models.TextField(unique=True)
     platform  = models.CharField(max_length=10, choices=(('ios','iOS'),('android','Android'),('web','Web')))
     is_active = models.BooleanField(default=True)

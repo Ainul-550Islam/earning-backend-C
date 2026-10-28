@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from ..models import SmartLinkGroup
-from ..serializers.SmartLinkGroupSerializer import SmartLinkGroupSerializer
-from ..permissions import IsPublisher
+from api.smartlink.models import SmartLinkGroup
+from api.smartlink.serializers.SmartLinkGroupSerializer import SmartLinkGroupSerializer
+from api.smartlink.permissions import IsPublisher
 
 
 class SmartLinkGroupViewSet(viewsets.ModelViewSet):
@@ -13,7 +13,7 @@ class SmartLinkGroupViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
-            return SmartLinkGroup.objects.all()
+            return SmartLinkGroup.objects.prefetch_related("smartlinks")
         return SmartLinkGroup.objects.filter(publisher=user)
 
     def perform_create(self, serializer):

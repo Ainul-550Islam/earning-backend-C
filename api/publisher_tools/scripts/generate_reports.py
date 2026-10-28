@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 def generate_daily_reports_all():
     """সব publishers-এর daily report generate করে।"""
-    from api.publisher_tools.models import Publisher
-    from api.publisher_tools.performance_analytics.daily_report import generate_daily_report
+    from publisher_tools.models import Publisher
+    from publisher_tools.performance_analytics.daily_report import generate_daily_report
     yesterday = timezone.now().date() - timedelta(days=1)
     publishers = Publisher.objects.filter(status="active")
     generated = 0
@@ -31,8 +31,8 @@ def generate_daily_reports_all():
 
 def generate_monthly_reports_all(year: int = None, month: int = None):
     """সব publishers-এর monthly report generate করে।"""
-    from api.publisher_tools.models import Publisher
-    from api.publisher_tools.performance_analytics.monthly_report import generate_monthly_report
+    from publisher_tools.models import Publisher
+    from publisher_tools.performance_analytics.monthly_report import generate_monthly_report
     now = timezone.now()
     year  = year or (now.year if now.month > 1 else now.year - 1)
     month = month or (now.month - 1 if now.month > 1 else 12)
@@ -51,8 +51,8 @@ def generate_monthly_reports_all(year: int = None, month: int = None):
 
 def generate_waterfall_reports():
     """Waterfall performance reports generate করে।"""
-    from api.publisher_tools.models import Publisher
-    from api.publisher_tools.mediation_management.mediation_reporting import generate_waterfall_report
+    from publisher_tools.models import Publisher
+    from publisher_tools.mediation_management.mediation_reporting import generate_waterfall_report
     publishers = Publisher.objects.filter(status="active")
     start = (timezone.now() - timedelta(days=30)).date()
     end   = timezone.now().date()
@@ -71,8 +71,8 @@ def generate_waterfall_reports():
 
 def generate_fraud_reports():
     """Fraud reports generate করে।"""
-    from api.publisher_tools.models import Publisher
-    from api.publisher_tools.fraud_prevention.fraud_report import generate_fraud_report
+    from publisher_tools.models import Publisher
+    from publisher_tools.fraud_prevention.fraud_report import generate_fraud_report
     publishers = Publisher.objects.filter(status="active")
     generated = 0
     high_risk = 0

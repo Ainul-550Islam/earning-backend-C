@@ -12,6 +12,7 @@ import logging
 
 from ..models.security import TenantAPIKey, TenantWebhookConfig, TenantIPWhitelist, TenantAuditLog
 from ..models.analytics import TenantNotification
+from .base import api_key_created, api_key_revoked, api_key_used, security_event_detected, audit_log_created
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,6 @@ def api_key_created(sender, instance, created, **kwargs):
         )
         
         # Trigger signal
-        from . import api_key_created
         api_key_created.send(sender=TenantAPIKey, api_key=instance)
 
 
@@ -98,7 +98,6 @@ def api_key_updated(sender, instance, created, **kwargs):
                 )
                 
                 # Trigger signal
-                from . import api_key_revoked
                 api_key_revoked.send(sender=TenantAPIKey, api_key=instance)
                 
                 # Send notification
@@ -198,7 +197,6 @@ def audit_log_created(sender, instance, created, **kwargs):
             # Send security alert
             if instance.action == 'security_event':
                 # Trigger security event signal
-                from . import security_event_detected
                 security_event_detected.send(
                     sender=TenantAuditLog,
                     tenant=instance.tenant,
@@ -220,7 +218,6 @@ def audit_log_created(sender, instance, created, **kwargs):
                 )
         
         # Trigger signal
-        from . import audit_log_created
         audit_log_created.send(sender=TenantAuditLog, audit_log=instance)
 
 
@@ -259,7 +256,6 @@ def log_api_access(tenant, user, endpoint, ip_address, user_agent, request_id=No
     # This would update the last_used_at and usage_count for the API key
     
     # Trigger signal
-    from . import api_key_used
     api_key_used.send(
         sender=None,
         tenant=tenant,
@@ -297,7 +293,6 @@ def log_security_event(tenant, event_type, description, severity='medium',
     )
     
     # Trigger signal
-    from . import security_event_detected
     security_event_detected.send(
         sender=TenantAuditLog,
         tenant=tenant,

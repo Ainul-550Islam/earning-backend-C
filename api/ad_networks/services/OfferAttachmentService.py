@@ -3,6 +3,7 @@ api/ad_networks/services/OfferAttachmentService.py
 Service for managing offer attachments
 SaaS-ready with tenant support
 """
+from django.db import models
 
 import os
 import hashlib

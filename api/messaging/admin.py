@@ -13,6 +13,7 @@ from .models import (
     SupportThread, SupportMessage, UserInbox,
     MessageReaction, UserPresence, CallSession,
     AnnouncementChannel, ChannelMember, ScheduledMessage,
+    BotInteraction, AuditLogEntry, RetentionPolicy, LegalHold,
     MessagePin, PollVote, BotConfig, BotResponse,
     MessagingWebhook, WebhookDelivery, MessageTranslation,
     UserBlock, DeviceToken,
@@ -21,6 +22,8 @@ from .models import (
     VoiceMessageTranscription, LinkPreview, MessageLinkPreview,
     MediaAttachment, MessageReport, UserDevice,
     ChatMention, MessageSearchIndex,
+    CPANotification, MessageTemplate, CPABroadcast,
+    NotificationRead, AffiliateConversationThread,
 )
 
 
@@ -777,3 +780,246 @@ class MessageSearchIndexAdmin(ReadOnlyMixin, admin.ModelAdmin):
 
     def search_text_preview(self, obj): return obj.search_text[:60]
     search_text_preview.short_description = "Search Text"
+
+# ── CPA Platform Models ───────────────────────────────────────────────────────
+
+@admin.register(CPANotification)
+class CPANotificationAdmin(admin.ModelAdmin):
+    list_display  = (
+        "recipient", "notification_type", "title_short",
+        "priority", "object_type", "is_read", "is_dismissed",
+        "push_sent", "created_at",
+    )
+    list_filter   = (
+        "notification_type", "priority", "object_type",
+        "is_read", "is_dismissed", "push_sent", "email_sent",
+    )
+    search_fields = (
+        "recipient__username", "recipient__email",
+        "title", "body", "object_id",
+    )
+    readonly_fields = (
+        "recipient", "notification_type", "title", "body",
+        "priority", "object_type", "object_id",
+        "action_url", "action_label", "payload",
+        "is_read", "read_at", "is_dismissed",
+        "push_sent", "email_sent", "sms_sent",
+        "created_at", "updated_at",
+    )
+    raw_id_fields = ("recipient", "tenant")
+    date_hierarchy = "created_at"
+    ordering = ("-created_at",)
+
+    def title_short(self, obj):
+        return obj.title[:60]
+    title_short.short_description = "Title"
+
+    def has_add_permission(self, request):
+        return False  # notifications are system-generated
+
+
+@admin.register(MessageTemplate)
+class MessageTemplateAdmin(admin.ModelAdmin):
+    list_display  = (
+        "name", "category", "is_active",
+        "usage_count", "created_by", "created_at",
+    )
+    list_filter   = ("category", "is_active")
+    search_fields = ("name", "subject", "body")
+    readonly_fields = ("usage_count", "created_at", "updated_at")
+    raw_id_fields   = ("created_by", "tenant")
+    ordering = ("-usage_count", "name")
+    fieldsets = (
+        (None, {
+            "fields": ("name", "category", "is_active", "tags"),
+        }),
+        ("Content", {
+            "fields": ("subject", "body"),
+            "description": (
+                "Supports placeholders: {affiliate_name}, {offer_name}, "
+                "{amount}, {payout_date}, {manager_name}, {action_url}"
+            ),
+        }),
+        ("Stats", {
+            "fields": ("usage_count", "created_by", "created_at"),
+            "classes": ("collapse",),
+        }),
+    )
+
+    def render_preview(self, obj):
+        return format_html(
+            "<details><summary>Preview body</summary><pre style='white-space:pre-wrap'>{}</pre></details>",
+            obj.body[:500],
+        )
+    render_preview.short_description = "Body Preview"
+
+
+@admin.register(CPABroadcast)
+class CPABroadcastAdmin(admin.ModelAdmin):
+    list_display  = (
+        "title", "notification_type", "priority",
+        "audience_filter", "status",
+        "recipient_count", "delivered_count", "opened_count", "clicked_count",
+        "send_push", "send_email", "scheduled_at", "sent_at", "created_by",
+    )
+    list_filter   = (
+        "status", "priority", "audience_filter",
+        "send_push", "send_email", "send_inbox", "send_sms",
+        "notification_type",
+    )
+    search_fields = ("title", "body", "created_by__username")
+    readonly_fields = (
+        "recipient_count", "delivered_count", "opened_count", "clicked_count",
+        "sent_at", "created_at", "updated_at",
+    )
+    raw_id_fields = ("created_by", "template", "tenant")
+    date_hierarchy = "created_at"
+    ordering = ("-created_at",)
+    fieldsets = (
+        (None, {
+            "fields": (
+                "title", "body", "notification_type", "priority",
+                "action_url", "action_label", "template",
+            ),
+        }),
+        ("Audience", {
+            "fields": ("audience_filter", "audience_params"),
+        }),
+        ("Delivery channels", {
+            "fields": ("send_push", "send_email", "send_inbox", "send_sms"),
+            "classes": ("collapse",),
+        }),
+        ("Scheduling & status", {
+            "fields": ("status", "scheduled_at", "sent_at", "error_message"),
+        }),
+        ("Analytics", {
+            "fields": (
+                "recipient_count", "delivered_count",
+                "opened_count", "clicked_count",
+            ),
+            "classes": ("collapse",),
+        }),
+        ("Meta", {
+            "fields": ("created_by", "created_at"),
+            "classes": ("collapse",),
+        }),
+    )
+
+    def open_rate_display(self, obj):
+        if obj.delivered_count:
+            pct = round(obj.opened_count / obj.delivered_count * 100, 1)
+            return f"{pct}%"
+        return "—"
+    open_rate_display.short_description = "Open %"
+
+    def click_rate_display(self, obj):
+        if obj.opened_count:
+            pct = round(obj.clicked_count / obj.opened_count * 100, 1)
+            return f"{pct}%"
+        return "—"
+    click_rate_display.short_description = "Click %"
+
+
+@admin.register(NotificationRead)
+class NotificationReadAdmin(ReadOnlyMixin, admin.ModelAdmin):
+    list_display  = ("broadcast_title", "user", "opened_at", "clicked_at")
+    list_filter   = ()
+    search_fields = ("user__username", "user__email", "broadcast__title")
+    raw_id_fields = ("broadcast", "user", "tenant")
+    date_hierarchy = "opened_at"
+    ordering = ("-opened_at",)
+
+    def broadcast_title(self, obj):
+        return obj.broadcast.title[:60]
+    broadcast_title.short_description = "Broadcast"
+
+
+@admin.register(AffiliateConversationThread)
+class AffiliateConversationThreadAdmin(admin.ModelAdmin):
+    list_display  = (
+        "affiliate", "manager", "status",
+        "affiliate_unread", "manager_unread",
+        "last_message_at", "tags_display",
+    )
+    list_filter   = ("status",)
+    search_fields = (
+        "affiliate__username", "affiliate__email",
+        "manager__username", "notes",
+    )
+    readonly_fields = (
+        "affiliate_unread", "manager_unread",
+        "last_message_at", "last_message_by",
+        "created_at", "updated_at",
+    )
+    raw_id_fields = ("affiliate", "manager", "chat", "last_message_by", "tenant")
+    ordering = ("-last_message_at",)
+    fieldsets = (
+        (None, {
+            "fields": ("affiliate", "manager", "chat", "status"),
+        }),
+        ("Unread counters", {
+            "fields": ("affiliate_unread", "manager_unread"),
+            "classes": ("collapse",),
+        }),
+        ("Notes & tags", {
+            "fields": ("notes", "tags"),
+        }),
+        ("Last activity", {
+            "fields": ("last_message_at", "last_message_by"),
+            "classes": ("collapse",),
+        }),
+    )
+
+    def tags_display(self, obj):
+        tags = obj.tags or []
+        if not tags:
+            return "—"
+        return format_html(
+            " ".join(
+                f"<span style='background:#eee;border-radius:3px;padding:1px 5px;font-size:11px'>{t}</span>"
+                for t in tags[:5]
+            )
+        )
+    tags_display.short_description = "Tags"
+
+
+# ── Part 20/21 (world-system audit): Bot Interactions & Compliance ─────────────
+
+@admin.register(BotInteraction)
+class BotInteractionAdmin(ReadOnlyMixin, admin.ModelAdmin):
+    list_display  = ("bot", "action_id", "user", "value_short", "created_at")
+    list_filter   = ("action_id",)
+    raw_id_fields = ("bot", "source_message", "user", "resulting_message", "tenant")
+    ordering      = ("-created_at",)
+
+    def value_short(self, obj): return (obj.value or "—")[:40]
+    value_short.short_description = "Value"
+
+
+@admin.register(AuditLogEntry)
+class AuditLogEntryAdmin(ReadOnlyMixin, admin.ModelAdmin):
+    """Append-only, same as BotResponseAdmin above - has_delete_permission
+    still allows a superuser to delete, matching ReadOnlyMixin's existing
+    convention elsewhere in this file, but no admin gets add/change."""
+    list_display  = ("action", "target_type", "target_id", "actor", "created_at")
+    list_filter   = ("action", "target_type")
+    search_fields = ("target_id", "target_type")
+    raw_id_fields = ("actor", "tenant")
+    ordering      = ("-created_at",)
+
+
+@admin.register(RetentionPolicy)
+class RetentionPolicyAdmin(admin.ModelAdmin):
+    list_display    = ("tenant", "chat_message_retention_days", "updated_by", "updated_at")
+    raw_id_fields   = ("tenant", "updated_by")
+    readonly_fields = ("id", "created_at", "updated_at")
+
+
+@admin.register(LegalHold)
+class LegalHoldAdmin(admin.ModelAdmin):
+    list_display    = ("chat", "user", "is_active", "applied_by", "created_at", "released_at")
+    list_filter     = ("is_active",)
+    search_fields   = ("reason",)
+    raw_id_fields   = ("chat", "user", "applied_by", "released_by", "tenant")
+    readonly_fields = ("id", "created_at", "updated_at")
+    ordering        = ("-created_at",)

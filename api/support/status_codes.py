@@ -1,0 +1,39 @@
+# api/support/status_codes.py
+"""
+HTTP status code constants for support API.
+Semantic names for common patterns in support responses.
+"""
+from rest_framework import status
+
+# Success
+OK                  = status.HTTP_200_OK
+CREATED             = status.HTTP_201_CREATED
+ACCEPTED            = status.HTTP_202_ACCEPTED
+NO_CONTENT          = status.HTTP_204_NO_CONTENT
+
+# Client errors
+BAD_REQUEST         = status.HTTP_400_BAD_REQUEST
+UNAUTHORIZED        = status.HTTP_401_UNAUTHORIZED
+FORBIDDEN           = status.HTTP_403_FORBIDDEN
+NOT_FOUND           = status.HTTP_404_NOT_FOUND
+METHOD_NOT_ALLOWED  = status.HTTP_405_METHOD_NOT_ALLOWED
+CONFLICT            = status.HTTP_409_CONFLICT
+UNPROCESSABLE       = status.HTTP_422_UNPROCESSABLE_ENTITY
+TOO_MANY_REQUESTS   = status.HTTP_429_TOO_MANY_REQUESTS
+
+# Server errors
+INTERNAL_ERROR      = status.HTTP_500_INTERNAL_SERVER_ERROR
+SERVICE_UNAVAILABLE = status.HTTP_503_SERVICE_UNAVAILABLE
+
+# Support-specific semantic mapping
+TICKET_CREATED      = CREATED
+TICKET_UPDATED      = OK
+TICKET_NOT_FOUND    = NOT_FOUND
+TICKET_FORBIDDEN    = FORBIDDEN
+TICKET_CLOSED_ERR   = BAD_REQUEST
+DISPUTE_CREATED     = CREATED
+DISPUTE_LIMIT_ERR   = TOO_MANY_REQUESTS
+CHAT_STARTED        = CREATED
+MAINTENANCE_MODE    = SERVICE_UNAVAILABLE
+RATE_LIMITED        = TOO_MANY_REQUESTS
+VALIDATION_ERROR    = BAD_REQUEST

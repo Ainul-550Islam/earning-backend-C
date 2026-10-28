@@ -25,7 +25,7 @@ class DecimalEncoder(json.JSONEncoder):
 
 def backup_publisher_earnings(publisher_id: str = None, days: int = 30) -> dict:
     """Publisher earnings backup করে।"""
-    from api.publisher_tools.models import Publisher, PublisherEarning
+    from publisher_tools.models import Publisher, PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     if publisher_id:
         publishers = Publisher.objects.filter(publisher_id=publisher_id)
@@ -54,7 +54,7 @@ def backup_publisher_earnings(publisher_id: str = None, days: int = 30) -> dict:
 
 def backup_invoices(months: int = 3) -> dict:
     """Recent invoices backup করে।"""
-    from api.publisher_tools.models import PublisherInvoice
+    from publisher_tools.models import PublisherInvoice
     start = timezone.now().date() - timedelta(days=months * 30)
     invoices = list(
         PublisherInvoice.objects.filter(period_start__gte=start).values(
@@ -72,7 +72,7 @@ def export_publisher_data(publisher_id: str) -> dict:
     Publisher-এর সব data export করে (GDPR compliance)।
     Returns structured data dict।
     """
-    from api.publisher_tools.models import Publisher, PublisherEarning, TrafficSafetyLog
+    from publisher_tools.models import Publisher, PublisherEarning, TrafficSafetyLog
     try:
         pub = Publisher.objects.get(publisher_id=publisher_id)
     except Publisher.DoesNotExist:

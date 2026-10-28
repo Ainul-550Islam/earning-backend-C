@@ -24,12 +24,12 @@ class Command(BaseCommand):
         use_async = options.get("use_async", False)
 
         if use_async:
-            from messaging.tasks import bulk_reindex_task
+            from api.messaging.tasks import bulk_reindex_task
             result = bulk_reindex_task.delay(chat_id=chat_id, days=days)
             self.stdout.write(f"✅ Queued bulk reindex task: {result.id}")
             return
 
-        from messaging.tasks import bulk_reindex_task
+        from api.messaging.tasks import bulk_reindex_task
         self.stdout.write(f"🔄 Indexing messages (days={days}, chat={chat_id or 'all'}) ...")
         result = bulk_reindex_task(chat_id=chat_id, days=days)
         self.stdout.write(self.style.SUCCESS(

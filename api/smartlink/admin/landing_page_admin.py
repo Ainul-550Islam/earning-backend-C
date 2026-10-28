@@ -1,5 +1,5 @@
 from django.contrib import admin
-from ..models import LandingPage, PreLander
+from api.smartlink.models import LandingPage, PreLander
 
 
 @admin.register(LandingPage)

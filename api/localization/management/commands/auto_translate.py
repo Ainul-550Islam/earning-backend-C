@@ -11,8 +11,8 @@ class Command(BaseCommand):
         parser.add_argument('--dry-run', action='store_true')
 
     def handle(self, *args, **options):
-        from localization.services.translation.AutoTranslationService import AutoTranslationService
-        from localization.models.core import Language
+        from api.localization.services.translation.AutoTranslationService import AutoTranslationService
+        from api.localization.models.core import Language
         service = AutoTranslationService()
         lang_code = options.get('language')
         limit = options.get('limit', 100)

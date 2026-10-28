@@ -76,7 +76,7 @@ class IntegrationAuditLogger:
             action=action, module=module, actor_id=actor_id,
             target_type=target_type, target_id=str(target_id),
             # data_before handled above with PII masking
-            data_before=mask_pii(data_before) if data_before else None, data_before=mask_pii(data_before) if data_before else None,
+            data_before=mask_pii(data_before) if data_before else None,
             data_after=mask_pii(data_after) if data_after else None,
             metadata=metadata or {}, ip_address=ip_address,
             success=success, error=error,

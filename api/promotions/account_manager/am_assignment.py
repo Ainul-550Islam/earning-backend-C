@@ -163,13 +163,11 @@ class AccountManagerAssignment:
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def my_tier_view(request):
     am = AccountManagerAssignment()
     return Response(am.get_publisher_tier_info(request.user.id))
-
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def assign_am_view(request, publisher_id):
     am = AccountManagerAssignment()

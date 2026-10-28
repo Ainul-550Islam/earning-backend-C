@@ -802,3 +802,60 @@ __all__ = [
     'completion_post_delete',
     'task_segments_changed_json',
 ]
+
+# ══════════════════════════════════════════════════════════════════════════════
+# INTEGRATION LAYER SIGNALS — Fire EventBus events on model changes
+# ══════════════════════════════════════════════════════════════════════════════
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+def _emit_safely(event: str, payload: dict) -> None:
+    """Emit an EventBus event, silently ignoring errors."""
+    try:
+        from api.tasks.integration.event_bus import EventBus
+        EventBus.emit(event, payload, async_dispatch=True, priority='normal')
+    except Exception as _e:
+        logger.debug(f"[SIGNAL→EventBus] Could not emit {event}: {_e}")
+
+
+def _fire_task_completed_event(sender, instance, created, **kwargs):
+    """Fire EventBus 'task.completed' when a UserTaskCompletion is saved as completed."""
+    try:
+        if not created and instance.status == 'completed':
+            _emit_safely('task.completed', {
+                'user_id':       instance.user_id,
+                'task_id':       getattr(instance.task, 'task_id', '') if instance.task else '',
+                'reward_amount': str(instance.reward_amount or 0),
+                'completion_id': instance.pk,
+            })
+    except Exception as e:
+        logger.error(f"[SIGNAL] _fire_task_completed_event: {e}")
+
+
+# Connect to UserTaskCompletion post_save
+try:
+    from api.tasks.models import UserTaskCompletion as _UTC
+    post_save.connect(_fire_task_completed_event, sender=_UTC,
+                      dispatch_uid='integration_task_completed')
+    logger.info("[OK] EventBus signal: task.completed connected")
+except ImportError:
+    pass
+except Exception as _e:
+    logger.warning(f"[WARN] EventBus task.completed signal: {_e}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ADDITIONAL SIGNALS — Used by inventory and subscription task modules
+# ══════════════════════════════════════════════════════════════════════════════
+
+from django.dispatch import Signal
+
+# Inventory signals
+low_stock_alert = Signal()        # sent when stock drops below threshold
+item_expiring_soon = Signal()     # sent when a redemption code is near expiry
+
+# Subscription signals
+subscription_activated = Signal()  # sent when a subscription becomes active
+trial_ending_soon = Signal()       # sent when trial period is about to end

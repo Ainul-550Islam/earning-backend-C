@@ -118,8 +118,6 @@ def search_view(request):
         try: qs=engine.search_conversions(query,request.user,filters); total+=qs.count(); results['conversions']=list(qs.values('id','conversion_id','offer__name','payout','currency','status','country_code','created_at')[offset:offset+page_size])
         except: results['conversions']=[]
     return Response({'success':True,'query':query,'type':search_type,'total':total,'page':page,'page_size':page_size,'results':results})
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def quick_search_view(request):
     query=request.GET.get('q','').strip()

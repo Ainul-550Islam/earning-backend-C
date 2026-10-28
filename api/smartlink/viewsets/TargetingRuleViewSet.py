@@ -2,9 +2,9 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..models import TargetingRule
-from ..serializers.TargetingRuleSerializer import TargetingRuleSerializer
-from ..permissions import IsPublisher
+from api.smartlink.models import TargetingRule
+from api.smartlink.serializers.TargetingRuleSerializer import TargetingRuleSerializer
+from api.smartlink.permissions import IsPublisher
 
 
 class TargetingRuleViewSet(viewsets.ModelViewSet):
@@ -28,7 +28,7 @@ class TargetingRuleViewSet(viewsets.ModelViewSet):
         Body: {"country": "BD", "device_type": "mobile", "os": "android", ...}
         """
         from ..services.targeting.TargetingEngine import TargetingEngine
-        from ..models import SmartLink
+        from api.smartlink.models import SmartLink
         rule = self.get_object()
         context = request.data
         engine = TargetingEngine()

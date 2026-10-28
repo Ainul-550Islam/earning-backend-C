@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 def process_pending_payout_requests():
     """Pending payout requests process করে।"""
-    from api.publisher_tools.publisher_management.publisher_payout import PayoutRequest
-    from api.publisher_tools.payment_settlement.payout_manager import check_payout_eligibility
+    from publisher_tools.publisher_management.publisher_payout import PayoutRequest
+    from publisher_tools.payment_settlement.payout_manager import check_payout_eligibility
     pending = PayoutRequest.objects.filter(status="pending").select_related("publisher", "bank_account")
     processed = 0
     approved  = 0
@@ -42,8 +42,8 @@ def execute_approved_payouts():
     Approved payouts execute করে (payment gateway call)।
     Production-এ bKash/Nagad API অথবা bank transfer।
     """
-    from api.publisher_tools.publisher_management.publisher_payout import PayoutRequest
-    from api.publisher_tools.webhooks.payment_webhook import send_payout_status_webhook
+    from publisher_tools.publisher_management.publisher_payout import PayoutRequest
+    from publisher_tools.webhooks.payment_webhook import send_payout_status_webhook
     import uuid
     approved = PayoutRequest.objects.filter(status="approved").select_related("publisher", "bank_account")
     executed = 0
@@ -68,13 +68,13 @@ def execute_approved_payouts():
 
 def check_overdue_invoices():
     """Overdue invoices check ও reminder পাঠায়।"""
-    from api.publisher_tools.models import PublisherInvoice
+    from publisher_tools.models import PublisherInvoice
     today = timezone.now().date()
     overdue = PublisherInvoice.objects.filter(status="issued", due_date__lt=today)
     count = 0
     for invoice in overdue:
         try:
-            from api.publisher_tools.webhooks.payment_webhook import send_invoice_failed_webhook
+            from publisher_tools.webhooks.payment_webhook import send_invoice_failed_webhook
             send_invoice_failed_webhook(invoice.publisher, invoice, "Payment overdue")
             count += 1
         except Exception as e:

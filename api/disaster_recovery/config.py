@@ -3,7 +3,8 @@ Configuration for Disaster Recovery System
 """
 import os
 from functools import lru_cache
-from pydantic import BaseSettings, validator
+from pydantic_settings import BaseSettings
+from pydantic import validator
 from typing import List, Optional
 
 

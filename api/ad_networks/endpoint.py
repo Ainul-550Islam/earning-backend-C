@@ -3,6 +3,8 @@ api/ad_networks/endpoint.py
 API endpoint utilities for ad networks module
 SaaS-ready with tenant support
 """
+from django.db import models
+import json
 
 import logging
 from typing import Dict, List, Any, Optional, Union, Callable

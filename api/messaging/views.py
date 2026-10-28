@@ -17,21 +17,71 @@ from .exceptions import (
     MessagingError, MediaUploadError, MediaTooLargeError,
     MediaTypeNotAllowedError, ChatAccessDeniedError, SearchQueryTooShortError,
 )
+from .openapi import UPLOAD_SCHEMA, extend_schema, OpenApiTypes
+from .utils.http import _err, MessagingAPIView  # centralised helpers
 
 logger = logging.getLogger(__name__)
 
 
-def _err(exc: Exception, http_status: int = 400) -> Response:
-    return Response(
-        {"detail": str(exc), "error_type": type(exc).__name__},
-        status=http_status,
+def messaging_exception_handler(exc, context):
+    """
+    Custom DRF exception handler for the messaging app.
+
+    Part 6 audit fix: this function is referenced by settings_messaging.py's
+    REST_FRAMEWORK template (EXCEPTION_HANDLER =
+    "messaging.views.messaging_exception_handler") but never actually
+    existed anywhere - a project following that template exactly would
+    get an ImportError the first time DRF needed to format an exception
+    into a response, compounding whatever error originally occurred. It
+    likely never got written because most views already catch
+    MessagingError subclasses manually via _err()/_error_response()
+    (utils/http.py) - but that only covers exceptions raised inside a
+    view's own try/except. A MessagingError raised deeper (a service
+    function, a signal receiver invoked synchronously, etc.) without an
+    enclosing try/except was never converted into the
+    error_type/code/detail shape its own to_dict() (exceptions.py) is
+    clearly designed to produce - it just became a bare 500 with none of
+    that context.
+
+    Delegates to DRF's default handler first (covers ValidationError,
+    NotAuthenticated, PermissionDenied, Http404, and anything else DRF
+    already knows how to turn into a Response) and only steps in for
+    MessagingError subclasses DRF's default handler doesn't recognize.
+    """
+    from rest_framework.views import exception_handler as _drf_default_handler
+
+    response = _drf_default_handler(exc, context)
+    if response is not None:
+        return response
+
+    if isinstance(exc, MessagingError):
+        return _err(exc)
+
+    # Not a MessagingError and not something DRF's default handler
+    # recognized either - log for visibility, then return None so
+    # Django's normal unhandled-exception reporting takes over, same as
+    # if this handler weren't installed at all.
+    logger.error(
+        "messaging_exception_handler: unhandled exception in view=%s: %s",
+        context.get("view"), exc, exc_info=True,
     )
+    return None
 
 
 # ---------------------------------------------------------------------------
 # MessageAttachmentUploadView  — Presigned S3 upload URL
 # ---------------------------------------------------------------------------
 
+@UPLOAD_SCHEMA
+@extend_schema(
+    request=OpenApiTypes.OBJECT,
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's request/response shape "
+        "isn't modeled with a serializer (handles raw request.data / builds "
+        "its Response(...) directly) - see the view body for the real contract."
+    ),
+)
 class MessageAttachmentUploadView(APIView):
     """
     POST /messaging/upload/
@@ -95,6 +145,15 @@ class MessageAttachmentUploadView(APIView):
             return Response({"detail": "Upload initiation failed."}, status=500)
 
 
+@extend_schema(
+    request=OpenApiTypes.OBJECT,
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's request/response shape "
+        "isn't modeled with a serializer (handles raw request.data / builds "
+        "its Response(...) directly) - see the view body for the real contract."
+    ),
+)
 class UploadConfirmView(APIView):
     """
     POST /messaging/upload/confirm/
@@ -138,6 +197,14 @@ class UploadConfirmView(APIView):
         })
 
 
+@extend_schema(
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's response shape isn't "
+        "modeled with a serializer (builds its Response(...) directly) - "
+        "see the view body for the real contract."
+    ),
+)
 class MediaStatusView(APIView):
     """
     GET /messaging/upload/status/?media_id=<id>
@@ -177,6 +244,14 @@ class MediaStatusView(APIView):
 # MessageSearchView  — Full-text search
 # ---------------------------------------------------------------------------
 
+@extend_schema(
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's response shape isn't "
+        "modeled with a serializer (builds its Response(...) directly) - "
+        "see the view body for the real contract."
+    ),
+)
 class MessageSearchView(APIView):
     """
     GET /messaging/search/?q=<query>&chat_id=<id>&from=<date>&to=<date>&page=1
@@ -191,8 +266,17 @@ class MessageSearchView(APIView):
         msg_type    = request.query_params.get("message_type")
         from_date   = request.query_params.get("from")
         to_date     = request.query_params.get("to")
-        page        = int(request.query_params.get("page", 1))
-        page_size   = min(int(request.query_params.get("page_size", 20)), 50)
+        # Audit fix (Part 19): int() on unvalidated query params raised an
+        # unhandled ValueError for e.g. ?page=abc - DRF's default exception
+        # handler doesn't recognize plain ValueError, so this fell all the
+        # way through to a raw 500 instead of a clean 400.
+        try:
+            page = int(request.query_params.get("page", 1))
+            page_size = min(int(request.query_params.get("page_size", 20)), 50)
+        except (TypeError, ValueError):
+            return Response({"detail": "page and page_size must be integers."}, status=400)
+        if page < 1 or page_size < 1:
+            return Response({"detail": "page and page_size must be positive."}, status=400)
 
         if not query:
             return Response({"detail": "q parameter required."}, status=400)
@@ -219,6 +303,14 @@ class MessageSearchView(APIView):
             return Response({"detail": "Search failed."}, status=500)
 
 
+@extend_schema(
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's response shape isn't "
+        "modeled with a serializer (builds its Response(...) directly) - "
+        "see the view body for the real contract."
+    ),
+)
 class UserSearchView(APIView):
     """
     GET /messaging/users/search/?q=<query>
@@ -244,6 +336,14 @@ class UserSearchView(APIView):
 # DeliveryStatusView  — Get delivery/read receipts for a message
 # ---------------------------------------------------------------------------
 
+@extend_schema(
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's response shape isn't "
+        "modeled with a serializer (builds its Response(...) directly) - "
+        "see the view body for the real contract."
+    ),
+)
 class DeliveryStatusView(APIView):
     """
     GET /messaging/delivery/?message_id=<id>
@@ -278,6 +378,14 @@ class DeliveryStatusView(APIView):
 # PresenceView  — REST endpoint for presence (non-WS)
 # ---------------------------------------------------------------------------
 
+@extend_schema(
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's response shape isn't "
+        "modeled with a serializer (builds its Response(...) directly) - "
+        "see the view body for the real contract."
+    ),
+)
 class PresenceView(APIView):
     """GET /messaging/online/?user_ids=1,2,3 — bulk presence lookup."""
     permission_classes = [IsAuthenticated]
@@ -296,6 +404,15 @@ class PresenceView(APIView):
 # TranslationView  — Translate a message on demand
 # ---------------------------------------------------------------------------
 
+@extend_schema(
+    request=OpenApiTypes.OBJECT,
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's request/response shape "
+        "isn't modeled with a serializer (handles raw request.data / builds "
+        "its Response(...) directly) - see the view body for the real contract."
+    ),
+)
 class TranslationView(APIView):
     """
     POST /messaging/translate/
@@ -340,6 +457,14 @@ class TranslationView(APIView):
 # UnreadCountView  — Fast unread count
 # ---------------------------------------------------------------------------
 
+@extend_schema(
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's response shape isn't "
+        "modeled with a serializer (builds its Response(...) directly) - "
+        "see the view body for the real contract."
+    ),
+)
 class UnreadCountView(APIView):
     """GET /messaging/unread/ — Total unread count."""
     permission_classes = [IsAuthenticated]
@@ -354,6 +479,15 @@ class UnreadCountView(APIView):
 # DeviceSyncView  — Initial sync on device login
 # ---------------------------------------------------------------------------
 
+@extend_schema(
+    request=OpenApiTypes.OBJECT,
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's request/response shape "
+        "isn't modeled with a serializer (handles raw request.data / builds "
+        "its Response(...) directly) - see the view body for the real contract."
+    ),
+)
 class DeviceSyncView(APIView):
     """
     POST /messaging/sync/
@@ -380,6 +514,14 @@ class DeviceSyncView(APIView):
 # HealthCheckView  — Liveness + readiness probe
 # ---------------------------------------------------------------------------
 
+@extend_schema(
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's response shape isn't "
+        "modeled with a serializer (builds its Response(...) directly) - "
+        "see the view body for the real contract."
+    ),
+)
 class HealthCheckView(APIView):
     """GET /messaging/health/ — Returns system health status."""
     permission_classes = []
@@ -387,13 +529,22 @@ class HealthCheckView(APIView):
     def get(self, request: Request) -> Response:
         checks = {}
 
+        # Audit fix (Part 19): this view is intentionally permission_classes=[]
+        # (load balancers/orchestrators must be able to probe it without
+        # auth), which means every f"error: {exc}" below was handing raw
+        # exception text - potentially DB hostnames/ports, cache backend
+        # addresses, connection details - to any anonymous caller on the
+        # internet. Full detail still goes to the logs; the public response
+        # only ever says "ok" or "error".
+
         # DB check
         try:
             from django.db import connection
             connection.ensure_connection()
             checks["database"] = "ok"
         except Exception as exc:
-            checks["database"] = f"error: {exc}"
+            logger.error("HealthCheckView: database check failed: %s", exc)
+            checks["database"] = "error"
 
         # Redis / cache check
         try:
@@ -402,7 +553,8 @@ class HealthCheckView(APIView):
             val = cache.get("health_check")
             checks["cache"] = "ok" if val == "ok" else "error"
         except Exception as exc:
-            checks["cache"] = f"error: {exc}"
+            logger.error("HealthCheckView: cache check failed: %s", exc)
+            checks["cache"] = "error"
 
         # Elasticsearch check
         try:
@@ -413,7 +565,8 @@ class HealthCheckView(APIView):
             else:
                 checks["elasticsearch"] = "not configured"
         except Exception as exc:
-            checks["elasticsearch"] = f"error: {exc}"
+            logger.error("HealthCheckView: elasticsearch check failed: %s", exc)
+            checks["elasticsearch"] = "error"
 
         # Celery check
         try:
@@ -421,7 +574,8 @@ class HealthCheckView(APIView):
             inspector = current_app.control.inspect()
             active = inspector.active()
             checks["celery"] = "ok" if active else "no_workers"
-        except Exception:
+        except Exception as exc:
+            logger.debug("HealthCheckView: celery inspect failed: %s", exc)
             checks["celery"] = "not configured"
 
         all_ok = all(v in ("ok", "not configured", "no_workers") for v in checks.values())
@@ -435,6 +589,14 @@ class HealthCheckView(APIView):
 # MentionsView  — Messages where user was @mentioned
 # ---------------------------------------------------------------------------
 
+@extend_schema(
+    responses=OpenApiTypes.OBJECT,
+    description=(
+        "Schema generation note: this endpoint's response shape isn't "
+        "modeled with a serializer (builds its Response(...) directly) - "
+        "see the view body for the real contract."
+    ),
+)
 class MentionsView(APIView):
     """
     GET /messaging/mentions/?unread=1
@@ -447,10 +609,12 @@ class MentionsView(APIView):
         unread_only = request.query_params.get("unread") == "1"
         qs = ChatMention.objects.filter(
             mentioned_user=request.user
-        ).select_related("message", "chat", "mentioned_by").order_by("-created_at")[:50]
+        ).select_related("message", "chat", "mentioned_by")
 
         if unread_only:
             qs = qs.filter(is_read=False)
+
+        qs = qs.order_by("-created_at")[:50]
 
         results = [{
             "mention_id": str(m.id),

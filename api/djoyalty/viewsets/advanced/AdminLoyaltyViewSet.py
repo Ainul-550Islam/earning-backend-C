@@ -12,8 +12,9 @@ from ...services.advanced.LoyaltyFraudService import LoyaltyFraudService
 from ...services.tiers.TierEvaluationService import TierEvaluationService
 from ...permissions import IsLoyaltyAdmin
 from ...pagination import DjoyaltyPagePagination
+from ...mixins import DjoyaltyBaseViewSet
 
-class AdminLoyaltyViewSet(viewsets.ViewSet):
+class AdminLoyaltyViewSet(DjoyaltyBaseViewSet, viewsets.ViewSet):
     permission_classes = [IsAuthenticated, IsLoyaltyAdmin]
 
     @action(detail=False, methods=['get'])

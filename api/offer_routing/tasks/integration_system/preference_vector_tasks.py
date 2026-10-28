@@ -4,6 +4,7 @@ Preference Vector Tasks
 Periodic tasks for rebuilding user preference vectors
 in the offer routing system.
 """
+from django.db.models import Q
 
 import logging
 from typing import Dict, List, Any, Optional
@@ -122,8 +123,8 @@ class PreferenceVectorTask:
             cutoff_time = timezone.now() - timezone.timedelta(days=PREFERENCE_VECTOR_REBUILD_INTERVAL)
             
             users = User.objects.filter(
-                is_active=True,
-                Q(userpreferencevector__rebuilt_at__lt=cutoff_time) | Q(userpreferencevector__isnull=True)
+                Q(userpreferencevector__rebuilt_at__lt=cutoff_time) | Q(userpreferencevector__isnull=True),
+                is_active=True
             ).order_by('-last_login')[:100]  # Limit to 100 users per batch
             
             # Prioritize users with recent activity

@@ -7,11 +7,11 @@ from django.db.models import Count, Avg, Q, F
 from datetime import timedelta
 import logging
 
-from alerts.models.core import AlertRule, AlertLog, Notification
-from alerts.models.channel import AlertChannel
-from alerts.models.incident import Incident
-from alerts.models.reporting import MTTRMetric, MTTDMetric, SLABreach
-from alerts.tasks.reporting import calculate_mttr_metrics, calculate_mttd_metrics
+from api.alerts.models.core import AlertRule, AlertLog, Notification
+from api.alerts.models.channel import AlertChannel
+from api.alerts.models.incident import Incident
+from api.alerts.models.reporting import MTTRMetric, MTTDMetric, SLABreach
+from api.alerts.tasks.reporting import calculate_mttr_metrics, calculate_mttd_metrics
 
 logger = logging.getLogger(__name__)
 

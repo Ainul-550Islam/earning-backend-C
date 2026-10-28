@@ -54,7 +54,7 @@ def notify_campaign_participants_task(self, campaign_id: int):
         from ..models.campaigns import LoyaltyCampaign, CampaignParticipant
         campaign = LoyaltyCampaign.objects.get(id=campaign_id)
         count = CampaignParticipant.objects.filter(campaign=campaign, is_active=True).count()
-        logger.info('[djoyalty] Campaign %d started — %d participants to notify', campaign_id, count)
+        logger.info('[djoyalty] Campaign %d started -- %d participants to notify', campaign_id, count)
         return count
     except Exception as exc:
         logger.error('[djoyalty] notify_campaign_participants error: %s', exc)

@@ -30,7 +30,7 @@ class TrafficBlacklist(TimeStampedModel):
     )
 
     owner           = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                       related_name='blacklist_entries',
+                       related_name='pg_blacklist_entries',
                        help_text='Advertiser who owns this blacklist entry')
     block_type      = models.CharField(max_length=15, choices=BLOCK_TYPES)
     value           = models.CharField(max_length=500, db_index=True,
@@ -44,7 +44,7 @@ class TrafficBlacklist(TimeStampedModel):
 
     # Scope (null = applies to all their offers)
     offer           = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
-                       null=True, blank=True, related_name='blacklist_entries',
+                       null=True, blank=True, related_name='pg_blacklist_entries',
                        help_text='Specific offer to apply to (null = all offers)')
 
     class Meta:

@@ -4,6 +4,7 @@ Auth Bridge
 Cross-module permission system for integration system
 to provide unified authentication and authorization.
 """
+import secrets
 
 import logging
 from typing import Dict, List, Any, Optional, Union
@@ -53,8 +54,8 @@ class AuthBridge:
             'avg_auth_time_ms': 0.0
         }
     
-    def authenticate_integration(self, integration_id: str, auth_data: Dict[str, Any], 
-                              auth_type: IntegrationType) -> Dict[str, Any]:
+    def authenticate_integration(self, integration_id: str, auth_data: Dict[str, Any],
+                              auth_type=None) -> Dict[str, Any]:
         """
         Authenticate integration using specified authentication type.
         

@@ -16,6 +16,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from .notifier import send_websocket_event  # noqa: F401  (module-level so tests can patch it)
+
 logger = logging.getLogger(__name__)
 
 SYNC_DAYS_DEFAULT = 90
@@ -40,23 +42,40 @@ def sync_device_on_login(user_id: Any, device_token_id: Any) -> dict:
         .values_list("chat_id", flat=True)
     )
 
-    # Unread counts per chat
+    # Unread counts per chat.
+    # UserInbox.source_id is a generic polymorphic reference (it also backs
+    # BROADCAST/SUPPORT_REPLY/SYSTEM/REACTION/MENTION/... item types with
+    # source_id pointing at *those* objects, not a chat) - for CHAT_MESSAGE
+    # items specifically, source_id is a ChatMessage id, not a chat id. The
+    # previous version grouped by source_id and then looked results up by
+    # chat.id, which never matched, so every chat's unread_count was 0.
     from django.db.models import Count, Q
-    unread_by_chat = dict(
+    from ..choices import InboxItemType
+    from ..models import ChatMessage
+    unread_message_ids = list(
         UserInbox.objects.filter(
             user_id=user_id,
+            item_type=InboxItemType.CHAT_MESSAGE,
             is_read=False,
             is_archived=False,
-        ).values("source_id").annotate(c=Count("id")).values_list("source_id", "c")
+        ).values_list("source_id", flat=True)
+    )
+    unread_by_chat = dict(
+        ChatMessage.objects.filter(id__in=unread_message_ids)
+        .values("chat_id").annotate(c=Count("id")).values_list("chat_id", "c")
     )
 
-    # Total unread
-    total_unread = sum(unread_by_chat.values())
+    # Total unread across ALL inbox item types (matches the semantics of
+    # delivery_manager.get_total_unread(), which is also item-type-agnostic)
+    total_unread = UserInbox.objects.filter(
+        user_id=user_id, is_read=False, is_archived=False,
+    ).count()
 
     # Chat summaries (last message + participant count)
     chats_summary = []
     for chat in InternalChat.objects.filter(
-        id__in=chat_ids, status="ACTIVE"
+        Q(last_message_at__gte=cutoff) | Q(last_message_at__isnull=True),
+        id__in=chat_ids, status="ACTIVE",
     ).order_by("-last_message_at")[:50]:
         last_msg = chat.messages.filter(status__in=["SENT","DELIVERED","READ"]).order_by("-created_at").first()
         chats_summary.append({
@@ -107,6 +126,13 @@ def get_messages_for_sync(user_id: Any, chat_id: Any, since: str = None) -> list
         since_dt = parse_datetime(since)
         if since_dt:
             qs = qs.filter(created_at__gt=since_dt)
+        else:
+            # Unparseable `since` (e.g. a malformed client value) should
+            # fall back to the same bounded default as "no since given",
+            # not silently return the chat's entire unbounded history.
+            qs = qs.filter(
+                created_at__gte=timezone.now() - timedelta(days=SYNC_DAYS_DEFAULT)
+            )
     else:
         qs = qs.filter(
             created_at__gte=timezone.now() - timedelta(days=SYNC_DAYS_DEFAULT)
@@ -117,22 +143,37 @@ def get_messages_for_sync(user_id: Any, chat_id: Any, since: str = None) -> list
 
 def broadcast_to_all_user_devices(user_id: Any, event_type: str, data: dict) -> int:
     """
-    Send a WebSocket event to ALL connected devices of a user.
+    Send a WebSocket event to all of a user's connected devices/sockets.
     Used for cross-device sync (e.g., message read on one device → mark read on all).
-    Returns count of devices notified.
+    Returns an upper-bound count of devices notified (Channels' group_send
+    doesn't report per-socket delivery, so this is "active device tokens if
+    the send succeeded", same as before - just no longer silently wrong).
+
+    Bug fix (Part 6 audit): every one of a user's WS connections joins a
+    single shared group - consumers._user_devices_group(user_id), i.e.
+    "user_devices_{user_id}" with no per-device suffix - regardless of
+    which device it's on. This function previously appended each
+    DeviceToken's own pk to build a per-device group name and looped,
+    calling send_websocket_event once per token; since no consumer has
+    ever subscribed to a "user_devices_{user_id}_{token_pk}" group, every
+    call silently reached zero sockets while still reporting success. Fixed
+    to import the real group name from consumers.py (single source of
+    truth) and send once - Channels already fans a single group_send out
+    to every connected socket in that group, so looping per device both
+    targeted the wrong group *and* would have duplicated delivery to every
+    socket once the name was corrected.
     """
     from ..models import DeviceToken
-    from ..utils.notifier import send_websocket_event
+    from ..consumers import _user_devices_group
 
-    active_tokens = DeviceToken.objects.filter(user_id=user_id, is_active=True)
-    notified = 0
-    for token in active_tokens:
-        # Each device has its own WS group
-        group = f"user_devices_{user_id}_{token.pk}"
-        success = send_websocket_event(group_name=group, event_type=event_type, data=data)
-        if success:
-            notified += 1
-    return notified
+    active_token_count = DeviceToken.objects.filter(user_id=user_id, is_active=True).count()
+    if active_token_count == 0:
+        return 0
+
+    success = send_websocket_event(
+        group_name=_user_devices_group(user_id), event_type=event_type, data=data
+    )
+    return active_token_count if success else 0
 
 
 def get_aggregated_presence(user_id: Any) -> dict:

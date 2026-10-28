@@ -1,3 +1,4 @@
+from django.db import models
 import json
 import os
 from django.conf import settings
@@ -10,10 +11,10 @@ from collections import defaultdict
 import hashlib
 import logging
 from django.core.cache import cache
-from ..models import Translation, Language, TranslationKey, MissingTranslation
+from api.localization.models import Translation, Language, TranslationKey, MissingTranslation
 
-from ..models import (
-    Language, Translation, TranslationKey, 
+from api.localization.models import (
+    Language, Translation, TranslationKey,
     TranslationCache, MissingTranslation
 )
 
@@ -779,6 +780,39 @@ class LocalizationService:
         
         return 0.0
     
+
+    def get_language_for_request(self, request) -> 'Language | None':
+        """Detect the best language for a request from Accept-Language header."""
+        from api.localization.models import Language
+        accept = getattr(request, 'META', {}).get('HTTP_ACCEPT_LANGUAGE', '')
+        if not accept:
+            return Language.objects.filter(is_default=True).first()
+        for part in accept.split(','):
+            code = part.split(';')[0].strip().lower()
+            lang = Language.objects.filter(code__iexact=code, is_active=True).first()
+            if lang:
+                return lang
+            # try base code e.g. 'en' from 'en-US'
+            base = code.split('-')[0]
+            lang = Language.objects.filter(code__iexact=base, is_active=True).first()
+            if lang:
+                return lang
+        return Language.objects.filter(is_default=True).first()
+
+    def detect_language(self, text: str) -> str:
+        """Detect the language of a text string. Returns language code."""
+        try:
+            from lingua import Language, LanguageDetectorBuilder
+            detector = LanguageDetectorBuilder.from_all_languages().build()
+            result = detector.detect_language_of(text)
+            return result.iso_code_639_1.name.lower() if result else 'en'
+        except Exception:
+            try:
+                from langdetect import detect
+                return detect(text)
+            except Exception:
+                return 'en'
+
     def get_language_info(self, language_code: str) -> Dict[str, Any]:
         """
         Get detailed information about a language

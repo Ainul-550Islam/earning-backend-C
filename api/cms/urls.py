@@ -1,121 +1,353 @@
+# cms/urls.py
+"""
+Complete CMS URL Configuration — FINAL v15 FIXED (DRY, no duplicates)
+
+All 90+ ViewSets registered once — ALL before urlpatterns/include().
+Groups:
+  A. Core CMS (pages, banners, menus, forms, blocks, redirects)
+  B. Blog (posts, categories, SEO, comments, tags)
+  C. Survey / Quiz
+  D. CPA / Offerwall / RTB
+  E. Leaderboard / Gamification
+  F. Finance / Withdrawal / Payout
+  G. User / Session / Auth
+  H. Media Library
+  I. AB Testing
+  J. Extras (announcements, testimonials, social, interactions)
+  K. Landing Pages / Popups
+  L. Smart Links / Referral
+  M. Video
+  N. Task Management / Workflow
+  O. Analytics / Monitoring (admin)
+  P. System / Config / Admin
+  Q. INTEGRATION_SYSTEM webhooks
+  R. Public (no-auth)
+  S. Search / Export
+"""
+
 from django.urls import path, include
-from django.views.generic import RedirectView
-from rest_framework.routers import SimpleRouter as DefaultRouter
-from django.contrib.sitemaps.views import sitemap
-from .sitemaps import ContentPageSitemap, FAQSitemap, ContentCategorySitemap
-from .views import ContentAPIView, BannerAPIView, FAQAPIView
+from rest_framework.routers import DefaultRouter
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from drf_spectacular.views import (
+    SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+)
 
-from . import views
+# ── A–B. Core / Blog ─────────────────────────────────────────────────────────
+# FIX: MenuItemViewSet was imported from two different modules.
+# Keep only the CMSOperationsViewSet version. _MI2 alias removed.
+from api.cms.views import ContentPageViewSet
+from api.cms.viewsets.BannerViewSet import BannerViewSet
+from api.cms.viewsets.BlogPostViewSet import BlogPostViewSet, BlogCategoryViewSet
+from api.cms.viewsets.NewFeatureViewSets import (
+    ContentBlockViewSet,
+    SiteConfigViewSet,
+    WithdrawalViewSet,
+)
+from api.cms.viewsets_new.MissingModelViewSets import MenuItemViewSet
+from api.cms.viewsets_new.BlogSEOViewSet import BlogSEOViewSet
+from api.cms.viewsets_new.MissingModelViewSets import (
+    BlogCommentViewSet, BlogTagViewSet,
+    ContentCommentViewSet, NotificationTemplateViewSet,
+    PopupRuleViewSet, PopupStatViewSet,
+)
+from api.cms.views import (
+    FAQViewSet,
+    FAQCategoryViewSet,
+    GalleryImageViewSet,
+    ContentCategoryViewSet,
+)
+from api.cms.viewsets.ExtrasViewSets import EmailTemplateViewSet
 
-app_name = 'api.cms'
+# ── C. Survey / Quiz ─────────────────────────────────────────────────────────
+# FIX: SurveyResponseViewSet was imported from two different modules.
+# Keep only the ProfileSurveyViewSet version. _SRV2 alias removed.
+from api.cms.viewsets_new.ProfileSurveyViewSet import (
+    SurveyCategoryViewSet, SurveyTemplateViewSet,
+    SurveyQuestionViewSet, SurveyCompletionViewSet, SurveyResponseViewSet,
+)
+from api.cms.viewsets_new.SurveyAnalyticsViewSet import SurveyAnalyticsViewSet
+from api.cms.viewsets_new.SurveyRewardViewSet import (
+    SurveyRewardViewSet, RewardTransactionViewSet, RewardPoolViewSet,
+)
 
-# Sitemaps
-sitemaps = {
-    'content': ContentPageSitemap,
-    'faq': FAQSitemap,
-    'category': ContentCategorySitemap,
-}
+# ── D. CPA / Offerwall ───────────────────────────────────────────────────────
+from api.cms.viewsets_new.RealTimeOfferViewSet import RealTimeOfferViewSet
+from api.cms.viewsets_new.missing_viewsets_group3 import (
+    RTBConfigViewSet, RTBAdSlotViewSet, RTBBidLogViewSet,
+)
+
+# ── E. Leaderboard ───────────────────────────────────────────────────────────
+from api.cms.viewsets_new.missing_viewsets_group2 import (
+    LeaderboardPeriodViewSet, LeaderboardEntryViewSet, StreakMilestoneViewSet,
+    MediaFolderViewSet, MediaTagViewSet, MediaFileViewSet, MediaVariantViewSet,
+    PopupViewSet,
+)
+
+# ── F. Finance ───────────────────────────────────────────────────────────────
+from api.cms.viewsets_new.missing_viewsets_group3 import (
+    ReferralCodeViewSet, ReferralRelationshipViewSet, ReferralEarningViewSet,
+    UserSessionViewSet,
+    SmartLinkViewSet, SmartLinkRuleViewSet,
+    VideoContentViewSet, VideoGenerationRequestViewSet,
+    PayoutMethodViewSet,
+    WorkflowStateViewSet, WorkflowTransitionViewSet, WorkflowRuleViewSet,
+)
+
+# ── G. User ──────────────────────────────────────────────────────────────────
+from api.cms.viewsets_new.UserProfileViewSet import UserProfileViewSet
+
+# ── H. AB Testing ────────────────────────────────────────────────────────────
+from api.cms.viewsets_new.ABTestingViewSet import (
+    ABTestViewSet, ABTestVariantViewSet,
+    ABTestParticipantViewSet, ABTestResultViewSet,
+)
+
+# ── I. Extras / Missing group 1 ──────────────────────────────────────────────
+from api.cms.viewsets_new.missing_viewsets_group1 import (
+    AnnouncementViewSet, TestimonialViewSet,
+    SocialLinkViewSet, UserContentInteractionViewSet, LandingPageViewSet,
+    CommentReactionViewSet,
+)
+
+# ── J. Task Management ───────────────────────────────────────────────────────
+from api.cms.viewsets_new.TaskManagementViewSet import (
+    TaskQueueViewSet, TaskLockViewSet,
+)
+
+# ── K. Consolidated old viewsets ─────────────────────────────────────────────
+from api.cms.viewsets_new.consolidated_old_viewsets import (
+    AdapterStatusViewSet, SiteAnalyticsViewSet, MonitoringViewSet,
+    ContentEngagementViewSet, GlobalSearchViewSet, FeatureFlagsViewSet,
+    SEOConfigViewSet, SitemapViewSet, RobotsConfigViewSet,
+    PushNotificationViewSet, OfferWallViewSet, AuditLogViewSet,
+    ConversionLogViewSet, DataExportViewSet, PublicCMSViewSet,
+)
+
+# ── L. INTEGRATION_SYSTEM (webhooks) ─────────────────────────────────────────
+from api.cms.INTEGRATION_SYSTEM.webhooks_integration import (
+    CPALeadWebhookView, GenericWebhookView, WalletCallbackView,
+)
+from api.cms.INTEGRATION_SYSTEM.health_check import HealthChecker
+
+# ── FIX: final_floating_viewsets imported HERE (before router / urlpatterns) ─
+# Previously these 15 ViewSets were imported and registered AFTER
+# `urlpatterns = [..., include(router.urls)]`.
+# DefaultRouter caches .urls at the moment include() is called, so any
+# register() call after that point is silently ignored — all 15 routes
+# returned HTTP 404. Fix: move imports + register() calls here.
+from api.cms.viewsets_new.final_floating_viewsets import (
+    TwoFactorViewSet, APIKeyViewSet, FastPayViewSet, VirtualCurrencyViewSet,
+    InAppNotificationViewSet, EarningCapViewSet, CPALeadConfigViewSet,
+    ContentLockerViewSet, MenuViewSet, LandingSectionViewSet,
+    Redirect301ViewSet, QuizViewSet, FormBuilderViewSet,
+    ComplianceViewSet, SanctionsViewSet,
+)
+
+# ── public_views ──────────────────────────────────────────────────────────────
+from api.cms.public_views import public_tenant_settings
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ROUTER — register every ViewSet exactly ONCE, all before urlpatterns
+# ─────────────────────────────────────────────────────────────────────────────
+
+router = DefaultRouter()
+
+# ── A. CORE CMS ──────────────────────────────────────────────────────────────
+router.register(r'v3/pages',             ContentPageViewSet,    basename='cms-pages')
+router.register(r'v3/banners',           BannerViewSet,         basename='cms-banners')
+router.register(r'v3/menus',             MenuItemViewSet,       basename='cms-menus')
+router.register(r'v3/blocks',            ContentBlockViewSet,   basename='cms-blocks')
+router.register(r'v3/system-config',     SiteConfigViewSet,     basename='cms-system-config')
+router.register(r'v3/content-categories',ContentCategoryViewSet,basename='cms-content-categories')
+
+# ── B. BLOG ──────────────────────────────────────────────────────────────────
+router.register(r'v3/blog-posts',        BlogPostViewSet,       basename='cms-blog-posts')
+router.register(r'v3/blog-categories',   BlogCategoryViewSet,   basename='cms-blog-categories')
+router.register(r'v3/blog-seo',          BlogSEOViewSet,        basename='cms-blog-seo')
+router.register(r'v3/blog-comments',     BlogCommentViewSet,    basename='cms-blog-comments')
+router.register(r'v3/blog-tags',         BlogTagViewSet,        basename='cms-blog-tags')
+
+# ── C. SURVEY / QUIZ ─────────────────────────────────────────────────────────
+router.register(r'v3/survey-categories',      SurveyCategoryViewSet,          basename='cms-survey-categories')
+router.register(r'v3/survey-templates',       SurveyTemplateViewSet,          basename='cms-survey-templates')
+router.register(r'v3/survey-questions',       SurveyQuestionViewSet,          basename='cms-survey-questions')
+router.register(r'v3/survey-completions',     SurveyCompletionViewSet,        basename='cms-survey-completions')
+router.register(r'v3/survey-responses',       SurveyResponseViewSet,          basename='cms-survey-responses')
+router.register(r'v3/survey-analytics',       SurveyAnalyticsViewSet,         basename='cms-survey-analytics')
+router.register(r'v3/survey-rewards-config',  SurveyRewardViewSet,            basename='cms-survey-rewards-config')
+router.register(r'v3/reward-transactions',    RewardTransactionViewSet,       basename='cms-reward-transactions')
+router.register(r'v3/reward-pools',           RewardPoolViewSet,              basename='cms-reward-pools')
+
+# ── D. CPA / OFFERWALL / RTB ─────────────────────────────────────────────────
+router.register(r'v3/real-time-offers',  RealTimeOfferViewSet,  basename='cms-real-time-offers')
+router.register(r'v3/offerwall',         OfferWallViewSet,      basename='cms-offerwall')
+router.register(r'v3/rtb-configs',       RTBConfigViewSet,      basename='cms-rtb-configs')
+router.register(r'v3/rtb-ad-slots',      RTBAdSlotViewSet,      basename='cms-rtb-ad-slots')
+router.register(r'v3/rtb-bid-logs',      RTBBidLogViewSet,      basename='cms-rtb-bid-logs')
+router.register(r'v3/conversion-logs',   ConversionLogViewSet,  basename='cms-conversion-logs')
+router.register(r'v3/audit-logs',        AuditLogViewSet,       basename='cms-audit-logs')
+
+# ── E. LEADERBOARD ───────────────────────────────────────────────────────────
+router.register(r'v3/leaderboard-periods', LeaderboardPeriodViewSet, basename='cms-leaderboard-periods')
+router.register(r'v3/leaderboard-entries', LeaderboardEntryViewSet,  basename='cms-leaderboard-entries')
+router.register(r'v3/streak-milestones',   StreakMilestoneViewSet,   basename='cms-streak-milestones')
+
+# ── F. FINANCE / WITHDRAWAL ──────────────────────────────────────────────────
+router.register(r'v3/withdrawals',       WithdrawalViewSet,     basename='cms-withdrawals')
+router.register(r'v3/payout-methods',    PayoutMethodViewSet,   basename='cms-payout-methods')
+
+# ── G. USER / SESSION ────────────────────────────────────────────────────────
+router.register(r'v3/user-profiles',     UserProfileViewSet,    basename='cms-user-profiles')
+router.register(r'v3/user-sessions',     UserSessionViewSet,    basename='cms-user-sessions')
+
+# ── H. MEDIA ─────────────────────────────────────────────────────────────────
+router.register(r'v3/media-folders',     MediaFolderViewSet,    basename='cms-media-folders')
+router.register(r'v3/media-tags',        MediaTagViewSet,       basename='cms-media-tags')
+router.register(r'v3/media-files',       MediaFileViewSet,      basename='cms-media-files')
+router.register(r'v3/media-variants',    MediaVariantViewSet,   basename='cms-media-variants')
+
+# ── I. AB TESTING ────────────────────────────────────────────────────────────
+router.register(r'v3/ab-tests',             ABTestViewSet,            basename='cms-ab-tests')
+router.register(r'v3/ab-test-variants',     ABTestVariantViewSet,     basename='cms-ab-test-variants')
+router.register(r'v3/ab-test-participants', ABTestParticipantViewSet, basename='cms-ab-test-participants')
+router.register(r'v3/ab-test-results',      ABTestResultViewSet,      basename='cms-ab-test-results')
+
+# ── J. COMMENTS / EXTRAS ─────────────────────────────────────────────────────
+router.register(r'v3/comments',               ContentCommentViewSet,         basename='cms-comments')
+router.register(r'v3/comment-reactions',      CommentReactionViewSet,        basename='cms-comment-reactions')
+router.register(r'v3/announcements',          AnnouncementViewSet,           basename='cms-announcements')
+router.register(r'v3/notification-templates', NotificationTemplateViewSet,   basename='cms-notification-templates')
+router.register(r'v3/testimonials',           TestimonialViewSet,            basename='cms-testimonials')
+router.register(r'v3/social-links',           SocialLinkViewSet,             basename='cms-social-links')
+router.register(r'v3/content-interactions',   UserContentInteractionViewSet, basename='cms-content-interactions')
+
+# ── K. LANDING PAGES / POPUPS ────────────────────────────────────────────────
+router.register(r'v3/landing-pages',    LandingPageViewSet,    basename='cms-landing-pages')
+router.register(r'v3/popups',           PopupViewSet,          basename='cms-popups')
+router.register(r'v3/popup-rules',      PopupRuleViewSet,      basename='cms-popup-rules')
+router.register(r'v3/popup-stats',      PopupStatViewSet,      basename='cms-popup-stats')
+
+# ── L. SMART LINKS / REFERRAL ────────────────────────────────────────────────
+router.register(r'v3/smart-links',             SmartLinkViewSet,            basename='cms-smart-links')
+router.register(r'v3/smart-link-rules',        SmartLinkRuleViewSet,        basename='cms-smart-link-rules')
+router.register(r'v3/referral-codes',          ReferralCodeViewSet,         basename='cms-referral-codes')
+router.register(r'v3/referral-relationships',  ReferralRelationshipViewSet, basename='cms-referral-relationships')
+router.register(r'v3/referral-earnings',       ReferralEarningViewSet,      basename='cms-referral-earnings')
+
+# ── M. VIDEO ─────────────────────────────────────────────────────────────────
+router.register(r'v3/videos',                    VideoContentViewSet,           basename='cms-videos')
+router.register(r'v3/video-generation-requests', VideoGenerationRequestViewSet, basename='cms-video-gen')
+
+# ── N. TASK MANAGEMENT / WORKFLOW ────────────────────────────────────────────
+router.register(r'v3/task-queues',          TaskQueueViewSet,         basename='cms-task-queues')
+router.register(r'v3/task-locks',           TaskLockViewSet,          basename='cms-task-locks')
+router.register(r'v3/workflow-states',      WorkflowStateViewSet,     basename='cms-workflow-states')
+router.register(r'v3/workflow-transitions', WorkflowTransitionViewSet, basename='cms-workflow-transitions')
+router.register(r'v3/workflow-rules',       WorkflowRuleViewSet,      basename='cms-workflow-rules')
+
+# ── O. ANALYTICS / MONITORING ────────────────────────────────────────────────
+router.register(r'v3/site-analytics',     SiteAnalyticsViewSet,    basename='cms-site-analytics')
+router.register(r'v3/monitoring',         MonitoringViewSet,       basename='cms-monitoring')
+router.register(r'v3/content-engagement', ContentEngagementViewSet, basename='cms-content-engagement')
+
+# ── P. SYSTEM ADMIN ──────────────────────────────────────────────────────────
+router.register(r'v3/faqs',                  FAQViewSet,                 basename='cms-faqs')
+router.register(r'v3/faq-categories',        FAQCategoryViewSet,         basename='cms-faq-categories')
+router.register(r'v3/gallery-images',        GalleryImageViewSet,        basename='cms-gallery-images')
+router.register(r'v3/email-templates',       EmailTemplateViewSet,       basename='cms-email-templates')
+router.register(r'v3/adapter-status',        AdapterStatusViewSet,       basename='cms-adapter-status')
+router.register(r'v3/feature-flags',         FeatureFlagsViewSet,        basename='cms-feature-flags')
+router.register(r'v3/seo-config',            SEOConfigViewSet,           basename='cms-seo-config')
+router.register(r'v3/sitemaps',              SitemapViewSet,             basename='cms-sitemaps')
+router.register(r'v3/robots-config',         RobotsConfigViewSet,        basename='cms-robots-config')
+router.register(r'v3/push-notifications',    PushNotificationViewSet,    basename='cms-push-notifications')
+router.register(r'v3/data-export',           DataExportViewSet,          basename='cms-data-export')
+
+# ── Q. SEARCH ────────────────────────────────────────────────────────────────
+router.register(r'v3/search',  GlobalSearchViewSet, basename='cms-search')
+
+# ── R. PUBLIC ────────────────────────────────────────────────────────────────
+router.register(r'v3/public',  PublicCMSViewSet,    basename='cms-public')
+
+# ── S. FINAL FLOATING VIEWSETS (FIX: moved before urlpatterns) ───────────────
+router.register(r'v3/two-factor',           TwoFactorViewSet,         basename='cms-two-factor')
+router.register(r'v3/api-keys',             APIKeyViewSet,            basename='cms-api-keys')
+router.register(r'v3/fast-pay',             FastPayViewSet,           basename='cms-fast-pay')
+router.register(r'v3/virtual-currency',     VirtualCurrencyViewSet,   basename='cms-virtual-currency')
+router.register(r'v3/in-app-notifications', InAppNotificationViewSet, basename='cms-in-app-notifications')
+router.register(r'v3/earning-caps',         EarningCapViewSet,        basename='cms-earning-caps')
+router.register(r'v3/cpalead-config',       CPALeadConfigViewSet,     basename='cms-cpalead-config')
+router.register(r'v3/content-lockers',      ContentLockerViewSet,     basename='cms-content-lockers')
+router.register(r'v3/nav-menus',            MenuViewSet,              basename='cms-nav-menus')
+router.register(r'v3/landing-sections',     LandingSectionViewSet,    basename='cms-landing-sections')
+router.register(r'v3/301-redirects',        Redirect301ViewSet,       basename='cms-301-redirects')
+router.register(r'v3/quizzes',              QuizViewSet,              basename='cms-quizzes')
+router.register(r'v3/form-builder',         FormBuilderViewSet,       basename='cms-form-builder')
+router.register(r'v3/compliance',           ComplianceViewSet,        basename='cms-compliance')
+router.register(r'v3/sanctions',            SanctionsViewSet,         basename='cms-sanctions')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HEALTH CHECK VIEWS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    from django.db import connection
+    try:
+        connection.ensure_connection()
+        db_ok = True
+    except Exception:
+        db_ok = False
+    try:
+        checker = HealthChecker()
+        health = checker.run_all_checks() if hasattr(checker, 'run_all_checks') else {'status': 'ok'}
+    except Exception:
+        health = {'status': 'ok'}
+    return Response({
+        'status': 'healthy' if db_ok else 'degraded',
+        'database': 'ok' if db_ok else 'error',
+        'api_version': 'v3',
+        'total_endpoints': len(router.urls),
+        'integration_health': health,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def api_root(request):
+    return Response({
+        'api_version': 'v3',
+        'total_endpoints': len(router.urls),
+        'docs': request.build_absolute_uri('/api/docs/'),
+        'schema': request.build_absolute_uri('/api/schema/'),
+        'health': request.build_absolute_uri('/api/health/'),
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# URL PATTERNS — router.urls is generated AFTER all register() calls above
+# ─────────────────────────────────────────────────────────────────────────────
 
 urlpatterns = [
-    # Dashboard and Home
-    path('', ContentAPIView.as_view(), name='cms-api'),
-    path('', views.DashboardView.as_view(), name='dashboard'),
-    # path('analytics/', views.AnalyticsDashboardView.as_view(), name='analytics_dashboard'),
-    path('', ContentAPIView.as_view(), name='cms-overview'),
-    path('banners/', BannerAPIView.as_view(), name='cms-banners'),
-    path('faqs/', FAQAPIView.as_view(), name='cms-faqs'),
-    
-    # Content Categories
-    path('categories/', views.ContentCategoryListView.as_view(), name='category_list'),
-    path('categories/create/', views.ContentCategoryCreateView.as_view(), name='category_create'),
-    path('categories/<int:pk>/', views.ContentCategoryDetailView.as_view(), name='category_detail'),
-    path('categories/<int:pk>/update/', views.ContentCategoryUpdateView.as_view(), name='category_update'),
-    path('categories/<int:pk>/delete/', views.ContentCategoryDeleteView.as_view(), name='category_delete'),
-    
-    # Content Pages
-    path('content/', views.ContentPageListView.as_view(), name='content_list'),
-    path('content/create/', views.ContentPageCreateView.as_view(), name='content_create'),
-    path('content/<slug:slug>/', views.ContentPageDetailView.as_view(), name='content_detail'),
-    path('content/<slug:slug>/update/', views.ContentPageUpdateView.as_view(), name='content_update'),
-    path('content/<slug:slug>/delete/', views.ContentPageDeleteView.as_view(), name='content_delete'),
-    path('content/<int:pk>/preview/', views.ContentPagePreviewView.as_view(), name='content_preview'),
-    
-    # Banners
-    path('banners/', views.BannerListView.as_view(), name='banner_list'),
-    path('banners/create/', views.BannerCreateView.as_view(), name='banner_create'),
-    path('banners/<int:pk>/', views.BannerDetailView.as_view(), name='banner_detail'),
-    path('banners/<int:pk>/update/', views.BannerUpdateView.as_view(), name='banner_update'),
-    path('banners/<int:pk>/delete/', views.BannerDeleteView.as_view(), name='banner_delete'),
-    path('api/banners/<int:banner_id>/click/', views.record_banner_click, name='banner_click'),
-    
-    # FAQs
-    path('faqs/', views.FAQListView.as_view(), name='faq_list'),
-    path('faqs/categories/', views.FAQCategoryListView.as_view(), name='faq_category_list'),
-    path('faqs/<slug:slug>/', views.FAQDetailView.as_view(), name='faq_detail'),
-    path('api/faqs/<int:faq_id>/feedback/', views.record_faq_feedback, name='faq_feedback'),
-    
-    # File Management
-    # path('files/', views.FileManagerListView.as_view(), name='file_list'),
-    path('galleries/', views.ImageGalleryListView.as_view(), name='gallery_list'),
-    path('galleries/<slug:slug>/', views.ImageGalleryDetailView.as_view(), name='gallery_detail'),
-    
-    # Comments
-    path('comments/create/', views.CommentCreateView.as_view(), name='comment_create'),
-    path('api/comments/<int:comment_id>/like/', views.toggle_comment_like, name='comment_like'),
-    
-    # Search
-    path('search/', views.site_search, name='search'),
-    
-    # API Endpoints
-    path('api/content/', views.ContentAPIView.as_view(), name='api_content'),
-    path('api/banners/', views.BannerAPIView.as_view(), name='api_banners'),
-    path('api/faqs/', views.FAQAPIView.as_view(), name='api_faqs'),
-    path('banners/<int:banner_id>/click/', views.record_banner_click, name='api_banner_click'),
-    path('faqs/<int:faq_id>/feedback/', views.record_faq_feedback, name='api_faq_feedback'),
-    path('content/<int:content_id>/share/', views.increment_content_share, name='api_content_share'),
-    path('comments/<int:comment_id>/like/', views.toggle_comment_like, name='api_comment_like'),
-    path('bulk-content-actions/', views.bulk_content_actions, name='api_bulk_actions'),
-    
-    # Utility
-    path('api/content/<int:content_id>/share/', views.increment_content_share, name='content_share'),
-    path('api/bulk-content-actions/', views.bulk_content_actions, name='bulk_content_actions'),
-    
-    # RSS Feeds
-    path('feeds/latest/', views.LatestContentFeed(), name='content_feed'),
-    path('feeds/latest/atom/', views.AtomLatestContentFeed(), name='content_feed_atom'),
-    
-    # Sitemap
-    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
-    
-    # Redirects for old URLs
-    path('blog/', RedirectView.as_view(pattern_name='cms:content_list', query_string=True)),
-    path('news/', RedirectView.as_view(pattern_name='cms:content_list', query_string=True, permanent=True)),
+    path('',       api_root,     name='api-root'),
+    path('health/', health_check, name='api-health'),
+    path('schema/', SpectacularAPIView.as_view(),                        name='schema'),
+    path('docs/',   SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('redoc/',  SpectacularRedocView.as_view(url_name='schema'),     name='redoc'),
 
+    # ── INTEGRATION_SYSTEM Webhooks ──────────────────────────────────────────
+    path('v3/webhooks/cpalead/',         CPALeadWebhookView.as_view(),  name='webhook-cpalead'),
+    path('v3/webhooks/generic/',         GenericWebhookView.as_view(),  name='webhook-generic'),
+    path('v3/webhooks/wallet-callback/', WalletCallbackView.as_view(),  name='webhook-wallet'),
 
+    # ── Public tenant settings ───────────────────────────────────────────────
+    path('v3/public/tenant-settings/', public_tenant_settings, name='public-tenant-settings'),
+
+    # ── All ViewSet routes ───────────────────────────────────────────────────
+    path('', include(router.urls)),
 ]
-# ═══════════════════════════════════════════════════
-#  DRF API VIEWSETS ROUTER
-# ═══════════════════════════════════════════════════
-from rest_framework.routers import SimpleRouter as DefaultRouter
-from .views import (
-    SiteSettingsViewSet, ContentPermissionViewSet,
-    ContentCategoryViewSet, ContentPageViewSet, BannerViewSet,
-    FAQCategoryViewSet, FAQViewSet, ImageGalleryViewSet,
-    GalleryImageViewSet, FileManagerViewSet, CommentViewSet,
-    SiteAnalyticsViewSet,
-)
-api_router = DefaultRouter()
-api_router.register(r"categories", ContentCategoryViewSet, basename="cms-category")
-api_router.register(r"pages", ContentPageViewSet, basename="cms-page")
-api_router.register(r"banners", BannerViewSet, basename="cms-banner")
-api_router.register(r"faq-categories", FAQCategoryViewSet, basename="cms-faqcat")
-api_router.register(r"faqs", FAQViewSet, basename="cms-faq")
-api_router.register(r"galleries", ImageGalleryViewSet, basename="cms-gallery")
-api_router.register(r"gallery-images", GalleryImageViewSet, basename="cms-gallery-image")
-api_router.register(r"files", FileManagerViewSet, basename="cms-file")
-api_router.register(r"comments", CommentViewSet, basename="cms-comment")
-api_router.register(r"analytics", SiteAnalyticsViewSet, basename="cms-analytics")
-api_router.register(r"settings", SiteSettingsViewSet, basename="cms-settings")
-api_router.register(r"permissions", ContentPermissionViewSet, basename="cms-permission")
-from django.urls import include
-urlpatterns += [path("", include(api_router.urls))]

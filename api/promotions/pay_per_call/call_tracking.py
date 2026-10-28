@@ -160,9 +160,6 @@ def create_tracking_number_view(request):
         min_duration_seconds=int(request.data.get('min_duration_seconds', 60)),
     )
     return Response(result, status=status.HTTP_201_CREATED)
-
-
-@api_view(['POST'])
 @permission_classes([AllowAny])
 def call_webhook_view(request):
     """Webhook from Twilio/Nexmo when call completes."""

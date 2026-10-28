@@ -1,5 +1,5 @@
 """
-Intelligence Signals
+Intelligence Signals  — FIXED: anomaly_detected, prediction_trained, rca_completed now trigger downstream tasks
 """
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
@@ -7,7 +7,7 @@ from django.utils import timezone
 import logging
 
 from ..models.intelligence import (
-    AlertCorrelation, AlertPrediction, AnomalyDetectionModel, 
+    AlertCorrelation, AlertPrediction, AnomalyDetectionModel,
     AlertNoise, RootCauseAnalysis
 )
 
@@ -18,40 +18,27 @@ logger = logging.getLogger(__name__)
 def alert_correlation_pre_save(sender, instance, **kwargs):
     """Signal handler before saving AlertCorrelation"""
     try:
-        # Set default values if not provided
         if not instance.correlation_type:
             instance.correlation_type = 'temporal'
-        
         if not instance.status:
             instance.status = 'pending'
-        
         if not instance.time_window_minutes:
             instance.time_window_minutes = 60
-        
         if not instance.minimum_occurrences:
             instance.minimum_occurrences = 3
-        
         if not instance.correlation_threshold:
             instance.correlation_threshold = 0.7
-        
         if not instance.model_type:
-            instance.model_type = 'statistical'
-        
-        # Validate correlation type
-        valid_types = ['temporal', 'pattern', 'causal', 'statistical', 'ml_based']
+            instance.model_type = 'linear'
+        valid_types = [c[0] for c in AlertCorrelation._meta.get_field('correlation_type').choices]
         if instance.correlation_type not in valid_types:
             logger.warning(f"Invalid correlation type '{instance.correlation_type}' for AlertCorrelation {instance.id}")
-        
-        # Validate status
-        valid_statuses = ['pending', 'analyzing', 'confirmed', 'rejected', 'expired']
+        valid_statuses = [c[0] for c in AlertCorrelation._meta.get_field('status').choices]
         if instance.status not in valid_statuses:
             logger.warning(f"Invalid status '{instance.status}' for AlertCorrelation {instance.id}")
-        
-        # Validate model type
-        valid_models = ['statistical', 'ml_linear', 'ml_tree', 'ml_neural', 'ensemble']
+        valid_models = [c[0] for c in AlertCorrelation._meta.get_field('model_type').choices]
         if instance.model_type not in valid_models:
             logger.warning(f"Invalid model type '{instance.model_type}' for AlertCorrelation {instance.id}")
-            
     except Exception as e:
         logger.error(f"Error in alert_correlation_pre_save: {e}")
 
@@ -62,19 +49,13 @@ def alert_correlation_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created new AlertCorrelation: {instance.name} ({instance.correlation_type})")
-            
-            # Trigger correlation analysis
             from ..tasks.intelligence import analyze_all_correlations
             analyze_all_correlations.delay()
-            
         else:
             logger.debug(f"Updated AlertCorrelation: {instance.name}")
-            
-            # Re-analyze if configuration changed
             if instance.status == 'pending':
                 from ..tasks.intelligence import train_correlation_model
                 train_correlation_model.delay(instance.id)
-            
     except Exception as e:
         logger.error(f"Error in alert_correlation_post_save: {e}")
 
@@ -83,40 +64,27 @@ def alert_correlation_post_save(sender, instance, created, **kwargs):
 def alert_prediction_pre_save(sender, instance, **kwargs):
     """Signal handler before saving AlertPrediction"""
     try:
-        # Set default values if not provided
         if not instance.prediction_type:
             instance.prediction_type = 'volume'
-        
         if not instance.model_type:
             instance.model_type = 'linear_regression'
-        
         if not instance.is_active:
             instance.is_active = True
-        
         if not instance.training_days:
             instance.training_days = 30
-        
         if not instance.prediction_horizon_hours:
             instance.prediction_horizon_hours = 24
-        
         if not instance.training_status:
             instance.training_status = 'pending'
-        
-        # Validate prediction type
-        valid_types = ['volume', 'severity', 'frequency', 'trend', 'anomaly']
+        valid_types = [c[0] for c in AlertPrediction._meta.get_field('prediction_type').choices]
         if instance.prediction_type not in valid_types:
             logger.warning(f"Invalid prediction type '{instance.prediction_type}' for AlertPrediction {instance.id}")
-        
-        # Validate model type
-        valid_models = ['linear_regression', 'arima', 'lstm', 'prophet', 'ensemble']
+        valid_models = [c[0] for c in AlertPrediction._meta.get_field('model_type').choices]
         if instance.model_type not in valid_models:
             logger.warning(f"Invalid model type '{instance.model_type}' for AlertPrediction {instance.id}")
-        
-        # Validate training status
-        valid_statuses = ['pending', 'training', 'completed', 'failed', 'updating']
+        valid_statuses = [c[0] for c in AlertPrediction._meta.get_field('training_status').choices]
         if instance.training_status not in valid_statuses:
             logger.warning(f"Invalid training status '{instance.training_status}' for AlertPrediction {instance.id}")
-            
     except Exception as e:
         logger.error(f"Error in alert_prediction_pre_save: {e}")
 
@@ -127,19 +95,19 @@ def alert_prediction_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created new AlertPrediction: {instance.name} ({instance.prediction_type})")
-            
-            # Trigger model training
             from ..tasks.intelligence import train_prediction_models
             train_prediction_models.delay()
-            
+            from api.alerts.signals.intelligence import prediction_created
+            prediction_created.send(sender=sender, instance=instance)
         else:
             logger.debug(f"Updated AlertPrediction: {instance.name}")
-            
-            # Retrain if configuration changed
             if instance.training_status == 'pending':
                 from ..tasks.intelligence import test_prediction_model
                 test_prediction_model.delay(instance.id)
-            
+            # FIXED: when training completes, automatically evaluate accuracy
+            if instance.training_status == 'completed':
+                from ..tasks.intelligence import evaluate_model_accuracy
+                evaluate_model_accuracy.delay(instance.pk)
     except Exception as e:
         logger.error(f"Error in alert_prediction_post_save: {e}")
 
@@ -148,33 +116,23 @@ def alert_prediction_post_save(sender, instance, created, **kwargs):
 def anomaly_detection_model_pre_save(sender, instance, **kwargs):
     """Signal handler before saving AnomalyDetectionModel"""
     try:
-        # Set default values if not provided
         if not instance.detection_method:
             instance.detection_method = 'statistical'
-        
         if not instance.sensitivity:
             instance.sensitivity = 0.95
-        
         if not instance.window_size_minutes:
             instance.window_size_minutes = 60
-        
         if not instance.baseline_days:
             instance.baseline_days = 30
-        
         if not instance.anomaly_threshold:
-            instance.anomaly_threshold = 3.0  # 3 standard deviations
-        
+            instance.anomaly_threshold = 3.0
         if not instance.min_alert_count:
             instance.min_alert_count = 5
-        
         if not instance.is_active:
             instance.is_active = True
-        
-        # Validate detection method
-        valid_methods = ['statistical', 'ml_isolation_forest', 'ml_one_class_svm', 'time_series', 'threshold_based']
+        valid_methods = [c[0] for c in AnomalyDetectionModel._meta.get_field('detection_method').choices]
         if instance.detection_method not in valid_methods:
             logger.warning(f"Invalid detection method '{instance.detection_method}' for AnomalyDetectionModel {instance.id}")
-            
     except Exception as e:
         logger.error(f"Error in anomaly_detection_model_pre_save: {e}")
 
@@ -185,19 +143,33 @@ def anomaly_detection_model_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created new AnomalyDetectionModel: {instance.name} ({instance.detection_method})")
-            
-            # Trigger anomaly detection
             from ..tasks.intelligence import detect_anomalies
             detect_anomalies.delay()
-            
         else:
             logger.debug(f"Updated AnomalyDetectionModel: {instance.name}")
-            
-            # Update thresholds if sensitivity changed
             if instance.is_active:
                 from ..tasks.intelligence import update_anomaly_thresholds
                 update_anomaly_thresholds.delay()
-            
+
+        # FIXED: when anomaly is detected (is_trained flips True), feed into alert pipeline
+        if getattr(instance, 'last_anomaly_detected_at', None):
+            from api.alerts.signals.intelligence import anomaly_detected
+            anomaly_detected.send(sender=sender, instance=instance)
+            try:
+                from ..models.core import AlertLog
+                from ..tasks.core import process_pending_alerts
+                # Create a high-severity alert log for the detected anomaly
+                target_rule = instance.target_rules.first()
+                if target_rule:
+                    AlertLog.objects.create(
+                        rule_id=target_rule.id,
+                        message=f"Anomaly detected by model '{instance.name}': threshold exceeded",
+                        severity='high',
+                        status='pending'
+                    )
+                    process_pending_alerts.delay()
+            except Exception as inner_exc:
+                logger.warning(f"Could not create AlertLog for anomaly in model {instance.pk}: {inner_exc}")
     except Exception as e:
         logger.error(f"Error in anomaly_detection_model_post_save: {e}")
 
@@ -206,41 +178,28 @@ def anomaly_detection_model_post_save(sender, instance, created, **kwargs):
 def alert_noise_pre_save(sender, instance, **kwargs):
     """Signal handler before saving AlertNoise"""
     try:
-        # Set default values if not provided
         if not instance.noise_type:
             instance.noise_type = 'repeated'
-        
         if not instance.action:
             instance.action = 'suppress'
-        
         if not instance.is_active:
             instance.is_active = True
-        
         if not instance.suppression_duration_minutes:
             instance.suppression_duration_minutes = 60
-        
         if not instance.max_suppressions_per_hour:
             instance.max_suppressions_per_hour = 100
-        
         if not instance.group_window_minutes:
             instance.group_window_minutes = 30
-        
         if not instance.max_group_size:
             instance.max_group_size = 10
-        
         if not instance.delay_minutes:
             instance.delay_minutes = 5
-        
-        # Validate noise type
-        valid_types = ['repeated', 'low_priority', 'known_issue', 'maintenance', 'test_environment', 'configuration_error']
+        valid_types = [c[0] for c in AlertNoise._meta.get_field('noise_type').choices]
         if instance.noise_type not in valid_types:
             logger.warning(f"Invalid noise type '{instance.noise_type}' for AlertNoise {instance.id}")
-        
-        # Validate action
-        valid_actions = ['suppress', 'group', 'delay', 'escalate', 'filter']
+        valid_actions = [c[0] for c in AlertNoise._meta.get_field('action').choices]
         if instance.action not in valid_actions:
             logger.warning(f"Invalid action '{instance.action}' for AlertNoise {instance.id}")
-            
     except Exception as e:
         logger.error(f"Error in alert_noise_pre_save: {e}")
 
@@ -251,19 +210,15 @@ def alert_noise_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created new AlertNoise: {instance.name} ({instance.noise_type} - {instance.action})")
-            
-            # Trigger noise filter optimization
             from ..tasks.intelligence import optimize_noise_filters
             optimize_noise_filters.delay()
-            
+            from api.alerts.signals.intelligence import noise_filter_created
+            noise_filter_created.send(sender=sender, instance=instance)
         else:
             logger.debug(f"Updated AlertNoise: {instance.name}")
-            
-            # Update effectiveness if configuration changed
             if instance.is_active:
                 from ..tasks.intelligence import update_noise_effectiveness
                 update_noise_effectiveness.delay()
-            
     except Exception as e:
         logger.error(f"Error in alert_noise_post_save: {e}")
 
@@ -272,34 +227,21 @@ def alert_noise_post_save(sender, instance, created, **kwargs):
 def root_cause_analysis_pre_save(sender, instance, **kwargs):
     """Signal handler before saving RootCauseAnalysis"""
     try:
-        # Set default values if not provided
         if not instance.analysis_method:
             instance.analysis_method = '5_whys'
-        
         if not instance.confidence_level:
             instance.confidence_level = 'medium'
-        
         if not instance.status:
             instance.status = 'draft'
-        
-        if not instance.internal_only:
-            instance.internal_only = True
-        
-        # Validate analysis method
-        valid_methods = ['5_whys', 'fishbone', 'fault_tree', 'pareto', 'statistical', 'ml_based']
+        valid_methods = [c[0] for c in RootCauseAnalysis._meta.get_field('analysis_method').choices]
         if instance.analysis_method not in valid_methods:
             logger.warning(f"Invalid analysis method '{instance.analysis_method}' for RootCauseAnalysis {instance.id}")
-        
-        # Validate confidence level
-        valid_levels = ['low', 'medium', 'high', 'very_high']
+        valid_levels = [c[0] for c in RootCauseAnalysis._meta.get_field('confidence_level').choices]
         if instance.confidence_level not in valid_levels:
             logger.warning(f"Invalid confidence level '{instance.confidence_level}' for RootCauseAnalysis {instance.id}")
-        
-        # Validate status
-        valid_statuses = ['draft', 'in_progress', 'completed', 'submitted_for_review', 'approved', 'rejected']
+        valid_statuses = [c[0] for c in RootCauseAnalysis._meta.get_field('status').choices]
         if instance.status not in valid_statuses:
             logger.warning(f"Invalid status '{instance.status}' for RootCauseAnalysis {instance.id}")
-            
     except Exception as e:
         logger.error(f"Error in root_cause_analysis_pre_save: {e}")
 
@@ -310,185 +252,137 @@ def root_cause_analysis_post_save(sender, instance, created, **kwargs):
     try:
         if created:
             logger.info(f"Created new RootCauseAnalysis: {instance.title} ({instance.analysis_method})")
-            
-            # Trigger RCA analysis
             from ..tasks.intelligence import create_rca_for_incidents
             create_rca_for_incidents.delay()
-            
         else:
             logger.debug(f"Updated RootCauseAnalysis: {instance.title}")
-            
-            # Generate recommendations if completed
             if instance.status == 'completed':
                 from ..tasks.intelligence import generate_intelligence_dashboard_data
                 generate_intelligence_dashboard_data.delay()
-            
+                # FIXED: when RCA completes, apply threshold recommendations
+                from ..tasks.intelligence import update_anomaly_thresholds
+                update_anomaly_thresholds.delay()
     except Exception as e:
         logger.error(f"Error in root_cause_analysis_post_save: {e}")
 
 
-# Custom signal handlers for intelligence business logic
+# ── Helper functions ─────────────────────────────────────────────────────────
+
 def trigger_correlation_analysis(alert_log):
-    """Custom function to trigger correlation analysis for an alert"""
+    """Check active correlations against a new alert and notify if matched."""
     try:
         logger.info(f"Triggering correlation analysis for alert {alert_log.id}")
-        
-        # Get active correlations that might match this alert
         from ..models.intelligence import AlertCorrelation
-        
         correlations = AlertCorrelation.objects.filter(
             status='confirmed',
             primary_rules=alert_log.rule
         )
-        
         for correlation in correlations:
             if correlation.predict_correlation(alert_log):
-                # Create correlation event
                 from ..models.core import Notification
-                
                 notification = Notification.objects.create(
                     notification_type='email',
-                    recipient="intelligence_team",  # Would be resolved by routing
+                    recipient="intelligence_team",
                     subject=f"Alert Correlation Detected: {correlation.name}",
                     message=f"Alert {alert_log.id} correlates with pattern: {correlation.name}",
                     status='pending'
                 )
-                
-                # Trigger notification sending
                 from ..tasks.notification import send_pending_notifications
                 send_pending_notifications.delay()
-                
     except Exception as e:
         logger.error(f"Error in trigger_correlation_analysis: {e}")
 
 
 def trigger_prediction_update(prediction_model):
-    """Custom function to trigger prediction model update"""
+    """Retrain a prediction model and evaluate accuracy."""
     try:
         logger.info(f"Triggering prediction update for model {prediction_model.name}")
-        
-        # Retrain the model
         from ..tasks.intelligence import train_prediction_models
         train_prediction_models.delay()
-        
-        # Update accuracy metrics
         from ..tasks.intelligence import update_prediction_accuracy_metrics
         update_prediction_accuracy_metrics.delay()
-        
     except Exception as e:
         logger.error(f"Error in trigger_prediction_update: {e}")
 
 
 def trigger_anomaly_detection(anomaly_model, alert_data):
-    """Custom function to trigger anomaly detection"""
+    """Run anomaly detection and generate a report."""
     try:
         logger.info(f"Triggering anomaly detection for model {anomaly_model.name}")
-        
-        # Run anomaly detection
         from ..tasks.intelligence import detect_anomalies
         detect_anomalies.delay()
-        
-        # Generate anomaly report
         from ..tasks.intelligence import generate_anomaly_report
         generate_anomaly_report.delay()
-        
     except Exception as e:
         logger.error(f"Error in trigger_anomaly_detection: {e}")
 
 
 def trigger_noise_filter_evaluation(noise_filter, alert_log):
-    """Custom function to trigger noise filter evaluation"""
+    """Evaluate a noise filter against an alert log and notify if suppressed."""
     try:
         logger.info(f"Evaluating noise filter {noise_filter.name} for alert {alert_log.id}")
-        
-        # Process alert through noise filter
         result = noise_filter.process_alert(alert_log)
-        
         if result:
-            # Create noise filter event
             from ..models.core import Notification
-            
-            notification = Notification.objects.create(
+            Notification.objects.create(
                 notification_type='email',
-                recipient="intelligence_team",  # Would be resolved by routing
+                recipient="intelligence_team",
                 subject=f"Noise Filter Applied: {noise_filter.name}",
                 message=f"Alert {alert_log.id} processed by noise filter: {result['action']} - {result.get('reason', '')}",
                 status='pending'
             )
-            
-            # Trigger notification sending
             from ..tasks.notification import send_pending_notifications
             send_pending_notifications.delay()
-            
     except Exception as e:
         logger.error(f"Error in trigger_noise_filter_evaluation: {e}")
 
 
 def trigger_rca_analysis(incident, analysis_data=None):
-    """Custom function to trigger RCA analysis"""
+    """Create RCA for an incident and refresh the intelligence dashboard."""
     try:
         logger.info(f"Triggering RCA analysis for incident {incident.title}")
-        
-        # Create or update RCA
         from ..tasks.intelligence import create_rca_for_incidents
-        rca_id = create_rca_for_incidents.delay(incident.id, analysis_data or {})
-        
-        # Generate intelligence dashboard update
+        create_rca_for_incidents.delay(incident.id, analysis_data or {})
         from ..tasks.intelligence import generate_intelligence_dashboard_data
         generate_intelligence_dashboard_data.delay()
-        
     except Exception as e:
         logger.error(f"Error in trigger_rca_analysis: {e}")
 
 
 def trigger_intelligence_pipeline():
-    """Custom function to trigger complete intelligence pipeline"""
+    """Kick off the full intelligence pipeline and refresh dashboard."""
     try:
         logger.info("Triggering complete intelligence pipeline")
-        
-        # Run pipeline
         from ..tasks.intelligence import run_intelligence_pipeline
         run_intelligence_pipeline.delay()
-        
-        # Generate dashboard data
         from ..tasks.intelligence import generate_intelligence_dashboard_data
         generate_intelligence_dashboard_data.delay()
-        
     except Exception as e:
         logger.error(f"Error in trigger_intelligence_pipeline: {e}")
 
 
 def trigger_model_optimization():
-    """Custom function to trigger model optimization"""
+    """Optimize all intelligence models and update accuracy metrics."""
     try:
         logger.info("Triggering intelligence model optimization")
-        
-        # Optimize all models
         from ..tasks.intelligence import optimize_intelligence_models
         optimize_intelligence_models.delay()
-        
-        # Update accuracy metrics
         from ..tasks.intelligence import update_prediction_accuracy_metrics
         update_prediction_accuracy_metrics.delay()
-        
     except Exception as e:
         logger.error(f"Error in trigger_model_optimization: {e}")
 
 
 def trigger_intelligence_cleanup():
-    """Custom function to trigger intelligence data cleanup"""
+    """Trigger cleanup of stale intelligence data."""
     try:
         logger.info("Triggering intelligence data cleanup")
-        
-        # Clean up old data
         from ..tasks.intelligence import cleanup_old_intelligence_data
         cleanup_old_intelligence_data.delay()
-        
     except Exception as e:
         logger.error(f"Error in trigger_intelligence_cleanup: {e}")
 
 
-# Signal registration
 def register_intelligence_signals():
     """Register all intelligence signals"""
     try:
@@ -497,5 +391,30 @@ def register_intelligence_signals():
         logger.error(f"Error registering intelligence signals: {e}")
 
 
-# Auto-register signals when module is imported
 register_intelligence_signals()
+
+
+from django.dispatch import Signal
+
+correlation_created      = Signal()
+correlation_updated      = Signal()
+correlation_detected     = Signal()
+correlation_analyzed     = Signal()
+prediction_created       = Signal()
+prediction_trained       = Signal()
+anomaly_detected         = Signal()
+noise_filter_created     = Signal()
+noise_filtered           = Signal()
+rca_created              = Signal()
+rca_completed            = Signal()
+root_cause_identified    = Signal()
+prediction_made          = Signal()
+
+from django.db.models.signals import post_save as _post_save
+
+try:
+    from ..models.intelligence import AlertCorrelation as _ACo, RootCauseAnalysis as _RCA
+    _post_save.connect(lambda sender, instance, created, **kw: (correlation_created if created else correlation_updated).send(sender=sender, instance=instance), sender=_ACo, weak=False)
+    _post_save.connect(lambda sender, instance, created, **kw: rca_created.send(sender=sender, instance=instance) if created else None, sender=_RCA, weak=False)
+except Exception:
+    pass

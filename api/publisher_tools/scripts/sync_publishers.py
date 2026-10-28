@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def sync_publisher_revenue_totals():
     """সব publishers-এর revenue totals recalculate করে।"""
-    from api.publisher_tools.models import Publisher, PublisherEarning
+    from publisher_tools.models import Publisher, PublisherEarning
     publishers = Publisher.objects.filter(status="active")
     updated = 0
     errors  = 0
@@ -37,7 +37,7 @@ def sync_publisher_revenue_totals():
 
 def sync_publisher_status_consistency():
     """Publisher status ও inventory status consistency check করে।"""
-    from api.publisher_tools.models import Publisher, Site, App, AdUnit
+    from publisher_tools.models import Publisher, Site, App, AdUnit
     issues = []
     for pub in Publisher.objects.filter(status="suspended"):
         active_sites = Site.objects.filter(publisher=pub, status="active").count()
@@ -59,7 +59,7 @@ def sync_publisher_status_consistency():
 
 def sync_publisher_payout_schedules():
     """Payout schedule next_payout_date update করে।"""
-    from api.publisher_tools.publisher_management.publisher_payout import PayoutSchedule
+    from publisher_tools.publisher_management.publisher_payout import PayoutSchedule
     schedules = PayoutSchedule.objects.filter(is_automatic=True, is_paused=False)
     updated = 0
     for schedule in schedules:

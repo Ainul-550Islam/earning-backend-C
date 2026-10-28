@@ -1,7 +1,7 @@
 import logging
 from django.core.cache import cache
 from django.utils import timezone
-from ...models import OfferPoolEntry, OfferCapTracker
+from api.smartlink.models import OfferPoolEntry, OfferCapTracker
 from ...choices import CapPeriod
 from ...constants import CAP_BUFFER_PERCENT
 
@@ -71,7 +71,7 @@ class CapTrackerService:
         Reset all daily cap counters. Called at midnight UTC.
         Clears Redis keys and resets DB OfferCapTracker records.
         """
-        from ...models import OfferPoolEntry
+        from api.smartlink.models import OfferPoolEntry
         today = timezone.now().date()
 
         entries = OfferPoolEntry.objects.filter(

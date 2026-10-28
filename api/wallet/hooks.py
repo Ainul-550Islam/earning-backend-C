@@ -41,7 +41,7 @@ class WalletHookRegistry:
         """Register a post-hook for an operation."""
         def decorator(func: Callable) -> Callable:
             self._after.setdefault(operation, []).append(func)
-            logger.debug(f"Hook registered: after:{operation} -> {func.__name__}")
+            logger.debug(f"Hook registered: after:{operation} → {func.__name__}")
             return func
         return decorator
 

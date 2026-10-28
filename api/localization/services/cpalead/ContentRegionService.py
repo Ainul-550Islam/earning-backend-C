@@ -103,7 +103,7 @@ class ContentRegionService:
 
         # Check DB first
         try:
-            from ...models.region import ContentRegion
+            from api.localization.models.region import ContentRegion
             region_obj = ContentRegion.objects.filter(
                 country_codes__contains=[country_upper]
             ).select_related('default_language', 'default_currency').first()
@@ -187,7 +187,7 @@ class ContentRegionService:
     def get_gdpr_consent_text(self, country_code: str, language_code: str = 'en') -> str:
         """GDPR consent text for country"""
         try:
-            from ...models.core import Translation
+            from api.localization.models.core import Translation
             key = 'gdpr.consent_text'
             trans = Translation.objects.filter(
                 key__key=key, language__code=language_code, is_approved=True
@@ -225,7 +225,7 @@ class ContentRegionService:
             return cached
         result = []
         try:
-            from ...models.region import ContentRegion
+            from api.localization.models.region import ContentRegion
             for region in ContentRegion.objects.filter(is_active=True).order_by('name'):
                 result.append({
                     'name': region.name, 'slug': region.slug,

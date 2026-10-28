@@ -1,7 +1,8 @@
 """
-Security Middleware - Production Ready
-Enhanced security middleware with defensive coding and graceful degradation
-Version: 5.0.0 - Fixed Bulletproof Edition
+Enhanced Security Middleware - Production Ready
+Comprehensive security middleware with defensive coding and graceful degradation
+Supports all new security models and services
+Version: 6.0.0 - Complete Security Edition
 """
 
 import logging
@@ -49,10 +50,48 @@ from django.utils.deprecation import MiddlewareMixin
 from django.core.cache import cache
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.contrib.auth import get_user_model
+from django.db import transaction
+
+# Import new security models and services
+from .models import (
+    DeviceInfo, SecurityLog, UserBan, IPBlacklist, 
+    ThreatIntelligence, SecurityIncident, TrustedDevice, 
+    PasswordHistory, SecurityPolicy, SecurityInsight
+)
+from .utils import (
+    safe_getattr, safe_dict_get, NullSafe, TypeValidator
+)
+from django.contrib.auth import get_user_model
 from django.db import transaction, connection
 from django.db.models import Q
+from .integration_system.circuit_breaker import CircuitBreaker
 
 # Graceful imports with fallbacks
+try:
+    from .models import (
+        SecurityLog, DeviceInfo, IPBlacklist, GeolocationLog,
+        APIRateLimit, RateLimitLog, UserSession, ThreatIntelligence,
+        SecurityIncident, TrustedDevice, PasswordHistory,
+        SecurityPolicy, SecurityInsight
+    )
+    MODELS_AVAILABLE = True
+except ImportError as e:
+    logger = logging.getLogger('security.middleware')
+    logger.warning(f"Security models import failed: {e}")
+    MODELS_AVAILABLE = False
+
+# Import security services
+try:
+    from .services import (
+        TrustedDeviceService, PasswordHistoryService, SecurityPolicyService,
+        SecurityInsightService, ThreatIntelService, IncidentService
+    )
+    SERVICES_AVAILABLE = True
+except ImportError as e:
+    logger = logging.getLogger('security.middleware')
+    logger.warning(f"Security services import failed: {e}")
+    SERVICES_AVAILABLE = False
+
 try:
     from .models import (
         SecurityLog, DeviceInfo, IPBlacklist, GeolocationLog,
@@ -66,7 +105,7 @@ except ImportError as e:
     
     # Create dummy classes for fallback
     class SecurityLog:
-        @classmethod
+        @staticmethod
         def objects(cls):
             return cls
         @classmethod
@@ -76,6 +115,91 @@ except ImportError as e:
         def filter(cls, **kwargs):
             return cls()
         @classmethod
+        def get(cls, **kwargs):
+            return None
+        @classmethod
+        def create(cls, **kwargs):
+            return cls()
+        @classmethod
+        def filter(cls, **kwargs):
+            return cls.none()
+    
+    class DeviceInfo:
+        @staticmethod
+        def objects():
+            return None
+        @classmethod
+        def create(cls, **kwargs):
+            logger.debug(f"Dummy DeviceInfo.create: {kwargs}")
+        @classmethod
+        def filter(cls, **kwargs):
+            return cls.none()
+    
+    class TrustedDevice:
+        @staticmethod
+        def objects():
+            return None
+        @classmethod
+        def create(cls, **kwargs):
+            logger.debug(f"Dummy TrustedDevice.create: {kwargs}")
+        @classmethod
+        def filter(cls, **kwargs):
+            return cls.none()
+    
+    class PasswordHistory:
+        @staticmethod
+        def objects():
+            return None
+        @classmethod
+        def create(cls, **kwargs):
+            logger.debug(f"Dummy PasswordHistory.create: {kwargs}")
+        @classmethod
+        def filter(cls, **kwargs):
+            return cls.none()
+    
+    class SecurityPolicy:
+        @staticmethod
+        def objects():
+            return None
+        @classmethod
+        def create(cls, **kwargs):
+            logger.debug(f"Dummy SecurityPolicy.create: {kwargs}")
+        @classmethod
+        def filter(cls, **kwargs):
+            return cls.none()
+    
+    class SecurityInsight:
+        @staticmethod
+        def objects():
+            return None
+        @classmethod
+        def create(cls, **kwargs):
+            logger.debug(f"Dummy SecurityInsight.create: {kwargs}")
+        @classmethod
+        def filter(cls, **kwargs):
+            return cls.none()
+    
+    class ThreatIntelligence:
+        @staticmethod
+        def objects():
+            return None
+        @classmethod
+        def create(cls, **kwargs):
+            logger.debug(f"Dummy ThreatIntelligence.create: {kwargs}")
+        @classmethod
+        def filter(cls, **kwargs):
+            return cls.none()
+    
+    class SecurityIncident:
+        @staticmethod
+        def objects():
+            return None
+        @classmethod
+        def create(cls, **kwargs):
+            logger.debug(f"Dummy SecurityIncident.create: {kwargs}")
+        @classmethod
+        def filter(cls, **kwargs):
+            return cls.none()
         def exists(cls):
             return False
     
@@ -211,71 +335,6 @@ class SecurityHeaders:
             'Permissions-Policy': self.permissions_policy,
             'Content-Security-Policy': self.content_security_policy,
         }
-
-
-# ==================== UTILITY CLASSES ====================
-class CircuitBreaker:
-    """Circuit breaker pattern for external service calls"""
-    
-    def __init__(self, failure_threshold: int = 5, reset_timeout: int = 60):
-        self.failure_threshold = failure_threshold
-        self.reset_timeout = reset_timeout
-        self.failures = 0
-        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
-        self.last_failure_time = None
-        
-    def __call__(self, func: Callable) -> Callable:
-        """Decorator for circuit breaker pattern"""
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            current_state = self.state
-            
-            # Check if circuit is OPEN
-            if current_state == "OPEN":
-                if self.last_failure_time:
-                    time_since_failure = (timezone.now() - self.last_failure_time).total_seconds()
-                    if time_since_failure > self.reset_timeout:
-                        # Try to reset
-                        self.state = "HALF_OPEN"
-                        logger.info("Circuit breaker moving to HALF_OPEN state")
-                    else:
-                        # Still in cooldown period
-                        logger.warning(f"Circuit breaker OPEN, blocking call to {func.__name__}")
-                        raise ConnectionError("Service temporarily unavailable (circuit breaker open)")
-            
-            try:
-                # Try the operation
-                result = func(*args, **kwargs)
-                
-                # Success: reset circuit if needed
-                if current_state == "HALF_OPEN":
-                    self.state = "CLOSED"
-                    self.failures = 0
-                    logger.info("Circuit breaker reset to CLOSED after successful call")
-                
-                return result
-                
-            except Exception as e:
-                # Failure: update circuit state
-                self.failures += 1
-                self.last_failure_time = timezone.now()
-                
-                if self.failures >= self.failure_threshold:
-                    self.state = "OPEN"
-                    logger.error(f"Circuit breaker OPEN after {self.failures} failures: {e}")
-                
-                # Re-raise the original exception
-                raise
-        
-        return wrapper
-    
-    def wrap_method(self, obj, method_name: str):
-        """Wrap a method of an object with circuit breaker"""
-        original_method = getattr(obj, method_name)
-        wrapped_method = self(original_method)
-        setattr(obj, method_name, wrapped_method)
-        return obj
-
 
 class DeepGet:
     """Utility for safe nested dictionary/object access"""
@@ -1570,14 +1629,14 @@ class SecurityAuditMiddleware(MiddlewareMixin):
         if success:
             if circuit.state == "HALF_OPEN":
                 circuit.state = "CLOSED"
-                circuit.failures = 0
+                circuit.failure_count = 0
         else:
-            circuit.failures += 1
+            circuit.failure_count += 1
             circuit.last_failure_time = timezone.now()
             
-            if circuit.failures >= circuit.failure_threshold:
+            if circuit.failure_count >= circuit.failure_threshold:
                 circuit.state = "OPEN"
-                logger.error(f"Logging circuit breaker OPEN after {circuit.failures} failures")
+                logger.error(f"Logging circuit breaker OPEN after {circuit.failure_count} failures")
     
     def log_security_event(self, request: HttpRequest, response: HttpResponse, 
                           request_data: Dict) -> None:

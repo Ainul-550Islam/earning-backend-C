@@ -211,7 +211,7 @@ class HoneypotLogAdmin(admin.ModelAdmin):
 # FINANCE
 # ══════════════════════════════════════════════════════
 
-@admin.register(WithdrawalRequest)
+# @admin.register(WithdrawalRequest)  # Moved to wallet app
 class WithdrawalRequestAdmin(admin.ModelAdmin):
     list_display  = ['reference_no', 'user', 'amount', 'fee', 'net_amount', 'status', 'created_at']
     list_filter   = ['status', 'currency']

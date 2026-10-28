@@ -10,10 +10,14 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from ..services.core import DispatchService
+import logging
+
+from ..services.core.DispatchService import DispatchService
 from ..models import WebhookSubscription
 
 User = get_user_model()
+
+logger = logging.getLogger("ainul.webhooks.signals")
 
 
 # Signal definitions
@@ -22,6 +26,9 @@ wallet_balance_updated = Signal()
 wallet_transaction_failed = Signal()
 
 
+from ._isolation import isolated_receiver
+
+@isolated_receiver
 def on_wallet_transaction_created(sender, instance, created, **kwargs):
     """
     Signal handler for wallet transaction creation.
@@ -44,7 +51,7 @@ def on_wallet_transaction_created(sender, instance, created, **kwargs):
         'description': instance.description or '',
         'status': instance.status,
         'created_at': instance.created_at.isoformat(),
-        'metadata': instance.metadata or {}
+        'metadata': getattr(instance, 'metadata', None) or {}
     }
     
     # Send webhook notifications
@@ -59,11 +66,11 @@ def on_wallet_transaction_created(sender, instance, created, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -77,9 +84,10 @@ def on_wallet_transaction_created(sender, instance, created, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending wallet transaction webhook: {e}")
+            logger.error("sending wallet transaction webhook: %s", e)
 
 
+@isolated_receiver
 def on_wallet_balance_updated(sender, instance, **kwargs):
     """
     Signal handler for wallet balance updates.
@@ -89,12 +97,12 @@ def on_wallet_balance_updated(sender, instance, **kwargs):
     payload = {
         'wallet_id': str(instance.id),
         'user_id': instance.user.id,
-        'current_balance': str(instance.balance),
+        'current_balance': str(instance.current_balance),
         'currency': instance.currency,
         'last_updated': instance.updated_at.isoformat() if instance.updated_at else None,
         'available_balance': str(instance.available_balance),
         'frozen_balance': str(instance.frozen_balance),
-        'metadata': instance.metadata or {}
+        'metadata': getattr(instance, 'metadata', None) or {}
     }
     
     # Send webhook notifications
@@ -109,11 +117,11 @@ def on_wallet_balance_updated(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -127,9 +135,10 @@ def on_wallet_balance_updated(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending wallet balance webhook: {e}")
+            logger.error("sending wallet balance webhook: %s", e)
 
 
+@isolated_receiver
 def on_wallet_transaction_failed(sender, instance, **kwargs):
     """
     Signal handler for failed wallet transactions.
@@ -154,7 +163,7 @@ def on_wallet_transaction_failed(sender, instance, **kwargs):
         'failure_reason': instance.failure_reason or '',
         'error_code': instance.error_code or '',
         'failed_at': instance.updated_at.isoformat() if instance.updated_at else None,
-        'metadata': instance.metadata or {}
+        'metadata': getattr(instance, 'metadata', None) or {}
     }
     
     # Send webhook notifications
@@ -169,11 +178,11 @@ def on_wallet_transaction_failed(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -187,20 +196,20 @@ def on_wallet_transaction_failed(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending wallet transaction failed webhook: {e}")
+            logger.error("sending wallet transaction failed webhook: %s", e)
 
 
 # Connect signal handlers
 # Note: These would be connected in the apps.py ready() method
 # Example:
-# from apps.wallets.models import WalletTransaction, Wallet
+# from api.wallet.models import WalletTransaction, Wallet
 # post_save.connect(on_wallet_transaction_created, sender=WalletTransaction)
 # post_save.connect(on_wallet_balance_updated, sender=Wallet)
 
 # For demonstration, we'll define the connection function
 def connect_wallet_signals():
     """Connect wallet-related signals to their handlers."""
-    from apps.wallets.models import WalletTransaction, Wallet
+    from api.wallet.models import WalletTransaction, Wallet
     
     try:
         post_save.connect(on_wallet_transaction_created, sender=WalletTransaction)
@@ -209,26 +218,26 @@ def connect_wallet_signals():
         # For failed transactions, we need to check status in the handler
         post_save.connect(on_wallet_transaction_failed, sender=WalletTransaction)
         
-        print("Wallet signals connected successfully")
+        logger.info("[Webhooks] %s", "Wallet signals connected successfully")
     except ImportError:
         # Wallet app not available
-        print("Wallet app not available, skipping signal connections")
+        logger.warning("Wallet app not available, skipping signal connections")
     except Exception as e:
-        print(f"Error connecting wallet signals: {e}")
+        logger.error("connecting wallet signals: %s", e)
 
 
 def disconnect_wallet_signals():
     """Disconnect wallet-related signals."""
-    from apps.wallets.models import WalletTransaction, Wallet
+    from api.wallet.models import WalletTransaction, Wallet
     
     try:
         post_save.disconnect(on_wallet_transaction_created, sender=WalletTransaction)
         post_save.disconnect(on_wallet_balance_updated, sender=Wallet)
         post_save.disconnect(on_wallet_transaction_failed, sender=WalletTransaction)
         
-        print("Wallet signals disconnected successfully")
+        logger.info("[Webhooks] %s", "Wallet signals disconnected successfully")
     except ImportError:
         # Wallet app not available
-        print("Wallet app not available, skipping signal disconnection")
+        logger.warning("Wallet app not available, skipping signal disconnection")
     except Exception as e:
-        print(f"Error disconnecting wallet signals: {e}")
+        logger.error("disconnecting wallet signals: %s", e)

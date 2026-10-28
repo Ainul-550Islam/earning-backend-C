@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from ..models import PreLander
-from ..serializers.PreLanderSerializer import PreLanderSerializer
-from ..permissions import IsPublisher
+from api.smartlink.models import PreLander
+from api.smartlink.serializers.PreLanderSerializer import PreLanderSerializer
+from api.smartlink.permissions import IsPublisher
 
 
 class PreLanderViewSet(viewsets.ModelViewSet):

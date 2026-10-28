@@ -8,6 +8,7 @@ import json
 from typing import Dict, Any, Optional, List
 from django.template import Template, Context
 from django.utils import timezone
+from ...exceptions import WebhookTemplateError
 
 logger = logging.getLogger(__name__)
 

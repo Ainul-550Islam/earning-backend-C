@@ -15,7 +15,7 @@ class ICUMessageEngine:
     """
 
     def __init__(self):
-        from ...utils.icu import ICUMessageFormatter
+        from api.localization.utils.icu import ICUMessageFormatter
         self._formatter = ICUMessageFormatter()
 
     def format(self, template: str, values: Dict[str, Any], locale: str = 'en') -> str:
@@ -40,7 +40,7 @@ class ICUMessageEngine:
     def validate(self, template: str) -> Dict:
         """Template validate করে — syntax errors, missing 'other' form, etc."""
         try:
-            from ...utils.icu import validate_icu_template
+            from api.localization.utils.icu import validate_icu_template
             return validate_icu_template(template)
         except Exception as e:
             logger.error(f"ICU validate failed: {e}")
@@ -49,7 +49,7 @@ class ICUMessageEngine:
     def is_icu(self, text: str) -> bool:
         """Text ICU format কিনা detect করে"""
         try:
-            from ...utils.icu import is_icu_format
+            from api.localization.utils.icu import is_icu_format
             return is_icu_format(text)
         except Exception:
             return False
@@ -57,7 +57,7 @@ class ICUMessageEngine:
     def extract_variables(self, template: str) -> List[str]:
         """Template থেকে variable names extract করে"""
         try:
-            from ...utils.icu import extract_icu_variables
+            from api.localization.utils.icu import extract_icu_variables
             return extract_icu_variables(template)
         except Exception:
             return []
@@ -76,7 +76,7 @@ class ICUMessageEngine:
           → (Bengali) "আপনার {count, plural, one {# টি আইটেম} other {# টি আইটেম}} আছে"
         """
         try:
-            from ...utils.icu import ICUMessageFormatter, is_icu_format
+            from api.localization.utils.icu import ICUMessageFormatter, is_icu_format
             from .TranslationEngine import TranslationEngine
 
             if not is_icu_format(source_template):
@@ -154,7 +154,7 @@ class ICUMessageEngine:
     def get_plural_forms(self, locale: str) -> Dict:
         """Locale-র plural forms info"""
         try:
-            from ...utils.plural import get_cldr_info
+            from api.localization.utils.plural import get_cldr_info
             return get_cldr_info(locale)
         except Exception as e:
             logger.error(f"Get plural forms failed: {e}")
@@ -167,7 +167,7 @@ class ICUMessageEngine:
         format_plural(5, "item", "items", "en") → "5 items"
         """
         try:
-            from ...utils.plural import get_plural_form
+            from api.localization.utils.plural import get_plural_form
             form = get_plural_form(count, locale)
             text = singular if form == 'one' else plural
             return f"{count} {text}"

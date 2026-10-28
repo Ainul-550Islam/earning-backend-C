@@ -21,7 +21,7 @@ def get_peak_hours() -> List[Dict]:
 
 
 def get_optimal_schedule(publisher, ad_unit) -> Dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.db.models import Avg
     from django.utils import timezone
     from datetime import timedelta
@@ -42,7 +42,7 @@ def get_optimal_schedule(publisher, ad_unit) -> Dict:
 
 
 def get_day_of_week_analysis(publisher, days: int = 28) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.db.models import Sum, Avg
     from django.utils import timezone
     from datetime import timedelta

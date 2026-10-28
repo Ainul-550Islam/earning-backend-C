@@ -4,6 +4,8 @@ Cache Warmup Tasks
 Periodic tasks for pre-warming routing cache
 for active users and popular offers.
 """
+from django.db.models import Count
+from django.db.models import Q
 
 import logging
 from typing import Dict, List, Any, Optional

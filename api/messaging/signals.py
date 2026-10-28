@@ -121,3 +121,15 @@ link_previews_fetched = Signal()
 # Fired after voice message is transcribed.
 # kwargs: transcription (VoiceMessageTranscription)
 voice_message_transcribed = Signal()
+
+
+# ── Part 20 (world-system audit: interactive bot components) ───────────────
+
+# Fired after a BotInteraction (button click / select-menu pick) is
+# recorded. Deliberately its own signal rather than reusing
+# bot_response_sent above - BotInteraction has a resulting_message field,
+# not sent_message, and on_bot_response_sent's receiver reads
+# bot_response.sent_message_id directly, so sending a BotInteraction
+# through that signal would AttributeError inside the receiver.
+# kwargs: interaction (BotInteraction)
+bot_interaction_processed = Signal()

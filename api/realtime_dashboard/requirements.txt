@@ -1,0 +1,23 @@
+# Core Django stack
+django>=4.2,<5.0
+djangorestframework>=3.14.0
+django-filter>=23.0               # DjangoFilterBackend for list endpoint filtering
+drf-spectacular>=0.27.0           # OpenAPI 3 schema — in INSTALLED_APPS, app won't boot without it
+
+# WebSocket / async support
+channels>=4.0.0
+channels-redis>=4.1.0          # Production channel layer (Redis-backed)
+daphne>=4.0.0                  # ASGI server (required by channels)
+asgiref>=3.7.0                 # async_to_sync / database_sync_to_async
+
+# Async tasks & observability
+celery>=5.3.0                  # @shared_task in tasks.py (the Celery app itself lives in the parent project)
+sentry-sdk>=1.40.0             # apps.py init_sentry() — no-ops cleanly if SENTRY_DSN is unset
+
+# Testing
+pytest>=7.4.0
+pytest-django>=4.7.0
+pytest-asyncio>=0.21.0
+
+# Optional but recommended for production
+redis>=4.6.0                   # Python Redis client used by channels-redis

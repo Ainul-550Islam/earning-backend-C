@@ -1,5 +1,5 @@
 from django.contrib import admin
-from ..models import TargetingRule, GeoTargeting, DeviceTargeting, OSTargeting, BrowserTargeting, TimeTargeting, ISPTargeting, LanguageTargeting
+from api.smartlink.models import TargetingRule, GeoTargeting, DeviceTargeting, OSTargeting, BrowserTargeting, TimeTargeting, ISPTargeting, LanguageTargeting
 
 
 @admin.register(TargetingRule)

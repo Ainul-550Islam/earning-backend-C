@@ -160,3 +160,74 @@ class WebhookValidationError(ValidationError):
     
     def __str__(self):
         return f"Webhook Validation Error: {self.message}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DRF CUSTOM EXCEPTION HANDLER
+# ─────────────────────────────────────────────────────────────────────────────
+
+def webhook_exception_handler(exc, context):
+    """
+    Custom DRF exception handler — returns a consistent JSON error envelope:
+
+        {
+            "success": false,
+            "error": {
+                "code":    "not_found",
+                "message": "No WebhookEndpoint matches the given query.",
+                "detail":  { ... }   # present only for validation errors
+            }
+        }
+
+    Wire it up in settings.py:
+        REST_FRAMEWORK = {
+            'EXCEPTION_HANDLER': 'api.webhooks.exceptions.webhook_exception_handler',
+        }
+    """
+    import logging
+    from rest_framework.views import exception_handler
+    from rest_framework.response import Response
+    from rest_framework import status as drf_status
+
+    logger = logging.getLogger("ainul.webhooks.exceptions")
+
+    # Let DRF build the base response first
+    response = exception_handler(exc, context)
+
+    if response is None:
+        # Unhandled exception → 500
+        logger.exception("Unhandled exception in webhook API: %s", exc)
+        return Response(
+            {
+                "success": False,
+                "error": {
+                    "code":    "internal_error",
+                    "message": "An unexpected error occurred. Please try again.",
+                },
+            },
+            status=drf_status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    # Normalise the error shape
+    original_data = response.data
+    code = getattr(exc, "default_code", "error")
+
+    if isinstance(original_data, dict) and "detail" in original_data:
+        message = str(original_data["detail"])
+        detail  = None
+    elif isinstance(original_data, list):
+        message = str(original_data[0]) if original_data else "Validation error."
+        detail  = original_data
+    elif isinstance(original_data, dict):
+        # Validation error: field → [errors]
+        message = "Validation failed."
+        detail  = original_data
+    else:
+        message = str(original_data)
+        detail  = None
+
+    error_body = {"code": code, "message": message}
+    if detail is not None:
+        error_body["detail"] = detail
+
+    response.data = {"success": False, "error": error_body}
+    return response

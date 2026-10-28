@@ -114,13 +114,11 @@ class MilestoneBonus:
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def milestone_progress_view(request):
     bonus = MilestoneBonus()
     return Response(bonus.get_milestone_progress(request.user.id))
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def check_milestones_view(request):
     bonus = MilestoneBonus()

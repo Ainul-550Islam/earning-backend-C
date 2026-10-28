@@ -3,11 +3,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from ..models import Click
-from ..serializers.ClickSerializer import ClickSerializer
-from ..filters import ClickFilter
-from ..pagination import SmartLinkCursorPagination
-from ..permissions import IsPublisher
+from api.smartlink.models import Click
+from api.smartlink.serializers.ClickSerializer import ClickSerializer
+from api.smartlink.filters import ClickFilter
+from api.smartlink.pagination import SmartLinkCursorPagination
+from api.smartlink.permissions import IsPublisher
 
 
 class ClickViewSet(viewsets.ReadOnlyModelViewSet):

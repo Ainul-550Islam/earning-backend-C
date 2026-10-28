@@ -3,6 +3,8 @@ Security Views with Defensive Coding
 Author: System Security Team
 Version: 2.0.0
 """
+from django.core.exceptions import ValidationError as DjangoValidationError
+import time
 
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
@@ -42,6 +44,10 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from django.contrib.auth import get_user_model
+from .exceptions import SecurityException
+from .decorators import RateLimitExceeded, SuspiciousActivityDetected
+import json
+
 def get_hours_default():
     return list(range(0, 24))
 
@@ -70,24 +76,6 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 # Custom exceptions for defensive coding
-class SecurityException(Exception):
-    """Base security exception"""
-    pass
-
-class RateLimitExceeded(SecurityException):
-    """Rate limit exceeded exception"""
-    pass
-
-class SuspiciousActivityDetected(SecurityException):
-    """Suspicious activity detected"""
-    pass
-
-class ValidationFailed(SecurityException):
-    """Validation failed exception"""
-    pass
-
-# ==================== DEFENSIVE DECORATORS ====================
-
 def handle_gracefully(default_response=None):
     """
     Graceful degradation decorator
@@ -1068,301 +1056,6 @@ class RiskScoreView(BaseAPIView):
         return recommendations
 
 # ==================== SECURITY DASHBOARD VIEWS ====================
-
-class SecurityDashboardView(BaseAPIView):
-    """Security dashboard views"""
-    
-    permission_classes = [IsAdminUser]
-    
-    @method_decorator(rate_limit(limit_type='user', requests_per_minute=10))
-    def get(self, request):
-        """Get security dashboard data"""
-        try:
-            # Get time range (default: last 7 days)
-            days = int(request.GET.get('days', 7))
-            start_date = timezone.now() - timedelta(days=days)
-            
-            # Generate dashboard data
-            dashboard_data = self._generate_dashboard_data(start_date)
-            
-            # Get real-time alerts
-            alerts = self._get_recent_alerts()
-            
-            # Get top threats
-            top_threats = self._get_top_threats(start_date)
-            
-            # Get risk distribution
-            risk_distribution = self._get_risk_distribution()
-            
-            return Response({
-                'success': True,
-                'dashboard': dashboard_data,
-                'alerts': alerts,
-                'top_threats': top_threats,
-                'risk_distribution': risk_distribution,
-                'last_updated': timezone.now().isoformat()
-            })
-            
-        except Exception as e:
-            logging.error(f"Error generating dashboard: {str(e)}")
-            return Response({
-                'error': 'Failed to generate dashboard',
-                'code': 'DASHBOARD_ERROR'
-            }, status=500)
-    
-    def _generate_dashboard_data(self, start_date):
-        """Generate comprehensive dashboard data"""
-        data = {
-            'overview': self._get_overview_stats(start_date),
-            'threats_timeline': self._get_threats_timeline(start_date),
-            'geographic_data': self._get_geographic_data(start_date),
-            'device_analytics': self._get_device_analytics(start_date),
-            'user_behavior': self._get_user_behavior(start_date)
-        }
-        return data
-    
-    def _get_overview_stats(self, start_date):
-        """Get overview statistics"""
-        stats = {}
-        
-        try:
-            # Total threats
-            stats['total_threats'] = SecurityLog.objects.filter(
-                created_at__gte=start_date
-            ).count()
-            
-            # Blocked threats
-            stats['blocked_threats'] = SecurityLog.objects.filter(
-                created_at__gte=start_date,
-                action_taken__icontains='block'
-            ).count()
-            
-            # Active users with high risk
-            stats['high_risk_users'] = RiskScore.objects.filter(
-                current_score__gte=60,
-                calculated_at__gte=timezone.now() - timedelta(days=1)
-            ).count()
-            
-            # Suspicious devices
-            stats['suspicious_devices'] = DeviceInfo.objects.filter(
-                is_suspicious=True,
-                last_activity__gte=timezone.now() - timedelta(days=7)
-            ).count()
-            
-            # Banned users
-            stats['banned_users'] = UserBan.objects.filter(
-                banned_at__gte=start_date
-            ).count()
-            
-        except Exception as e:
-            logging.error(f"Error getting overview stats: {str(e)}")
-        
-        return stats
-    
-    def _get_threats_timeline(self, start_date):
-        """Get threats timeline data"""
-        timeline = []
-        
-        try:
-            # Group by day
-            threat_data = SecurityLog.objects.filter(
-                created_at__gte=start_date
-            ).annotate(
-                date=TruncDate('created_at')
-            ).values('date', 'severity').annotate(
-                count=Count('id')
-            ).order_by('date')
-            
-            # Format for chart
-            for entry in threat_data:
-                timeline.append({
-                    'date': entry['date'].isoformat(),
-                    'severity': entry['severity'],
-                    'count': entry['count']
-                })
-                
-        except Exception as e:
-            logging.error(f"Error getting threats timeline: {str(e)}")
-        
-        return timeline
-    
-    def _get_geographic_data(self, start_date):
-        """Get geographic threat data"""
-        geographic = []
-        
-        try:
-            # Get threats by country
-            geo_data = GeolocationLog.objects.filter(
-                security_logs__created_at__gte=start_date
-            ).values(
-                'country_code', 'country_name'
-            ).annotate(
-                threat_count=Count('security_logs'),
-                high_severity=Count('security_logs', filter=Q(security_logs__severity__in=['high', 'critical']))
-            ).order_by('-threat_count')[:10]
-            
-            for entry in geo_data:
-                geographic.append({
-                    'country_code': entry['country_code'],
-                    'country_name': entry['country_name'],
-                    'threat_count': entry['threat_count'],
-                    'high_severity_count': entry['high_severity']
-                })
-                
-        except Exception as e:
-            logging.error(f"Error getting geographic data: {str(e)}")
-        
-        return geographic
-    
-    def _get_device_analytics(self, start_date):
-        """Get device analytics"""
-        analytics = {
-            'rooted_devices': DeviceInfo.objects.filter(is_rooted=True).count(),
-            'emulator_devices': DeviceInfo.objects.filter(is_emulator=True).count(),
-            'vpn_usage': DeviceInfo.objects.filter(is_vpn=True).count(),
-            'device_models': [],
-            'os_versions': []
-        }
-        
-        try:
-            # Top device models
-            device_models = DeviceInfo.objects.values('device_model').annotate(
-                count=Count('id')
-            ).order_by('-count')[:10]
-            
-            analytics['device_models'] = list(device_models)
-            
-            # Android versions
-            os_versions = DeviceInfo.objects.filter(
-                android_version__isnull=False
-            ).values('android_version').annotate(
-                count=Count('id')
-            ).order_by('-count')[:10]
-            
-            analytics['os_versions'] = list(os_versions)
-            
-        except Exception as e:
-            logging.error(f"Error getting device analytics: {str(e)}")
-        
-        return analytics
-    
-    def _get_user_behavior(self, start_date):
-        """Get user behavior analytics"""
-        behavior = {}
-        
-        try:
-            # Login patterns
-            login_hours = SecurityLog.objects.filter(
-                security_type='failed_login',
-                created_at__gte=start_date
-            ).annotate(
-                hour=TruncHour('created_at')
-            ).values('hour').annotate(
-                count=Count('id')
-            ).order_by('hour')
-            
-            behavior['login_patterns'] = list(login_hours)
-            
-            # User risk distribution
-            risk_dist = RiskScore.objects.values('current_score').annotate(
-                user_count=Count('id')
-            ).order_by('current_score')
-            
-            behavior['risk_distribution'] = list(risk_dist)
-            
-        except Exception as e:
-            logging.error(f"Error getting user behavior: {str(e)}")
-        
-        return behavior
-    
-    def _get_recent_alerts(self):
-        """Get recent security alerts"""
-        alerts = []
-        
-        try:
-            recent_alerts = SecurityLog.objects.filter(
-                severity__in=['high', 'critical'],
-                created_at__gte=timezone.now() - timedelta(hours=24)
-            ).order_by('-created_at')[:20]
-            
-            for alert in recent_alerts:
-                alerts.append({
-                    'id': alert.id,
-                    'type': alert.security_type,
-                    'severity': alert.severity,
-                    'description': alert.description,
-                    'user': alert.user.username if alert.user else 'Unknown',
-                    'time': alert.created_at.isoformat(),
-                    'resolved': alert.resolved
-                })
-                
-        except Exception as e:
-            logging.error(f"Error getting recent alerts: {str(e)}")
-        
-        return alerts
-    
-    def _get_top_threats(self, start_date):
-        """Get top threat types"""
-        threats = []
-        
-        try:
-            threat_types = SecurityLog.objects.filter(
-                created_at__gte=start_date
-            ).values('security_type').annotate(
-                count=Count('id'),
-                high_severity=Count('id', filter=Q(severity__in=['high', 'critical']))
-            ).order_by('-count')[:10]
-            
-            for threat in threat_types:
-                threats.append({
-                    'type': threat['security_type'],
-                    'total': threat['count'],
-                    'high_severity': threat['high_severity'],
-                    'percentage': (threat['count'] / SecurityLog.objects.filter(
-                        created_at__gte=start_date
-                    ).count() * 100) if SecurityLog.objects.filter(created_at__gte=start_date).count() > 0 else 0
-                })
-                
-        except Exception as e:
-            logging.error(f"Error getting top threats: {str(e)}")
-        
-        return threats
-    
-    def _get_risk_distribution(self):
-        """Get risk score distribution"""
-        distribution = {
-            'very_low': 0,
-            'low': 0,
-            'medium': 0,
-            'high': 0,
-            'critical': 0
-        }
-        
-        try:
-            risk_scores = RiskScore.objects.all()
-            
-            for score in risk_scores:
-                if score.current_score >= 80:
-                    distribution['critical'] += 1
-                elif score.current_score >= 60:
-                    distribution['high'] += 1
-                elif score.current_score >= 40:
-                    distribution['medium'] += 1
-                elif score.current_score >= 20:
-                    distribution['low'] += 1
-                else:
-                    distribution['very_low'] += 1
-                    
-        except Exception as e:
-            logging.error(f"Error getting risk distribution: {str(e)}")
-        
-        return distribution
-
-# ==================== AUTO-BLOCK VIEWS ====================
-
-
-
-# ==================== AUDIT TRAIL VIEWS ====================
 
 class AuditTrailView(BaseAPIView):
     """Audit trail views"""
@@ -2923,7 +2616,9 @@ class UserSecuritySettingsView(BaseAPIView):
 # ==================== PUBLIC API VIEWS ====================
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([])  # Public endpoint
+
 @check_maintenance_mode()
 @validate_app_version()
 def security_status(request):
@@ -2962,8 +2657,8 @@ def security_status(request):
             'code': 'STATUS_ERROR'
         }, status=500)
 
-@api_view(['POST'])
 @permission_classes([])  # Public endpoint
+
 @validate_request_params(['email'])
 def report_security_issue(request):
     """Report security issue (public endpoint)"""
@@ -3646,6 +3341,48 @@ class NullSafeSerializerMixin:
         except Exception as e:
             logger.error(f"Error validating {field_name}: {e}")
             raise ValidationError({field_name: f"Invalid value for {field_name}"})
+    
+    def safe_call_method(self, obj, method_name: str, default=None, *args, **kwargs):
+        """Safely call method on object"""
+        if obj is None:
+            return default
+        method = getattr(obj, method_name, None)
+        if callable(method):
+            try:
+                return method(*args, **kwargs)
+            except Exception:
+                return default
+        return default
+    
+    def safe_dict_value(self, data_dict, key: str, default=None):
+        """Safely get value from dictionary"""
+        if not isinstance(data_dict, dict):
+            return default
+        return data_dict.get(key, default)
+    
+    def safe_bool_value(self, value, default=False):
+        """Safely convert to boolean"""
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.lower() in ['true', '1', 'yes', 'y']
+        return default
+    
+    def safe_int_value(self, value, default=0, min_val=None, max_val=None):
+        """Safely convert to integer with range validation"""
+        try:
+            result = int(float(value)) if value is not None else default
+            if min_val is not None:
+                result = max(result, min_val)
+            if max_val is not None:
+                result = min(result, max_val)
+            return result
+        except (ValueError, TypeError):
+            return default
 
 
 # ==================== DEFENSIVE CODING DECORATORS ====================
@@ -3685,69 +3422,6 @@ def cache_result(timeout: int = 300):
                 return func(self, obj, *args, **kwargs)  # Fallback
         return wrapper
     return decorator
-
-
-# ==================== ENHANCED MIXINS ====================
-
-class NullSafeSerializerMixin:
-    """
-    Null Object Pattern for serializers
-    """
-    
-    @safe_serializer_method(default_return=None)
-    def safe_get_value(self, obj, attr: str, default=None):
-        """Safely get attribute from object"""
-        try:
-            return getattr(obj, attr, default) if obj is not None else default
-        except (AttributeError, TypeError):
-            return default
-    
-    @safe_serializer_method(default_return=None)
-    def safe_call_method(self, obj, method_name: str, default=None, *args, **kwargs):
-        """Safely call method on object"""
-        if obj is None:
-            return default
-        
-        method = getattr(obj, method_name, None)
-        if callable(method):
-            try:
-                return method(*args, **kwargs)
-            except Exception:
-                return default
-        return default
-    
-    @safe_serializer_method(default_return=None)
-    def safe_dict_value(self, data_dict: Optional[Dict], key: str, default=None):
-        """Safely get value from dictionary"""
-        if not isinstance(data_dict, dict):
-            return default
-        return data_dict.get(key, default)
-    
-    @safe_serializer_method(default_return=False)
-    def safe_bool_value(self, value, default=False):
-        """Safely convert to boolean"""
-        if value is None:
-            return default
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, (int, float)):
-            return bool(value)
-        if isinstance(value, str):
-            return value.lower() in ['true', '1', 'yes', 'y']
-        return default
-    
-    @safe_serializer_method(default_return=0)
-    def safe_int_value(self, value, default=0, min_val=None, max_val=None):
-        """Safely convert to integer with range validation"""
-        try:
-            result = int(float(value)) if value is not None else default
-            if min_val is not None:
-                result = max(result, min_val)
-            if max_val is not None:
-                result = min(result, max_val)
-            return result
-        except (ValueError, TypeError):
-            return default
 
 
 class GracefulDegradationMixin:
@@ -7279,7 +6953,7 @@ class RiskScoreCalculateSerializer(serializers.Serializer):
                 last_suspicious_activity=(
                     timezone.now() - timedelta(hours=validated_data.get('hours_since_last_suspicious', 999))
                     if validated_data.get('hours_since_last_suspicious', 999) < 999 else None
-                )
+                ),
             )
             
             # Calculate score
@@ -10943,864 +10617,6 @@ class PasswordValidationSerializer(serializers.Serializer):
         return attrs
 
 
-class RealTimeDetectionSerializer(serializers.ModelSerializer):
-    """
-    Bulletproof Serializer for RealTimeDetection Model
-    Complete Defensive Implementation with All Patterns
-    """
-    
-    # ============ COMPUTED FIELDS (READ-ONLY) ============
-    
-    status_display = serializers.CharField(
-        source='get_status_display',
-        read_only=True,
-        help_text="Human-readable status"
-    )
-    
-    uptime_percentage = serializers.SerializerMethodField(
-        help_text="Uptime percentage of the detection engine"
-    )
-    
-    performance_score = serializers.SerializerMethodField(
-        help_text="Performance score (0-100)"
-    )
-    
-    efficiency_rate = serializers.SerializerMethodField(
-        help_text="Match rate efficiency"
-    )
-    
-    last_run_ago = serializers.SerializerMethodField(
-        help_text="How long ago the detection last ran"
-    )
-    
-    next_run_in = serializers.SerializerMethodField(
-        help_text="When the next run is scheduled"
-    )
-    
-    health_status = serializers.SerializerMethodField(
-        help_text="Health status of the detection engine"
-    )
-    
-    # ============ CONTROL FIELDS ============
-    
-    run_now = serializers.BooleanField(
-        write_only=True,
-        required=False,
-        default=False,
-        help_text="Set to true to run detection immediately"
-    )
-    
-    force_restart = serializers.BooleanField(
-        write_only=True,
-        required=False,
-        default=False,
-        help_text="Force restart the detection engine"
-    )
-    
-    test_data = serializers.DictField(
-        write_only=True,
-        required=False,
-        default=dict,
-        help_text="Test data for detection engine"
-    )
-    
-    # ============ STATISTICS FIELDS ============
-    
-    today_stats = serializers.SerializerMethodField(
-        help_text="Statistics for today"
-    )
-    
-    weekly_stats = serializers.SerializerMethodField(
-        help_text="Statistics for this week"
-    )
-    
-    monthly_stats = serializers.SerializerMethodField(
-        help_text="Statistics for this month"
-    )
-    
-    # ============ PERFORMANCE METRICS ============
-    
-    performance_metrics = serializers.SerializerMethodField(
-        help_text="Detailed performance metrics"
-    )
-    
-    error_rate = serializers.SerializerMethodField(
-        help_text="Error rate percentage"
-    )
-    
-    success_rate = serializers.SerializerMethodField(
-        help_text="Success rate percentage"
-    )
-    
-    class Meta:
-        model = 'security.RealTimeDetection'  # Lazy reference
-        fields = [
-            # Core fields
-            'id', 'name', 'detection_type', 'description',
-            
-            # Configuration
-            'check_interval_seconds', 'batch_size',
-            
-            # Status
-            'status', 'status_display', 'last_run_at', 'last_error',
-            'last_run_ago', 'next_run_in', 'health_status',
-            
-            # Statistics
-            'total_checks', 'total_matches',
-            'today_stats', 'weekly_stats', 'monthly_stats',
-            
-            # Performance
-            'average_processing_time',
-            'performance_score', 'efficiency_rate', 'uptime_percentage',
-            'performance_metrics', 'error_rate', 'success_rate',
-            
-            # Control fields
-            'run_now', 'force_restart', 'test_data',
-            
-            # Timestamps
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = [
-            'id', 'last_run_at', 'last_error', 'total_checks',
-            'total_matches', 'average_processing_time', 'created_at',
-            'updated_at', 'status_display', 'uptime_percentage',
-            'performance_score', 'efficiency_rate', 'last_run_ago',
-            'next_run_in', 'health_status', 'today_stats', 'weekly_stats',
-            'monthly_stats', 'performance_metrics', 'error_rate',
-            'success_rate'
-        ]
-    
-    def __init__(self, *args, **kwargs):
-        """Initialize with dynamic model reference"""
-        super().__init__(*args, **kwargs)
-        
-        # Set model if not already set
-        if self.Meta.model == 'security.RealTimeDetection':
-            try:
-                from .models import RealTimeDetection
-                self.Meta.model = RealTimeDetection
-            except ImportError as e:
-                logger.warning(f"RealTimeDetection model not available: {e}")
-                # Graceful degradation - use stub
-                self.Meta.model = None
-    
-    # ============ SAFE GETTER METHODS ============
-    
-    def get_uptime_percentage(self, obj) -> float:
-        """Calculate uptime percentage with defensive coding"""
-        try:
-            total_checks = getattr(obj, 'total_checks', 0)
-            error_count = self._get_error_count(obj)
-            
-            if total_checks == 0:
-                return 100.0  # No checks yet, assume 100% uptime
-            
-            uptime = max(0, total_checks - error_count)
-            return round((uptime / total_checks) * 100, 2)
-            
-        except Exception as e:
-            logger.debug(f"Uptime calculation error: {e}")
-            return 0.0
-    
-    def get_performance_score(self, obj) -> float:
-        """Calculate performance score"""
-        try:
-            avg_processing_time = getattr(obj, 'average_processing_time', 0)
-            efficiency_rate = self.get_efficiency_rate(obj)
-            
-            # Lower processing time is better
-            time_score = max(0, min(100, (1000 - avg_processing_time) / 10))
-            
-            # Combined score
-            performance_score = (time_score * 0.4) + (efficiency_rate * 0.6)
-            return round(performance_score, 1)
-            
-        except Exception as e:
-            logger.debug(f"Performance score calculation error: {e}")
-            return 0.0
-    
-    def get_efficiency_rate(self, obj) -> float:
-        """Calculate match efficiency rate"""
-        try:
-            total_checks = getattr(obj, 'total_checks', 0)
-            total_matches = getattr(obj, 'total_matches', 0)
-            
-            if total_checks == 0:
-                return 0.0
-            
-            # Efficiency: matches per check (normalized)
-            efficiency = (total_matches / total_checks) * 100
-            return round(min(100.0, efficiency), 2)
-            
-        except Exception as e:
-            logger.debug(f"Efficiency rate calculation error: {e}")
-            return 0.0
-    
-    def get_last_run_ago(self, obj) -> str:
-        """Format how long ago detection last ran"""
-        try:
-            last_run_at = getattr(obj, 'last_run_at', None)
-            if not last_run_at:
-                return "Never"
-            
-            delta = timezone.now() - last_run_at
-            
-            if delta.days > 0:
-                return f"{delta.days} days ago"
-            elif delta.seconds > 3600:
-                return f"{delta.seconds // 3600} hours ago"
-            elif delta.seconds > 60:
-                return f"{delta.seconds // 60} minutes ago"
-            else:
-                return f"{delta.seconds} seconds ago"
-                
-        except Exception as e:
-            logger.debug(f"Last run ago calculation error: {e}")
-            return "Unknown"
-    
-    def get_next_run_in(self, obj) -> str:
-        """Calculate when next run is scheduled"""
-        try:
-            last_run_at = getattr(obj, 'last_run_at', None)
-            check_interval = getattr(obj, 'check_interval_seconds', 60)
-            status = getattr(obj, 'status', 'idle')
-            
-            if status != 'idle' or not last_run_at:
-                return "Not scheduled"
-            
-            next_run = last_run_at + timedelta(seconds=check_interval)
-            delta = next_run - timezone.now()
-            
-            if delta.total_seconds() <= 0:
-                return "Due now"
-            elif delta.total_seconds() > 3600:
-                return f"In {int(delta.total_seconds() / 3600)} hours"
-            elif delta.total_seconds() > 60:
-                return f"In {int(delta.total_seconds() / 60)} minutes"
-            else:
-                return f"In {int(delta.total_seconds())} seconds"
-                
-        except Exception as e:
-            logger.debug(f"Next run calculation error: {e}")
-            return "Unknown"
-    
-    def get_health_status(self, obj) -> str:
-        """Determine health status"""
-        try:
-            status = getattr(obj, 'status', 'idle')
-            last_error = getattr(obj, 'last_error', '')
-            avg_processing_time = getattr(obj, 'average_processing_time', 0)
-            
-            if status == 'error':
-                return "Critical"
-            elif status == 'running' and avg_processing_time > 10:
-                return "Degraded"
-            elif last_error and 'error' in status.lower():
-                return "Warning"
-            elif status == 'paused':
-                return "Paused"
-            else:
-                return "Healthy"
-                
-        except Exception as e:
-            logger.debug(f"Health status calculation error: {e}")
-            return "Unknown"
-    
-    def get_today_stats(self, obj) -> Dict[str, Any]:
-        """Get today's statistics"""
-        try:
-            # In real implementation, you would query actual data
-            # For now, return mock/estimated data
-            total_checks = getattr(obj, 'total_checks', 0)
-            total_matches = getattr(obj, 'total_matches', 0)
-            
-            # Estimate today's activity (assuming 10% of total)
-            today_checks = max(1, int(total_checks * 0.1))
-            today_matches = max(0, int(total_matches * 0.1))
-            
-            return {
-                'checks': today_checks,
-                'matches': today_matches,
-                'match_rate': round((today_matches / today_checks * 100), 1) if today_checks > 0 else 0,
-                'avg_processing_time': getattr(obj, 'average_processing_time', 0)
-            }
-            
-        except Exception as e:
-            logger.debug(f"Today stats calculation error: {e}")
-            return {'error': 'Stats unavailable'}
-    
-    def get_weekly_stats(self, obj) -> Dict[str, Any]:
-        """Get weekly statistics"""
-        try:
-            total_checks = getattr(obj, 'total_checks', 0)
-            total_matches = getattr(obj, 'total_matches', 0)
-            
-            # Estimate weekly activity (assuming 30% of total)
-            weekly_checks = max(1, int(total_checks * 0.3))
-            weekly_matches = max(0, int(total_matches * 0.3))
-            
-            return {
-                'checks': weekly_checks,
-                'matches': weekly_matches,
-                'match_rate': round((weekly_matches / weekly_checks * 100), 1) if weekly_checks > 0 else 0,
-                'trend': 'stable'  # Would calculate actual trend
-            }
-            
-        except Exception as e:
-            logger.debug(f"Weekly stats calculation error: {e}")
-            return {'error': 'Stats unavailable'}
-    
-    def get_monthly_stats(self, obj) -> Dict[str, Any]:
-        """Get monthly statistics"""
-        try:
-            total_checks = getattr(obj, 'total_checks', 0)
-            total_matches = getattr(obj, 'total_matches', 0)
-            
-            return {
-                'checks': total_checks,
-                'matches': total_matches,
-                'match_rate': round((total_matches / total_checks * 100), 1) if total_checks > 0 else 0,
-                'avg_daily_checks': round(total_checks / 30, 1) if total_checks > 0 else 0
-            }
-            
-        except Exception as e:
-            logger.debug(f"Monthly stats calculation error: {e}")
-            return {'error': 'Stats unavailable'}
-    
-    def get_performance_metrics(self, obj) -> Dict[str, Any]:
-        """Get detailed performance metrics"""
-        try:
-            avg_time = getattr(obj, 'average_processing_time', 0)
-            total_checks = getattr(obj, 'total_checks', 0)
-            
-            return {
-                'processing_time': {
-                    'average': avg_time,
-                    'estimated_max': avg_time * 2,
-                    'estimated_min': max(0.1, avg_time * 0.5)
-                },
-                'throughput': {
-                    'checks_per_hour': int(total_checks / 24) if total_checks > 0 else 0,
-                    'estimated_capacity': 10000,  # Would calculate based on system
-                    'current_utilization': round((total_checks / 10000) * 100, 1) if total_checks > 0 else 0
-                },
-                'reliability': {
-                    'uptime_percentage': self.get_uptime_percentage(obj),
-                    'error_rate': self.get_error_rate(obj),
-                    'success_rate': self.get_success_rate(obj)
-                }
-            }
-            
-        except Exception as e:
-            logger.debug(f"Performance metrics calculation error: {e}")
-            return {'error': 'Metrics unavailable'}
-    
-    def get_error_rate(self, obj) -> float:
-        """Calculate error rate"""
-        try:
-            total_checks = getattr(obj, 'total_checks', 0)
-            error_count = self._get_error_count(obj)
-            
-            if total_checks == 0:
-                return 0.0
-            
-            return round((error_count / total_checks) * 100, 2)
-            
-        except Exception as e:
-            logger.debug(f"Error rate calculation error: {e}")
-            return 0.0
-    
-    def get_success_rate(self, obj) -> float:
-        """Calculate success rate"""
-        try:
-            error_rate = self.get_error_rate(obj)
-            return max(0.0, 100.0 - error_rate)
-            
-        except Exception as e:
-            logger.debug(f"Success rate calculation error: {e}")
-            return 0.0
-    
-    def _get_error_count(self, obj) -> int:
-        """Estimate error count based on last_error"""
-        try:
-            last_error = getattr(obj, 'last_error', '')
-            if last_error and len(last_error.strip()) > 0:
-                # Simple estimation: assume 1 error per error message
-                return 1
-            return 0
-        except Exception:
-            return 0
-    
-    # ============ VALIDATION METHODS ============
-    
-    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Bulletproof validation with Graceful Degradation
-        """
-        validated_data = {}
-        
-        try:
-            # Use dict.get() with defaults for all fields
-            # Core fields
-            validated_data['name'] = attrs.get('name', '').strip()
-            validated_data['detection_type'] = attrs.get('detection_type', 'generic')
-            validated_data['description'] = attrs.get('description', '').strip()
-            
-            # Configuration with safe defaults
-            validated_data['check_interval_seconds'] = self._safe_int_get(
-                attrs, 'check_interval_seconds', 60, 10, 3600
-            )
-            validated_data['batch_size'] = self._safe_int_get(
-                attrs, 'batch_size', 100, 1, 10000
-            )
-            
-            # Status
-            validated_data['status'] = attrs.get('status', 'idle')
-            validated_data['last_error'] = attrs.get('last_error', '').strip()
-            
-            # Control fields
-            validated_data['run_now'] = attrs.get('run_now', False)
-            validated_data['force_restart'] = attrs.get('force_restart', False)
-            
-            # Test data if provided
-            if 'test_data' in attrs:
-                validated_data['test_data'] = self._validate_test_data(attrs['test_data'])
-            
-            # Apply business logic validation
-            self._validate_business_logic(validated_data)
-            
-        except Exception as e:
-            # GRACEFUL DEGRADATION: Log error and use safe defaults
-            logger.error(f"RealTimeDetection validation error: {e}")
-            validated_data = self._get_safe_defaults()
-            validated_data['validation_errors'] = [str(e)]
-        
-        return validated_data
-    
-    def _validate_test_data(self, test_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate test data for detection engine"""
-        safe_test_data = {}
-        
-        try:
-            if not isinstance(test_data, dict):
-                return self._get_default_test_data()
-            
-            # Simulation parameters
-            safe_test_data['simulate'] = test_data.get('simulate', False)
-            safe_test_data['duration_seconds'] = self._safe_int_get(
-                test_data, 'duration_seconds', 60, 1, 3600
-            )
-            safe_test_data['activity_count'] = self._safe_int_get(
-                test_data, 'activity_count', 100, 1, 10000
-            )
-            
-            # Test scenarios
-            safe_test_data['scenarios'] = test_data.get('scenarios', ['normal', 'suspicious'])
-            
-            # Specific test cases
-            safe_test_data['test_cases'] = test_data.get('test_cases', [])
-            
-            # Add timestamp
-            safe_test_data['test_timestamp'] = timezone.now().isoformat()
-            
-        except Exception as e:
-            logger.warning(f"Test data validation error: {e}")
-            safe_test_data = self._get_default_test_data()
-        
-        return safe_test_data
-    
-    def _validate_business_logic(self, data: Dict[str, Any]) -> None:
-        """Validate business logic rules"""
-        try:
-            # Ensure name is provided
-            if not data.get('name'):
-                raise serializers.ValidationError("Detection engine name is required")
-            
-            # Validate check interval
-            check_interval = data.get('check_interval_seconds', 60)
-            if check_interval < 10:
-                logger.warning(f"Check interval too short: {check_interval} seconds")
-                data['check_interval_seconds'] = 10
-            
-            # Validate batch size
-            batch_size = data.get('batch_size', 100)
-            if batch_size > 10000:
-                logger.warning(f"Batch size too large: {batch_size}")
-                data['batch_size'] = 10000
-            
-            # Validate status transition
-            current_status = getattr(self.instance, 'status', 'idle') if self.instance else 'idle'
-            new_status = data.get('status', current_status)
-            
-            # Prevent invalid status transitions
-            valid_transitions = {
-                'idle': ['running', 'paused', 'error'],
-                'running': ['idle', 'paused', 'error'],
-                'paused': ['idle', 'running', 'error'],
-                'error': ['idle', 'paused']
-            }
-            
-            if current_status in valid_transitions and new_status not in valid_transitions[current_status]:
-                logger.warning(f"Invalid status transition: {current_status} -> {new_status}")
-                data['status'] = current_status
-            
-            # Check if run_now is requested
-            if data.get('run_now', False) and data.get('status') == 'idle':
-                data['status'] = 'running'
-                logger.info(f"Setting detection engine to run now: {data.get('name')}")
-            
-        except Exception as e:
-            logger.warning(f"Business logic validation error: {e}")
-            # Don't raise - continue with potentially invalid data (graceful degradation)
-    
-    # ============ HELPER METHODS ============
-    
-    def _safe_int_get(self, data: Dict[str, Any], key: str, 
-                     default: int, min_val: int, max_val: int) -> int:
-        """Safe integer extraction with bounds checking"""
-        try:
-            value = data.get(key, default)
-            if not isinstance(value, (int, float)):
-                value = default
-            value = int(value)
-            return max(min_val, min(max_val, value))
-        except Exception:
-            return default
-    
-    def _get_default_test_data(self) -> Dict[str, Any]:
-        """Get default test data"""
-        return {
-            "simulate": True,
-            "duration_seconds": 60,
-            "activity_count": 100,
-            "scenarios": ["normal", "suspicious", "malicious"],
-            "test_cases": [
-                {
-                    "type": "failed_login",
-                    "count": 10,
-                    "interval_seconds": 5
-                },
-                {
-                    "type": "suspicious_transaction",
-                    "count": 5,
-                    "interval_seconds": 30
-                }
-            ]
-        }
-    
-    def _get_safe_defaults(self) -> Dict[str, Any]:
-        """Get complete safe defaults (Ultimate Graceful Degradation)"""
-        return {
-            'name': f'Detection_{int(time.time())}',
-            'detection_type': 'generic',
-            'description': 'Safe default detection engine',
-            'check_interval_seconds': 60,
-            'batch_size': 100,
-            'status': 'idle',
-            'last_error': '',
-            'run_now': False,
-            'force_restart': False,
-            'safe_mode': True
-        }
-    
-    # ============ CREATE AND UPDATE METHODS ============
-    
-    def create(self, validated_data: Dict[str, Any]):
-        """Create detection engine with defensive coding"""
-        try:
-            # Remove control fields
-            run_now = validated_data.pop('run_now', False)
-            force_restart = validated_data.pop('force_restart', False)
-            test_data = validated_data.pop('test_data', None)
-            
-            # Set initial statistics
-            validated_data['total_checks'] = 0
-            validated_data['total_matches'] = 0
-            validated_data['average_processing_time'] = 0
-            
-            # Create instance
-            instance = super().create(validated_data)
-            
-            # Run if requested
-            if run_now:
-                self._run_detection_engine(instance)
-            
-            # Test if test data provided
-            if test_data:
-                self._test_detection_engine(instance, test_data)
-            
-            logger.info(f"Created RealTimeDetection: {instance.name}")
-            return instance
-            
-        except Exception as e:
-            logger.error(f"Failed to create RealTimeDetection: {e}")
-            raise serializers.ValidationError({
-                'non_field_errors': f'Failed to create detection engine: {str(e)}'
-            })
-    
-    def update(self, instance, validated_data: Dict[str, Any]):
-        """Update detection engine with defensive coding"""
-        try:
-            # Remove control fields
-            run_now = validated_data.pop('run_now', False)
-            force_restart = validated_data.pop('force_restart', False)
-            test_data = validated_data.pop('test_data', None)
-            
-            # Force restart logic
-            if force_restart and instance.status != 'idle':
-                validated_data['status'] = 'idle'
-                logger.info(f"Forcing restart of detection engine: {instance.name}")
-            
-            # Update instance
-            instance = super().update(instance, validated_data)
-            
-            # Run if requested
-            if run_now and instance.status == 'idle':
-                self._run_detection_engine(instance)
-            
-            # Test if test data provided
-            if test_data:
-                self._test_detection_engine(instance, test_data)
-            
-            logger.info(f"Updated RealTimeDetection: {instance.name}")
-            return instance
-            
-        except Exception as e:
-            logger.error(f"Failed to update RealTimeDetection {instance.id}: {e}")
-            raise serializers.ValidationError({
-                'non_field_errors': f'Failed to update detection engine: {str(e)}'
-            })
-    
-    def _run_detection_engine(self, instance):
-        """Run detection engine"""
-        try:
-            # Use getattr() to safely access model method
-            if hasattr(instance, 'run_detection'):
-                success = instance.run_detection()
-                if success:
-                    logger.info(f"Successfully ran detection engine: {instance.name}")
-                else:
-                    logger.warning(f"Detection engine run failed: {instance.name}")
-            else:
-                logger.warning(f"run_detection method not available on {instance.name}")
-                
-        except Exception as e:
-            logger.error(f"Error running detection engine {instance.name}: {e}")
-    
-    def _test_detection_engine(self, instance, test_data: Dict[str, Any]):
-        """Test detection engine"""
-        try:
-            # Store test result in instance context
-            if hasattr(instance, '_test_result'):
-                instance._test_result = {
-                    'test_data': test_data,
-                    'simulated': test_data.get('simulate', False),
-                    'timestamp': timezone.now().isoformat(),
-                    'engine_status': instance.status
-                }
-            
-            logger.info(f"Tested detection engine: {instance.name}")
-            
-        except Exception as e:
-            logger.warning(f"Detection engine test failed: {e}")
-            if hasattr(instance, '_test_result'):
-                instance._test_result = {
-                    'error': str(e),
-                    'test_data': test_data,
-                    'timestamp': timezone.now().isoformat()
-                }
-    
-    # ============ TO REPRESENTATION ============
-    
-    def to_representation(self, instance):
-        """Add test result to representation if available"""
-        representation = super().to_representation(instance)
-        
-        # Add test result if it exists
-        if hasattr(instance, '_test_result'):
-            representation['test_result'] = instance._test_result
-        
-        return representation
-
-
-# ============ REAL-TIME DETECTION STATUS SERIALIZER ============
-
-class RealTimeDetectionStatusSerializer(serializers.Serializer):
-    """
-    Serializer for real-time detection status
-    """
-    
-    engine_id = serializers.IntegerField(
-        help_text="Detection engine ID"
-    )
-    
-    engine_name = serializers.CharField(
-        help_text="Detection engine name"
-    )
-    
-    status = serializers.CharField(
-        help_text="Current status"
-    )
-    
-    last_run = serializers.DateTimeField(
-        help_text="Last run timestamp"
-    )
-    
-    next_run = serializers.CharField(
-        help_text="Next scheduled run"
-    )
-    
-    health = serializers.CharField(
-        help_text="Health status"
-    )
-    
-    performance = serializers.FloatField(
-        help_text="Performance score"
-    )
-    
-    statistics = serializers.DictField(
-        help_text="Current statistics"
-    )
-    
-    class Meta:
-        fields = [
-            'engine_id', 'engine_name', 'status', 'last_run',
-            'next_run', 'health', 'performance', 'statistics'
-        ]
-
-
-# ============ REAL-TIME DETECTION CONTROL SERIALIZER ============
-
-class RealTimeDetectionControlSerializer(serializers.Serializer):
-    """
-    Serializer for controlling real-time detection engines
-    """
-    
-    action = serializers.ChoiceField(
-        choices=[
-            ('start', 'Start'),
-            ('stop', 'Stop'),
-            ('pause', 'Pause'),
-            ('restart', 'Restart'),
-            ('test', 'Test'),
-            ('status', 'Get Status')
-        ],
-        required=True,
-        help_text="Action to perform"
-    )
-    
-    engine_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        required=False,
-        default=list,
-        help_text="Specific engine IDs (empty for all)"
-    )
-    
-    parameters = serializers.DictField(
-        required=False,
-        default=dict,
-        help_text="Action parameters"
-    )
-    
-    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate control action"""
-        validated_data = data.copy()
-        
-        try:
-            action = data.get('action')
-            parameters = data.get('parameters', {})
-            
-            # Validate action-specific parameters
-            if action == 'test':
-                if 'duration' in parameters:
-                    duration = parameters['duration']
-                    if not isinstance(duration, int) or not 1 <= duration <= 3600:
-                        raise serializers.ValidationError({
-                            'parameters.duration': 'Duration must be between 1 and 3600 seconds'
-                        })
-            
-            elif action == 'start':
-                # Validate start parameters
-                if 'force' in parameters and not isinstance(parameters['force'], bool):
-                    raise serializers.ValidationError({
-                        'parameters.force': 'Force must be a boolean'
-                    })
-            
-        except serializers.ValidationError:
-            raise
-        except Exception as e:
-            logger.warning(f"Control validation error: {e}")
-            # Graceful degradation - accept with default parameters
-        
-        return validated_data
-
-
-# ============ REAL-TIME DETECTION RESULT SERIALIZER ============
-
-class RealTimeDetectionResultSerializer(serializers.Serializer):
-    """
-    Serializer for real-time detection results
-    """
-    
-    engine_id = serializers.IntegerField(
-        help_text="Detection engine ID"
-    )
-    
-    engine_name = serializers.CharField(
-        help_text="Detection engine name"
-    )
-    
-    start_time = serializers.DateTimeField(
-        help_text="Detection start time"
-    )
-    
-    end_time = serializers.DateTimeField(
-        help_text="Detection end time"
-    )
-    
-    duration_seconds = serializers.FloatField(
-        help_text="Detection duration in seconds"
-    )
-    
-    items_processed = serializers.IntegerField(
-        help_text="Number of items processed"
-    )
-    
-    matches_found = serializers.IntegerField(
-        help_text="Number of matches found"
-    )
-    
-    status = serializers.CharField(
-        help_text="Detection status"
-    )
-    
-    errors = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="Any errors encountered"
-    )
-    
-    warnings = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="Any warnings encountered"
-    )
-    
-    details = serializers.DictField(
-        help_text="Detailed detection results"
-    )
-    
-    class Meta:
-        fields = [
-            'engine_id', 'engine_name', 'start_time', 'end_time',
-            'duration_seconds', 'items_processed', 'matches_found',
-            'status', 'errors', 'warnings', 'details'
-        ]
-        
-
-
-
-
-# security/serializers.py এ এই code টা ADD করুন
-
 class AuditTrailSerializer(serializers.ModelSerializer):
     """
     Full serializer for AuditTrail model.
@@ -11899,4 +10715,362 @@ class AuditTrailListSerializer(serializers.ModelSerializer):
         try:
             return obj.user.username if obj.user else 'Anonymous'
         except Exception:
-            return 'Unknown'# trigger
+            return 'Unknown'
+
+
+# ==================== MISSING SERIALIZERS - NEW SYSTEM SERIALIZERS ====================
+from rest_framework.serializers import SerializerMethodField, CharField, IntegerField, FloatField, BooleanField, DateTimeField
+from .models import ThreatIntelligence, SecurityIncident, SecurityInsight, SecurityPolicy, TrustedDevice, PasswordHistory
+BaseSecuritySerializer = CombinedSecuritySerializer
+
+class ThreatIntelligenceSerializer(BaseSecuritySerializer):
+    """
+    Threat Intelligence serializer
+    """
+    
+    threat_type_display = SerializerMethodField()
+    severity_display = SerializerMethodField()
+    is_expired = SerializerMethodField()
+    
+    class Meta:
+        model = ThreatIntelligence
+        fields = [
+            'id', 'ip_range', 'threat_type', 'threat_type_display',
+            'source', 'confidence', 'expires_at', 'indicator',
+            'indicator_type', 'severity', 'severity_display',
+            'is_active', 'is_expired', 'metadata',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'created_at', 'updated_at'
+        ]
+    
+    def get_threat_type_display(self, obj):
+        """Get threat type display"""
+        return obj.get_threat_type_display()
+    
+    def get_severity_display(self, obj):
+        """Get severity display"""
+        return obj.get_severity_display()
+    
+    def get_is_expired(self, obj):
+        """Check if threat intelligence is expired"""
+        return obj.is_expired()
+
+
+class SecurityIncidentSerializer(BaseSecuritySerializer):
+    """
+    Security Incident serializer
+    """
+    
+    user_info = SerializerMethodField()
+    assigned_to_info = SerializerMethodField()
+    incident_type_display = SerializerMethodField()
+    severity_display = SerializerMethodField()
+    status_display = SerializerMethodField()
+    is_resolved = SerializerMethodField()
+    duration = SerializerMethodField()
+    
+    class Meta:
+        model = SecurityIncident
+        fields = [
+            'id', 'user', 'user_info', 'incident_type', 'incident_type_display',
+            'severity', 'severity_display', 'status', 'status_display',
+            'title', 'description', 'affected_systems', 'impact_assessment',
+            'mitigation_steps', 'assigned_to', 'assigned_to_info',
+            'priority', 'opened_at', 'resolved_at', 'is_resolved',
+            'duration', 'resolution_details', 'lessons_learned',
+            'metadata', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'user', 'opened_at', 'resolved_at', 'updated_at'
+        ]
+    
+    def get_user_info(self, obj):
+        """Get user info"""
+        try:
+            if obj.user:
+                return {
+                    'id': obj.user.id,
+                    'username': obj.user.username
+                }
+        except Exception:
+            pass
+        return None
+    
+    def get_assigned_to_info(self, obj):
+        """Get assigned user info"""
+        try:
+            if obj.assigned_to:
+                return {
+                    'id': obj.assigned_to.id,
+                    'username': obj.assigned_to.username
+                }
+        except Exception:
+            pass
+        return None
+    
+    def get_incident_type_display(self, obj):
+        """Get incident type display"""
+        return obj.get_incident_type_display()
+    
+    def get_severity_display(self, obj):
+        """Get severity display"""
+        return obj.get_severity_display()
+    
+    def get_status_display(self, obj):
+        """Get status display"""
+        return obj.get_status_display()
+    
+    def get_is_resolved(self, obj):
+        """Check if incident is resolved"""
+        return obj.is_resolved()
+    
+    def get_duration(self, obj):
+        """Get incident duration"""
+        try:
+            duration = obj.get_duration()
+            return str(duration) if duration else None
+        except Exception:
+            return None
+
+
+class TrustedDeviceSerializer(BaseSecuritySerializer):
+    """
+    Trusted Device serializer
+    """
+    
+    user_info = SerializerMethodField()
+    device_type_display = SerializerMethodField()
+    is_expired = SerializerMethodField()
+    
+    class Meta:
+        model = TrustedDevice
+        fields = [
+            'id', 'user', 'user_info', 'device_fingerprint', 'device_name',
+            'device_type', 'device_type_display', 'platform', 'browser',
+            'ip_address', 'user_agent', 'trust_score', 'last_seen',
+            'is_trusted', 'is_expired', 'expires_at', 'metadata',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'user', 'device_fingerprint', 'created_at', 'updated_at'
+        ]
+    
+    def get_user_info(self, obj):
+        """Get user info"""
+        try:
+            return {
+                'id': obj.user.id,
+                'username': obj.user.username
+            }
+        except Exception:
+            return None
+    
+    def get_device_type_display(self, obj):
+        """Get device type display"""
+        return obj.get_device_type_display()
+    
+    def get_is_expired(self, obj):
+        """Check if trust has expired"""
+        return obj.is_expired()
+
+
+class PasswordHistorySerializer(BaseSecuritySerializer):
+    """
+    Password History serializer
+    """
+    
+    user_info = SerializerMethodField()
+    is_recent = SerializerMethodField()
+    
+    class Meta:
+        model = PasswordHistory
+        fields = [
+            'id', 'user', 'user_info', 'password_hash', 'algorithm',
+            'salt', 'strength_score', 'is_compromised',
+            'changed_at', 'is_recent', 'metadata'
+        ]
+        read_only_fields = [
+            'id', 'user', 'password_hash', 'algorithm', 'salt',
+            'changed_at'
+        ]
+    
+    def get_user_info(self, obj):
+        """Get user info"""
+        try:
+            return {
+                'id': obj.user.id,
+                'username': obj.user.username
+            }
+        except Exception:
+            return None
+    
+    def get_is_recent(self, obj):
+        """Check if password was changed recently"""
+        return obj.is_recent()
+
+
+class SecurityPolicySerializer(BaseSecuritySerializer):
+    """
+    Security Policy serializer
+    """
+    
+    tenant_info = SerializerMethodField()
+    policy_type_display = SerializerMethodField()
+    effective_value = SerializerMethodField()
+    
+    class Meta:
+        model = SecurityPolicy
+        fields = [
+            'id', 'tenant', 'tenant_info', 'policy_key', 'value',
+            'policy_type', 'policy_type_display', 'description',
+            'priority', 'is_active', 'enforced', 'effective_value',
+            'metadata', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'created_at', 'updated_at'
+        ]
+    
+    def get_tenant_info(self, obj):
+        """Get tenant info"""
+        try:
+            if obj.tenant:
+                return {
+                    'id': obj.tenant.id,
+                    'name': obj.tenant.name
+                }
+        except Exception:
+            pass
+        return None
+    
+    def get_policy_type_display(self, obj):
+        """Get policy type display"""
+        return obj.get_policy_type_display()
+    
+    def get_effective_value(self, obj):
+        """Get effective policy value"""
+        try:
+            return obj.get_effective_value()
+        except Exception:
+            return obj.value
+
+
+class SecurityInsightSerializer(BaseSecuritySerializer):
+    """
+    Security Insight serializer
+    """
+    
+    severity_breakdown = SerializerMethodField()
+    event_breakdown = SerializerMethodField()
+    risk_score_calculated = SerializerMethodField()
+    
+    class Meta:
+        model = SecurityInsight
+        fields = [
+            'id', 'date', 'total_events', 'critical_count', 'high_count',
+            'medium_count', 'low_count', 'blocked_ips', 'locked_accounts',
+            'failed_logins', 'successful_logins', 'suspicious_activities',
+            'fraud_attempts', 'malware_detections', 'phishing_attempts',
+            'ddos_attacks', 'data_breaches', 'countries_affected',
+            'risk_score', 'system_health_score', 'avg_response_time',
+            'severity_breakdown', 'event_breakdown', 'risk_score_calculated',
+            'metadata', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'created_at', 'updated_at'
+        ]
+    
+    def get_severity_breakdown(self, obj):
+        """Get severity breakdown"""
+        return obj.get_severity_breakdown()
+    
+    def get_event_breakdown(self, obj):
+        """Get event breakdown"""
+        return obj.get_event_breakdown()
+    
+    def get_risk_score_calculated(self, obj):
+        """Get calculated risk score"""
+        return obj.calculate_risk_score()
+
+
+# ==================== CREATE SERIALIZERS ====================
+
+class ThreatIntelligenceCreateSerializer(BaseSecuritySerializer):
+    """
+    Create serializer for ThreatIntelligence model
+    """
+    
+    class Meta:
+        model = ThreatIntelligence
+        fields = [
+            'ip_range', 'threat_type', 'source', 'confidence',
+            'expires_at', 'indicator', 'indicator_type', 'severity',
+            'metadata'
+        ]
+    
+    def validate_confidence(self, value):
+        """Validate confidence is between 0.0 and 1.0"""
+        if not (0.0 <= float(value) <= 1.0):
+            raise serializers.ValidationError("Confidence must be between 0.0 and 1.0")
+        return value
+
+
+class SecurityIncidentCreateSerializer(BaseSecuritySerializer):
+    """
+    Create serializer for SecurityIncident model
+    """
+    
+    class Meta:
+        model = SecurityIncident
+        fields = [
+            'user', 'incident_type', 'severity', 'title',
+            'description', 'affected_systems', 'impact_assessment',
+            'mitigation_steps', 'assigned_to', 'priority',
+            'metadata'
+        ]
+
+
+class TrustedDeviceCreateSerializer(BaseSecuritySerializer):
+    """
+    Create serializer for TrustedDevice model
+    """
+    
+    class Meta:
+        model = TrustedDevice
+        fields = [
+            'device_fingerprint', 'device_name', 'device_type',
+            'platform', 'browser', 'ip_address', 'user_agent',
+            'trust_score', 'expires_at', 'metadata'
+        ]
+
+
+class SecurityPolicyCreateSerializer(BaseSecuritySerializer):
+    """
+    Create serializer for SecurityPolicy model
+    """
+    
+    class Meta:
+        model = SecurityPolicy
+        fields = [
+            'tenant', 'policy_key', 'value', 'policy_type',
+            'description', 'priority', 'enforced', 'metadata'
+        ]
+
+
+class SecurityInsightCreateSerializer(BaseSecuritySerializer):
+    """
+    Create serializer for SecurityInsight model
+    """
+    
+    class Meta:
+        model = SecurityInsight
+        fields = [
+            'date', 'total_events', 'critical_count', 'high_count',
+            'medium_count', 'low_count', 'failed_logins',
+            'successful_logins', 'suspicious_activities',
+            'fraud_attempts', 'malware_detections', 'phishing_attempts',
+            'ddos_attacks', 'data_breaches', 'blocked_ips',
+            'locked_accounts', 'countries_affected', 'risk_score',
+            'system_health_score', 'avg_response_time', 'metadata'
+        ]

@@ -3,6 +3,8 @@
 This module contains the ViewSet for webhook batch management.
 """
 
+import logging
+from datetime import timedelta
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -21,6 +23,8 @@ from ..serializers import (
 )
 from ..permissions import IsOwnerOrReadOnly
 from ..filters import WebhookBatchFilter
+
+logger = logging.getLogger(__name__)
 
 
 class WebhookBatchViewSet(viewsets.ModelViewSet):
@@ -45,11 +49,16 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
             return WebhookBatchSerializer
     
     def get_queryset(self):
-        """Filter queryset to user's own batches."""
-        return super().get_queryset().filter(created_by=self.request.user)
+        """Ownership/access-control is via the endpoint FK (endpoint.owner),
+        same pattern as WebhookFilter/WebhookSecret/WebhookHealthLog.
+        created_by (below) is an audit-trail field only — who explicitly
+        triggered creation — not used for filtering here."""
+        return super().get_queryset().filter(endpoint__owner=self.request.user)
     
     def perform_create(self, serializer):
-        """Set created_by field on creation."""
+        """Populate created_by from the request for the audit trail.
+        Ownership/access-control is unaffected — that's endpoint.owner,
+        via get_queryset() above."""
         serializer.save(created_by=self.request.user)
     
     @action(detail=True, methods=['post'])
@@ -64,20 +73,44 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            from ..services.batch import BatchService
-            batch_service = BatchService()
-            
-            result = batch_service.process_batch(batch)
-            
+            # FIX: Use BatchDispatchService for actual async dispatch;
+            # BatchService handles simple CRUD, BatchDispatchService
+            # owns process_batch_async(), cancel_batch(), retry_batch().
+            from ..services.batch.BatchDispatchService import BatchDispatchService
+            batch_service = BatchDispatchService()
+
+            result = batch_service.process_batch_async(str(batch.pk))
+
+            if not result.get('success'):
+                return Response({
+                    'success': False,
+                    'error': result.get('error', 'Failed to queue batch processing'),
+                    'message': 'Batch processing failed'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # NOTE: deliberately not calling
+            # status_service.update_batch_status(batch, 'processing') here.
+            # The task's own atomic claim (WebhookBatch.objects.filter(
+            # pk=..., status=PENDING).update(status=PROCESSING, ...), in
+            # BatchDispatchService.process_batch()) is the sole authority
+            # for that transition. Setting it here too races with - and in
+            # production would actively corrupt - that claim: if this runs
+            # before the real task claims the batch, the task's own
+            # filter(status=PENDING) then matches zero rows and refuses to
+            # process it, permanently orphaning the batch in "processing"
+            # without ever actually running it.
+
+            # BUG FIX: this used to claim synchronous completion
+            # ("processed_count"/"success_count" etc.) — but
+            # process_batch_async() only queues a Celery task and returns
+            # immediately; it has no item-level results to report yet.
+            # Report what actually happened: the task was queued.
             return Response({
-                'success': result['success'],
+                'success': True,
                 'batch_id': str(batch.id),
                 'batch_id_display': batch.batch_id,
-                'processed_count': result.get('processed_count', 0),
-                'success_count': result.get('success_count', 0),
-                'failed_count': result.get('failed_count', 0),
-                'processing_time': result.get('processing_time', 0),
-                'message': 'Batch processing completed' if result['success'] else 'Batch processing failed'
+                'task_id': result.get('task_id'),
+                'message': 'Batch processing queued successfully'
             })
         except Exception as e:
             return Response({
@@ -98,9 +131,11 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            from ..services.batch import BatchService
-            batch_service = BatchService()
-            
+            from ..services.batch.BatchDispatchService import BatchDispatchService
+            from ..services.batch.BatchStatusService import BatchStatusService
+            batch_service = BatchDispatchService()
+            status_service = BatchStatusService()
+
             result = batch_service.cancel_batch(batch, reason="Cancelled via API")
             
             return Response({
@@ -116,7 +151,7 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
                 'message': 'Batch cancellation failed'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='retry-failed')
     def retry_failed(self, request, pk=None):
         """Retry failed items in a batch."""
         batch = self.get_object()
@@ -128,8 +163,11 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            from ..services.batch import BatchService
-            batch_service = BatchService()
+            # BatchDispatchService owns retry_batch() (renamed from
+            # retry_failed_items() this session) — same service that owns
+            # process_batch_async()/cancel_batch(), not BatchStatusService.
+            from ..services.batch.BatchDispatchService import BatchDispatchService
+            batch_service = BatchDispatchService()
             
             result = batch_service.retry_batch(batch)
             
@@ -168,8 +206,8 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
         serializer = WebhookBatchItemSerializer(items, many=True)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['get'])
-    def statistics(self, request, pk=None):
+    @action(detail=True, methods=['get'], url_path='statistics')
+    def batch_statistics(self, request, pk=None):
         """Get batch statistics."""
         batch = self.get_object()
         
@@ -239,7 +277,7 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
             'completed_at': batch.completed_at
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-status')
     def by_status(self, request):
         """Get batches by status."""
         status_filter = request.query_params.get('status')
@@ -256,7 +294,7 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(batches, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-endpoint')
     def by_endpoint(self, request):
         """Get batches by endpoint."""
         endpoint_id = request.query_params.get('endpoint_id')
@@ -286,7 +324,7 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
     def recent(self, request):
         """Get recent batches."""
         hours = int(request.query_params.get('hours', 24))
-        since = timezone.now() - timezone.timedelta(hours=hours)
+        since = timezone.now() - timedelta(hours=hours)
         
         batches = self.queryset.filter(created_at__gte=since)
         
@@ -298,7 +336,7 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(batches, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-cancel')
     def bulk_cancel(self, request):
         """Cancel multiple batches."""
         batch_ids = request.data.get('batch_ids', [])
@@ -313,8 +351,8 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
         )
         
         cancelled_count = 0
-        from ..services.batch import BatchService
-        batch_service = BatchService()
+        from ..services.batch import BatchDispatchService
+        batch_service = BatchDispatchService()
         
         for batch in batches:
             try:
@@ -322,6 +360,7 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
                 if result['success']:
                     cancelled_count += 1
             except Exception as e:
+                logger.error(f"Error bulk-cancelling batch {batch.pk}: {str(e)}")
                 continue
         
         return Response({
@@ -329,7 +368,7 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
             'cancelled_count': cancelled_count
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-process')
     def bulk_process(self, request):
         """Process multiple batches."""
         batch_ids = request.data.get('batch_ids', [])
@@ -344,8 +383,8 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
         )
         
         processed_count = 0
-        from ..services.batch import BatchService
-        batch_service = BatchService()
+        from ..services.batch import BatchDispatchService
+        batch_service = BatchDispatchService()
         
         for batch in batches:
             try:
@@ -353,6 +392,7 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
                 if result['success']:
                     processed_count += 1
             except Exception as e:
+                logger.error(f"Error bulk-processing batch {batch.pk}: {str(e)}")
                 continue
         
         return Response({
@@ -394,3 +434,34 @@ class WebhookBatchViewSet(viewsets.ModelViewSet):
             'completed_items': completed_items,
             'success_rate': round(success_rate, 2)
         })
+    @action(detail=False, methods=["get"], url_path="stalled", url_name="stalled")
+    def stalled_batches(self, request):
+        """
+        GET /webhooks/batches/stalled/
+
+        Return batches stuck in processing state for more than 1 hour.
+        Uses BatchStatusService.get_stalled_batches() — previously floating.
+        """
+        hours = int(request.query_params.get("hours", 1))
+        from ..services.batch.BatchStatusService import BatchStatusService
+        service = BatchStatusService()
+        stalled = service.get_stalled_batches(hours=hours)
+        return Response({"success": True, "stalled_batches": stalled, "hours_threshold": hours})
+
+    @action(detail=False, methods=["get"], url_path="status-overview")
+    def status_overview(self, request):
+        """
+        GET /webhooks/batches/status-overview/
+
+        Full status breakdown across all batches for this user.
+        Uses BatchStatusService.get_batch_status_overview() — previously floating.
+        """
+        endpoint_id = request.query_params.get("endpoint_id")
+        days = int(request.query_params.get("days", 7))
+        from ..services.batch.BatchStatusService import BatchStatusService
+        service = BatchStatusService()
+        overview = service.get_batch_status_overview(
+            endpoint_id=endpoint_id, days=days
+        )
+        return Response({"success": True, "data": overview})
+

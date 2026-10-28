@@ -28,6 +28,7 @@ from api.ad_networks.serializers import (
     OfferClickSerializer, OfferRewardSerializer,
     NetworkHealthSerializer, AdminAdNetworkSerializer
 )
+from api.ad_networks.models import NetworkHealthCheck
 
 
 class TestOfferViews(APITestCase):

@@ -57,3 +57,43 @@ class DeduplicationWindow(models.TextChoices):
     WEEK = "7d", "7 Days"
     MONTH = "30d", "30 Days"
     FOREVER = "forever", "Forever (No Repeat)"
+
+
+class ConversionEventType(models.TextChoices):
+    """
+    Conversion event types — mirrors CPAlead, Everflow, CAKE, TUNE standards.
+    Used in PostbackLog.event_type to distinguish conversion funnel stages.
+    """
+    INSTALL         = "install",        "App Install (CPI)"
+    LEAD            = "lead",           "Lead / Form Fill (CPL)"
+    SALE            = "sale",           "Sale / Purchase (CPA)"
+    REGISTRATION    = "registration",   "User Registration"
+    TRIAL           = "trial",          "Free Trial Start"
+    SUBSCRIPTION    = "subscription",   "Subscription"
+    DEPOSIT         = "deposit",        "First Deposit"
+    SURVEY          = "survey",         "Survey Complete"
+    VIDEO           = "video",          "Video View"
+    CLICK           = "click",          "Click Event"
+    CUSTOM          = "custom",         "Custom Event"
+    UNKNOWN         = "unknown",        "Unknown"
+
+
+class PostbackConversionStatus(models.TextChoices):
+    """
+    Lead/conversion status reported by the network.
+    Maps CPAlead status field + Everflow/CAKE/TUNE equivalents.
+    """
+    APPROVED  = "approved",  "Approved"
+    PENDING   = "pending",   "Pending Review"
+    REVERSED  = "reversed",  "Reversed / Chargeback"
+    REJECTED  = "rejected",  "Rejected"
+    FRAUD     = "fraud",     "Flagged as Fraud"
+
+
+class PostbackLevel(models.TextChoices):
+    """
+    Whether this postback config applies globally or to a specific offer.
+    Mirrors Everflow pixel_level (global / specific).
+    """
+    GLOBAL   = "global",   "Global (all offers)"
+    SPECIFIC = "specific", "Specific Offer"

@@ -212,6 +212,7 @@ class SweepstakesManager:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
 def sweepstake_entry_view(request, sweep_id):
     """POST /api/promotions/sweepstakes/<sweep_id>/enter/"""
@@ -230,8 +231,6 @@ def sweepstake_entry_view(request, sweep_id):
     )
     return Response(result)
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_sweepstake_view(request):
     """POST /api/promotions/sweepstakes/create/"""
@@ -251,9 +250,6 @@ def create_sweepstake_view(request):
         target_countries=d.get('target_countries', []),
     )
     return Response(result, status=status.HTTP_201_CREATED)
-
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def sweep_offers_view(request):
     """GET /api/promotions/sweepstakes/offers/"""

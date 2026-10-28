@@ -4,6 +4,7 @@ Offer Publish Service
 Service for publishing offers to the offer network,
 including distribution, visibility management, and syndication.
 """
+from django.db import models
 
 import logging
 from typing import Dict, List, Optional, Any

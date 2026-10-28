@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.contrib.admin import ModelAdmin, TabularInline, StackedInline
 from django.utils.html import format_html
 from django.utils import timezone
+from django.db import models
 from django.db.models import Count, Sum, Avg, Q, F, Max, Case, When
 from django.core.exceptions import ValidationError
 from django import forms
@@ -23,7 +24,7 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
-from .models import RateLimitConfig, RateLimitLog, UserRateLimitProfile
+from api.rate_limit.models import RateLimitConfig, RateLimitLog, UserRateLimitProfile, AbuseReport, IPBlockList, RateLimitInsight, RateLimitException
 
 
 # Custom Admin Site with Rate Limit Analytics
@@ -442,10 +443,40 @@ class RateLimitConfigAdmin(ModelAdmin):
         self.message_user(request, f'{updated} rate limit configurations activated.')
     activate_configs.short_description = "Activate selected configs"
     
+    def deactivate_configs(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} rate limit configurations deactivated.')
+    deactivate_configs.short_description = "Deactivate selected configs"
+    
     def reset_statistics(self, request, queryset):
         updated = queryset.update(hit_count=0, block_count=0, last_hit_at=None)
         self.message_user(request, f'{updated} configurations statistics reset.')
     reset_statistics.short_description = "Reset statistics"
+    
+    def export_configs(self, request, queryset):
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="rate_limit_configs.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Name', 'Rate Limit Type', 'Requests per Unit', 'Time Unit', 'Time Value', 'Is Active', 'Created At'])
+        
+        for config in queryset:
+            writer.writerow([
+                config.name,
+                config.rate_limit_type,
+                config.requests_per_unit,
+                config.time_unit,
+                config.time_value,
+                config.is_active,
+                config.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            ])
+        
+        self.message_user(request, f'{queryset.count()} configurations exported.')
+        return response
+    export_configs.short_description = "Export selected configs"
 
 
 # RateLimitLog Admin
@@ -591,6 +622,31 @@ class RateLimitLogAdmin(ModelAdmin):
         
         return response
     export_selected_logs.short_description = "Export selected logs"
+    
+    def mark_as_reviewed(self, request, queryset):
+        updated = queryset.update(is_reviewed=True)
+        self.message_user(request, f'{updated} rate limit logs marked as reviewed.')
+    mark_as_reviewed.short_description = "Mark as reviewed"
+    
+    def add_to_blacklist(self, request, queryset):
+        from api.rate_limit.models import IPBlockList
+        blacklisted_count = 0
+        
+        for log in queryset:
+            if log.ip_address:
+                ip_block, created = IPBlockList.objects.get_or_create(
+                    ip_address=log.ip_address,
+                    defaults={
+                        'reason': 'Blacklisted from rate limit logs',
+                        'is_active': True,
+                        'created_by': request.user if request.user.is_authenticated else None
+                    }
+                )
+                if created:
+                    blacklisted_count += 1
+        
+        self.message_user(request, f'{blacklisted_count} unique IP addresses added to blacklist.')
+    add_to_blacklist.short_description = "Add IPs to blacklist"
 
 
 # UserRateLimitProfile Admin
@@ -743,43 +799,713 @@ class UserRateLimitProfileAdmin(ModelAdmin):
         )
         self.message_user(request, f'{updated} user usage stats reset.')
     reset_usage_stats.short_description = "Reset usage statistics"
-    
-    
-    
-    
-    # api/rate_limit/admin.py - একদম শেষে এই কোড যোগ করুন
 
-# ==================== FORCE REGISTER IN DEFAULT ADMIN ====================
-from django.contrib import admin
 
-try:
-    from .models import RateLimitConfig, RateLimitLog, UserRateLimitProfile
-    from .admin import RateLimitConfigAdmin, RateLimitLogAdmin, UserRateLimitProfileAdmin
+# AbuseReport Admin
+@admin.register(AbuseReport, site=admin_site)
+class AbuseReportAdmin(ModelAdmin):
+    list_display = ('ip_address', 'user_display', 'abuse_type_display', 'severity_display',
+                   'is_blocked_display', 'is_investigated_display', 'count_24h_display',
+                   'last_seen_display', 'created_at_display')
+    list_filter = ('abuse_type', 'severity', 'is_blocked', 'is_investigated', 'created_at')
+    search_fields = ('ip_address', 'user__username', 'endpoint', 'pattern')
+    readonly_fields = ('created_at', 'updated_at', 'first_seen', 'last_seen', 'count_24h', 'count_7d', 'count_total')
+    list_per_page = 30
+    date_hierarchy = 'created_at'
     
-    registered = 0
+    fieldsets = (
+        ('Target Information', {
+            'fields': ('ip_address', 'user', 'user_agent')
+        }),
+        ('Abuse Details', {
+            'fields': ('abuse_type', 'endpoint', 'pattern', 'severity')
+        }),
+        ('Status', {
+            'fields': ('is_blocked', 'is_investigated')
+        }),
+        ('Statistics', {
+            'fields': ('count_24h', 'count_7d', 'count_total', 'first_seen', 'last_seen'),
+            'classes': ('collapse',)
+        }),
+        ('Additional Data', {
+            'fields': ('metadata',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
     
-    # Register RateLimitConfig
-    if not admin.site.is_registered(RateLimitConfig):
-        admin.site.register(RateLimitConfig, RateLimitConfigAdmin)
-        registered += 1
-        print("[OK] Registered: RateLimitConfig in default admin")
+    def user_display(self, obj):
+        if obj.user:
+            return format_html(
+                '<span style="color: blue; font-weight: bold;">{}</span>',
+                obj.user.username
+            )
+        return format_html(
+            '<span style="color: gray; font-style: italic;">Anonymous</span>'
+        )
+    user_display.short_description = 'User'
     
-    # Register RateLimitLog
-    if not admin.site.is_registered(RateLimitLog):
-        admin.site.register(RateLimitLog, RateLimitLogAdmin)
-        registered += 1
-        print("[OK] Registered: RateLimitLog in default admin")
-    
-    # Register UserRateLimitProfile
-    if not admin.site.is_registered(UserRateLimitProfile):
-        admin.site.register(UserRateLimitProfile, UserRateLimitProfileAdmin)
-        registered += 1
-        print("[OK] Registered: UserRateLimitProfile in default admin")
-    
-    if registered > 0:
-        print(f"[OK][OK][OK] {registered} rate_limit models registered in default admin")
-    else:
-        print("[OK] All rate_limit models already registered")
+    def abuse_type_display(self, obj):
+        type_colors = {
+            'rate_limit': 'orange',
+            'spam': 'red',
+            'fraud': 'darkred',
+            'malicious': 'purple',
+            'bot': 'brown',
+            'other': 'gray',
+        }
+        color = type_colors.get(obj.abuse_type, 'gray')
         
-except Exception as e:
-    print(f"[ERROR] Error registering rate_limit models: {e}")
+        type_icons = {
+            'rate_limit': '⏱️',
+            'spam': '📧',
+            'fraud': '🎭',
+            'malicious': '💀',
+            'bot': '🤖',
+            'other': '❓',
+        }
+        icon = type_icons.get(obj.abuse_type, '⚙️')
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color, icon, obj.get_abuse_type_display()
+        )
+    abuse_type_display.short_description = 'Type'
+    
+    def severity_display(self, obj):
+        severity_colors = {
+            1: 'green',
+            2: 'blue',
+            3: 'orange',
+            4: 'red',
+            5: 'darkred',
+        }
+        color = severity_colors.get(obj.severity, 'gray')
+        
+        severity_icons = {
+            1: '[INFO]',
+            2: '[WARN]',
+            3: '[CAUTION]',
+            4: '[DANGER]',
+            5: '[CRITICAL]',
+        }
+        icon = severity_icons.get(obj.severity, '[?]')
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color, icon, obj.severity
+        )
+    severity_display.short_description = 'Severity'
+    
+    def is_blocked_display(self, obj):
+        if obj.is_blocked:
+            return format_html(
+                '<span style="color: red; font-weight: bold;">⛔ Blocked</span>'
+            )
+        return format_html(
+            '<span style="color: green;">✅ Active</span>'
+        )
+    is_blocked_display.short_description = 'Blocked'
+    
+    def is_investigated_display(self, obj):
+        if obj.is_investigated:
+            return format_html(
+                '<span style="color: blue; font-weight: bold;">🔍 Investigated</span>'
+            )
+        return format_html(
+            '<span style="color: orange;">⏳ Pending</span>'
+        )
+    is_investigated_display.short_description = 'Investigated'
+    
+    def count_24h_display(self, obj):
+        if obj.count_24h > 10:
+            color = 'red'
+        elif obj.count_24h > 5:
+            color = 'orange'
+        else:
+            color = 'green'
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.count_24h
+        )
+    count_24h_display.short_description = '24h Count'
+    
+    def last_seen_display(self, obj):
+        return timezone.localtime(obj.last_seen).strftime('%Y-%m-%d %H:%M')
+    last_seen_display.short_description = 'Last Seen'
+    
+    def created_at_display(self, obj):
+        return timezone.localtime(obj.created_at).strftime('%Y-%m-%d %H:%M')
+    created_at_display.short_description = 'Created'
+    
+    actions = ['investigate_reports', 'block_ips', 'mark_as_safe']
+    
+    def investigate_reports(self, request, queryset):
+        updated = queryset.update(is_investigated=True)
+        self.message_user(request, f'{updated} abuse reports marked as investigated.')
+    investigate_reports.short_description = "Mark as investigated"
+    
+    def block_ips(self, request, queryset):
+        from api.rate_limit.services.IPBlockService import IPBlockService
+        ip_block_service = IPBlockService()
+        blocked_count = 0
+        
+        for report in queryset:
+            if not report.is_blocked:
+                try:
+                    ip_block_service.block_ip(
+                        ip_address=report.ip_address,
+                        reason='manual',
+                        description=f"Manual block from abuse report {report.id}",
+                        blocked_by=request.user
+                    )
+                    report.is_blocked = True
+                    report.save()
+                    blocked_count += 1
+                except Exception:
+                    continue
+        
+        self.message_user(request, f'{blocked_count} IPs blocked from abuse reports.')
+    block_ips.short_description = "Block IPs from reports"
+
+
+# IPBlockList Admin
+@admin.register(IPBlockList, site=admin_site)
+class IPBlockListAdmin(ModelAdmin):
+    list_display = ('target_display', 'block_type_display', 'reason_display',
+                   'is_active_display', 'blocked_by_display', 'duration_display',
+                   'block_count_display', 'created_at_display')
+    list_filter = ('block_type', 'reason', 'is_active', 'permanent', 'created_at')
+    search_fields = ('ip_address', 'ip_range_start', 'ip_range_end', 'subnet', 'description')
+    readonly_fields = ('created_at', 'updated_at', 'block_count', 'last_blocked_at')
+    list_per_page = 30
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Block Information', {
+            'fields': ('block_type', 'reason', 'description')
+        }),
+        ('Target Specification', {
+            'fields': ('ip_address', 'ip_range_start', 'ip_range_end', 'subnet')
+        }),
+        ('Block Details', {
+            'fields': ('blocked_by', 'is_active', 'permanent', 'expires_at')
+        }),
+        ('Statistics', {
+            'fields': ('block_count', 'last_blocked_at'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def target_display(self, obj):
+        if obj.block_type == 'single':
+            return format_html(
+                '<span style="color: red; font-weight: bold;">🎯 {}</span>',
+                obj.ip_address
+            )
+        elif obj.block_type == 'range':
+            return format_html(
+                '<span style="color: orange; font-weight: bold;">📏 {} - {}</span>',
+                obj.ip_range_start, obj.ip_range_end
+            )
+        elif obj.block_type == 'subnet':
+            return format_html(
+                '<span style="color: purple; font-weight: bold;">🌐 {}</span>',
+                obj.subnet
+            )
+        return 'Unknown'
+    target_display.short_description = 'Target'
+    
+    def block_type_display(self, obj):
+        type_colors = {
+            'single': 'red',
+            'range': 'orange',
+            'subnet': 'purple',
+        }
+        color = type_colors.get(obj.block_type, 'gray')
+        
+        type_icons = {
+            'single': '🎯',
+            'range': '📏',
+            'subnet': '🌐',
+        }
+        icon = type_icons.get(obj.block_type, '⚙️')
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color, icon, obj.get_block_type_display()
+        )
+    block_type_display.short_description = 'Type'
+    
+    def reason_display(self, obj):
+        reason_colors = {
+            'abuse': 'red',
+            'fraud': 'darkred',
+            'spam': 'orange',
+            'malicious': 'purple',
+            'manual': 'blue',
+            'automatic': 'green',
+        }
+        color = reason_colors.get(obj.reason, 'gray')
+        
+        reason_icons = {
+            'abuse': '⚠️',
+            'fraud': '🎭',
+            'spam': '📧',
+            'malicious': '💀',
+            'manual': '👤',
+            'automatic': '🤖',
+        }
+        icon = reason_icons.get(obj.reason, '❓')
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color, icon, obj.get_reason_display()
+        )
+    reason_display.short_description = 'Reason'
+    
+    def is_active_display(self, obj):
+        if obj.is_expired():
+            return format_html(
+                '<span style="color: gray; font-style: italic;">⏰ Expired</span>'
+            )
+        elif obj.is_active:
+            return format_html(
+                '<span style="color: red; font-weight: bold;">⛔ Active</span>'
+            )
+        return format_html(
+            '<span style="color: green;">✅ Inactive</span>'
+        )
+    is_active_display.short_description = 'Status'
+    
+    def blocked_by_display(self, obj):
+        if obj.blocked_by:
+            return format_html(
+                '<span style="color: blue; font-weight: bold;">{}</span>',
+                obj.blocked_by.username
+            )
+        return format_html(
+            '<span style="color: gray;">System</span>'
+        )
+    blocked_by_display.short_description = 'Blocked By'
+    
+    def duration_display(self, obj):
+        if obj.permanent:
+            return format_html(
+                '<span style="color: red; font-weight: bold;">♾️ Permanent</span>'
+            )
+        elif obj.expires_at:
+            if obj.is_expired():
+                return format_html(
+                    '<span style="color: gray;">⏰ Expired</span>'
+                )
+            remaining = obj.expires_at - timezone.now()
+            days = remaining.days
+            return format_html(
+                '<span style="color: orange;">⏱️ {} days</span>',
+                days
+            )
+        return format_html(
+            '<span style="color: gray;">No expiry</span>'
+        )
+    duration_display.short_description = 'Duration'
+    
+    def block_count_display(self, obj):
+        if obj.block_count > 100:
+            color = 'red'
+        elif obj.block_count > 50:
+            color = 'orange'
+        else:
+            color = 'green'
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.block_count
+        )
+    block_count_display.short_description = 'Block Count'
+    
+    def created_at_display(self, obj):
+        return timezone.localtime(obj.created_at).strftime('%Y-%m-%d %H:%M')
+    created_at_display.short_description = 'Created'
+    
+    actions = ['activate_blocks', 'deactivate_blocks', 'extend_blocks', 'cleanup_expired']
+    
+    def activate_blocks(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'{updated} IP blocks activated.')
+    activate_blocks.short_description = "Activate selected blocks"
+    
+    def deactivate_blocks(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} IP blocks deactivated.')
+    deactivate_blocks.short_description = "Deactivate selected blocks"
+    
+    def extend_blocks(self, request, queryset):
+        from datetime import timedelta
+        updated = 0
+        for block in queryset:
+            if not block.permanent:
+                block.expires_at = timezone.now() + timedelta(days=30)
+                block.save()
+                updated += 1
+        self.message_user(request, f'{updated} IP blocks extended by 30 days.')
+    extend_blocks.short_description = "Extend blocks by 30 days"
+    
+    def cleanup_expired(self, request, queryset):
+        from api.rate_limit.services.IPBlockService import IPBlockService
+        ip_block_service = IPBlockService()
+        cleaned = ip_block_service.cleanup_expired_blocks()
+        self.message_user(request, f'{cleaned} expired blocks cleaned up.')
+    cleanup_expired.short_description = "Clean up expired blocks"
+
+
+# RateLimitInsight Admin
+@admin.register(RateLimitInsight, site=admin_site)
+class RateLimitInsightAdmin(ModelAdmin):
+    list_display = ('date_display', 'total_requests_display', 'blocked_requests_display',
+                   'block_rate_display', 'unique_users_display', 'unique_ips_display',
+                   'abuse_reports_count_display', 'health_score_display')
+    list_filter = ('date',)
+    search_fields = ('date',)
+    readonly_fields = ('date', 'total_requests', 'allowed_requests', 'blocked_requests',
+                      'unique_users', 'unique_ips', 'abuse_reports_count',
+                      'auto_blocks_count', 'manual_blocks_count',
+                      'avg_response_time', 'peak_requests_per_minute',
+                      'error_rate', 'top_abusers', 'top_endpoints', 'top_ips')
+    list_per_page = 30
+    date_hierarchy = 'date'
+    
+    fieldsets = (
+        ('Date Information', {
+            'fields': ('date', 'hour')
+        }),
+        ('Request Statistics', {
+            'fields': ('total_requests', 'allowed_requests', 'blocked_requests')
+        }),
+        ('User Statistics', {
+            'fields': ('unique_users', 'unique_ips')
+        }),
+        ('Abuse Statistics', {
+            'fields': ('abuse_reports_count', 'auto_blocks_count', 'manual_blocks_count')
+        }),
+        ('Performance Metrics', {
+            'fields': ('avg_response_time', 'peak_requests_per_minute', 'error_rate'),
+            'classes': ('collapse',)
+        }),
+        ('Top Data', {
+            'fields': ('top_abusers', 'top_endpoints', 'top_ips'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def date_display(self, obj):
+        if obj.hour:
+            return format_html(
+                '<span style="color: blue; font-weight: bold;">{} {}:{:02d}</span>',
+                obj.date.strftime('%Y-%m-%d'), obj.date.strftime('%b'), obj.hour
+            )
+        return format_html(
+            '<span style="color: blue; font-weight: bold;">{}</span>',
+            obj.date.strftime('%Y-%m-%d')
+        )
+    date_display.short_description = 'Date'
+    
+    def total_requests_display(self, obj):
+        return format_html(
+            '<span style="color: blue; font-weight: bold;">{:,}</span>',
+            obj.total_requests
+        )
+    total_requests_display.short_description = 'Total Requests'
+    
+    def blocked_requests_display(self, obj):
+        return format_html(
+            '<span style="color: red; font-weight: bold;">{}</span>',
+            obj.blocked_requests
+        )
+    blocked_requests_display.short_description = 'Blocked Requests'
+    
+    def block_rate_display(self, obj):
+        rate = obj.calculate_block_rate()
+        if rate > 20:
+            color = 'red'
+        elif rate > 10:
+            color = 'orange'
+        else:
+            color = 'green'
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
+            color, rate
+        )
+    block_rate_display.short_description = 'Block Rate'
+    
+    def unique_users_display(self, obj):
+        return format_html(
+            '<span style="color: purple; font-weight: bold;">{}</span>',
+            obj.unique_users
+        )
+    unique_users_display.short_description = 'Unique Users'
+    
+    def unique_ips_display(self, obj):
+        return format_html(
+            '<span style="color: brown; font-weight: bold;">{}</span>',
+            obj.unique_ips
+        )
+    unique_ips_display.short_description = 'Unique IPs'
+    
+    def abuse_reports_count_display(self, obj):
+        return format_html(
+            '<span style="color: red; font-weight: bold;">{}</span>',
+            obj.abuse_reports_count
+        )
+    abuse_reports_count_display.short_description = 'Abuse Reports'
+    
+    def health_score_display(self, obj):
+        score = obj.get_health_score()
+        if score >= 80:
+            color = 'green'
+            emoji = '[OK]'
+        elif score >= 60:
+            color = 'orange'
+            emoji = '[WARN]'
+        else:
+            color = 'red'
+            emoji = '[ERROR]'
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color, emoji, score
+        )
+    health_score_display.short_description = 'Health Score'
+    
+    actions = ['export_insights', 'generate_daily_report']
+    
+    def export_insights(self, request, queryset):
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="rate_limit_insights.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Date', 'Total Requests', 'Blocked Requests', 'Block Rate', 
+                        'Unique Users', 'Unique IPs', 'Abuse Reports', 'Health Score'])
+        
+        for insight in queryset:
+            writer.writerow([
+                insight.date,
+                insight.total_requests,
+                insight.blocked_requests,
+                insight.calculate_block_rate(),
+                insight.unique_users,
+                insight.unique_ips,
+                insight.abuse_reports_count,
+                insight.get_health_score()
+            ])
+        
+        return response
+    export_insights.short_description = "Export selected insights"
+    
+    def generate_daily_report(self, request, queryset):
+        from api.rate_limit.services.RateLimitInsightService import RateLimitInsightService
+        service = RateLimitInsightService()
+        
+        reports = []
+        for insight in queryset:
+            try:
+                report = service.generate_daily_insights(insight.date)
+                reports.append(f"Generated for {insight.date}")
+            except Exception as e:
+                reports.append(f"Failed for {insight.date}: {e}")
+        
+        self.message_user(request, f"Reports generated: {', '.join(reports)}")
+    generate_daily_report.short_description = "Generate daily reports"
+
+
+# RateLimitException Admin
+@admin.register(RateLimitException, site=admin_site)
+class RateLimitExceptionAdmin(ModelAdmin):
+    list_display = ('target_display', 'exception_type_display', 'reason_display',
+                   'is_active_display', 'multiplier_display', 'usage_count_display',
+                   'granted_by_display', 'expires_at_display')
+    list_filter = ('exception_type', 'is_active', 'permanent', 'created_at')
+    search_fields = ('user__username', 'ip_address', 'endpoint_pattern', 'reason')
+    readonly_fields = ('created_at', 'updated_at', 'usage_count', 'last_used_at')
+    list_per_page = 30
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Target Information', {
+            'fields': ('user', 'ip_address', 'endpoint_pattern')
+        }),
+        ('Exception Details', {
+            'fields': ('exception_type', 'reason', 'granted_by')
+        }),
+        ('Exception Parameters', {
+            'fields': ('multiplier', 'max_requests')
+        }),
+        ('Status and Timing', {
+            'fields': ('is_active', 'permanent', 'expires_at')
+        }),
+        ('Usage Tracking', {
+            'fields': ('usage_count', 'last_used_at'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def target_display(self, obj):
+        if obj.user:
+            return format_html(
+                '<span style="color: blue; font-weight: bold;">👤 {}</span>',
+                obj.user.username
+            )
+        elif obj.ip_address:
+            return format_html(
+                '<span style="color: red; font-weight: bold;">🌐 {}</span>',
+                obj.ip_address
+            )
+        elif obj.endpoint_pattern:
+            return format_html(
+                '<span style="color: purple; font-weight: bold;">🔗 {}</span>',
+                obj.endpoint_pattern[:30] + '...' if len(obj.endpoint_pattern) > 30 else obj.endpoint_pattern
+            )
+        return 'Unknown'
+    target_display.short_description = 'Target'
+    
+    def exception_type_display(self, obj):
+        type_colors = {
+            'whitelist': 'green',
+            'premium': 'gold',
+            'emergency': 'red',
+            'maintenance': 'orange',
+            'custom': 'blue',
+        }
+        color = type_colors.get(obj.exception_type, 'gray')
+        
+        type_icons = {
+            'whitelist': '✅',
+            'premium': '⭐',
+            'emergency': '🚨',
+            'maintenance': '🔧',
+            'custom': '⚙️',
+        }
+        icon = type_icons.get(obj.exception_type, '❓')
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color, icon, obj.get_exception_type_display()
+        )
+    exception_type_display.short_description = 'Type'
+    
+    def reason_display(self, obj):
+        if len(obj.reason) > 50:
+            return obj.reason[:50] + '...'
+        return obj.reason
+    reason_display.short_description = 'Reason'
+    
+    def is_active_display(self, obj):
+        if obj.is_expired():
+            return format_html(
+                '<span style="color: gray; font-style: italic;">⏰ Expired</span>'
+            )
+        elif obj.is_active:
+            return format_html(
+                '<span style="color: green; font-weight: bold;">✅ Active</span>'
+            )
+        return format_html(
+            '<span style="color: red;">⛔ Inactive</span>'
+        )
+    is_active_display.short_description = 'Status'
+    
+    def multiplier_display(self, obj):
+        if obj.multiplier > 1:
+            return format_html(
+                '<span style="color: green; font-weight: bold;">{}x</span>',
+                obj.multiplier
+            )
+        return format_html(
+            '<span style="color: gray;">{}x</span>',
+            obj.multiplier
+        )
+    multiplier_display.short_description = 'Multiplier'
+    
+    def usage_count_display(self, obj):
+        if obj.usage_count > 1000:
+            color = 'red'
+        elif obj.usage_count > 500:
+            color = 'orange'
+        else:
+            color = 'green'
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.usage_count
+        )
+    usage_count_display.short_description = 'Usage Count'
+    
+    def granted_by_display(self, obj):
+        if obj.granted_by:
+            return format_html(
+                '<span style="color: blue; font-weight: bold;">{}</span>',
+                obj.granted_by.username
+            )
+        return format_html(
+            '<span style="color: gray;">System</span>'
+        )
+    granted_by_display.short_description = 'Granted By'
+    
+    def expires_at_display(self, obj):
+        if obj.permanent:
+            return format_html(
+                '<span style="color: gold; font-weight: bold;">♾️ Permanent</span>'
+            )
+        elif obj.expires_at:
+            if obj.is_expired():
+                return format_html(
+                    '<span style="color: gray;">⏰ Expired</span>'
+                )
+            remaining = obj.expires_at - timezone.now()
+            days = remaining.days
+            return format_html(
+                '<span style="color: orange;">⏱️ {} days</span>',
+                days
+            )
+        return format_html(
+            '<span style="color: green;">No expiry</span>'
+        )
+    expires_at_display.short_description = 'Expires'
+    
+    actions = ['activate_exceptions', 'deactivate_exceptions', 'extend_exceptions']
+    
+    def activate_exceptions(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'{updated} exceptions activated.')
+    activate_exceptions.short_description = "Activate selected exceptions"
+    
+    def deactivate_exceptions(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} exceptions deactivated.')
+    deactivate_exceptions.short_description = "Deactivate selected exceptions"
+    
+    def extend_exceptions(self, request, queryset):
+        from datetime import timedelta
+        updated = 0
+        for exception in queryset:
+            if not exception.permanent:
+                exception.expires_at = timezone.now() + timedelta(days=30)
+                exception.save()
+                updated += 1
+        self.message_user(request, f'{updated} exceptions extended by 30 days.')
+    extend_exceptions.short_description = "Extend exceptions by 30 days"

@@ -4,6 +4,7 @@ Analytics Tasks
 This module contains Celery tasks for analytics operations including
 metrics collection, health scoring, and reporting.
 """
+from django.conf import settings
 
 from celery import shared_task
 from django.utils import timezone

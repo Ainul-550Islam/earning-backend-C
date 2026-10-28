@@ -87,6 +87,7 @@ POINTS_PER_DOLLAR = 1000        # 1000 points = $1
 
 # ── AML thresholds ────────────────────────────────────────────
 AML_STRUCTURING_THRESHOLD = Decimal("9999")   # Near reporting threshold
+AML_REPORTING_THRESHOLD  = Decimal("500000")   # Transactions ≥ 5 lakh BDT must be reported to BB
 AML_RAPID_MOVEMENT_24H    = Decimal("100000") # 100k in 24h = flag
 AML_ROUND_NUMBER_REPEAT   = 3                 # 3+ round numbers in 7 days = flag
 
@@ -97,3 +98,11 @@ KYC_LIMITS = {
     2: {"daily": Decimal("500000"),   "monthly": Decimal("5000000")},
     3: {"daily": Decimal("9999999"),  "monthly": Decimal("99999999")},
 }
+
+# ── Celery Beat Schedule (also defined in celery_beat_config.py) ──────────
+# Imported by celery_beat_config.py and celery_schedule.py
+# Usage: from api.wallet.constants import WALLET_BEAT_SCHEDULE
+try:
+    from .celery_beat_config import WALLET_BEAT_SCHEDULE
+except Exception:
+    WALLET_BEAT_SCHEDULE = {}

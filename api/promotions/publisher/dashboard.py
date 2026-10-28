@@ -200,6 +200,8 @@ class PublisherDashboard:
 
 
 @api_view(['GET'])
+@api_view(['GET'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def publisher_dashboard_view(request):
     """GET /api/promotions/publisher/dashboard/"""
@@ -207,17 +209,12 @@ def publisher_dashboard_view(request):
     data = dashboard.get_overview()
     return Response(data)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def publisher_campaign_breakdown_view(request):
     """GET /api/promotions/publisher/campaigns/"""
     dashboard = PublisherDashboard(user_id=request.user.id)
     data = dashboard.get_campaign_breakdown(limit=int(request.query_params.get('limit', 10)))
     return Response({'campaigns': data})
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def publisher_earnings_chart_view(request):
     """GET /api/promotions/publisher/earnings/chart/?days=30"""

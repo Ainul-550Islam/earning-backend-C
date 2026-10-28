@@ -37,8 +37,8 @@ class TranslationMemoryService:
     ) -> Optional[object]:
         """New TM segment add করে। Duplicate হলে quality check করে update করে।"""
         try:
-            from ..models.translation import TranslationMemory
-            from ..models.core import Language
+            from api.localization.models.translation import TranslationMemory
+            from api.localization.models.core import Language
             source_lang = Language.objects.filter(code=source_lang_code).first()
             target_lang = Language.objects.filter(code=target_lang_code).first()
             if not source_lang or not target_lang:
@@ -142,7 +142,7 @@ class TranslationMemoryService:
     ) -> Optional[object]:
         """SHA256 hash দিয়ে exact match খোঁজে — O(1)"""
         try:
-            from ..models.translation import TranslationMemory
+            from api.localization.models.translation import TranslationMemory
             source_hash = _hash_text(source_text)
             qs = TranslationMemory.objects.filter(
                 source_hash=source_hash,
@@ -174,8 +174,8 @@ class TranslationMemoryService:
         Fetches candidate segments (length-filtered) then scores them.
         """
         try:
-            from ..models.translation import TranslationMemory
-            from ...utils.fuzzy import combined_similarity
+            from api.localization.models.translation import TranslationMemory
+            from api.localization.utils.fuzzy import combined_similarity
 
             # Length filter — segments that are too different in length won't match well
             src_len = len(source_text)
@@ -300,7 +300,7 @@ class TranslationMemoryService:
     def export_tmx(self, source_lang: str, target_lang: str, domain: str = '') -> str:
         """TM entries-গুলো TMX format-এ export করে"""
         try:
-            from ..models.translation import TranslationMemory
+            from api.localization.models.translation import TranslationMemory
             qs = TranslationMemory.objects.filter(
                 source_language__code=source_lang,
                 target_language__code=target_lang,
@@ -335,7 +335,7 @@ class TranslationMemoryService:
     def get_stats(self, source_lang: str, target_lang: str) -> Dict:
         """TM statistics"""
         try:
-            from ..models.translation import TranslationMemory
+            from api.localization.models.translation import TranslationMemory
             qs = TranslationMemory.objects.filter(
                 source_language__code=source_lang,
                 target_language__code=target_lang,
@@ -370,7 +370,7 @@ class TranslationMemoryService:
         Run once to populate TM from existing translations.
         """
         try:
-            from ..models.core import Language, Translation
+            from api.localization.models.core import Language, Translation
             source_lang = Language.objects.filter(code=source_lang_code).first()
             target_lang = Language.objects.filter(code=language_code).first()
             if not source_lang or not target_lang:

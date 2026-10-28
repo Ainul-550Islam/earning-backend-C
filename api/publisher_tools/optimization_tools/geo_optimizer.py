@@ -11,7 +11,7 @@ HIGH_VALUE_COUNTRIES = {
 
 
 def get_geo_optimization_recommendations(publisher, days: int = 30) -> Dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.db.models import Sum, Avg
     from django.utils import timezone
     from datetime import timedelta

@@ -46,8 +46,6 @@ class Command(BaseCommand):
             action='store_true',
             help='Skip records that already exist'
         )
-        defaulthelp='Skip records that already exist'
-        )
         parser.add_argument(
             '--dry-run',
             action='store_true',
@@ -300,8 +298,12 @@ class Command(BaseCommand):
             with zipfile.ZipFile(backup_file, 'r') as zf:
                 for filename in zf.namelist():
                     if filename.endswith(f'_{model}.{format_type}'):
-                        # Extract to temp file
-                        temp_path = f'/tmp/{filename}'
+                        # Extract to temp file - use basename only to prevent
+                        # path traversal via a crafted archive filename
+                        safe_name = os.path.basename(filename)
+                        # private (0700) directory: no predictable /tmp name for others to pre-create
+                        import tempfile
+                        temp_path = os.path.join(tempfile.mkdtemp(prefix='alerts_restore_'), safe_name)
                         with open(temp_path, 'wb') as f:
                             f.write(zf.read(filename))
                         return temp_path
@@ -313,10 +315,10 @@ class Command(BaseCommand):
     
     def _get_model_class(self, model):
         """Get model class by name"""
-        from alerts.models.core import AlertRule, AlertLog, Notification
-        from alerts.models.channel import AlertChannel
-        from alerts.models.incident import Incident
-        from alerts.models.reporting import AlertReport
+        from api.alerts.models.core import AlertRule, AlertLog, Notification
+        from api.alerts.models.channel import AlertChannel
+        from api.alerts.models.incident import Incident
+        from api.alerts.models.reporting import AlertReport
         
         model_map = {
             'rules': AlertRule,

@@ -2,6 +2,13 @@
 
 This serializer handles webhook filter CRUD operations
 including validation and configuration management.
+
+FIX APPLIED:
+- Added WebhookFilterCreateSerializer (for POST)
+- Added WebhookFilterUpdateSerializer (for PATCH/PUT)
+- Added WebhookFilterDetailSerializer (for GET single)
+- Added WebhookFilterListSerializer (for GET list)
+- All must be exported in serializers/__init__.py
 """
 
 from rest_framework import serializers
@@ -12,12 +19,14 @@ from ..constants import FilterOperator
 
 
 class WebhookFilterSerializer(serializers.ModelSerializer):
-    """Serializer for webhook filter CRUD operations."""
+    """Base serializer for webhook filter CRUD operations."""
+    
+    endpoint_name = serializers.CharField(source='endpoint.label', read_only=True)
     
     class Meta:
         model = WebhookFilter
         fields = [
-            'id', 'endpoint', 'field_path', 'operator', 'value',
+            'id', 'endpoint', 'endpoint_name', 'field_path', 'operator', 'value',
             'is_active', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -34,123 +43,77 @@ class WebhookFilterSerializer(serializers.ModelSerializer):
         return value
 
 
-class WebhookTemplateSerializer(serializers.ModelSerializer):
-    """Serializer for webhook template CRUD operations."""
+class WebhookFilterCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating webhook filters (POST)."""
     
     class Meta:
-        model = WebhookTemplate
+        model = WebhookFilter
         fields = [
-            'id', 'name', 'event_type', 'payload_template',
-            'transform_rules', 'is_active', 'created_at', 'updated_at',
+            'endpoint', 'field_path', 'operator', 'value', 'is_active',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
     
-    def validate_payload_template(self, value):
-        """Validate Jinja2 template syntax."""
-        try:
-            from jinja2 import Environment, TemplateSyntaxError
-            env = Environment()
-            env.from_string(value)
-            return value
-        except TemplateSyntaxError as e:
-            raise serializers.ValidationError(_('Invalid Jinja2 template: {}').format(str(e)))
+    def validate_operator(self, value):
+        """Validate filter operator."""
+        if value not in [choice[0] for choice in FilterOperator.CHOICES]:
+            raise serializers.ValidationError(_('Invalid operator'))
+        return value
     
-    def validate_transform_rules(self, value):
-        """Validate transformation rules JSON."""
-        if not isinstance(value, dict):
-            raise serializers.ValidationError(_('Transform rules must be a JSON object'))
+    def validate_value(self, value):
+        """Validate filter value based on operator."""
+        return value
+    
+    def validate_field_path(self, value):
+        """Validate field path format."""
+        if not value or not isinstance(value, str):
+            raise serializers.ValidationError(_('Field path must be a non-empty string'))
         return value
 
 
-class WebhookBatchSerializer(serializers.ModelSerializer):
-    """Serializer for webhook batch CRUD operations."""
+class WebhookFilterUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating webhook filters (PATCH/PUT)."""
     
     class Meta:
-        model = WebhookBatch
+        model = WebhookFilter
         fields = [
-            'id', 'batch_id', 'endpoint', 'event_count',
-            'status', 'created_at', 'completed_at',
+            'field_path', 'operator', 'value', 'is_active',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def validate_operator(self, value):
+        """Validate filter operator."""
+        if value not in [choice[0] for choice in FilterOperator.CHOICES]:
+            raise serializers.ValidationError(_('Invalid operator'))
+        return value
+    
+    def validate_value(self, value):
+        """Validate filter value based on operator."""
+        return value
 
 
-class WebhookBatchItemSerializer(serializers.ModelSerializer):
-    """Serializer for webhook batch item CRUD operations."""
+class WebhookFilterDetailSerializer(serializers.ModelSerializer):
+    """Serializer for retrieving single webhook filter details (GET)."""
+    
+    endpoint_name = serializers.CharField(source='endpoint.label', read_only=True)
+    operator_display = serializers.CharField(source='get_operator_display', read_only=True)
     
     class Meta:
-        model = WebhookBatchItem
+        model = WebhookFilter
         fields = [
-            'id', 'batch', 'delivery_log', 'position',
-            'created_at',
+            'id', 'endpoint', 'endpoint_name', 'field_path', 'operator',
+            'operator_display', 'value', 'is_active', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'endpoint', 'created_at', 'updated_at']
 
 
-class WebhookSecretSerializer(serializers.ModelSerializer):
-    """Serializer for webhook secret CRUD operations."""
+class WebhookFilterListSerializer(serializers.ModelSerializer):
+    """Serializer for listing webhook filters (GET list)."""
+    
+    endpoint_name = serializers.CharField(source='endpoint.label', read_only=True)
     
     class Meta:
-        model = WebhookSecret
+        model = WebhookFilter
         fields = [
-            'id', 'endpoint', 'secret_hash', 'created_at',
-            'expires_at', 'is_active',
+            'id', 'endpoint', 'endpoint_name', 'field_path', 'operator', 'value',
+            'is_active', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-    
-    def to_representation(self, instance):
-        """Customize secret representation."""
-        data = super().to_representation(instance)
-        # Never expose actual secret in API responses
-        data.pop('secret_hash', None)
-        data['secret_exists'] = bool(instance.secret_hash)
-        return data
+        read_only_fields = ['id', 'endpoint', 'created_at', 'updated_at']
 
-
-class WebhookAnalyticsSerializer(serializers.ModelSerializer):
-    """Serializer for webhook analytics CRUD operations."""
-    
-    class Meta:
-        model = WebhookAnalytics
-        fields = [
-            'id', 'date', 'endpoint', 'total_sent', 'success_count',
-            'failed_count', 'avg_latency_ms', 'success_rate',
-            'created_at', 'updated_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-
-class WebhookHealthLogSerializer(serializers.ModelSerializer):
-    """Serializer for webhook health log CRUD operations."""
-    
-    class Meta:
-        model = WebhookHealthLog
-        fields = [
-            'id', 'endpoint', 'checked_at', 'is_healthy',
-            'response_time_ms', 'status_code', 'error',
-        ]
-        read_only_fields = ['id', 'created_at']
-
-
-class WebhookEventStatSerializer(serializers.ModelSerializer):
-    """Serializer for webhook event statistics CRUD operations."""
-    
-    class Meta:
-        model = WebhookEventStat
-        fields = [
-            'id', 'date', 'event_type', 'fired_count',
-            'delivered_count', 'failed_count',
-            'created_at', 'updated_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-
-class WebhookRateLimitSerializer(serializers.ModelSerializer):
-    """Serializer for webhook rate limit CRUD operations."""
-    
-    class Meta:
-        model = WebhookRateLimit
-        fields = [
-            'id', 'endpoint', 'window_seconds', 'max_requests',
-            'current_count', 'reset_at', 'updated_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']

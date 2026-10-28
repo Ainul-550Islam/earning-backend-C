@@ -1,6 +1,6 @@
 import random
 import logging
-from ...models import OfferPoolEntry, OfferRotationLog
+from api.smartlink.models import OfferPoolEntry, OfferRotationLog
 from ...choices import RotationMethod
 from ...constants import ROTATION_MAX_RETRIES
 from .CapTrackerService import CapTrackerService

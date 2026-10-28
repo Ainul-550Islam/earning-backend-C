@@ -234,6 +234,7 @@ class PublisherBankAccount(TimeStampedModel):
     metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_bank_accounts'
         verbose_name = _('Publisher Bank Account')
         verbose_name_plural = _('Publisher Bank Accounts')

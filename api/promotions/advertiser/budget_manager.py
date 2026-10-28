@@ -96,13 +96,11 @@ class BudgetManager:
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def campaign_budget_status_view(request, campaign_id):
     manager = BudgetManager()
     return Response(manager.get_campaign_budget_status(campaign_id, request.user.id))
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def campaign_topup_view(request, campaign_id):
     manager = BudgetManager()

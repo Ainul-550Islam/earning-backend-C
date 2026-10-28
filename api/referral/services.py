@@ -265,7 +265,7 @@ class ReferralService:
     @staticmethod
     def get_referral_stats(user) -> dict:
         """User এর complete referral stats"""
-        from django.db.models import Sum, Count
+        from django.db.models import Sum, Count, Q
 
         # Direct referrals (Level 1)
         direct_refs = Referral.objects.filter(referrer=user)
@@ -280,9 +280,9 @@ class ReferralService:
         # Total earnings from referrals
         earnings = ReferralEarning.objects.filter(referrer=user).aggregate(
             total=Sum('amount'),
-            l1=Sum('amount', filter=__import__('django.db.models', fromlist=['Q']).Q(level=1)),
-            l2=Sum('amount', filter=__import__('django.db.models', fromlist=['Q']).Q(level=2)),
-            l3=Sum('amount', filter=__import__('django.db.models', fromlist=['Q']).Q(level=3)),
+            l1=Sum('amount', filter=Q(level=1)),
+            l2=Sum('amount', filter=Q(level=2)),
+            l3=Sum('amount', filter=Q(level=3)),
         )
 
         # This month

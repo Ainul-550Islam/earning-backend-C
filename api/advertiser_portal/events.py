@@ -20,6 +20,8 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 from .exceptions import *
 from .utils import *
+from .cache import CacheManager
+from api.fraud_detection.services import get_fraud_detection_service
 
 
 logger = logging.getLogger(__name__)
@@ -76,7 +78,7 @@ class Event:
             'max_retries': self.max_retries,
             'delay_until': self.delay_until.isoformat() if self.delay_until else None
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Event':
         """Create event from dictionary."""
@@ -280,7 +282,7 @@ class InvoiceGeneratedEvent(Event):
 # Event Handler Interface
 class EventHandler(ABC):
     """Abstract base class for event handlers."""
-    
+
     @abstractmethod
     def handle(self, event: Event) -> bool:
         """
@@ -293,7 +295,7 @@ class EventHandler(ABC):
             True if handled successfully
         """
         pass
-    
+
     @property
     @abstractmethod
     def event_types(self) -> List[str]:
@@ -306,7 +308,7 @@ class EmailNotificationHandler(EventHandler):
     """Handler for sending email notifications."""
     
     def __init__(self):
-        self.email_service = EmailService()
+        self.email_service = None  # TODO: EmailService was never imported (NameError at startup); wire a real one before use
     
     def handle(self, event: Event) -> bool:
         """Send email notification based on event type."""
@@ -383,7 +385,7 @@ class AnalyticsEventHandler(EventHandler):
     """Handler for analytics-related events."""
     
     def __init__(self):
-        self.analytics_service = AnalyticsService()
+        self.analytics_service = None  # TODO: AnalyticsService was never imported (NameError at startup); wire a real one before use
     
     def handle(self, event: Event) -> bool:
         """Update analytics based on event."""
@@ -433,7 +435,7 @@ class FraudDetectionEventHandler(EventHandler):
     """Handler for fraud detection events."""
     
     def __init__(self):
-        self.fraud_service = FraudDetectionService()
+        self.fraud_service = get_fraud_detection_service()
     
     def handle(self, event: Event) -> bool:
         """Handle fraud detection events."""
@@ -679,7 +681,7 @@ def publish_event(event: Event, is_async: bool = False) -> bool:
     
     Args:
         event: Event to publish
-        async: Whether to publish asynchronously
+        is_async: Whether to publish asynchronously
         
     Returns:
         True if published successfully
@@ -687,7 +689,7 @@ def publish_event(event: Event, is_async: bool = False) -> bool:
     # Save to store first
     event_store.save_event(event)
     
-    if async:
+    if is_async:
         return event_publisher.publish_async(event)
     else:
         return event_publisher.publish(event)

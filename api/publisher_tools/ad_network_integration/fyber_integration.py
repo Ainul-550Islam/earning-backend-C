@@ -36,6 +36,7 @@ class FyberConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_fyber_configs"
         verbose_name = _("Fyber Config")
         unique_together = [["publisher"]]

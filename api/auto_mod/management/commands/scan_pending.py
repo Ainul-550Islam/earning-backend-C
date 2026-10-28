@@ -18,9 +18,9 @@ class Command(BaseCommand):
                             help="Show count without processing.")
 
     def handle(self, *args, **options):
-        from auto_mod.models import SuspiciousSubmission
-        from auto_mod.tasks import scan_submission
-        from auto_mod.services import ModerationService
+        from api.auto_mod.models import SuspiciousSubmission
+        from api.auto_mod.tasks import scan_submission
+        from api.auto_mod.services import ModerationService
 
         qs = SuspiciousSubmission.objects.pending()
         if options["submission_type"]:

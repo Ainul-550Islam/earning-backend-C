@@ -5,7 +5,15 @@ import logging
 from django.utils import timezone
 from django.db.models import Avg, Sum, Count, F
 from datetime import timedelta
-from ..constants import *
+from ..constants import (
+    STATUS_ACTIVE,
+    CONVERSION_APPROVED,
+    CONVERSION_PENDING,
+    CONVERSION_REJECTED,
+    EVENT_OFFER_VIEW,
+    EVENT_OFFER_CLICK,
+    EVENT_OFFER_CONVERSION,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -300,15 +308,19 @@ class AnalyticsTracker:
     
     def get_provider_performance(self, provider):
         """
-        Get performance stats for provider
-        
+        Get performance stats for provider.
         Args:
-            provider: OfferProvider instance
-        
+            provider: OfferProvider instance OR UUID/pk
         Returns:
             dict: Provider statistics
         """
-        from ..models import Offer, OfferConversion
+        from ..models import Offer, OfferConversion, OfferProvider
+        # Accept UUID/pk or instance
+        if not hasattr(provider, 'name'):
+            try:
+                provider = OfferProvider.objects.get(pk=provider)
+            except OfferProvider.DoesNotExist:
+                return {'error': 'provider not found'}
         
         offers = Offer.objects.filter(provider=provider)
         
@@ -350,34 +362,27 @@ class AnalyticsTracker:
     
     def get_trending_offers(self, limit=10):
         """
-        Get trending offers based on recent activity
-        
-        Args:
-            limit: Number of offers to return
-        
+        Get trending offers based on recent activity.
         Returns:
-            QuerySet: Trending offers
+            QuerySet: Trending offers ordered by score
         """
         from ..models import Offer
-        from django.db.models import F, Q
-        
-        # Calculate trending score based on recent activity
-        recent_time = timezone.now() - timedelta(days=7)
-        
+        from django.db.models import F, FloatField
+        from django.db.models.functions import Cast
+
         trending_offers = Offer.objects.filter(
             status=STATUS_ACTIVE,
-            created_at__lte=timezone.now() - timedelta(days=1)  # At least 1 day old
         ).annotate(
-            trending_score=(
-                F('conversion_count') * 3 +  # Weight conversions more
+            # Simple trending score: weighted sum of engagement metrics
+            trending_score=Cast(
+                F('conversion_count') * 3 +
                 F('click_count') * 2 +
-                F('view_count')
-            ) / (
-                (timezone.now() - F('created_at')).total_seconds() / 86400 + 1  # Days since creation
+                F('view_count'),
+                FloatField()
             )
         ).order_by('-trending_score')[:limit]
-        
-        return trending_offers
+
+        return list(trending_offers)
     
     def update_offer_analytics(self):
         """
@@ -416,25 +421,34 @@ class AnalyticsTracker:
             self.offer.calculate_quality_score()
             
             self.offer.save()
-            
-            return True
-        
+
+            return {
+                'success':       True,
+                'total_revenue': float(total_revenue),
+                'total_payout':  float(total_payout),
+                'offer_id':      str(self.offer.id),
+            }
+
         except Exception as e:
             logger.error(f"Failed to update offer analytics: {e}")
-            return False
+            return {'success': False, 'error': str(e)}
     
     @staticmethod
-    def generate_performance_report(start_date, end_date):
+    def generate_performance_report(start_date=None, end_date=None):
         """
-        Generate comprehensive performance report
-        
+        Generate comprehensive performance report.
         Args:
-            start_date: Start date for report
-            end_date: End date for report
-        
+            start_date: Start date (defaults to 30 days ago)
+            end_date:   End date   (defaults to now)
         Returns:
             dict: Performance report
         """
+        from django.utils import timezone
+        from datetime import timedelta
+        if start_date is None:
+            start_date = timezone.now() - timedelta(days=30)
+        if end_date is None:
+            end_date = timezone.now()
         from ..models import Offer, OfferClick, OfferConversion
         
         offers = Offer.objects.filter(

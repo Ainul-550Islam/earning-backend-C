@@ -64,7 +64,7 @@ class WebhookTemplateAdmin(admin.ModelAdmin):
         return actions
 
     def test_template(self, request, queryset):
-        from ..services.core import TemplateEngine
+        from ..services.core.TemplateEngine import TemplateEngine
         engine = TemplateEngine()
         results = []
         for template in queryset:
@@ -97,7 +97,7 @@ class WebhookTemplateAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if obj.payload_template:
             try:
-                from ..services.core import TemplateEngine
+                from ..services.core.TemplateEngine import TemplateEngine
                 engine = TemplateEngine()
                 engine.render_template(obj.payload_template, {'test': True})
             except Exception as e:
@@ -112,7 +112,7 @@ class WebhookTemplateAdmin(admin.ModelAdmin):
 class WebhookBatchAdmin(admin.ModelAdmin):
     """Admin configuration for WebhookBatch model."""
 
-    list_display = ['batch_id', 'endpoint', 'event_count', 'completion_percentage', 'created_at']
+    list_display = ['batch_id', 'endpoint', 'event_count', 'status_badge', 'completion_percentage', 'created_at']
     list_filter = ['created_at', 'endpoint__status', 'endpoint__owner']
     search_fields = ['batch_id', 'endpoint__label', 'endpoint__url', 'endpoint__owner__username']
     readonly_fields = ['id', 'created_at', 'completion_percentage']
@@ -161,8 +161,8 @@ class WebhookBatchAdmin(admin.ModelAdmin):
         return actions
 
     def process_batch(self, request, queryset):
-        from ..services.batch import BatchService
-        service = BatchService()
+        from ..services.batch import BatchDispatchService
+        service = BatchDispatchService()
         results = []
         for batch in queryset:
             if batch.status in [BatchStatus.COMPLETED, BatchStatus.PROCESSING]:
@@ -177,8 +177,8 @@ class WebhookBatchAdmin(admin.ModelAdmin):
     process_batch.short_description = 'Process selected batches'
 
     def cancel_batch(self, request, queryset):
-        from ..services.batch import BatchService
-        service = BatchService()
+        from ..services.batch import BatchDispatchService
+        service = BatchDispatchService()
         canceled_count = 0
         for batch in queryset:
             if batch.status in [BatchStatus.COMPLETED, BatchStatus.CANCELLED]:
@@ -193,8 +193,8 @@ class WebhookBatchAdmin(admin.ModelAdmin):
     cancel_batch.short_description = 'Cancel selected batches'
 
     def retry_batch(self, request, queryset):
-        from ..services.batch import BatchService
-        service = BatchService()
+        from ..services.batch import BatchDispatchService
+        service = BatchDispatchService()
         retried_count = 0
         for batch in queryset:
             try:
@@ -214,7 +214,7 @@ class WebhookBatchAdmin(admin.ModelAdmin):
 class WebhookBatchItemAdmin(admin.ModelAdmin):
     """Admin configuration for WebhookBatchItem model."""
 
-    list_display = ['batch', 'event_data_preview', 'created_at']
+    list_display = ['batch', 'sequence_number', 'status_badge', 'event_data_preview', 'created_at']
     list_filter = ['created_at']
     search_fields = ['batch__batch_id', 'batch__endpoint__label', 'batch__endpoint__url', 'error_message']
     readonly_fields = ['id', 'created_at', 'event_data_preview']
@@ -301,16 +301,16 @@ class WebhookSecretAdmin(admin.ModelAdmin):
         return actions
 
     def rotate_secret(self, request, queryset):
-        from ..services.core import SecretRotationService
+        from ..services.core.SecretRotationService import SecretRotationService
         service = SecretRotationService()
         rotated_count = 0
         for secret in queryset:
             try:
                 new_secret = service.rotate_secret(secret.endpoint)
                 rotated_count += 1
-                self.message_user(request, f"Rotated secret for {secret.endpoint.label or secret.endpoint.url}: {new_secret[:8]}...")
+                self.message_user(request, f"Rotated secret for {secret.endpoint.label or secret.endpoint.target_url}: {new_secret[:8]}...")
             except Exception as e:
-                self.message_user(request, f"Failed to rotate secret for {secret.endpoint.label or secret.endpoint.url}: {str(e)}", level='error')
+                self.message_user(request, f"Failed to rotate secret for {secret.endpoint.label or secret.endpoint.target_url}: {str(e)}", level='error')
         self.message_user(request, f"Successfully rotated {rotated_count} secrets.")
     rotate_secret.short_description = 'Rotate secrets for selected endpoints'
 
@@ -322,7 +322,7 @@ class WebhookSecretAdmin(admin.ModelAdmin):
             secret.is_active = False
             secret.save()
             deactivated_count += 1
-            self.message_user(request, f"Deactivated secret for {secret.endpoint.label or secret.endpoint.url}")
+            self.message_user(request, f"Deactivated secret for {secret.endpoint.label or secret.endpoint.target_url}")
         self.message_user(request, f"Successfully deactivated {deactivated_count} secrets.")
     deactivate_secret.short_description = 'Deactivate selected secrets'
 

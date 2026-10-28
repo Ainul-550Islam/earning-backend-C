@@ -178,6 +178,8 @@ class CampaignChoices(BaseChoices):
     
     ARCHIVED = 'archived'
     ARCHIVED_label = _('Archived')
+    
+    STATUS_CHOICES = [
         (DRAFT, DRAFT_label),
         (ACTIVE, ACTIVE_label),
         (PAUSED, PAUSED_label),

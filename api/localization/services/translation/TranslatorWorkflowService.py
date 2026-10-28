@@ -18,8 +18,8 @@ class TranslatorWorkflowService:
     def assign_translator(self, key_ids: List[int], language_code: str, translator_user) -> Dict:
         """Translation keys translator-এ assign করে।"""
         try:
-            from ..models.core import TranslationKey, Language
-            from ..models.content import TranslationRequest
+            from api.localization.models.core import TranslationKey, Language
+            from api.localization.models.content import TranslationRequest
             lang = Language.objects.filter(code=language_code, is_active=True).first()
             if not lang:
                 return {'success': False, 'error': f'Language {language_code} not found'}
@@ -53,7 +53,7 @@ class TranslatorWorkflowService:
     ) -> Dict:
         """Translator-এর translation submit করে — 'translated' status-এ যায়।"""
         try:
-            from ..models.core import Translation, TranslationKey, Language
+            from api.localization.models.core import Translation, TranslationKey, Language
             trans_key = TranslationKey.objects.filter(key=key).first()
             language = Language.objects.filter(code=language_code, is_active=True).first()
             if not trans_key or not language:
@@ -117,7 +117,7 @@ class TranslatorWorkflowService:
         decision: 'approve' | 'reject'
         """
         try:
-            from ..models.core import Translation
+            from api.localization.models.core import Translation
             trans = Translation.objects.filter(pk=translation_id).first()
             if not trans:
                 return {'success': False, 'error': 'Translation not found'}
@@ -153,7 +153,7 @@ class TranslatorWorkflowService:
     def get_pending_reviews(self, language_code: str = None, reviewer=None) -> List[Dict]:
         """Review দরকার এমন translations list করে।"""
         try:
-            from ..models.core import Translation
+            from api.localization.models.core import Translation
             qs = Translation.objects.filter(needs_review=True, is_approved=False)
             if language_code:
                 qs = qs.filter(language__code=language_code)
@@ -169,7 +169,7 @@ class TranslatorWorkflowService:
     def bulk_approve(self, language_code: str, min_quality_score: float = 85.0, reviewer=None) -> Dict:
         """High quality scores-এর translations auto-approve করে।"""
         try:
-            from ..models.core import Translation
+            from api.localization.models.core import Translation
             qs = Translation.objects.filter(
                 language__code=language_code,
                 is_approved=False,
@@ -189,7 +189,7 @@ class TranslatorWorkflowService:
     def get_workflow_stats(self, language_code: str) -> Dict:
         """Language-এর workflow statistics।"""
         try:
-            from ..models.core import Translation, Language
+            from api.localization.models.core import Translation, Language
             lang = Language.objects.filter(code=language_code).first()
             if not lang:
                 return {'error': 'Language not found'}

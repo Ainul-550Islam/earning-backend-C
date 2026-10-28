@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 
 def optimize_all_auto_groups():
     """auto_optimize=True সব groups-এর waterfall optimize করে।"""
-    from api.publisher_tools.models import MediationGroup
-    from api.publisher_tools.services import MediationService
+    from publisher_tools.models import MediationGroup
+    from publisher_tools.services import MediationService
     from datetime import timedelta
     cutoff = timezone.now() - timedelta(hours=24)
     from django.db.models import Q
@@ -36,8 +36,8 @@ def optimize_all_auto_groups():
 
 def update_floor_prices_auto():
     """Historical eCPM data-র ভিত্তিতে floor prices auto-update করে।"""
-    from api.publisher_tools.models import Publisher
-    from api.publisher_tools.mediation_management.floor_price_manager import bulk_update_floor_prices
+    from publisher_tools.models import Publisher
+    from publisher_tools.mediation_management.floor_price_manager import bulk_update_floor_prices
     publishers = Publisher.objects.filter(status="active", tier__in=["premium","enterprise"])
     updated_total = 0
     for pub in publishers:
@@ -52,8 +52,8 @@ def update_floor_prices_auto():
 
 def reorder_waterfalls_by_ecpm():
     """eCPM-based waterfall reorder করে।"""
-    from api.publisher_tools.models import MediationGroup
-    from api.publisher_tools.mediation_management.waterfall_manager import reorder_by_ecpm
+    from publisher_tools.models import MediationGroup
+    from publisher_tools.mediation_management.waterfall_manager import reorder_by_ecpm
     groups = MediationGroup.objects.filter(is_active=True)
     reordered = 0
     for group in groups:
@@ -68,7 +68,7 @@ def reorder_waterfalls_by_ecpm():
 
 def analyze_network_performance():
     """Ad network performance summary।"""
-    from api.publisher_tools.models import WaterfallItem
+    from publisher_tools.models import WaterfallItem
     from django.db.models import Avg, Sum
     summary = list(
         WaterfallItem.objects.filter(status="active", total_ad_requests__gte=1000)

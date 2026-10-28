@@ -1,6 +1,7 @@
 # api/publisher_tools/site_management/site_whitelist.py
 """Site Whitelist — Approved advertisers and content for sites."""
 from django.db import models
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from core.models import TimeStampedModel
 
@@ -19,9 +20,10 @@ class SiteWhitelistEntry(TimeStampedModel):
     is_active       = models.BooleanField(default=True, db_index=True)
     reason          = models.TextField(blank=True)
     floor_price_override = models.DecimalField(max_digits=8, decimal_places=4, null=True, blank=True, help_text=_("Custom floor price for whitelisted entity"))
-    added_by        = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    added_by        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_whitelist_entries'
         verbose_name = _('Site Whitelist Entry')
         ordering = ['-priority', '-created_at']

@@ -8,7 +8,7 @@ from django.utils import timezone
 
 
 def get_fill_rate_by_unit(publisher, days: int = 30) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     return list(
         PublisherEarning.objects.filter(publisher=publisher, date__gte=start)
@@ -21,7 +21,7 @@ def get_fill_rate_by_unit(publisher, days: int = 30) -> List[Dict]:
 
 
 def get_fill_rate_by_country(publisher, days: int = 30) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     return list(
         PublisherEarning.objects.filter(publisher=publisher, date__gte=start)
@@ -48,7 +48,7 @@ def identify_fill_rate_issues(publisher, threshold: float = 50.0) -> List[Dict]:
 
 def calculate_revenue_impact_of_low_fill(unit, target_fill_rate: float = 80.0) -> Dict:
     """Low fill rate-এর revenue impact estimate করে।"""
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=30)
     agg = PublisherEarning.objects.filter(ad_unit=unit, date__gte=start).aggregate(
         revenue=Sum("publisher_revenue"), impressions=Sum("impressions"),

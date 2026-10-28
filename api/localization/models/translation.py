@@ -154,6 +154,10 @@ class MissingTranslation(models.Model):
 # ============================================================
 class TranslationMemory(models.Model):
     """Reuse past translated segments — Translation Memory (TM) system"""
+    tenant_id = models.CharField(
+        max_length=100, db_index=True, blank=True, default='',
+        help_text='Tenant identifier — empty means global/shared'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     source_language = models.ForeignKey('localization.Language', on_delete=models.CASCADE, related_name='tm_source')
@@ -229,6 +233,10 @@ class TranslationMemory(models.Model):
 # ============================================================
 class TranslationGlossary(models.Model):
     """Brand terms, do-not-translate list, preferred translations per language"""
+    tenant_id = models.CharField(
+        max_length=100, db_index=True, blank=True, default='',
+        help_text='Tenant identifier — empty means global/shared'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     source_language = models.ForeignKey('localization.Language', on_delete=models.CASCADE, related_name='glossary_source')

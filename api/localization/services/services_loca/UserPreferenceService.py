@@ -35,7 +35,7 @@ class UserPreferenceService:
 
     def _create_preference_object(self, language_code):
         try:
-            from ..models.core import Language
+            from api.localization.models.core import Language
             language = Language.objects.filter(code=language_code).first()
             if language:
                 return type('Preference', (), {'ui_language': language})
@@ -67,7 +67,7 @@ class UserPreferenceService:
         if cached:
             return cached
         try:
-            from ..models.core import UserLanguagePreference
+            from api.localization.models.core import UserLanguagePreference
             pref, _ = UserLanguagePreference.objects.select_related(
                 'primary_language', 'ui_language', 'content_language',
                 'preferred_currency', 'preferred_timezone'
@@ -107,7 +107,7 @@ class UserPreferenceService:
     def set_language(self, user, language_code: str, pref_type: str = 'ui') -> Dict:
         """User-এর language preference set করে. pref_type: ui|primary|content"""
         try:
-            from ..models.core import UserLanguagePreference, Language
+            from api.localization.models.core import UserLanguagePreference, Language
             language = Language.objects.filter(code=language_code, is_active=True).first()
             if not language:
                 return {'success': False, 'error': f'Language {language_code} not found'}
@@ -130,7 +130,7 @@ class UserPreferenceService:
     def set_currency(self, user, currency_code: str) -> Dict:
         """User-এর preferred currency set করে"""
         try:
-            from ..models.core import UserLanguagePreference, Currency
+            from api.localization.models.core import UserLanguagePreference, Currency
             currency = Currency.objects.filter(code=currency_code, is_active=True).first()
             if not currency:
                 return {'success': False, 'error': f'Currency {currency_code} not found'}
@@ -149,7 +149,7 @@ class UserPreferenceService:
             import pytz
             if timezone_name not in pytz.all_timezones:
                 return {'success': False, 'error': f'Invalid timezone: {timezone_name}'}
-            from ..models.core import UserLanguagePreference, Timezone
+            from api.localization.models.core import UserLanguagePreference, Timezone
             tz_obj = Timezone.objects.filter(name=timezone_name).first()
             if not tz_obj:
                 return {'success': False, 'error': f'Timezone {timezone_name} not in database'}
@@ -168,7 +168,7 @@ class UserPreferenceService:
         if date_format not in VALID:
             return {'success': False, 'error': f'Invalid date format. Valid: {VALID}'}
         try:
-            from ..models.core import UserLanguagePreference
+            from api.localization.models.core import UserLanguagePreference
             pref, _ = UserLanguagePreference.objects.get_or_create(user=user)
             pref.preferred_date_format = date_format
             if time_format in ['12h', '24h']:
@@ -183,7 +183,7 @@ class UserPreferenceService:
     def set_auto_translate(self, user, enabled: bool) -> Dict:
         """Auto-translate toggle করে"""
         try:
-            from ..models.core import UserLanguagePreference
+            from api.localization.models.core import UserLanguagePreference
             pref, _ = UserLanguagePreference.objects.get_or_create(user=user)
             pref.auto_translate = enabled
             pref.save(update_fields=['auto_translate'])
@@ -195,7 +195,7 @@ class UserPreferenceService:
 
     def add_preferred_language(self, user, language_code: str) -> Dict:
         try:
-            from ..models.core import UserLanguagePreference, Language
+            from api.localization.models.core import UserLanguagePreference, Language
             language = Language.objects.filter(code=language_code, is_active=True).first()
             if not language:
                 return {'success': False, 'error': f'Language {language_code} not found'}
@@ -229,7 +229,7 @@ class UserPreferenceService:
                     detected['timezone'] = geo['timezone']
             except Exception:
                 pass
-            from ..models.core import Language
+            from api.localization.models.core import Language
             lang_to_set = detected.get('geo_lang') or detected.get('browser_lang', 'en')
             if user and getattr(user, 'is_authenticated', False):
                 if Language.objects.filter(code=lang_to_set, is_active=True).exists():
@@ -244,7 +244,7 @@ class UserPreferenceService:
     def get_notification_language(self, user) -> str:
         """User-এর notification language code return করে"""
         try:
-            from ..models.core import UserLanguagePreference
+            from api.localization.models.core import UserLanguagePreference
             pref = UserLanguagePreference.objects.filter(user=user).select_related('primary_language').first()
             if pref:
                 lang = pref.primary_language or pref.effective_language
@@ -270,7 +270,7 @@ class UserPreferenceService:
     def get_language_distribution(self) -> List[Dict]:
         """সব users-এর language distribution"""
         try:
-            from ..models.core import UserLanguagePreference
+            from api.localization.models.core import UserLanguagePreference
             from django.db.models import Count
             return list(
                 UserLanguagePreference.objects.filter(ui_language__isnull=False)
@@ -284,7 +284,7 @@ class UserPreferenceService:
     def reset_to_defaults(self, user) -> Dict:
         """User preference সব default-এ reset করে"""
         try:
-            from ..models.core import UserLanguagePreference, Language
+            from api.localization.models.core import UserLanguagePreference, Language
             default_lang = Language.objects.filter(is_default=True, is_active=True).first()
             pref, _ = UserLanguagePreference.objects.get_or_create(user=user)
             pref.ui_language = default_lang
@@ -354,7 +354,7 @@ class UserPreferenceService:
         if not lang_obj:
             return 'YYYY-MM-DD'
         try:
-            from ..models.settings import DateTimeFormat
+            from api.localization.models.settings import DateTimeFormat
             fmt = DateTimeFormat.objects.filter(language=lang_obj).first()
             return fmt.date_short if fmt else 'YYYY-MM-DD'
         except Exception:
@@ -370,7 +370,7 @@ class UserPreferenceService:
 
     def _log_pref_change(self, user, event_type: str, extra_data: dict = None):
         try:
-            from ..models.analytics import LocalizationAnalytics
+            from api.localization.models.analytics import LocalizationAnalytics
             LocalizationAnalytics.log_event(
                 event_type=LocalizationAnalytics.EventType.USER_PREFERENCE_UPDATED,
                 user=user, extra_data=extra_data or {},

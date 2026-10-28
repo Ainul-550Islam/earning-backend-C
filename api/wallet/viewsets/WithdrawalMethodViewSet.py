@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 
 from ..models import WithdrawalMethod
-from ..filters import WithdrawalFilter
+from ..filters import WithdrawalMethodFilter
 from ..pagination import WalletPagePagination
 
 logger = logging.getLogger("wallet.viewset.payment_method")
@@ -23,7 +23,7 @@ class WithdrawalMethodViewSet(viewsets.ModelViewSet):
     POST /withdrawal-methods/{id}/unverify/    — admin unverify
     DELETE /withdrawal-methods/{id}/           — remove
     """
-    filterset_class  = WithdrawalFilter
+    filterset_class  = WithdrawalMethodFilter
     pagination_class = WalletPagePagination
 
     def get_serializer_class(self):

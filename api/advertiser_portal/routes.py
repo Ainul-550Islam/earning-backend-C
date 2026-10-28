@@ -405,7 +405,7 @@ class TargetingViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Validate Targeting",
-        description="Validate targeting configuration
+        description="Validate targeting configuration"
     )
     @action(detail=True, methods=['post'])
     def validate(self, request, pk=None):

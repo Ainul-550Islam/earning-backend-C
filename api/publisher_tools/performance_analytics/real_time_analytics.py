@@ -11,7 +11,7 @@ def get_live_stats(publisher) -> dict:
     cached = cache.get(cache_key)
     if cached:
         return cached
-    from api.publisher_tools.models import PublisherEarning, TrafficSafetyLog
+    from publisher_tools.models import PublisherEarning, TrafficSafetyLog
     now = timezone.now()
     today = now.date()
     agg = PublisherEarning.objects.filter(publisher=publisher, date=today).aggregate(

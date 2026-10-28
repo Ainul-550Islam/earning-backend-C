@@ -1,6 +1,6 @@
 import logging
 from django.core.cache import cache
-from ...models import SmartLink, OfferPoolEntry
+from api.smartlink.models import SmartLink, OfferPoolEntry
 from ...constants import CACHE_TTL_TARGETING
 from .GeoTargetingService import GeoTargetingService
 from .DeviceTargetingService import DeviceTargetingService
@@ -111,8 +111,10 @@ class TargetingEngine:
     def _load_rule(self, smartlink: SmartLink):
         """Load targeting rule with all sub-rules (cache or DB)."""
         cache_key = f"sl_targeting:{smartlink.pk}"
-        cached = cache.get(cache_key)
-        if cached is not None:
+        _SENTINEL = '__no_rule__'
+        cached = cache.get(cache_key, _SENTINEL)
+        if cached != _SENTINEL:
+            # cached is either a TargetingRule object or None (no rule configured)
             return cached
 
         try:
@@ -148,7 +150,7 @@ class TargetingEngine:
 
         except Exception:
             # No targeting rule configured — cache None sentinel
-            cache.set(cache_key, False, CACHE_TTL_TARGETING)
+            cache.set(cache_key, None, CACHE_TTL_TARGETING)
             return None
 
     def _get_all_active_entries(self, smartlink: SmartLink) -> list:

@@ -1,3 +1,4 @@
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Count, Sum, Avg, F, Q, Max, Min
 from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
 from django.utils import timezone

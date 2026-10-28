@@ -7,19 +7,19 @@ from unittest.mock import patch
 from django.core.cache import cache
 from django.test import TestCase
 
-from postback.exceptions import (
+from api.postback.exceptions import (
     InvalidSignatureException,
     IPNotWhitelistedException,
     NonceReusedException,
     SignatureExpiredException,
 )
-from postback.utils.ip_checker import (
+from api.postback.utils.ip_checker import (
     get_client_ip,
     is_ip_in_whitelist,
     is_private_ip,
     validate_ip_whitelist_entries,
 )
-from postback.utils.signature_validator import (
+from api.postback.utils.signature_validator import (
     build_canonical_string,
     compute_signature,
     validate_and_consume_nonce,
@@ -27,7 +27,7 @@ from postback.utils.signature_validator import (
     validate_timestamp,
     verify_signature,
 )
-from postback.validators import (
+from api.postback.validators import (
     validate_field_mapping,
     validate_ip_whitelist,
     validate_payout_not_exceeds_cap,
@@ -233,7 +233,7 @@ class PostbackValidatorTests(TestCase):
 
     def test_payout_cap_exceeded_raises(self):
         from django.core.exceptions import ValidationError
-        from postback.constants import MAX_PAYOUT_PER_POSTBACK
+        from api.postback.constants import MAX_PAYOUT_PER_POSTBACK
         with self.assertRaises(ValidationError):
             validate_payout_not_exceeds_cap(MAX_PAYOUT_PER_POSTBACK + 1)
 

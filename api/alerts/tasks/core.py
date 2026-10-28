@@ -7,7 +7,7 @@ from datetime import timedelta
 import logging
 
 from ..services.core import (
-    AlertProcessorService, AnalyticsService, AlertGroupService, AlertMaintenanceService
+    LegacyAlertProcessorService as AlertProcessorService, AnalyticsService, AlertGroupService, AlertMaintenanceService
 )
 
 logger = logging.getLogger(__name__)

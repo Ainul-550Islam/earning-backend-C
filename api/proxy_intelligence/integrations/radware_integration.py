@@ -78,7 +78,6 @@ class RadwareIntegration:
             logger.error(f"{self.SERVICE_NAME} enrich failed for {ip_address}: {e}")
             return False
 
-FETCH_PLACEHOLDER
     def _fetch(self, ip_address: str) -> dict:
         try:
             base_url = self.config.get("api_url", "https://api.radware.com/threat/v1/ip")

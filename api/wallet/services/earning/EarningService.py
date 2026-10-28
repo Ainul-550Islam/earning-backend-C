@@ -10,8 +10,9 @@ Every earning:
   4. Applies performance bonus (CPAlead up to 20%)
   5. Credits WalletService.credit()
   6. Creates EarningRecord
-  7. Updates EarningStreak
-  8. Awards points (CPAlead 1000pts/$1)
+  7. [NEW] Creates OfferConversion when source_type is CPA/CPI/CPC/OFFER_WALL
+  8. Updates EarningStreak
+  9. Awards points (CPAlead 1000pts/$1)
 """
 import logging
 from decimal import Decimal
@@ -25,8 +26,17 @@ from ...models import Wallet, EarningSource, EarningRecord, EarningStreak
 from ...choices import EarningSourceType, TransactionType
 from ...exceptions import InvalidAmountError
 from ...constants import REFERRAL_RATES
+from api.wallet.models.core import WalletTransaction
 
 logger = logging.getLogger("wallet.service.earning")
+
+# Source types that produce an OfferConversion record
+OFFER_CONVERSION_TYPES = {
+    EarningSourceType.CPA,
+    EarningSourceType.CPI,
+    EarningSourceType.CPC,
+    EarningSourceType.OFFER_WALL,
+}
 
 
 class EarningService:
@@ -46,11 +56,21 @@ class EarningService:
         metadata: dict = None,
         idempotency_key: str = "",
         check_cap: bool = True,
+        # ── OfferConversion extras (only used when source_type is offer-based) ──
+        click_id: str = "",
+        sub_id: str = "",
+        user_agent: str = "",
+        conversion_status: str = "approved",
     ) -> dict:
         """
         Record an earning for a user. Full pipeline including cap check,
         multipliers, streak update, points award.
-        Returns dict with txn, record, streak_result.
+
+        When source_type is CPA / CPI / CPC / OFFER_WALL and `source` resolves
+        to an EarningOffer, an OfferConversion record is created automatically
+        so the conversion audit trail is always complete.
+
+        Returns dict with txn, record, conversion (or None), streak_result.
         """
         from ..core.WalletService import WalletService
         from .EarningCapService import EarningCapService
@@ -116,19 +136,138 @@ class EarningService:
         )
         record.save()
 
+        # ── OfferConversion (CPA / CPI / CPC / OFFER_WALL) ───────────
+        conversion = None
+        if source_type in OFFER_CONVERSION_TYPES:
+            conversion = EarningService._create_offer_conversion(
+                wallet=wallet,
+                txn=txn,
+                source=source,
+                source_id=source_id,
+                credited=credited,
+                country_code=country_code,
+                ip_address=ip_address,
+                device_type=device_type,
+                click_id=click_id,
+                sub_id=sub_id,
+                user_agent=user_agent,
+                conversion_status=conversion_status,
+            )
+
         # ── Streak update ─────────────────────────────────────────────
         streak_result = EarningService._update_streak(wallet, txn, record)
 
         logger.info(f"Earning: wallet={wallet.id} type={source_type} "
-                    f"original={original_amount} credited={credited}")
+                    f"original={original_amount} credited={credited}"
+                    + (f" conversion={conversion.id}" if conversion else ""))
 
         return {
             "txn":          txn,
             "record":       record,
+            "conversion":   conversion,
             "streak":       streak_result,
             "credited":     str(credited),
             "original":     str(original_amount),
         }
+
+    # ─────────────────────────────────────────────────────────────────
+    # Private helpers
+    # ─────────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _create_offer_conversion(
+        wallet: Wallet,
+        txn,
+        source,          # EarningSource | None
+        source_id: str,
+        credited: Decimal,
+        country_code: str,
+        ip_address,
+        device_type: str,
+        click_id: str,
+        sub_id: str,
+        user_agent: str,
+        conversion_status: str,
+    ):
+        """
+        Create an OfferConversion row tied to the transaction.
+
+        Strategy (in priority order):
+          1. source is already an EarningOffer  → use directly
+          2. source is an EarningSource with external_id  → look up EarningOffer
+          3. source_id looks like an EarningOffer PK (numeric)  → look up by PK
+          4. No offer found  → still create the conversion with offer=None
+             so the payout is auditable even without a linked offer record.
+        """
+        try:
+            from ...models_cpalead_extra import OfferConversion, EarningOffer
+
+            # Resolve EarningOffer
+            earning_offer = None
+            if source is not None:
+                # source might *be* an EarningOffer (duck-typed)
+                if isinstance(source, EarningOffer):
+                    earning_offer = source
+                elif hasattr(source, "external_id") and source.external_id:
+                    earning_offer = EarningOffer.objects.filter(
+                        offer_id=source.external_id
+                    ).first()
+
+            if earning_offer is None and source_id:
+                # Try numeric PK lookup
+                try:
+                    earning_offer = EarningOffer.objects.get(pk=int(source_id))
+                except (ValueError, EarningOffer.DoesNotExist):
+                    pass
+
+            if earning_offer is None:
+                logger.debug(
+                    f"EarningService._create_offer_conversion: no EarningOffer found "
+                    f"for source_id={source_id!r}; skipping OfferConversion creation."
+                )
+                return None
+
+            conversion = OfferConversion.objects.create(
+                offer=earning_offer,
+                user=wallet.user,
+                wallet=wallet,
+                transaction=txn,
+                status=conversion_status,
+                payout=credited,
+                click_id=click_id or "",
+                sub_id=sub_id or "",
+                ip_address=ip_address,
+                user_agent=user_agent or "",
+                country_code=country_code or "",
+                device_type=device_type or "",
+                approved_at=timezone.now() if conversion_status == "approved" else None,
+            )
+
+            # Keep offer aggregate counters up-to-date
+            if conversion_status == "approved":
+                EarningOffer.objects.filter(pk=earning_offer.pk).update(
+                    conversions_today=earning_offer.__class__.objects.filter(
+                        pk=earning_offer.pk
+                    ).values_list("conversions_today", flat=True)[0] + 1,
+                    total_conversions=earning_offer.__class__.objects.filter(
+                        pk=earning_offer.pk
+                    ).values_list("total_conversions", flat=True)[0] + 1,
+                )
+
+            return conversion
+
+        except Exception as exc:
+            # Never let conversion bookkeeping break the actual earning credit.
+            logger.warning(
+                f"EarningService._create_offer_conversion failed "
+                f"(source_id={source_id!r}): {exc}",
+                exc_info=True,
+            )
+            return None
+
+    # ─────────────────────────────────────────────────────────────────
+    # Public API — unchanged below this line
+    # ─────────────────────────────────────────────────────────────────
 
     @staticmethod
     @transaction.atomic

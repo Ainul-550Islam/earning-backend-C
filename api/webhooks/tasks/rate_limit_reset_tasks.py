@@ -10,6 +10,11 @@ from datetime import timedelta
 from ..models import WebhookEndpoint, WebhookRateLimit
 from ..services.analytics import RateLimiterService
 
+import logging
+
+logger = logging.getLogger('ainul.webhooks.tasks.rate.limit.reset.tasks')
+
+
 
 @shared_task
 def reset_rate_limits():
@@ -20,6 +25,7 @@ def reset_rate_limits():
     Returns:
         dict: Summary of reset operations
     """
+    logger.info('[Task] reset_rate_limits started')
     try:
         # Get all rate limits
         rate_limits = WebhookRateLimit.objects.all()
@@ -41,7 +47,7 @@ def reset_rate_limits():
                         reset_count += 1
                         
             except Exception as e:
-                print(f"Failed to reset rate limit for endpoint {rate_limit.endpoint.id}: {e}")
+                logger.error("Failed to reset rate limit for endpoint %s: %s", rate_limit.endpoint.id, e)
         
         return {
             'success': True,
@@ -69,6 +75,7 @@ def reset_rate_limit(endpoint_id, window_seconds=None):
     Returns:
         dict: Result of reset operation
     """
+    logger.info('[Task] reset_rate_limit started')
     try:
         # Get the endpoint
         endpoint = WebhookEndpoint.objects.get(id=endpoint_id)
@@ -106,6 +113,7 @@ def cleanup_expired_rate_limits():
     Returns:
         dict: Summary of cleanup operations
     """
+    logger.info('[Task] cleanup_expired_rate_limits started')
     try:
         # Use the rate limiter service to clean up expired limits
         rate_limiter = RateLimiterService()
@@ -132,6 +140,7 @@ def initialize_rate_limits():
     Returns:
         dict: Summary of initialization operations
     """
+    logger.info('[Task] initialize_rate_limits started')
     try:
         # Get endpoints without rate limits
         endpoints_without_limits = WebhookEndpoint.objects.filter(
@@ -156,7 +165,7 @@ def initialize_rate_limits():
                 initialized_count += 1
                 
             except Exception as e:
-                print(f"Failed to initialize rate limit for endpoint {endpoint.id}: {e}")
+                logger.error("Failed to initialize rate limit for endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -180,6 +189,7 @@ def sync_rate_limits_with_endpoints():
     Returns:
         dict: Summary of synchronization operations
     """
+    logger.info('[Task] sync_rate_limits_with_endpoints started')
     try:
         # Get all endpoints with rate limits
         endpoints_with_limits = WebhookEndpoint.objects.filter(
@@ -213,7 +223,7 @@ def sync_rate_limits_with_endpoints():
                         updated_count += 1
                         
             except Exception as e:
-                print(f"Failed to sync rate limit for endpoint {endpoint.id}: {e}")
+                logger.error("Failed to sync rate limit for endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -238,6 +248,7 @@ def get_rate_limit_statistics():
     Returns:
         dict: Rate limiting statistics
     """
+    logger.info('[Task] get_rate_limit_statistics started')
     try:
         from django.db.models import Count, Avg, Max, Sum
         
@@ -267,7 +278,7 @@ def get_rate_limit_statistics():
             utilization = (rate_limit.current_count / rate_limit.max_requests * 100) if rate_limit.max_requests > 0 else 0
             most_utilized_data.append({
                 'endpoint_id': str(rate_limit.endpoint.id),
-                'endpoint_label': rate_limit.endpoint.label or rate_limit.endpoint.url,
+                'endpoint_label': rate_limit.endpoint.label or rate_limit.endpoint.target_url,
                 'current_count': rate_limit.current_count,
                 'max_requests': rate_limit.max_requests,
                 'utilization_percentage': round(utilization, 2)
@@ -303,6 +314,7 @@ def reset_rate_limit_by_utilization(utilization_threshold=90):
     Returns:
         dict: Summary of reset operations
     """
+    logger.info('[Task] reset_rate_limit_by_utilization started')
     try:
         # Get rate limits with high utilization
         high_utilization_limits = WebhookRateLimit.objects.filter(
@@ -325,7 +337,7 @@ def reset_rate_limit_by_utilization(utilization_threshold=90):
                         reset_count += 1
                         
             except Exception as e:
-                print(f"Failed to reset rate limit for endpoint {rate_limit.endpoint.id}: {e}")
+                logger.error("Failed to reset rate limit for endpoint %s: %s", rate_limit.endpoint.id, e)
         
         return {
             'success': True,

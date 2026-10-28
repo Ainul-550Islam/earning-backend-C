@@ -245,7 +245,7 @@ class InstantPayout(models.Model):
     arrival_time    = models.DateTimeField(null=True, blank=True)
     gateway_ref     = models.CharField(max_length=200, blank=True)
     failure_reason  = models.TextField(blank=True)
-    withdrawal      = models.ForeignKey("WithdrawalRequest", on_delete=models.SET_NULL, null=True, blank=True, related_name="instant_payout")
+    withdrawal      = models.ForeignKey("wallet.WithdrawalRequest", on_delete=models.SET_NULL, null=True, blank=True, related_name="instant_payout")
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at      = models.DateTimeField(auto_now=True)
 
@@ -310,7 +310,7 @@ class MassPayoutItem(models.Model):
     amount      = models.DecimalField(max_digits=20, decimal_places=2)
     status      = models.CharField(max_length=8, choices=STATUSES, default="pending")
     error       = models.TextField(blank=True)
-    withdrawal  = models.ForeignKey("WithdrawalRequest", on_delete=models.SET_NULL, null=True, blank=True, related_name="mass_payout_item")
+    withdrawal  = models.ForeignKey("wallet.WithdrawalRequest", on_delete=models.SET_NULL, null=True, blank=True, related_name="mass_payout_item")
     processed_at= models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -348,7 +348,7 @@ class DisputeCase(models.Model):
     user            = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wallet_disputes")
     wallet          = models.ForeignKey("Wallet", on_delete=models.CASCADE, related_name="disputes")
     transaction     = models.ForeignKey("WalletTransaction", on_delete=models.SET_NULL, null=True, blank=True, related_name="disputes")
-    withdrawal      = models.ForeignKey("WithdrawalRequest", on_delete=models.SET_NULL, null=True, blank=True, related_name="disputes")
+    withdrawal      = models.ForeignKey("wallet.WithdrawalRequest", on_delete=models.SET_NULL, null=True, blank=True, related_name="disputes")
     reason          = models.CharField(max_length=20, choices=REASONS)
     status          = models.CharField(max_length=25, choices=STATUSES, default="open")
     outcome         = models.CharField(max_length=20, choices=OUTCOMES, blank=True)
@@ -531,7 +531,7 @@ class FraudScore(models.Model):
     user            = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wallet_fraud_scores")
     wallet          = models.ForeignKey("Wallet", on_delete=models.CASCADE, related_name="fraud_scores")
     transaction     = models.OneToOneField("WalletTransaction", on_delete=models.CASCADE, null=True, blank=True, related_name="fraud_score")
-    withdrawal      = models.OneToOneField("WithdrawalRequest", on_delete=models.CASCADE, null=True, blank=True, related_name="fraud_score")
+    withdrawal      = models.OneToOneField("wallet.WithdrawalRequest", on_delete=models.CASCADE, null=True, blank=True, related_name="fraud_score")
     score           = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     risk_level      = models.CharField(max_length=8, choices=RISK_LEVELS, default="low")
     is_blocked      = models.BooleanField(default=False)
@@ -1052,3 +1052,99 @@ class ReferralProgram(models.Model):
 
     def is_valid(self) -> bool:
         return self.is_active and (self.expires_at is None or timezone.now() < self.expires_at)
+
+
+class SavingsGoal(models.Model):
+    """
+    User savings goal — lock a portion of wallet balance towards a target.
+
+    States: active → paused → achieved / cancelled
+    Auto-save: if auto_contribute=True, EarningService deducts auto_amount each credit.
+    Interest: optional daily compound interest on locked balance.
+    """
+
+    STATUS_ACTIVE    = "active"
+    STATUS_PAUSED    = "paused"
+    STATUS_ACHIEVED  = "achieved"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES   = [
+        (STATUS_ACTIVE,    "Active"),
+        (STATUS_PAUSED,    "Paused"),
+        (STATUS_ACHIEVED,  "Achieved"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    tenant   = models.ForeignKey(
+        "tenants.Tenant", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="savings_goals",
+    )
+    user     = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="savings_goals",
+    )
+    wallet   = models.ForeignKey(
+        "wallet.Wallet", on_delete=models.CASCADE,
+        related_name="savings_goals",
+    )
+
+    # ── Goal definition ───────────────────────────────────────────
+    name          = models.CharField(max_length=120)
+    description   = models.TextField(blank=True)
+    target_amount = models.DecimalField(max_digits=20, decimal_places=8)
+    saved_amount  = models.DecimalField(max_digits=20, decimal_places=8,
+                                        default="0.00000000")
+    currency      = models.CharField(max_length=10, default="BDT")
+
+    # ── Timeline ──────────────────────────────────────────────────
+    deadline    = models.DateTimeField(null=True, blank=True)
+    achieved_at = models.DateTimeField(null=True, blank=True)
+
+    # ── Auto-save ─────────────────────────────────────────────────
+    auto_contribute = models.BooleanField(default=False)
+    auto_amount     = models.DecimalField(
+        max_digits=20, decimal_places=8, null=True, blank=True,
+        help_text="Fixed BDT amount deducted from each credit when auto_contribute=True",
+    )
+
+    # ── Interest ──────────────────────────────────────────────────
+    interest_rate   = models.DecimalField(
+        max_digits=6, decimal_places=4, default="0.0000",
+        help_text="Daily interest rate (e.g. 0.0002 = 0.02% daily)",
+    )
+    interest_earned = models.DecimalField(max_digits=20, decimal_places=8,
+                                          default="0.00000000")
+
+    # ── Status ────────────────────────────────────────────────────
+    status = models.CharField(
+        max_length=12, choices=STATUS_CHOICES, default=STATUS_ACTIVE, db_index=True,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = "wallet"
+        db_table  = "wallet_savingsgoal"
+        ordering  = ["-created_at"]
+        indexes   = [
+            models.Index(fields=["user", "status"]),
+            models.Index(fields=["wallet"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id} | {self.name} | {self.saved_amount}/{self.target_amount}"
+
+    @property
+    def progress_percent(self) -> float:
+        if not self.target_amount:
+            return 0.0
+        return float(self.saved_amount / self.target_amount * 100)
+
+    @property
+    def remaining(self):
+        from decimal import Decimal
+        return max(self.target_amount - self.saved_amount, Decimal("0"))
+
+    @property
+    def is_achieved(self) -> bool:
+        return self.saved_amount >= self.target_amount

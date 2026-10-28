@@ -7,6 +7,11 @@ from django.contrib.auth import get_user_model
 from ..models.reporting import (
     AlertReport, MTTRMetric, MTTDMetric, SLABreach
 )
+from ..validators import (
+    validate_alert_severity,
+    validate_time_window,
+    validate_cron_expression,
+)
 
 User = get_user_model()
 
@@ -52,17 +57,49 @@ class AlertReportSerializer(serializers.ModelSerializer):
         if value not in valid_statuses:
             raise serializers.ValidationError(f"Status must be one of: {valid_statuses}")
         return value
-    
+
     def validate_format_type(self, value):
         valid_formats = ['json', 'pdf', 'csv', 'html']
         if value not in valid_formats:
             raise serializers.ValidationError(f"Format type must be one of: {valid_formats}")
         return value
-    
+
     def validate_max_retries(self, value):
         if not 0 <= value <= 10:
             raise serializers.ValidationError("Max retries must be between 0 and 10")
         return value
+
+    def validate_schedule_cron(self, value):
+        """Wire validate_cron_expression() for scheduled reports."""
+        if not value:
+            return value
+        result = validate_cron_expression(value)
+        if not result['valid']:
+            raise serializers.ValidationError(result['errors'])
+        return value
+
+    def validate(self, attrs):
+        """
+        Cross-field validation:
+        - start_date must precede end_date
+        - scheduled reports must have a schedule_cron
+        """
+        start_date = attrs.get('start_date') or getattr(self.instance, 'start_date', None)
+        end_date = attrs.get('end_date') or getattr(self.instance, 'end_date', None)
+
+        if start_date and end_date and start_date >= end_date:
+            raise serializers.ValidationError(
+                {'end_date': 'end_date must be after start_date.'}
+            )
+
+        report_type = attrs.get('report_type') or getattr(self.instance, 'report_type', '')
+        schedule_cron = attrs.get('schedule_cron') or getattr(self.instance, 'schedule_cron', None)
+        if report_type == 'scheduled' and not schedule_cron:
+            raise serializers.ValidationError(
+                {'schedule_cron': 'schedule_cron is required for scheduled reports.'}
+            )
+
+        return attrs
 
 
 class MTTRMetricSerializer(serializers.ModelSerializer):
@@ -76,10 +113,10 @@ class MTTRMetricSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'calculation_period_days', 'target_mttr_minutes',
             'current_mttr_minutes', 'mttr_by_severity', 'mttr_by_rule', 'mttr_trend_7_days',
             'mttr_trend_30_days', 'alerts_within_target', 'total_resolved_alerts',
-            'target_compliance_percentage', 'last_calculated', 'created_at', 'updated_at',
+            'target_compliance_percentage', 'last_calculated',
             'mttr_by_severity_display', 'mttr_by_rule_display'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'current_mttr_minutes',
+        read_only_fields = ['current_mttr_minutes',
                           'alerts_within_target', 'total_resolved_alerts',
                           'target_compliance_percentage', 'last_calculated']
     
@@ -111,10 +148,10 @@ class MTTDMetricSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'calculation_period_days', 'target_mttd_minutes',
             'current_mttd_minutes', 'mttd_by_severity', 'mttd_by_rule', 'mttd_trend_7_days',
             'mttd_trend_30_days', 'detection_rate', 'false_positive_rate',
-            'target_compliance_percentage', 'last_calculated', 'created_at', 'updated_at',
+            'target_compliance_percentage', 'last_calculated',
             'mttd_by_severity_display', 'mttd_by_rule_display'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'current_mttd_minutes',
+        read_only_fields = ['current_mttd_minutes',
                           'detection_rate', 'false_positive_rate',
                           'target_compliance_percentage', 'last_calculated']
     
@@ -146,25 +183,36 @@ class SLABreachSerializer(serializers.ModelSerializer):
     class Meta:
         model = SLABreach
         fields = [
-            'id', 'name', 'sla_type', 'severity', 'status', 'alert_log',
-            'alert_log_rule_name', 'breach_time', 'breach_duration_minutes',
-            'breach_percentage', 'acknowledged_at', 'acknowledged_by',
+            'id', 'name', 'sla_name', 'sla_type', 'breach_type', 'severity', 'status', 'alert_log',
+            'alert_log_rule_name', 'breach_time', 'breached_at', 'breach_duration_minutes',
+            'breach_percentage', 'threshold_minutes', 'target_minutes', 'actual_minutes',
+            'acknowledged_at', 'acknowledged_by',
             'acknowledged_by_name', 'resolved_at', 'resolved_by', 'resolved_by_name',
             'resolution_time_minutes', 'business_impact', 'financial_impact',
             'customer_impact', 'escalation_level', 'escalated_at', 'escalation_reason',
             'stakeholder_notified', 'communication_sent', 'root_cause',
-            'preventive_actions', 'created_by', 'created_at', 'updated_at',
+            'preventive_actions', 'created_by',
             'breach_severity', 'duration_minutes'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'created_by', 'breach_time',
+        read_only_fields = ['created_by', 'breach_time',
                           'acknowledged_at', 'acknowledged_by', 'resolved_at', 'resolved_by',
                           'escalated_at', 'escalation_level']
+
+    def validate(self, data):
+        # Sync alias fields with canonical fields
+        if 'sla_name' in data and not data.get('name'):
+            data['name'] = data['sla_name']
+        if 'breach_type' in data and not data.get('sla_type'):
+            data['sla_type'] = data['breach_type']
+        if 'target_minutes' in data and not data.get('threshold_minutes'):
+            data['threshold_minutes'] = data['target_minutes']
+        return data
     
     def get_breach_severity(self, obj):
         return obj.get_breach_severity()
     
     def get_duration_minutes(self, obj):
-        return obj.get_duration_minutes()
+        return obj.breach_duration_minutes
     
     def validate_sla_type(self, value):
         valid_types = ['resolution_time', 'response_time', 'detection_time', 'availability', 'custom']
@@ -173,13 +221,15 @@ class SLABreachSerializer(serializers.ModelSerializer):
         return value
     
     def validate_severity(self, value):
-        valid_severities = ['low', 'medium', 'high', 'critical']
-        if value not in valid_severities:
-            raise serializers.ValidationError(f"Severity must be one of: {valid_severities}")
-        return value
-    
+        """Wire validate_alert_severity() from validators.py."""
+        result = validate_alert_severity(value)
+        if not result['valid']:
+            raise serializers.ValidationError(result['errors'])
+        return result.get('normalized_severity', value)
+
+
     def validate_status(self, value):
-        valid_statuses = ['active', 'resolved', 'escalated', 'acknowledged']
+        valid_statuses = ['open', 'active', 'resolved', 'escalated', 'acknowledged']
         if value not in valid_statuses:
             raise serializers.ValidationError(f"Status must be one of: {valid_statuses}")
         return value
@@ -222,13 +272,10 @@ class MTTDMetricListSerializer(serializers.ModelSerializer):
 
 class SLABreachListSerializer(serializers.ModelSerializer):
     """Simplified SLABreach serializer for list views"""
-    alert_log_rule_name = serializers.CharField(source='alert_log.rule.name', read_only=True)
-    breach_severity = serializers.SerializerMethodField()
-    
     class Meta:
         model = SLABreach
         fields = [
-            'id', 'name', 'sla_type', 'severity', 'alert_log_rule_name',
+            'id', 'name', 'sla_type', 'severity',
             'breach_time', 'breach_percentage', 'status', 'escalation_level'
         ]
     

@@ -7,7 +7,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         import pytz
-        from localization.models.core import Timezone
+        from api.localization.models.core import Timezone
         from django.utils import timezone as dj_tz
         created = skipped = 0
         for tz_name in pytz.all_timezones:

@@ -209,7 +209,7 @@ Webhook configuration is done through the admin interface or API.
 
 The system includes Django management commands for maintenance:
 - `python manage.py process_alerts` - Process pending alerts
-- `python manage.py generate_reports` - Generate reports
+- `python manage.py alerts_generate_reports` - Generate reports
 - `python manage.py cleanup_alerts` - Clean up old data
 - `python manage.py check_health` - Check system health
 - `python manage.py test_alerts` - Test alert rules

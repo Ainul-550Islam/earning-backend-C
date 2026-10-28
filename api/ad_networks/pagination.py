@@ -13,7 +13,7 @@ from django.conf import settings
 from django.utils import timezone
 from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 from rest_framework.response import Response
-from rest_framework.utils import replace_query_param
+from rest_framework.utils.urls import replace_query_param
 
 from .constants import CACHE_TIMEOUTS
 

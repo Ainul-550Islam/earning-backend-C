@@ -1,0 +1,11 @@
+{% extends "offer_routing/_base.html" %}
+{% block title %}Analytics Dashboard{% endblock %}
+{% block content %}
+<h1>Analytics Dashboard</h1>
+<div class="row mb-4">
+    <div class="col-md-3"><div class="card bg-light p-3"><h5>Total Decisions</h5><h2>{{ total_decisions|default:0 }}</h2></div></div>
+    <div class="col-md-3"><div class="card bg-light p-3"><h5>Avg Score</h5><h2>{{ avg_score|default:"N/A" }}</h2></div></div>
+    <div class="col-md-3"><div class="card bg-light p-3"><h5>Conversions</h5><h2>{{ total_conversions|default:0 }}</h2></div></div>
+    <div class="col-md-3"><div class="card bg-light p-3"><h5>Revenue</h5><h2>${{ total_revenue|default:"0.00" }}</h2></div></div>
+</div>
+{% endblock %}

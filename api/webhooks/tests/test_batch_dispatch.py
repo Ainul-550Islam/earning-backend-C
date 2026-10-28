@@ -4,13 +4,14 @@ This module contains tests for the webhook batch dispatch service
 including batch processing, status tracking, and error handling.
 """
 
+from datetime import timedelta
 import pytest
 from unittest.mock import Mock, patch
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from ..services.batch import BatchService
+from ..services.batch import BatchDispatchService
 from ..models import (
     WebhookEndpoint, WebhookSubscription, WebhookDeliveryLog,
     WebhookBatch, WebhookBatchItem, WebhookFilter
@@ -23,7 +24,7 @@ from ..constants import (
 User = get_user_model()
 
 
-class BatchServiceTest(TestCase):
+class BatchServiceTest(TransactionTestCase):
     """Test cases for BatchService."""
     
     def setUp(self):
@@ -34,12 +35,12 @@ class BatchServiceTest(TestCase):
             password='testpass123'
         )
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
-        self.batch_service = BatchService()
+        self.batch_service = BatchDispatchService()
     
     def test_create_batch_success(self):
         """Test successful batch creation."""
@@ -94,11 +95,10 @@ class BatchServiceTest(TestCase):
         # Create filter
         WebhookFilter.objects.create(
             endpoint=self.endpoint,
-            field_path='user.email',
+            field_path='email',
             operator=FilterOperator.CONTAINS,
             value='@example.com',
             is_active=True,
-            created_by=self.user,
         )
         
         events = [
@@ -132,7 +132,7 @@ class BatchServiceTest(TestCase):
             created_by=self.user
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.return_value = True
             
             result = self.batch_service.process_batch(batch)
@@ -162,7 +162,7 @@ class BatchServiceTest(TestCase):
             created_by=self.user
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             # First two succeed, third fails
             mock_emit.side_effect = [True, True, False]
             
@@ -191,7 +191,7 @@ class BatchServiceTest(TestCase):
             created_by=self.user
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.return_value = False
             
             result = self.batch_service.process_batch(batch)
@@ -218,6 +218,7 @@ class BatchServiceTest(TestCase):
         
         # Mark as completed
         batch.status = BatchStatus.COMPLETED
+        batch.completed_at = timezone.now()
         batch.save()
         
         result = self.batch_service.process_batch(batch)
@@ -258,6 +259,7 @@ class BatchServiceTest(TestCase):
         
         # Mark as cancelled
         batch.status = BatchStatus.CANCELLED
+        batch.completed_at = timezone.now()
         batch.save()
         
         result = self.batch_service.process_batch(batch)
@@ -276,7 +278,7 @@ class BatchServiceTest(TestCase):
             created_by=self.user
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.side_effect = Exception('Dispatch error')
             
             result = self.batch_service.process_batch(batch)
@@ -321,6 +323,7 @@ class BatchServiceTest(TestCase):
         
         # Mark as completed
         batch.status = BatchStatus.COMPLETED
+        batch.completed_at = timezone.now()
         batch.save()
         
         result = self.batch_service.cancel_batch(batch, reason='Test cancellation')
@@ -363,11 +366,11 @@ class BatchServiceTest(TestCase):
         )
         
         # Mark some items as failed
-        items = batch.items.all()
+        items = list(batch.items.all())
         items[0].status = BatchStatus.FAILED
         items[0].save()
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.return_value = True
             
             result = self.batch_service.retry_batch(batch)
@@ -437,7 +440,7 @@ class BatchServiceTest(TestCase):
         )
         
         # Mark some items as completed
-        items = batch.items.all()
+        items = list(batch.items.all())
         items[0].status = BatchStatus.COMPLETED
         items[0].save()
         items[1].status = BatchStatus.FAILED
@@ -522,7 +525,7 @@ class BatchServiceTest(TestCase):
             created_by=self.user
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.return_value = True
             
             result = self.batch_service.process_batch(batch)
@@ -550,7 +553,7 @@ class BatchServiceTest(TestCase):
             created_by=self.user
         )
         
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
             mock_emit.return_value = True
             
             start_time = time.time()
@@ -582,7 +585,7 @@ class BatchServiceTest(TestCase):
         results = []
         
         def process_batch():
-            with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+            with patch('api.webhooks.services.core.DispatchService.DispatchService.emit') as mock_emit:
                 mock_emit.return_value = True
                 
                 result = self.batch_service.process_batch(batch)
@@ -672,7 +675,7 @@ class BatchServiceTest(TestCase):
         )
         
         # Mark some items as completed/failed
-        items = batch.items.all()
+        items = list(batch.items.all())
         items[0].status = BatchStatus.COMPLETED
         items[0].save()
         items[1].status = BatchStatus.FAILED
@@ -688,11 +691,19 @@ class BatchServiceTest(TestCase):
     
     def test_get_batch_statistics_empty(self):
         """Test getting batch statistics for empty batch."""
-        batch = self.batch_service.create_batch(
+        # BUG FIX: previously called create_batch(events=[]), which directly
+        # contradicts test_create_batch_empty_events (same class), which
+        # requires that exact call to raise ValueError. Building the batch
+        # directly here tests what this test actually cares about — an
+        # empty batch's statistics — without relying on a call shape that
+        # create_batch() correctly rejects.
+        batch = WebhookBatch.objects.create(
+            batch_id='test-empty-stats-batch',
             endpoint=self.endpoint,
             event_type='user.created',
-            events=[],
-            created_by=self.user
+            event_count=0,
+            status=BatchStatus.PENDING,
+            created_by=self.user,
         )
         
         stats = self.batch_service.get_batch_statistics(batch)
@@ -715,10 +726,19 @@ class BatchServiceTest(TestCase):
             created_by=self.user
         )
         
-        # Mark as completed and set old date
+        # Mark as completed and set old date.
+        # FIX: completed_at is deliberately backdated before created_at here
+        # (created_at is auto_now_add, can't be backdated the normal way) -
+        # that's the point of this test, not the "impossible timestamp"
+        # clean() now checks for. Using .update() (bypasses save()/clean(),
+        # same as bulk_create) instead of batch.save() so this simulated-old
+        # row can still be constructed.
         batch.status = BatchStatus.COMPLETED
-        batch.completed_at = timezone.now() - timezone.timedelta(days=30)
-        batch.save()
+        WebhookBatch.objects.filter(pk=batch.pk).update(
+            status=BatchStatus.COMPLETED,
+            completed_at=timezone.now() - timedelta(days=30),
+        )
+        batch.refresh_from_db()
         
         # Cleanup batches older than 7 days
         result = self.batch_service.cleanup_old_batches(days=7)
@@ -740,10 +760,13 @@ class BatchServiceTest(TestCase):
             created_by=self.user
         )
         
-        # Mark as completed and set recent date
-        batch.status = BatchStatus.COMPLETED
-        batch.completed_at = timezone.now() - timezone.timedelta(days=1)
-        batch.save()
+        # Mark as completed and set recent date.
+        # FIX: same reason as test_cleanup_old_batches above.
+        WebhookBatch.objects.filter(pk=batch.pk).update(
+            status=BatchStatus.COMPLETED,
+            completed_at=timezone.now() - timedelta(days=1),
+        )
+        batch.refresh_from_db()
         
         # Cleanup batches older than 7 days
         result = self.batch_service.cleanup_old_batches(days=7)
@@ -774,6 +797,7 @@ class BatchServiceTest(TestCase):
         
         # Mark one as completed
         batch2.status = BatchStatus.COMPLETED
+        batch2.completed_at = timezone.now()
         batch2.save()
         
         # Get pending batches
@@ -794,10 +818,10 @@ class BatchServiceTest(TestCase):
         
         # Create batches for different endpoints
         endpoint2 = WebhookEndpoint.objects.create(
-            url='https://example2.com/webhook',
-            secret='test-secret-key-2',
+            target_url='https://example2.com/webhook',
+            secret_key='test-secret-key-2',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         
         batch1 = self.batch_service.create_batch(
@@ -846,21 +870,21 @@ class BatchServiceTest(TestCase):
         )
         
         # Modify created_at for batch2
-        batch2.created_at = timezone.now() - timezone.timedelta(days=10)
+        batch2.created_at = timezone.now() - timedelta(days=10)
         batch2.save()
         
         # Get batches for last 7 days
         recent_batches = self.batch_service.get_batches_by_date_range(
-            start_date=timezone.now() - timezone.timedelta(days=7),
+            start_date=timezone.now() - timedelta(days=7),
             end_date=timezone.now()
         )
         
-        self.assertEqual(recentent_batches.count(), 1)
-        self.assertEqual(recentent_batches.first().id, batch1.id)
+        self.assertEqual(recent_batches.count(), 1)
+        self.assertEqual(recent_batches.first().id, batch1.id)
         
         # Get batches for last 14 days
         all_batches = self.batch_service.get_batches_by_date_range(
-            start_date=timezone.now() - timezone.timedelta(days=14),
+            start_date=timezone.now() - timedelta(days=14),
             end_date=timezone.now()
         )
         

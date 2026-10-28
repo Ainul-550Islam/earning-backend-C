@@ -13,17 +13,17 @@ from django.utils import timezone
 from django.db.models import Q, Count, Sum, F
 from django.core.cache import cache
 from django.db import transaction
-from ....models import (
+from offer_routing.models import (
     OfferRoute, OfferRoutingCap, UserOfferCap, CapOverride,
     UserOfferHistory, RoutingDecisionLog
 )
-from ....constants import (
+from offer_routing.constants import (
     CAP_RESET_CACHE_TIMEOUT, RESET_BATCH_SIZE,
     CAP_RESET_HOURS, DEFAULT_DAILY_CAP,
     CAP_RESET_LOCK_TIMEOUT, CAP_HISTORY_RETENTION_DAYS
 )
-from ....exceptions import CapError, CapResetError
-from ....utils import get_cap_reset_key, calculate_reset_window
+from offer_routing.exceptions import CapError, CapResetError
+from offer_routing.utils import get_cap_reset_key, calculate_reset_window
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

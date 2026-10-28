@@ -173,3 +173,13 @@ class BotConfigFactory(factory.django.DjangoModelFactory):
     response_template = "Hello {user_name}! How can I help?"
     is_active         = True
     priority          = 0
+
+
+class MessagePinFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "messaging.MessagePin"
+
+    message   = factory.SubFactory(ChatMessageFactory)
+    chat      = factory.LazyAttribute(lambda o: o.message.chat)
+    pinned_by = factory.SubFactory(UserFactory)
+    pinned_at = factory.LazyFunction(timezone.now)

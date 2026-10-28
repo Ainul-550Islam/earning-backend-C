@@ -6,7 +6,7 @@ from typing import List
 
 def create_position_ab_test(publisher, site, positions: List[str]):
     """Site-এর position test।"""
-    from api.publisher_tools.models import AdUnit
+    from publisher_tools.models import AdUnit
     units = AdUnit.objects.filter(site=site, status="active")
     if not units.exists():
         raise ValueError("No active ad units for this site.")
@@ -17,7 +17,7 @@ def create_position_ab_test(publisher, site, positions: List[str]):
 
 def get_best_position_by_revenue(site, days: int = 30) -> dict:
     """Revenue-based best position identify করে।"""
-    from api.publisher_tools.models import AdPlacement, PublisherEarning
+    from publisher_tools.models import AdPlacement, PublisherEarning
     from django.db.models import Sum, Avg
     from django.utils import timezone
     from datetime import timedelta

@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-title {
+            font-size: 2rem;
+            color: #2a5298;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .live-indicator {
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .last-update {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .metric-card:hover::before {
+            left: 100%;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .metric-title {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .metric-change {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        .change-positive {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .change-negative {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #2a5298;
+            margin-bottom: 10px;
+        }
+
+        .metric-subtitle {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .activity-feed {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .feed-title {
+            font-size: 1.3rem;
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid #e9ecef;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .icon-task { background: #667eea; color: white; }
+        .icon-user { background: #28a745; color: white; }
+        .icon-revenue { background: #ffc107; color: #333; }
+        .icon-error { background: #dc3545; color: white; }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .activity-description {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .activity-time {
+            color: #999;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #dc3545;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .time-filter {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 20px;
+            border: 2px solid #2a5298;
+            background: white;
+            color: #2a5298;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            background: #2a5298;
+            color: white;
+        }
+
+        .filter-btn.active {
+            background: #2a5298;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 10px;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-title {
+                font-size: 1.5rem;
+            }
+
+            .metric-value {
+                font-size: 2rem;
+            }
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-weight: bold;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .status-connected {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-disconnected {
+            background: #dc3545;
+            color: white;
+        }
+
+        .status-connecting {
+            background: #ffc107;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="connection-status status-connecting">
+            🔄 Connecting...
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="header-title">
+                📊 Real-Time Analytics Dashboard
+                <div class="live-indicator"></div>
+            </div>
+            <div class="last-update">
+                Last updated: <span id="lastUpdateTime">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Time Filter -->
+        <div class="time-filter">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-period="1h">Last Hour</button>
+                <button class="filter-btn" data-period="24h">Last 24 Hours</button>
+                <button class="filter-btn active" data-period="7d">Last 7 Days</button>
+                <button class="filter-btn" data-period="30d">Last 30 Days</button>
+                <button class="filter-btn" data-period="90d">Last 90 Days</button>
+            </div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Active Users</span>
+                    <span class="metric-change change-positive" id="activeUsersChange">+0%</span>
+                </div>
+                <div class="metric-value" id="activeUsersValue">0</div>
+                <div class="metric-subtitle">Currently online</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Completions/min</span>
+                    <span class="metric-change change-positive" id="completionsChange">+0%</span>
+                </div>
+                <div class="metric-value" id="completionsValue">0</div>
+                <div class="metric-subtitle">Tasks completed per minute</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Revenue/min</span>
+                    <span class="metric-change change-positive" id="revenueChange">+0%</span>
+                </div>
+                <div class="metric-value" id="revenueValue">$0</div>
+                <div class="metric-subtitle">Revenue per minute</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Conversion Rate</span>
+                    <span class="metric-change change-positive" id="conversionChange">+0%</span>
+                </div>
+                <div class="metric-value" id="conversionValue">0%</div>
+                <div class="metric-subtitle">Task completion rate</div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3 class="chart-title">📈 Activity Over Time</h3>
+                <div class="chart-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3 class="chart-title">💰 Revenue Trends</h3>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Feed -->
+        <div class="activity-feed">
+            <h3 class="feed-title">🔔 Live Activity Feed</h3>
+            <div id="activityFeed">
+                <!-- Activity items will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let socket;
+        let charts = {};
+        let currentPeriod = '7d';
+        let previousData = {};
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 5;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+            setupEventListeners();
+            connectWebSocket();
+            loadInitialData();
+        });
+
+        // Initialize dashboard
+        function initializeDashboard() {
+            // Initialize charts
+            initializeCharts();
+            
+            // Set initial period
+            updateLastUpdateTime();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Time filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentPeriod = this.dataset.period;
+                    loadInitialData();
+                });
+            });
+
+            // Handle page visibility
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    // Pause updates when tab is hidden
+                    if (socket) socket.disconnect();
+                } else {
+                    // Resume updates when tab is visible
+                    connectWebSocket();
+                }
+            });
+        }
+
+        // Connect WebSocket
+        function connectWebSocket() {
+            updateConnectionStatus('connecting');
+            
+            try {
+                socket = io('/analytics', {
+                    transports: ['websocket'],
+                    upgrade: false
+                });
+
+                socket.on('connect', function() {
+                    console.log('Connected to analytics WebSocket');
+                    updateConnectionStatus('connected');
+                    reconnectAttempts = 0;
+                    
+                    // Subscribe to real-time updates
+                    socket.emit('subscribe', { period: currentPeriod });
+                });
+
+                socket.on('disconnect', function() {
+                    console.log('Disconnected from analytics WebSocket');
+                    updateConnectionStatus('disconnected');
+                    attemptReconnect();
+                });
+
+                socket.on('real_time_update', function(data) {
+                    handleRealTimeUpdate(data);
+                });
+
+                socket.on('activity_feed', function(data) {
+                    handleActivityFeed(data);
+                });
+
+                socket.on('error', function(error) {
+                    console.error('WebSocket error:', error);
+                    showError('Connection error. Please refresh the page.');
+                });
+
+            } catch (error) {
+                console.error('Failed to connect WebSocket:', error);
+                updateConnectionStatus('disconnected');
+                // Fallback to polling
+                startPolling();
+            }
+        }
+
+        // Attempt to reconnect
+        function attemptReconnect() {
+            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                showError('Connection lost. Please refresh the page.');
+                return;
+            }
+
+            reconnectAttempts++;
+            updateConnectionStatus('connecting');
+            
+            setTimeout(() => {
+                connectWebSocket();
+            }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000)); // Exponential backoff
+        }
+
+        // Start polling fallback
+        function startPolling() {
+            console.log('Starting polling fallback');
+            setInterval(() => {
+                loadRealTimeData();
+            }, 5000); // Poll every 5 seconds
+        }
+
+        // Load initial data
+        async function loadInitialData() {
+            showLoading(true);
+            hideError();
+
+            try {
+                const response = await fetch(`/api/v1/analytics/dashboard?days=${getDaysFromPeriod()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    updateMetrics(data.data);
+                    updateCharts(data.data);
+                } else {
+                    showError('Failed to load dashboard data');
+                }
+            } catch (error) {
+                console.error('Error loading initial data:', error);
+                showError('Network error. Please check your connection.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Load real-time data
+        async function loadRealTimeData() {
+            try {
+                const response = await fetch('/api/v1/analytics/real-time', {
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    handleRealTimeUpdate(data.data);
+                }
+            } catch (error) {
+                console.error('Error loading real-time data:', error);
+            }
+        }
+
+        // Handle real-time updates
+        function handleRealTimeUpdate(data) {
+            // Store previous data for comparison
+            previousData = { ...data };
+            
+            updateMetrics(data);
+            updateLastUpdateTime();
+        }
+
+        // Handle activity feed
+        function handleActivityFeed(activity) {
+            const feed = document.getElementById('activityFeed');
+            const activityItem = createActivityItem(activity);
+            
+            // Add to top of feed
+            feed.insertBefore(activityItem, feed.firstChild);
+            
+            // Limit feed to 50 items
+            while (feed.children.length > 50) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        // Create activity item
+        function createActivityItem(activity) {
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            
+            const iconClass = getActivityIconClass(activity.type);
+            const timeAgo = getTimeAgo(activity.timestamp);
+            
+            item.innerHTML = `
+                <div class="activity-icon ${iconClass}">${getActivityIcon(activity.type)}</div>
+                <div class="activity-content">
+                    <div class="activity-title">${activity.title}</div>
+                    <div class="activity-description">${activity.description}</div>
+                    <div class="activity-time">${timeAgo}</div>
+                </div>
+            `;
+            
+            return item;
+        }
+
+        // Get activity icon class
+        function getActivityIconClass(type) {
+            const iconMap = {
+                'task_completion': 'icon-task',
+                'user_signup': 'icon-user',
+                'revenue': 'icon-revenue',
+                'error': 'icon-error'
+            };
+            return iconMap[type] || 'icon-task';
+        }
+
+        // Get activity icon
+        function getActivityIcon(type) {
+            const iconMap = {
+                'task_completion': '✓',
+                'user_signup': '👤',
+                'revenue': '💰',
+                'error': '⚠️'
+            };
+            return iconMap[type] || '📋';
+        }
+
+        // Get time ago
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const time = new Date(timestamp);
+            const diff = Math.floor((now - time) / 1000); // seconds
+            
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+            return `${Math.floor(diff / 86400)} days ago`;
+        }
+
+        // Update metrics
+        function updateMetrics(data) {
+            const metrics = {
+                activeUsers: data.engagement_stats?.daily_active_users || 0,
+                completionsPerMinute: data.performance_metrics?.throughput || 0,
+                revenuePerMinute: data.revenue_stats?.daily_average / (24 * 60) || 0,
+                conversionRate: data.engagement_stats?.conversion_rate || 0
+            };
+
+            // Update values with animations
+            animateValue('activeUsersValue', metrics.activeUsers);
+            animateValue('completionsValue', metrics.completionsPerMinute.toFixed(1));
+            animateValue('revenueValue', `$${metrics.revenuePerMinute.toFixed(2)}`);
+            animateValue('conversionValue', `${metrics.conversionRate.toFixed(1)}%`);
+
+            // Update change indicators
+            updateChangeIndicators(metrics);
+        }
+
+        // Animate value change
+        function animateValue(elementId, newValue) {
+            const element = document.getElementById(elementId);
+            const currentValue = element.textContent;
+            
+            if (currentValue !== newValue) {
+                element.style.transform = 'scale(1.1)';
+                element.style.color = '#28a745';
+                
+                setTimeout(() => {
+                    element.textContent = newValue;
+                    element.style.transform = 'scale(1)';
+                    element.style.color = '#2a5298';
+                }, 200);
+            }
+        }
+
+        // Update change indicators
+        function updateChangeIndicators(currentMetrics) {
+            // Compare with previous data and show changes
+            Object.keys(currentMetrics).forEach(key => {
+                const current = currentMetrics[key];
+                const previous = previousData[key] || 0;
+                const change = calculateChange(current, previous);
+                
+                const changeElement = document.getElementById(`${key}Change`);
+                if (changeElement) {
+                    changeElement.textContent = `${change > 0 ? '+' : ''}${change.toFixed(1)}%`;
+                    changeElement.className = `metric-change ${change > 0 ? 'change-positive' : 'change-negative'}`;
+                }
+            });
+        }
+
+        // Calculate change percentage
+        function calculateChange(current, previous) {
+            if (previous === 0) return 0;
+            return ((current - previous) / previous) * 100;
+        }
+
+        // Initialize charts
+        function initializeCharts() {
+            // Activity Chart
+            const activityCtx = document.getElementById('activityChart').getContext('2d');
+            charts.activity = new Chart(activityCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Active Users',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // Revenue Chart
+            const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+            charts.revenue = new Chart(revenueCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Revenue',
+                        data: [],
+                        backgroundColor: 'rgba(40, 167, 69, 0.8)',
+                        borderColor: '#28a745',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Update charts
+        function updateCharts(data) {
+            // This would update chart data with real analytics data
+            // For now, showing placeholder implementation
+            updateActivityChart(data);
+            updateRevenueChart(data);
+        }
+
+        // Update activity chart
+        function updateActivityChart(data) {
+            // Implementation would use actual analytics data
+            const labels = generateTimeLabels();
+            const userData = generateRandomData(labels.length, 100, 500);
+            
+            charts.activity.data.labels = labels;
+            charts.activity.data.datasets[0].data = userData;
+            charts.activity.update('none');
+        }
+
+        // Update revenue chart
+        function updateRevenueChart(data) {
+            // Implementation would use actual analytics data
+            const labels = generateTimeLabels();
+            const revenueData = generateRandomData(labels.length, 1000, 5000);
+            
+            charts.revenue.data.labels = labels;
+            charts.revenue.data.datasets[0].data = revenueData;
+            charts.revenue.update('none');
+        }
+
+        // Generate time labels
+        function generateTimeLabels() {
+            const labels = [];
+            const now = new Date();
+            
+            for (let i = 23; i >= 0; i--) {
+                const time = new Date(now - i * 60 * 60 * 1000);
+                labels.push(time.getHours() + ':00');
+            }
+            
+            return labels;
+        }
+
+        // Generate random data (placeholder)
+        function generateRandomData(count, min, max) {
+            const data = [];
+            for (let i = 0; i < count; i++) {
+                data.push(Math.floor(Math.random() * (max - min + 1)) + min);
+            }
+            return data;
+        }
+
+        // Update last update time
+        function updateLastUpdateTime() {
+            document.getElementById('lastUpdateTime').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Update connection status
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.className = `connection-status status-${status}`;
+            
+            const statusText = {
+                'connected': '🟢 Connected',
+                'disconnected': '🔴 Disconnected',
+                'connecting': '🟡 Connecting...'
+            };
+            
+            statusElement.textContent = statusText[status] || 'Unknown';
+        }
+
+        // Utility functions
+        function getDaysFromPeriod() {
+            const periodMap = {
+                '1h': 0.04,
+                '24h': 1,
+                '7d': 7,
+                '30d': 30,
+                '90d': 90
+            };
+            return periodMap[currentPeriod] || 7;
+        }
+
+        function getAuthToken() {
+            return localStorage.getItem('authToken') || '';
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (socket) {
+                socket.disconnect();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -14,7 +14,7 @@ class SmartLinkTemplateService:
     def create_template_from_smartlink(self, smartlink, publisher, name: str,
                                         is_public: bool = False) -> object:
         """Save a SmartLink's full config as a reusable template."""
-        from ...models.extensions.smartlink_schedule import SmartLinkTemplate
+        from api.smartlink.models.extensions.smartlink_schedule import SmartLinkTemplate
 
         config = self._extract_config(smartlink)
         template = SmartLinkTemplate.objects.create(
@@ -44,7 +44,7 @@ class SmartLinkTemplateService:
         sl = builder.build(publisher, config)
 
         # Increment template use count
-        from ...models.extensions.smartlink_schedule import SmartLinkTemplate
+        from api.smartlink.models.extensions.smartlink_schedule import SmartLinkTemplate
         SmartLinkTemplate.objects.filter(pk=template.pk).update(
             use_count=template.use_count + 1
         )
@@ -54,7 +54,7 @@ class SmartLinkTemplateService:
 
     def get_public_templates(self, category: str = None) -> list:
         """Get all public templates available to all publishers."""
-        from ...models.extensions.smartlink_schedule import SmartLinkTemplate
+        from api.smartlink.models.extensions.smartlink_schedule import SmartLinkTemplate
         qs = SmartLinkTemplate.objects.filter(is_public=True).order_by('-use_count')
         if category:
             qs = qs.filter(config__type=category)

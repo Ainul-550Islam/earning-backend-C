@@ -59,7 +59,7 @@ python manage.py seed_translation_keys   # 100 CPAlead keys
 python manage.py import_translations --file=translations/en/messages.json --language=en
 
 # 8. Warm cache
-python manage.py warm_cache --all-languages
+python manage.py localization_warm_cache --all-languages
 
 # 9. Check coverage
 python manage.py check_coverage

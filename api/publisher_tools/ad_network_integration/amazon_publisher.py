@@ -36,6 +36,7 @@ class AmazonPublisherServicesConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_amazon_configs"
         verbose_name = _("Amazon Publisher Services Config")
         unique_together = [["publisher"]]

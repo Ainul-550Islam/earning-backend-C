@@ -7,6 +7,9 @@ from .models import KYCWorkflow, KYCWorkflowStep, KYCWorkflowRun, DEFAULT_WORKFL
 
 
 @api_view(['GET', 'POST'])
+@api_view(['GET', 'PUT', 'DELETE'])
+@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def workflow_list(request):
     tenant = getattr(request.user, 'tenant', None)
@@ -36,9 +39,6 @@ def workflow_list(request):
         created_by=request.user,
     )
     return Response({'id': wf.id, 'name': wf.name}, status=201)
-
-
-@api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def workflow_detail(request, wf_id):
     try:
@@ -64,8 +64,6 @@ def workflow_detail(request, wf_id):
         else: wf.status = request.data['status']; wf.save()
     return Response({'id': wf.id, 'status': wf.status})
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def workflow_activate(request, wf_id):
     try:
@@ -75,8 +73,6 @@ def workflow_activate(request, wf_id):
     except KYCWorkflow.DoesNotExist:
         return Response({'error': 'Not found'}, status=404)
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def workflow_run(request, wf_id):
     """Execute a workflow for current user's KYC"""
@@ -94,8 +90,6 @@ def workflow_run(request, wf_id):
     result = engine.execute()
     return Response(result)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def workflow_runs(request, wf_id):
     runs = KYCWorkflowRun.objects.filter(workflow_id=wf_id).order_by('-started_at')[:50]
@@ -104,9 +98,6 @@ def workflow_runs(request, wf_id):
         'final_decision': r.final_decision,
         'duration_seconds': r.duration_seconds, 'started_at': r.started_at,
     } for r in runs])
-
-
-@api_view(['GET'])
 def workflow_templates(request):
     """Available workflow templates"""
     return Response([{

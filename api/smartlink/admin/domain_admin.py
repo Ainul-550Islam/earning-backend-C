@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from ..models.publisher import PublisherDomain
+from api.smartlink.models.publisher import PublisherDomain
 from ..choices import DomainVerificationStatus
 
 

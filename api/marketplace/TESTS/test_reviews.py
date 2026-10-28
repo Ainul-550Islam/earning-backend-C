@@ -32,10 +32,13 @@ class ReviewTest(TestCase):
         self.assertTrue(review.is_approved)
 
     def test_rating_stats(self):
-        for r in [5, 5, 4, 3]:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        for i, r in enumerate([5, 5, 4, 3]):
+            u = User.objects.create_user(username=f"rater_{i}", password="x")
             ProductReview.objects.create(
                 tenant=self.tenant, product=self.product,
-                user=self.user, rating=r, body="Review",
+                user=u, rating=r, body="Review",
             )
         stats = product_rating_stats(self.product)
         self.assertEqual(stats["total"], 4)

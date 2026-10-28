@@ -1,0 +1,28 @@
+# Install only what you use. Every package below is imported lazily or guarded by try/except.
+# --- channels / delivery
+twilio>=8.0                      # SMS channel (services/channels/SMSAlertService.py)
+# --- exports and reports
+openpyxl>=3.1                    # Excel export
+reportlab>=4.0                   # PDF reports
+pandas>=2.0                      # export_data management command
+# --- backups
+boto3>=1.34                      # S3 backup backend (backup.py)
+# --- scheduling / validation / crypto
+croniter>=2.0                    # cron expressions (scheduler.py)
+jsonschema>=4.21                 # schemas.py
+cryptography>=41.0               # utils.py encryption helpers
+# --- integration bridges (bridge.py, fallback_logic.py)
+aiohttp>=3.9
+aiofiles>=23.0
+aiokafka>=0.10
+aioredis>=2.0
+websockets>=12.0
+mysql-connector-python>=8.0
+pylibmc>=1.6
+# --- host-project add-ons referenced from settings snippets
+django-celery-beat>=2.5          # DB-backed beat scheduler
+django-celery-results>=2.5
+django-cors-headers>=4.0
+djangorestframework-simplejwt>=5.3
+django-redis>=5.4                # Redis cache backend
+django-unfold>=0.30              # optional admin theme (admin falls back to Django admin without it)

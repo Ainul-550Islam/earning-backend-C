@@ -29,7 +29,7 @@ def get_root_domain(domain: str) -> str:
 
 def check_domain_available(domain: str) -> bool:
     """Domain already registered কিনা check করে।"""
-    from api.publisher_tools.models import Site
+    from publisher_tools.models import Site
     return not Site.objects.filter(domain=domain).exists()
 
 
@@ -57,6 +57,7 @@ class SiteDomainVerificationToken(TimeStampedModel):
     verified_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_domain_verification_tokens'
         verbose_name = _('Domain Verification Token')
 

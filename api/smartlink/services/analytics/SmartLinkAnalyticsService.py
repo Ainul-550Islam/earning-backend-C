@@ -2,7 +2,7 @@ import logging
 from django.db.models import Sum, Count, Avg, F, Q
 from django.utils import timezone
 import datetime
-from ...models import SmartLink, SmartLinkDailyStat, SmartLinkStat, Click
+from api.smartlink.models import SmartLink, SmartLinkDailyStat, SmartLinkStat, Click
 
 logger = logging.getLogger('smartlink.analytics')
 

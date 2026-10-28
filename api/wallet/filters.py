@@ -118,9 +118,24 @@ class LiabilityReportFilter(django_filters.FilterSet):
 
 
 class EarningSummaryFilter(django_filters.FilterSet):
-    start_date = django_filters.DateFilter(field_name='created_at', lookup_expr='gte')
-    end_date = django_filters.DateFilter(field_name='created_at', lookup_expr='lte')
+    """Filter for EarningSummary records — by date range and source type."""
+    period_start = django_filters.DateFilter(field_name="period_start", lookup_expr="gte")
+    period_end   = django_filters.DateFilter(field_name="period_end",   lookup_expr="lte")
+    source_type  = django_filters.CharFilter(field_name="source_type",  lookup_expr="iexact")
 
     class Meta:
-        model = None
-        fields = []
+        from .models import EarningSummary
+        model  = EarningSummary
+        fields = ["period_start", "period_end", "source_type"]
+
+
+class WithdrawalMethodFilter(django_filters.FilterSet):
+    """Filter for WithdrawalMethod records — by method type and active status."""
+    method_type = django_filters.CharFilter(field_name="method_type", lookup_expr="iexact")
+    is_active   = django_filters.BooleanFilter(field_name="is_active")
+    currency    = django_filters.CharFilter(field_name="currency",    lookup_expr="iexact")
+
+    class Meta:
+        from .models import WithdrawalMethod
+        model  = WithdrawalMethod
+        fields = ["method_type", "is_active", "currency"]

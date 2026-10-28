@@ -8,10 +8,10 @@ import json
 import csv
 import logging
 
-from alerts.models.core import AlertRule, AlertLog, Notification
-from alerts.models.channel import AlertChannel, ChannelHealthLog
-from alerts.models.incident import Incident, IncidentTimeline
-from alerts.models.reporting import AlertReport
+from api.alerts.models.core import AlertRule, AlertLog, Notification
+from api.alerts.models.channel import AlertChannel, ChannelHealthLog
+from api.alerts.models.incident import Incident, IncidentTimeline
+from api.alerts.models.reporting import AlertReport
 
 logger = logging.getLogger(__name__)
 

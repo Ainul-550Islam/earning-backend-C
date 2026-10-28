@@ -1,0 +1,57 @@
+# requirements.txt — messaging app
+#
+# This package ships with no pinned dependencies at all, which is a real
+# deployment risk on its own: an unconstrained `pip install` can silently
+# resolve a Django/DRF combination that has never been run together.
+# Concretely confirmed during audit:
+#   - models.py's CheckConstraint(check=...) works on all Django versions
+#     (Django 5.0 only understands the older `check=` keyword).
+#   - Django 6.1 removes django.utils.cache.cc_delim_re, which the
+#     currently-released djangorestframework (3.17.x) still imports at
+#     module load — installing Django 6.1 breaks `import rest_framework`
+#     entirely, before any of this app's own code even runs.
+# Floors below are what this audit actually ran the full test suite and a
+# real PostgreSQL 16 migration against — treat them as a verified
+# baseline, not an arbitrary minimum. Merge with your host project's own
+# requirements.txt (earning_backend) rather than replacing it; `>=`
+# floors compose fine with an existing file, unlike hard `==` pins.
+
+# ── Core (required to run the app) ──────────────────────────────────────
+Django>=5.1,<6.0                    # see note above re: 6.1 + DRF 3.17.x
+djangorestframework>=3.17.2
+djangorestframework-simplejwt>=5.5.1
+channels>=4.3.2
+channels_redis>=4.3.0               # production channel layer backend — see
+                                     # settings_messaging.py's MESSAGING_CHANNEL_LAYERS_REDIS;
+                                     # the default InMemoryChannelLayer only works
+                                     # with a single worker process
+django-filter>=25.1
+drf-spectacular>=0.30.0
+celery>=5.6.3
+redis>=8.1.0
+requests>=2.34.2
+boto3>=1.43.96                      # S3 media storage — settings_messaging.py MESSAGING_STORAGE
+beautifulsoup4>=4.15.0              # utils/link_preview.py
+cryptography>=50.0.1                # utils/e2e_encryption.py
+PyJWT>=2.14.0
+pydub>=0.25.1                       # utils/voice_processor.py
+pywebpush>=2.5.0                    # utils/device_push.py
+elasticsearch>=9.5.1                # utils/search_engine.py — optional at runtime,
+                                     # only exercised when settings.ELASTICSEARCH_URL is set
+Pillow>=12.3.0                      # utils/media_pipeline.py
+
+# ── Database driver ──────────────────────────────────────────────────────
+# Pick whichever matches your host project's DB — not both. This audit
+# verified the full migration chain (0001-0010) plus a query-heavy test
+# subset (models/viewsets/filters/services/CPA/serializers) against real
+# PostgreSQL 16 with no schema or query differences from SQLite.
+psycopg2-binary>=2.9.13             # PostgreSQL
+# mysqlclient>=2.2                  # MySQL / MariaDB, if that's your host DB instead
+
+# ── Testing only (running messaging/tests/ standalone via pytest) ───────
+# Not needed in production. See messaging/tests/conftest.py.
+pytest>=9.1.1
+pytest-django>=4.14.0
+factory_boy>=3.3.3
+daphne>=4.2.3                       # required by channels.testing.WebsocketCommunicator,
+                                     # used in test_consumers_*.py and test_ws_*.py

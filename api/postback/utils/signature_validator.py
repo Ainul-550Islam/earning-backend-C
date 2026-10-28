@@ -20,13 +20,13 @@ from typing import Optional
 
 from django.core.cache import cache
 
-from ..constants import (
+from api.postback.constants import (
     CACHE_KEY_NONCE_USED,
     CACHE_TIMEOUT_NONCE,
     MAX_NONCE_LENGTH,
     SIGNATURE_TOLERANCE_SECONDS,
 )
-from ..exceptions import (
+from api.postback.exceptions import (
     InvalidSignatureException,
     NonceReusedException,
     SignatureExpiredException,

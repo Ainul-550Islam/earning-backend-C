@@ -14,17 +14,17 @@ from django.utils import timezone
 from django.db.models import Q, Count, Avg, Sum, F
 from django.core.cache import cache
 from django.db import transaction
-from ....models import (
+from offer_routing.models import (
     OfferRoute, RoutingDecisionLog, RoutePerformanceStat,
     OfferExposureStat, RoutingInsight, UserOfferHistory
 )
-from ....constants import (
+from offer_routing.constants import (
     ANALYTICS_CACHE_TIMEOUT, INSIGHT_GENERATION_INTERVAL,
     PERFORMANCE_CALCULATION_WINDOW, MIN_SAMPLE_SIZE_FOR_INSIGHTS,
     DEFAULT_ANALYTICS_TIMEZONE, ANALYTICS_BATCH_SIZE
 )
-from ....exceptions import AnalyticsError, InsightGenerationError
-from ....utils import calculate_routing_metrics, generate_insight_data
+from offer_routing.exceptions import AnalyticsError, InsightGenerationError
+from offer_routing.utils import calculate_routing_metrics, generate_insight_data
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ class RoutingAnalyticsService:
                 end_date = timezone.now()
             
             # Check cache first
-            cache_key = f"routing_metrics:{start_date.isoformat()}:{end_date.isoformat()}:{hash(str(filters or {})}"
+            cache_key = f"routing_metrics:{start_date.isoformat()}:{end_date.isoformat()}:{hash(str(filters or {}))}"
             cached_metrics = self.cache_service.get(cache_key)
             
             if cached_metrics:

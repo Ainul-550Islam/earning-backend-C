@@ -25,6 +25,7 @@ class RewardedVideoConfig(TimeStampedModel):
     max_video_length_sec = models.IntegerField(default=30)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_rewarded_video_configs"
         verbose_name = _("Rewarded Video Config")
 

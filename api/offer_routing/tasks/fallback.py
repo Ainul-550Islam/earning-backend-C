@@ -4,6 +4,7 @@ Fallback Tasks for Offer Routing System
 This module contains background tasks for fallback management,
 including health checks, pool updates, and analytics.
 """
+from django.db.models import Count
 
 import logging
 from celery import shared_task

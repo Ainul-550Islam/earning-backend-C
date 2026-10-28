@@ -13,7 +13,7 @@ class PerformanceTest(TestCase):
             make_translation(key=key, language=self.lang, value=f'Perf Value {i}')
 
     def test_bulk_translation_query_count(self):
-        from localization.models.core import Translation
+        from api.localization.models.core import Translation
         from django.db import connection, reset_queries
         with override_settings(DEBUG=True):
             reset_queries()

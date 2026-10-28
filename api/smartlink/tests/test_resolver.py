@@ -43,14 +43,14 @@ class SmartLinkResolverTest(TestCase):
         with self.assertRaises(SmartLinkInactive):
             self.resolver.resolve(self.sl.slug, self.context)
 
-    @patch('smartlink.services.core.SmartLinkResolverService.SmartLinkResolverService._track_click_async')
+    @patch('api.smartlink.services.core.SmartLinkResolverService.SmartLinkResolverService._track_click_async')
     def test_fallback_when_no_offers(self, mock_track):
         """With empty pool, resolver should return fallback URL."""
         result = self.resolver.resolve(self.sl.slug, self.context)
         self.assertTrue(result['was_fallback'])
         self.assertEqual(result['url'], 'https://fallback.example.com')
 
-    @patch('smartlink.services.core.SmartLinkResolverService.SmartLinkResolverService._track_click_async')
+    @patch('api.smartlink.services.core.SmartLinkResolverService.SmartLinkResolverService._track_click_async')
     def test_resolve_performance_under_5ms(self, mock_track):
         """Critical: resolver must complete in <5ms (target SLA)."""
         # Warm up cache first

@@ -8,7 +8,7 @@ from django.utils import timezone
 
 def check_payout_eligibility(publisher) -> Dict:
     """Publisher payout-এর জন্য eligible কিনা check করে।"""
-    from api.publisher_tools.models import PayoutThreshold
+    from publisher_tools.models import PayoutThreshold
     threshold = PayoutThreshold.objects.filter(publisher=publisher, is_primary=True, is_verified=True).first()
     if not threshold:
         return {"eligible": False, "reason": "No verified payment method configured."}
@@ -31,13 +31,13 @@ def check_payout_eligibility(publisher) -> Dict:
 @transaction.atomic
 def process_payout_request(publisher, amount: Decimal, bank_account_id: str, notes: str = "") -> Dict:
     """Payout request process করে।"""
-    from api.publisher_tools.publisher_management.publisher_payout import PayoutRequest
+    from publisher_tools.publisher_management.publisher_payout import PayoutRequest
     eligibility = check_payout_eligibility(publisher)
     if not eligibility["eligible"]:
         return {"success": False, "reason": eligibility["reason"]}
     if amount > publisher.available_balance:
         return {"success": False, "reason": "Requested amount exceeds available balance."}
-    from api.publisher_tools.publisher_management.publisher_bank_account import PublisherBankAccount
+    from publisher_tools.publisher_management.publisher_bank_account import PublisherBankAccount
     try:
         bank_account = PublisherBankAccount.objects.get(id=bank_account_id, publisher=publisher)
     except Exception:
@@ -55,7 +55,7 @@ def process_payout_request(publisher, amount: Decimal, bank_account_id: str, not
 
 
 def get_payout_history(publisher, limit: int = 20) -> List[Dict]:
-    from api.publisher_tools.publisher_management.publisher_payout import PayoutRequest
+    from publisher_tools.publisher_management.publisher_payout import PayoutRequest
     payouts = PayoutRequest.objects.filter(publisher=publisher).order_by("-created_at")[:limit]
     return [
         {"request_id": p.request_id, "amount": float(p.requested_amount), "net": float(p.net_amount or 0),

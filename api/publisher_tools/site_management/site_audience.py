@@ -38,6 +38,7 @@ class SiteAudienceSnapshot(TimeStampedModel):
     is_estimated  = models.BooleanField(default=False)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_audience_snapshots'
         verbose_name = _('Audience Snapshot')
         unique_together = [['site', 'month']]

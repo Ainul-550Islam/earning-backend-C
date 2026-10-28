@@ -30,6 +30,49 @@ RISK_SCORE_MEDIUM: float = 0.60
 RISK_SCORE_HIGH: float   = 0.80
 
 # ---------------------------------------------------------------------------
+# Bot configuration
+# ---------------------------------------------------------------------------
+BOT_HEARTBEAT_INTERVAL_SEC: int = 30
+MAX_BOT_RETRIES: int = 3
+BOT_BATCH_SIZE: int = 50
+BOT_PROCESSING_TIMEOUT_SEC: int = 300
+
+# ---------------------------------------------------------------------------
+# Queue management
+# ---------------------------------------------------------------------------
+QUEUE_DEFAULT_PRIORITY: str = "medium"
+QUEUE_ESCALATION_MULTIPLIER: float = 2.0
+QUEUE_AUTO_ESCALATE_HOURS: int = 24
+QUEUE_MAX_PROCESSING_TIME_MINUTES: int = 120
+QUEUE_OVERDUE_HOURS: int = 48
+
+# ---------------------------------------------------------------------------
+# Decision tracking
+# ---------------------------------------------------------------------------
+DECISION_RETENTION_DAYS: int = 365
+DECISION_CONFIDENCE_THRESHOLD: float = 0.7
+APPEAL_TIMEOUT_DAYS: int = 30
+APPEAL_MAX_RETRIES: int = 3
+
+# ---------------------------------------------------------------------------
+# ML model management
+# ---------------------------------------------------------------------------
+MODEL_MAX_FILE_SIZE_MB: int = 500
+MODEL_CHECKSUM_ALGORITHM: str = "sha256"
+MODEL_DEPLOYMENT_GRACE_PERIOD_MINUTES: int = 15
+MODEL_PERFORMANCE_MIN_THRESHOLD: float = 0.8
+MODEL_TRAINING_MAX_HOURS: int = 48
+
+# ---------------------------------------------------------------------------
+# Signal processing
+# ---------------------------------------------------------------------------
+SIGNAL_MAX_WEIGHT: float = 10.0
+SIGNAL_DEFAULT_WEIGHT: float = 1.0
+SIGNAL_CONFIDENCE_THRESHOLD: float = 0.5
+SIGNAL_PROCESSING_BATCH_SIZE: int = 100
+SIGNAL_RETENTION_DAYS: int = 90
+
+# ---------------------------------------------------------------------------
 # Rule evaluation
 # ---------------------------------------------------------------------------
 MAX_RULES_PER_EVALUATION: int   = 50
@@ -103,3 +146,12 @@ CACHE_TTL_MODEL_VERSION: int    = 86_400   # 24 h
 # ---------------------------------------------------------------------------
 DEFAULT_PAGE_SIZE: int  = 20
 MAX_PAGE_SIZE: int      = 200
+
+
+from django.db import models
+
+class QueuePriority(models.TextChoices):
+    LOW    = 'low',    'Low'
+    NORMAL = 'normal', 'Normal'
+    HIGH   = 'high',   'High'
+    URGENT = 'urgent', 'Urgent'

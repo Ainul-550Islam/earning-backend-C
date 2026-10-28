@@ -48,7 +48,7 @@ class WebhookReplayAdmin(admin.ModelAdmin):
             '<div style="background: #f5f5f5; padding: 5px; font-size: 11px;">'
             '<strong>Endpoint:</strong> {}<br><strong>Event:</strong> {}<br>'
             '<strong>Status:</strong> {}<br><strong>Created:</strong> {}</div>',
-            log.endpoint.label or log.endpoint.url, log.event_type, log.status,
+            log.endpoint.label or log.endpoint.target_url, log.event_type, log.status,
             log.created_at.strftime('%Y-%m-%d %H:%M:%S')
         )
     original_log_preview.short_description = 'Original Log'
@@ -61,7 +61,7 @@ class WebhookReplayAdmin(admin.ModelAdmin):
             '<div style="background: #e8f5e8; padding: 5px; font-size: 11px;">'
             '<strong>Endpoint:</strong> {}<br><strong>Event:</strong> {}<br>'
             '<strong>Status:</strong> {}<br><strong>Created:</strong> {}</div>',
-            log.endpoint.label or log.endpoint.url, log.event_type, log.status,
+            log.endpoint.label or log.endpoint.target_url, log.event_type, log.status,
             log.created_at.strftime('%Y-%m-%d %H:%M:%S')
         )
     new_log_preview.short_description = 'New Log'

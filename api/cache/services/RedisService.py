@@ -118,6 +118,7 @@ class RedisService(CacheService):
                 )
             else:
                 self._client = redis.Redis(
+                    protocol=2,
                     host=self.config['host'],
                     port=self.config['port'],
                     db=self.config['db'],

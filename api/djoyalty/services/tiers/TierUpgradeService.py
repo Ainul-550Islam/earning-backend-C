@@ -1,6 +1,6 @@
 # api/djoyalty/services/tiers/TierUpgradeService.py
 """
-TierUpgradeService — Customer এর tier upgrade logic।
+TierUpgradeService -- Customer এর tier upgrade logic।
 """
 import logging
 from decimal import Decimal

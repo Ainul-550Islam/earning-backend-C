@@ -29,7 +29,7 @@ class LanguagePackBuilder:
         Returns: {'success': True, 'pack': {...}, 'meta': {...}}
         """
         try:
-            from ...models.core import Language, Translation, TranslationKey
+            from api.localization.models.core import Language, Translation, TranslationKey
 
             lang = Language.objects.filter(code=language_code, is_active=True).first()
             if not lang:
@@ -105,7 +105,7 @@ class LanguagePackBuilder:
     def build_all_namespaces(self, language_code: str) -> Dict:
         """সব namespaces-এর pack build করে"""
         try:
-            from ...models.core import TranslationKey
+            from api.localization.models.core import TranslationKey
             namespaces = list(
                 TranslationKey.objects.values_list('category', flat=True)
                 .distinct()
@@ -133,7 +133,7 @@ class LanguagePackBuilder:
         Frontend can merge diff with cached pack to avoid full re-download.
         """
         try:
-            from ...models.core import Translation, Language
+            from api.localization.models.core import Translation, Language
             from django.utils import timezone
             import dateutil.parser
 

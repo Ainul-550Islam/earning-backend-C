@@ -1,0 +1,26 @@
+{% extends "offer_routing/_base.html" %}
+{% block title %}Routes{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <h1>Offer Routes</h1>
+    <a href="{% url 'offer_routing:route-create' %}" class="btn btn-primary">+ New Route</a>
+</div>
+<table class="table table-striped">
+    <thead><tr><th>Name</th><th>Priority</th><th>Status</th><th>Max Offers</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for route in object_list %}
+    <tr>
+        <td>{{ route.name }}</td>
+        <td>{{ route.priority }}</td>
+        <td>{% if route.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
+        <td>{{ route.max_offers }}</td>
+        <td>
+            <a href="{% url 'offer_routing:route-detail' route.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+            <a href="{% url 'offer_routing:route-update' route.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+        </td>
+    </tr>
+    {% empty %}<tr><td colspan="5" class="text-center">No routes found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

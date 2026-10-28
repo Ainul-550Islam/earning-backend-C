@@ -22,6 +22,7 @@ from ..utils.formatters import (
     TenantFormatter, BillingFormatter, SecurityFormatter,
     AnalyticsFormatter, DateTimeFormatter, TableFormatter
 )
+from api.tenants.exceptions import ValidationError
 
 
 class TenantValidatorTests(TestCase):

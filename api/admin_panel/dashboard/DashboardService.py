@@ -15,7 +15,7 @@ class DashboardService:
             'active_users': User.objects.filter(is_active=True).count(),
             'verified_users': User.objects.filter(is_verified=True).count(),
             'today_registrations': User.objects.filter(created_at__date=today).count(),
-            'total_balance': User.objects.aggregate(total=Sum('balance'))['total'] or 0,
+            'total_balance': User.objects.aggregate(total=Sum('current_balance'))['total'] or 0,
         }
     
     @staticmethod

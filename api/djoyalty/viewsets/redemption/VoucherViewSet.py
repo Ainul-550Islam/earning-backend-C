@@ -11,8 +11,9 @@ from ...serializers.VoucherSerializer import VoucherSerializer
 from ...services.redemption.VoucherService import VoucherService
 from ...pagination import DjoyaltyPagePagination
 from ...permissions import IsLoyaltyAdmin
+from ...mixins import DjoyaltyBaseViewSet
 
-class VoucherViewSet(viewsets.ModelViewSet):
+class VoucherViewSet(DjoyaltyBaseViewSet, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Voucher.objects.all().select_related('customer').order_by('-created_at')
     serializer_class = VoucherSerializer
@@ -40,7 +41,7 @@ class VoucherViewSet(viewsets.ModelViewSet):
             )
             return Response(VoucherSerializer(voucher).data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return self.err(str(e))
 
     @action(detail=False, methods=['post'])
     def use(self, request):
@@ -52,7 +53,7 @@ class VoucherViewSet(viewsets.ModelViewSet):
             redemption = VoucherService.use_voucher(code, customer, order_reference=order_ref)
             return Response({'message': f'Voucher used. Discount: {redemption.discount_applied}'})
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return self.err(str(e))
 
     @action(detail=False, methods=['get'])
     def validate(self, request):

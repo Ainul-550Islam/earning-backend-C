@@ -4,6 +4,7 @@ Based on 2025 industry trends and requirements
 """
 
 import logging
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from decimal import Decimal
@@ -24,7 +25,7 @@ class RealTimeBid(models.Model):
     bid_id = models.CharField(max_length=100, unique=True, db_index=True)
     ad_network = models.ForeignKey('AdNetwork', on_delete=models.CASCADE)
     offer = models.ForeignKey('Offer', on_delete=models.CASCADE)
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     
     # Bid parameters
     bid_amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -112,7 +113,7 @@ class Web3Transaction(models.Model):
     # Ad network integration
     ad_network = models.ForeignKey('AdNetwork', on_delete=models.CASCADE)
     offer = models.ForeignKey('Offer', on_delete=models.CASCADE)
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     
     # Transaction data
     amount = models.DecimalField(max_digits=20, decimal_places=8)
@@ -161,7 +162,7 @@ class PrivacyCompliance(models.Model):
     )
     
     # User consent
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     consent_id = models.CharField(max_length=100, unique=True, db_index=True)
     
     # Consent details
@@ -307,7 +308,7 @@ class MLFraudDetection(models.Model):
     
     # Detection details
     detection_id = models.CharField(max_length=100, unique=True, db_index=True)
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     offer = models.ForeignKey('Offer', on_delete=models.CASCADE, null=True, blank=True)
     
     # ML model data
@@ -380,7 +381,7 @@ class CrossPlatformAttribution(models.Model):
     
     # Attribution details
     attribution_id = models.CharField(max_length=100, unique=True, db_index=True)
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     
     # Touch points
     touchpoints = models.JSONField(default=list)

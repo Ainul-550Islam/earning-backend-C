@@ -1,6 +1,7 @@
 """
 Power Outage Handler — Responds to power failures, UPS activations, and PDU failures.
 """
+from typing import Optional
 import logging
 import subprocess
 from datetime import datetime

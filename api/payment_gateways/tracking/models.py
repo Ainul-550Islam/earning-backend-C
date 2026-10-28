@@ -24,9 +24,9 @@ class Click(TimeStampedModel):
     click_id        = models.CharField(max_length=64, unique=True, default=generate_click_id,
                        db_index=True)
     offer           = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
-                       related_name='clicks', null=True, blank=True)
+                       related_name='+', null=True, blank=True)
     campaign        = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
-                       related_name='clicks', null=True, blank=True)
+                       related_name='clicks_pg', null=True, blank=True)
     publisher       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
                        null=True, related_name='tracking_clicks')
     advertiser      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
@@ -101,9 +101,9 @@ class Impression(TimeStampedModel):
     """
     impression_id   = models.CharField(max_length=64, unique=True, default=generate_click_id)
     offer           = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
-                       related_name='impressions')
+                       related_name='impressions_pg')
     publisher       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                       null=True, related_name='impressions')
+                       null=True, related_name='impressions_pg')
     ip_address      = models.GenericIPAddressField(null=True, blank=True)
     country_code    = models.CharField(max_length=2, blank=True)
     device_type     = models.CharField(max_length=20, blank=True)
@@ -153,11 +153,11 @@ class Conversion(TimeStampedModel):
                        help_text='Raw click_id from postback (even if Click deleted)')
 
     offer           = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
-                       related_name='conversions')
+                       related_name='+')
     campaign        = models.ForeignKey('offerwall.Offer', on_delete=models.CASCADE,
-                       related_name='conversions', null=True, blank=True)
+                       related_name='conversions_pg', null=True, blank=True)
     publisher       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                       null=True, related_name='conversions')
+                       null=True, related_name='conversions_pg')
     advertiser      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
                        null=True, related_name='advertiser_conversions')
 

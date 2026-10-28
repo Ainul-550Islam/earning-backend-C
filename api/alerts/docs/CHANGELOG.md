@@ -5,6 +5,22 @@ All notable changes to the Alerts API will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-10-03
+
+### Security
+- Tenant isolation: `X-Tenant-ID` honoured only for superusers/service accounts; optional fail-closed mode (`ENABLE_MULTI_TENANT`); removed silent no-op fallbacks of `TenantIsolationMixin`.
+- Webhooks: admin-only management endpoints, masked secrets, SSRF guard, fail-closed HMAC verification, signed inbound endpoint.
+- Channel `config` credentials masked in API output; exception text removed from 5xx responses and service error dicts.
+- SQL identifiers validated/quoted in backup, restore and data bridges; script escalation default-deny; template settings no longer ship insecure defaults.
+
+### Fixed
+- Fresh `migrate` on PostgreSQL (btree_gin); migration 0013 is data-aware; tenant FKs back on `tenants.Tenant` (removed retarget migration, guarded in 0014).
+- Eight previously documented defects (noise effectiveness field, `AlertLog.rule` reverse name, performance monitor, audit log, sync manager, inbound webhook body, scheduled report task, test fixtures).
+- No database access or threads at import/start-up.
+
+### Changed
+- Requirements split into runtime / optional / dev; broken dev scripts removed. See `KNOWN_ISSUES.md` for behaviour changes and upgrade notes.
+
 ## [1.0.0] - 2024-01-20
 
 ### Added

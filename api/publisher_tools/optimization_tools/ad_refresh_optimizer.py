@@ -9,7 +9,7 @@ REFRESH_RATE_ECPM_MULTIPLIERS = {15: 1.40, 20: 1.35, 30: 1.30, 45: 1.20, 60: 1.1
 
 def calculate_optimal_refresh_rate(placement, days: int = 30) -> Dict:
     """Placement-এর optimal refresh rate calculate করে।"""
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.db.models import Sum, Avg
     from django.utils import timezone
     from datetime import timedelta

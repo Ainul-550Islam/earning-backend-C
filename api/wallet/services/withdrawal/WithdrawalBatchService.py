@@ -3,6 +3,7 @@
 Batch withdrawal processing — group multiple requests into a single gateway call.
 Used for bKash B2C bulk transfers and similar batch APIs.
 """
+from django.db.models import QuerySet
 import logging
 from decimal import Decimal
 from django.db import transaction

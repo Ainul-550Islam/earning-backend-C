@@ -36,7 +36,7 @@ def select_winner(test) -> Optional[object]:
 
 def get_winner_recommendation(test) -> Dict:
     """Winner recommendation with reasoning।"""
-    analysis = __import__("api.publisher_tools.a_b_testing.test_analyzer", fromlist=["analyze_test"]).analyze_test(test)
+    analysis = __import__("publisher_tools.a_b_testing.test_analyzer", fromlist=["analyze_test"]).analyze_test(test)
     best = None
     best_ecpm = 0
     for v in analysis.get("variants", []):

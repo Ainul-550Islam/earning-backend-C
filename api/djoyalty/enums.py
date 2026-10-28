@@ -1,166 +1,88 @@
 # api/djoyalty/enums.py
 """
-Python Enum classes — type-safe constants।
-choices.py এর string values এর সাথে compatible।
+Djoyalty -- Python Enums (optional, for type-safe code)।
+Import করে use করো যেখানে string choices এর চেয়ে type safety দরকার।
 """
+from enum import Enum
 
-from enum import Enum, IntEnum
+
+class LedgerTxnType(str, Enum):
+    CREDIT = 'credit'
+    DEBIT = 'debit'
 
 
-class TxnType(str, Enum):
-    FULL = 'full'
-    DISCOUNT = 'discount'
-    EARN = 'earn'
-    BURN = 'burn'
-    ADJUSTMENT = 'adjustment'
-    EXPIRY = 'expiry'
-    TRANSFER_IN = 'transfer_in'
-    TRANSFER_OUT = 'transfer_out'
-    REFUND = 'refund'
+class LedgerSource(str, Enum):
+    PURCHASE = 'purchase'
+    REFERRAL = 'referral'
     BONUS = 'bonus'
-
-    @property
-    def is_credit(self):
-        return self in (
-            TxnType.EARN, TxnType.BONUS,
-            TxnType.TRANSFER_IN, TxnType.REFUND,
-        )
-
-    @property
-    def is_debit(self):
-        return self in (
-            TxnType.BURN, TxnType.EXPIRY,
-            TxnType.TRANSFER_OUT,
-        )
-
-    def __str__(self):
-        return self.value
+    OFFER = 'offer'
+    REDEMPTION = 'redemption'
+    EXPIRY = 'expiry'
+    TRANSFER = 'transfer'
+    ADMIN = 'admin'
+    SUBSCRIPTION = 'subscription'
+    BADGE = 'badge'
+    STREAK = 'streak'
+    CHALLENGE = 'challenge'
+    MILESTONE = 'milestone'
+    COALITION = 'coalition'
+    PARTNER = 'partner'
+    CONVERSION = 'conversion'
 
 
-class LoyaltyTier(str, Enum):
+class TierName(str, Enum):
     BRONZE = 'bronze'
     SILVER = 'silver'
     GOLD = 'gold'
     PLATINUM = 'platinum'
     DIAMOND = 'diamond'
 
-    @property
-    def rank(self):
-        _ranks = {
-            LoyaltyTier.BRONZE: 1,
-            LoyaltyTier.SILVER: 2,
-            LoyaltyTier.GOLD: 3,
-            LoyaltyTier.PLATINUM: 4,
-            LoyaltyTier.DIAMOND: 5,
-        }
-        return _ranks[self]
 
-    @property
-    def label(self):
-        _labels = {
-            LoyaltyTier.BRONZE: '🥉 Bronze',
-            LoyaltyTier.SILVER: '🥈 Silver',
-            LoyaltyTier.GOLD: '🥇 Gold',
-            LoyaltyTier.PLATINUM: '💎 Platinum',
-            LoyaltyTier.DIAMOND: '💠 Diamond',
-        }
-        return _labels[self]
-
-    def is_higher_than(self, other: 'LoyaltyTier') -> bool:
-        return self.rank > other.rank
-
-    def is_lower_than(self, other: 'LoyaltyTier') -> bool:
-        return self.rank < other.rank
-
-    def __str__(self):
-        return self.value
-
-    @classmethod
-    def ordered(cls):
-        """Rank অনুসারে sorted list।"""
-        return sorted(cls, key=lambda t: t.rank)
-
-
-class LedgerType(str, Enum):
-    CREDIT = 'credit'
-    DEBIT = 'debit'
-
-    def __str__(self):
-        return self.value
-
-
-class LedgerSource(str, Enum):
-    PURCHASE = 'purchase'
-    BONUS = 'bonus'
-    REFERRAL = 'referral'
-    CAMPAIGN = 'campaign'
-    ADMIN = 'admin'
-    EXPIRY = 'expiry'
-    REDEMPTION = 'redemption'
-    TRANSFER = 'transfer'
-    REFUND = 'refund'
-    STREAK = 'streak'
-    BADGE = 'badge'
-    CHALLENGE = 'challenge'
-    MILESTONE = 'milestone'
-
-    def __str__(self):
-        return self.value
+class TierChangeType(str, Enum):
+    UPGRADE = 'upgrade'
+    DOWNGRADE = 'downgrade'
+    INITIAL = 'initial'
+    MANUAL = 'manual'
 
 
 class EarnRuleType(str, Enum):
     FIXED = 'fixed'
     PERCENTAGE = 'percentage'
     MULTIPLIER = 'multiplier'
-    BONUS = 'bonus'
-    CATEGORY = 'category'
-
-    def __str__(self):
-        return self.value
 
 
-class EarnRuleTrigger(str, Enum):
+class EarnTrigger(str, Enum):
     PURCHASE = 'purchase'
-    SIGNUP = 'signup'
-    BIRTHDAY = 'birthday'
+    OFFER = 'offer'
+    LOGIN = 'login'
     REFERRAL = 'referral'
+    BIRTHDAY = 'birthday'
+    SIGNUP = 'signup'
     REVIEW = 'review'
-    CHECKIN = 'checkin'
-    CUSTOM = 'custom'
+    SOCIAL_SHARE = 'social_share'
 
-    def __str__(self):
-        return self.value
+
+class RedemptionType(str, Enum):
+    CASHBACK = 'cashback'
+    VOUCHER = 'voucher'
+    PRODUCT = 'product'
+    GIFT = 'gift'
+    DONATION = 'donation'
 
 
 class RedemptionStatus(str, Enum):
     PENDING = 'pending'
     APPROVED = 'approved'
     REJECTED = 'rejected'
+    FULFILLED = 'fulfilled'
     CANCELLED = 'cancelled'
-    COMPLETED = 'completed'
-
-    @property
-    def is_terminal(self):
-        """Final state — আর পরিবর্তন হবে না।"""
-        return self in (
-            RedemptionStatus.REJECTED,
-            RedemptionStatus.CANCELLED,
-            RedemptionStatus.COMPLETED,
-        )
-
-    def __str__(self):
-        return self.value
 
 
-class RedemptionType(str, Enum):
-    VOUCHER = 'voucher'
-    CASHBACK = 'cashback'
+class VoucherType(str, Enum):
+    PERCENT = 'percent'
+    FIXED = 'fixed'
+    FREE_SHIPPING = 'free_shipping'
     PRODUCT = 'product'
-    GIFTCARD = 'giftcard'
-    DONATION = 'donation'
-
-    def __str__(self):
-        return self.value
 
 
 class VoucherStatus(str, Enum):
@@ -169,176 +91,106 @@ class VoucherStatus(str, Enum):
     EXPIRED = 'expired'
     CANCELLED = 'cancelled'
 
-    @property
-    def is_usable(self):
-        return self == VoucherStatus.ACTIVE
-
-    def __str__(self):
-        return self.value
-
-
-class VoucherType(str, Enum):
-    PERCENT = 'percent'
-    FIXED = 'fixed'
-    FREE_SHIPPING = 'free_shipping'
-    BOGO = 'bogo'
-
-    def __str__(self):
-        return self.value
-
-
-class CampaignStatus(str, Enum):
-    DRAFT = 'draft'
-    ACTIVE = 'active'
-    PAUSED = 'paused'
-    ENDED = 'ended'
-    CANCELLED = 'cancelled'
-
-    @property
-    def is_live(self):
-        return self == CampaignStatus.ACTIVE
-
-    def __str__(self):
-        return self.value
-
-
-class CampaignType(str, Enum):
-    POINTS_MULTIPLIER = 'points_multiplier'
-    BONUS_POINTS = 'bonus_points'
-    DOUBLE_POINTS = 'double_points'
-    FLASH_EARN = 'flash_earn'
-    REFERRAL_BOOST = 'referral_boost'
-
-    def __str__(self):
-        return self.value
-
-
-class BadgeTrigger(str, Enum):
-    TRANSACTION_COUNT = 'transaction_count'
-    TOTAL_SPEND = 'total_spend'
-    STREAK_DAYS = 'streak_days'
-    REFERRALS = 'referrals'
-    TIER_REACHED = 'tier_reached'
-    CUSTOM = 'custom'
-
-    def __str__(self):
-        return self.value
-
-
-class ChallengeStatus(str, Enum):
-    ACTIVE = 'active'
-    COMPLETED = 'completed'
-    FAILED = 'failed'
-    UPCOMING = 'upcoming'
-    EXPIRED = 'expired'
-
-    def __str__(self):
-        return self.value
-
-
-class ChallengeType(str, Enum):
-    SPEND = 'spend'
-    VISIT = 'visit'
-    REFERRAL = 'referral'
-    CUSTOM = 'custom'
-
-    def __str__(self):
-        return self.value
-
 
 class TransferStatus(str, Enum):
     PENDING = 'pending'
     COMPLETED = 'completed'
     FAILED = 'failed'
-    CANCELLED = 'cancelled'
-
-    def __str__(self):
-        return self.value
+    REVERSED = 'reversed'
 
 
-class FraudRisk(str, Enum):
+class CampaignType(str, Enum):
+    MULTIPLIER = 'points_multiplier'
+    BONUS = 'bonus_points'
+    DOUBLE_POINTS = 'double_points'
+    FLASH_EARN = 'flash_earn'
+    CHALLENGE = 'challenge'
+
+
+class CampaignStatus(str, Enum):
+    DRAFT = 'draft'
+    ACTIVE = 'active'
+    ENDED = 'ended'
+    PAUSED = 'paused'
+
+
+class BadgeRarity(str, Enum):
+    COMMON = 'common'
+    RARE = 'rare'
+    EPIC = 'epic'
+    LEGENDARY = 'legendary'
+
+
+class ChallengeType(str, Enum):
+    INDIVIDUAL = 'individual'
+    TEAM = 'team'
+    SPEND = 'spend'
+    TRANSACTION = 'transaction'
+    LEADERBOARD = 'leaderboard'
+
+
+class ChallengeStatus(str, Enum):
+    DRAFT = 'draft'
+    ACTIVE = 'active'
+    ENDED = 'ended'
+    PAUSED = 'paused'
+
+
+class NotificationType(str, Enum):
+    EXPIRY = 'expiry'
+    TIER_UP = 'tier_up'
+    TIER_DOWN = 'tier_down'
+    CHALLENGE = 'challenge'
+    BADGE = 'badge'
+    STREAK = 'streak'
+    CAMPAIGN = 'campaign'
+
+
+class FraudRiskLevel(str, Enum):
     LOW = 'low'
     MEDIUM = 'medium'
     HIGH = 'high'
     CRITICAL = 'critical'
 
-    @property
-    def severity(self):
-        _severity = {
-            FraudRisk.LOW: 1,
-            FraudRisk.MEDIUM: 2,
-            FraudRisk.HIGH: 3,
-            FraudRisk.CRITICAL: 4,
-        }
-        return _severity[self]
-
-    def __str__(self):
-        return self.value
-
 
 class FraudAction(str, Enum):
     FLAG = 'flag'
-    SUSPEND = 'suspend'
     BLOCK = 'block'
-    NOTIFY = 'notify'
-
-    def __str__(self):
-        return self.value
+    REVERSE = 'reverse'
+    SUSPEND = 'suspend'
 
 
-class NotificationType(str, Enum):
-    POINTS_EXPIRY = 'points_expiry'
-    TIER_CHANGE = 'tier_change'
-    BADGE_UNLOCK = 'badge_unlock'
-    CAMPAIGN = 'campaign'
-    REDEMPTION = 'redemption'
-    GENERAL = 'general'
-
-    def __str__(self):
-        return self.value
+class InsightPeriod(str, Enum):
+    DAILY = 'daily'
+    WEEKLY = 'weekly'
+    MONTHLY = 'monthly'
+    ANNUAL = 'annual'
 
 
-class NotificationChannel(str, Enum):
-    EMAIL = 'email'
-    SMS = 'sms'
-    PUSH = 'push'
-    IN_APP = 'in_app'
-
-    def __str__(self):
-        return self.value
+class SubscriptionPlan(str, Enum):
+    BASIC = 'basic'
+    PREMIUM = 'premium'
+    VIP = 'vip'
 
 
-class GiftCardStatus(str, Enum):
-    ACTIVE = 'active'
-    USED = 'used'
-    EXPIRED = 'expired'
-    CANCELLED = 'cancelled'
-
-    @property
-    def is_usable(self):
-        return self == GiftCardStatus.ACTIVE
-
-    def __str__(self):
-        return self.value
+class BenefitType(str, Enum):
+    DISCOUNT = 'discount'
+    SHIPPING = 'shipping'
+    CASHBACK = 'cashback'
+    PERK = 'perk'
+    ACCESS = 'access'
+    POINTS_BOOST = 'points_boost'
 
 
-class EventAction(str, Enum):
-    REGISTER = 'register'
-    LOGIN = 'login'
-    LOGOUT = 'logout'
-    PURCHASE = 'purchase'
-    DISCOUNT_PURCHASE = 'discount_purchase'
-    POINTS_EARN = 'points_earn'
-    POINTS_REDEEM = 'points_redeem'
-    POINTS_EXPIRE = 'points_expire'
-    TIER_UPGRADE = 'tier_upgrade'
-    TIER_DOWNGRADE = 'tier_downgrade'
-    BADGE_UNLOCK = 'badge_unlock'
-    STREAK_MILESTONE = 'streak_milestone'
-    REFERRAL = 'referral'
-    VOUCHER_USE = 'voucher_use'
-    CHALLENGE_COMPLETE = 'challenge_complete'
-    ERROR = 'error'
+class MilestoneType(str, Enum):
+    TOTAL_POINTS = 'total_points'
+    TOTAL_SPEND = 'total_spend'
+    TRANSACTION_COUNT = 'transaction_count'
+    REFERRAL_COUNT = 'referral_count'
+    STREAK_DAYS = 'streak_days'
 
-    def __str__(self):
-        return self.value
+
+class AlertType(str, Enum):
+    LOW_BALANCE = 'low_balance'
+    EXPIRY_WARNING = 'expiry_warning'
+    TIER_PROGRESS = 'tier_progress'

@@ -101,6 +101,7 @@ class WhiteLabelManager:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def create_white_label_view(request):
     manager = WhiteLabelManager()
@@ -117,9 +118,6 @@ def create_white_label_view(request):
         show_powered_by=request.data.get('show_powered_by', True),
     )
     return Response(result, status=status.HTTP_201_CREATED)
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_white_label_view(request):
     manager = WhiteLabelManager()

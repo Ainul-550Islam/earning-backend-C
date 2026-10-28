@@ -223,8 +223,8 @@ class Campaign(TimeStampedModel):
 
     name            = models.CharField(max_length=200)
     advertiser      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                       related_name='campaigns')
-    offers          = models.ManyToManyField(Offer, related_name='campaigns', blank=True)
+                       related_name='campaigns_pg')
+    offers          = models.ManyToManyField(Offer, related_name='campaigns_pg', blank=True)
     status          = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')
     description     = models.TextField(blank=True)
 

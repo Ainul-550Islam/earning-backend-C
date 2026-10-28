@@ -12,6 +12,8 @@ from datetime import date, timedelta
 from django.db import models
 from django.db.models import Count, DecimalField, F, Q, Sum
 from django.utils import timezone
+from api.monetization_tools.models import MonetizationConfig
+from api.monetization_tools.models import CouponUsage
 
 
 # ── MonetizationConfig ──────────────────────────────────────────────────────

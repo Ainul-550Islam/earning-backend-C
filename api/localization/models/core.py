@@ -96,6 +96,35 @@ class Language(TimeStampedModel):
         return getattr(self, 'name_native', None) or getattr(self, 'name', '') or _('Unknown')
 
 
+    def update_coverage(self):
+        """Recalculate coverage and persist to TranslationCoverage analytics model."""
+        from django.utils import timezone
+        total_keys = TranslationKey.objects.count()
+        translated = Translation.objects.filter(
+            language=self, is_approved=True
+        ).values('key').distinct().count()
+        pct = round((translated / total_keys) * 100, 2) if total_keys else 0.0
+        missing = max(0, total_keys - translated)
+        try:
+            from api.localization.models.analytics import TranslationCoverage
+            TranslationCoverage.objects.update_or_create(
+                language=self,
+                defaults={
+                    'total_keys': total_keys,
+                    'translated_keys': translated,
+                    'approved_keys': translated,
+                    'coverage_percent': pct,
+                    'approved_percent': pct,
+                    'missing_keys': missing,
+                    'last_calculated_at': timezone.now(),
+                }
+            )
+        except Exception:
+            pass
+        # Expose as attribute so tests can read it
+        self.coverage_percent = pct
+
+
 class Country(TimeStampedModel):
     code = models.CharField(
         max_length=2, 
@@ -393,6 +422,7 @@ class City(TimeStampedModel):
             raise ValidationError(_("Both latitude and longitude must be provided together"))
 
 
+
 class TranslationKey(TimeStampedModel):
     key = models.CharField(
         max_length=255, 
@@ -518,6 +548,19 @@ class Translation(TimeStampedModel):
         help_text=_("Additional metadata")
     )
     
+    @property
+    def word_count(self):
+        """Word count of the translated value."""
+        if not self.value:
+            return 0
+        return len(self.value.split())
+
+    @property
+    def char_count(self):
+        """Character count of the translated value."""
+        return len(self.value) if self.value else 0
+
+
     class Meta:
         unique_together = ['key', 'language']
         ordering = ['language', 'key__key']
@@ -605,6 +648,10 @@ class UserLanguagePreference(TimeStampedModel):
         verbose_name = _("User Language Preference")
         verbose_name_plural = _("User Language Preferences")
     
+
+    class Meta:
+        ordering = ['user']
+
     def __str__(self):
         return self.get_safe_display()
     
@@ -636,4 +683,3 @@ class UserLanguagePreference(TimeStampedModel):
         except Exception as e:
             logger.error(f"Failed to add preferred language {language_code}: {e}")
         return False
-

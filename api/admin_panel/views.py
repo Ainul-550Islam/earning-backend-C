@@ -1,3 +1,4 @@
+from django.conf import settings
 from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -162,7 +163,7 @@ class ReportViewSet(BaseViewSet):
             report_type=report_type,
             generated_by=request.user,
             parameters=parameters,
-            status='processing'
+            status='PROCESSING'
         )
         
         # Trigger async task to generate report
@@ -652,7 +653,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
                 transaction_type='earning',
                 created_at__date=today,
                 status='completed'
-            ).aggregate(total=Sum('amount'))['total'] or 0
+            ).aggregate(total=Sum('gross_amount'))['total'] or 0
             
             current_count = float(daily_earning)
             daily_limit = float(settings.max_daily_earning_limit)
@@ -676,7 +677,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
-    def payment_gateways(self, request):
+    def gateways(self, request):
         """Get available payment gateways"""
         settings = SystemSettings.get_settings()
         serializer = PaymentGatewayStatusSerializer(settings)

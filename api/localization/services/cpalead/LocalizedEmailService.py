@@ -84,7 +84,7 @@ class LocalizedEmailService:
 
     def _get_user_language(self, user) -> str:
         try:
-            from ..models.core import UserLanguagePreference
+            from api.localization.models.core import UserLanguagePreference
             pref = UserLanguagePreference.objects.filter(user=user).select_related("ui_language").first()
             if pref and pref.ui_language:
                 return pref.ui_language.code

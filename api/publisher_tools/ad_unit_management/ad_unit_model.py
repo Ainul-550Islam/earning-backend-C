@@ -23,6 +23,7 @@ class AdUnitCreativeSpec(TimeStampedModel):
     companion_sizes     = models.JSONField(default=list, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_ad_unit_creative_specs"
         verbose_name = _("Creative Spec")
 

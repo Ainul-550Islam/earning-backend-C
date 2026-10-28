@@ -112,6 +112,7 @@ class WebhookConfigManager:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def set_webhook_view(request):
     manager = WebhookConfigManager()
@@ -126,15 +127,10 @@ def set_webhook_view(request):
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     return Response(result)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_webhooks_view(request):
     manager = WebhookConfigManager()
     return Response(manager.get_publisher_webhooks(request.user.id))
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def webhook_events_view(request):
     manager = WebhookConfigManager()

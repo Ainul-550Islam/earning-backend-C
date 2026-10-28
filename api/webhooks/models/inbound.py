@@ -42,6 +42,51 @@ class InboundWebhook(models.Model):
         verbose_name=_('Secret'),
         help_text=_('Secret key for signature verification')
     )
+    description = models.TextField(
+        blank=True,
+        default='',
+        verbose_name=_('Description'),
+        help_text=_('Optional notes about this inbound receiver'),
+    )
+    ip_whitelist = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_('IP Whitelist'),
+        help_text=_('Allowed source IPs/CIDR ranges; empty list allows any IP'),
+    )
+    allowed_origins = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_('Allowed Origins'),
+        help_text=_('Allowed CORS origin URLs; empty list allows any origin'),
+    )
+    max_payload_size = models.PositiveIntegerField(
+        default=1048576,
+        validators=[MinValueValidator(1)],
+        verbose_name=_('Max Payload Size'),
+        help_text=_('Maximum accepted request body size, in bytes'),
+    )
+    signature_header = models.CharField(
+        max_length=100,
+        blank=True,
+        default='X-Signature',
+        verbose_name=_('Signature Header'),
+        help_text=_('Request header carrying the provider signature'),
+    )
+    event_type_header = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        verbose_name=_('Event Type Header'),
+        help_text=_('Request header carrying the event type, if the provider sends one'),
+    )
+    timestamp_header = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        verbose_name=_('Timestamp Header'),
+        help_text=_('Request header carrying the send timestamp, if the provider sends one'),
+    )
     is_active = models.BooleanField(
         default=True,
         verbose_name=_('Is Active'),
@@ -70,6 +115,9 @@ class InboundWebhook(models.Model):
             models.Index(fields=['source', 'is_active'], name='iw_source_active_idx'),
             models.Index(fields=['url_token'], name='iw_url_token_idx'),
             models.Index(fields=['created_at'], name='iw_created_at_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(check=models.Q(max_payload_size__gte=1), name='iw_max_payload_size_gte_1'),
         ]
     
     def __str__(self) -> str:
@@ -198,6 +246,9 @@ class InboundWebhookRoute(models.Model):
             models.Index(fields=['inbound', 'is_active'], name='iwr_inbound_active_idx'),
             models.Index(fields=['priority'], name='iwr_priority_idx'),
             models.Index(fields=['event_pattern'], name='iwr_event_pattern_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(check=models.Q(priority__gte=1), name='iwr_priority_gte_1'),
         ]
     
     def __str__(self) -> str:

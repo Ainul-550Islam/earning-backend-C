@@ -43,7 +43,7 @@ def update_offer_performance_stats():
     import datetime
     from django.utils import timezone
     from django.db.models import Sum, Count, Q
-    from ..models import Click, OfferPerformanceStat
+    from api.smartlink.models import Click, OfferPerformanceStat
 
     today = timezone.now().date()
     yesterday = today - datetime.timedelta(days=1)

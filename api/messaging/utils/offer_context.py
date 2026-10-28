@@ -26,7 +26,7 @@ def build_offer_card_message(
     Rendered by the frontend as an offer preview card.
 
     Usage:
-        from messaging.utils.offer_context import build_offer_card_message
+        from api.messaging.utils.offer_context import build_offer_card_message
         payload = build_offer_card_message(offer_id=42, offer_name="Gaming App", payout="$3.00")
         services.send_chat_message(
             chat_id=chat.id, sender_id=manager.id,
@@ -45,7 +45,17 @@ def build_offer_card_message(
         "offer_url": offer_url,
         "preview_url": preview_url,
         "status": status,
-        "description": description[:300],
+        # Part 6 audit fix: description[:300] previously crashed with
+        # TypeError on description=None. views_extra.py's OfferCardView
+        # calls offer.get("description", "") - a default that only
+        # applies when the key is *missing*, not when a client explicitly
+        # sends {"description": null}, which is a very plausible thing for
+        # a JS frontend to send for "no description". That exception was
+        # still caught by the view's own try/except (returned as a 500),
+        # but a request the client sent in good faith failed for no real
+        # reason. Fixed here, at the function boundary, so every caller is
+        # protected, not just that one view.
+        "description": (description or "")[:300],
     }
 
 
@@ -122,7 +132,6 @@ def send_offer_recommendation_message(
             sender_id=manager_id,
             content=f"I recommend this offer for you: {offer_name}{' — ' + reason if reason else ''}",
             metadata={"offer_card": payload},
-            tenant=tenant,
         )
         logger.info("send_offer_recommendation_message: chat=%s offer=%s", chat_id, offer_id)
     except Exception as exc:

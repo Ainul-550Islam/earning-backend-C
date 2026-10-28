@@ -31,6 +31,7 @@ class PlacementABTest(TimeStampedModel):
     notes            = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_placement_ab_tests"
         verbose_name = _("Placement A/B Test")
         ordering = ["-created_at"]

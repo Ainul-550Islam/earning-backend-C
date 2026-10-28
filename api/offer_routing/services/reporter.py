@@ -38,7 +38,7 @@ class RoutingReporter:
     def _initialize_services(self):
         """Initialize reporter services."""
         try:
-            from .cache import RoutingCacheService
+            from .core.RoutingCacheService import RoutingCacheService
             from .analytics import RoutingAnalyticsService
             
             self.cache_service = RoutingCacheService()

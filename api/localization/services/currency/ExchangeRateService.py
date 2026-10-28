@@ -28,7 +28,7 @@ class ExchangeRateService:
 
         try:
             # 1. Latest ExchangeRate record
-            from ...models.currency import ExchangeRate
+            from api.localization.models.currency import ExchangeRate
             latest = ExchangeRate.objects.filter(
                 from_currency__code=from_currency,
                 to_currency__code=to_currency,
@@ -49,7 +49,7 @@ class ExchangeRateService:
                     return rate
 
             # 3. Currency model exchange_rate field (vs USD)
-            from ...models.core import Currency
+            from api.localization.models.core import Currency
             if from_currency == 'USD':
                 curr = Currency.objects.filter(code=to_currency).first()
                 if curr and curr.exchange_rate:
@@ -103,7 +103,7 @@ class ExchangeRateService:
         if cached:
             return cached
         try:
-            from ...models.core import Currency
+            from api.localization.models.core import Currency
             rates = {}
             for curr in Currency.objects.filter(is_active=True, exchange_rate__isnull=False):
                 rates[curr.code] = float(curr.exchange_rate)
@@ -117,8 +117,8 @@ class ExchangeRateService:
         """External API থেকে rates fetch করে DB-তে save করে"""
         try:
             from .CurrencyRateProvider import CurrencyRateProvider
-            from ...models.core import Currency
-            from ...models.currency import ExchangeRate
+            from api.localization.models.core import Currency
+            from api.localization.models.currency import ExchangeRate
 
             provider_service = CurrencyRateProvider()
             result = provider_service.fetch_rates('USD', provider)

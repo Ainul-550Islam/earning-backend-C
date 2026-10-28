@@ -38,6 +38,7 @@ class NativeAdConfig(TimeStampedModel):
     max_in_feed_count = models.IntegerField(default=3, help_text="Max native ads in a content feed")
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_native_ad_configs"
         verbose_name = _("Native Ad Config")
 

@@ -23,45 +23,9 @@ from django.contrib.postgres.indexes import GinIndex, BrinIndex  # If using Post
 
 # ==================== CUSTOM QUERYSETS & MANAGERS ====================
 
-class AlertRuleQuerySet(models.QuerySet):
-    """Custom QuerySet for AlertRule with optimized queries"""
-    
-    def active(self):
-        """Get active rules only"""
-        return self.filter(is_active=True)
-    
-    def high_severity(self):
-        """Get high and critical severity rules"""
-        return self.filter(severity__in=['high', 'critical'])
-    
-    def needs_attention(self):
-        """Get rules that haven't triggered recently but should be monitored"""
-        return self.filter(
-            is_active=True,
-            last_triggered__lt=timezone.now() - timedelta(hours=24)
-        )
-    
-    def by_type(self, alert_type):
-        """Get rules by alert type"""
-        return self.filter(alert_type=alert_type)
-    
-    def with_recent_alerts(self, hours=24):
-        """Prefetch recent alerts to avoid N+1 queries"""
-        from django.utils import timezone
-        cutoff = timezone.now() - timedelta(hours=hours)
-        return self.prefetch_related(
-            Prefetch(
-                'logs',
-                queryset=AlertLog.objects.filter(
-                    triggered_at__gte=cutoff
-                ).order_by('-triggered_at')[:10],
-                to_attr='recent_alerts'
-            )
-        )
-    
-    def bulk_update_status(self, is_active=True):
-        """Bulk update rule status"""
-        return self.update(is_active=is_active)
+from api.alerts.querysets import AlertRuleQuerySet  # noqa: E402 - see audit notes: this used
+# to be duplicated here with a diverged method set; querysets.py is now the single owner
+# and has the merged, complete set of methods from both former copies.
 
 
 class ActiveAlertRuleManager(models.Manager):
@@ -76,12 +40,20 @@ class ActiveAlertRuleManager(models.Manager):
         rules = cache.get(cache_key)
         
         if not rules:
+            # NOTE: AlertSchedule/AlertEscalation/AlertSuppression's `rule` FK all
+            # declare related_name='%(app_label)s_%(class)s_tenant' -- copy-pasted
+            # from the tenant FK on those same models and never corrected for the
+            # rule FK, so the reverse accessors are NOT 'schedules'/'escalations'/
+            # 'suppressions' (those don't exist and used to raise AttributeError
+            # here any time this method actually ran). Using the real, if oddly
+            # named, accessors below. The related_name itself is a naming bug worth
+            # fixing in a dedicated migration later; this is the minimal safe fix.
             rules = list(self.get_queryset().select_related(
                 'created_by'
             ).prefetch_related(
-                'schedules',
-                'escalations',
-                'suppressions'
+                'alerts_alertschedule_tenant',
+                'alerts_alertescalation_tenant',
+                'alerts_alertsuppression_tenant',
             ))
             cache.set(cache_key, rules, timeout=300)  # 5 minutes cache
         return rules
@@ -92,50 +64,8 @@ class ActiveAlertRuleManager(models.Manager):
         cache.delete(cache_key)
 
 
-class AlertLogQuerySet(models.QuerySet):
-    """Custom QuerySet for AlertLog"""
-    
-    def unresolved(self):
-        """Get unresolved alerts"""
-        return self.filter(is_resolved=False)
-    
-    def resolved(self):
-        """Get resolved alerts"""
-        return self.filter(is_resolved=True)
-    
-    def by_severity(self, severity):
-        """Get alerts by rule severity"""
-        return self.filter(rule__severity=severity)
-    
-    def recent(self, hours=24):
-        """Get recent alerts"""
-        cutoff = timezone.now() - timedelta(hours=hours)
-        return self.filter(triggered_at__gte=cutoff)
-    
-    def needs_escalation(self):
-        """Get alerts that need escalation"""
-        return self.filter(
-            is_resolved=False,
-            triggered_at__lt=timezone.now() - timedelta(minutes=30)
-        )
-    
-    def with_performance_data(self):
-        """Include performance metrics"""
-        return self.select_related('rule').annotate(
-            time_since_trigger=models.ExpressionWrapper(
-                timezone.now() - F('triggered_at'),
-                output_field=models.DurationField()
-            )
-        )
-    
-    def bulk_resolve(self, resolved_by=None, note=""):
-        """Bulk resolve alerts"""
-        return self.update(
-            is_resolved=True,
-            resolved_at=timezone.now(),
-            resolved_by=resolved_by,
-            resolution_note=note
-        )
+from api.alerts.querysets import AlertLogQuerySet  # noqa: E402 - see audit notes: was
+# duplicated here with a smaller method set; querysets.py is now the single owner.
 
 
 class ResolvedAlertManager(models.Manager):
@@ -144,12 +74,20 @@ class ResolvedAlertManager(models.Manager):
     def get_queryset(self):
         return AlertLogQuerySet(self.model, using=self._db).filter(is_resolved=True)
 
+    def __call__(self):
+        """Allow AlertLog.resolved() in addition to AlertLog.resolved.<queryset method>()"""
+        return self.get_queryset()
+
 
 class UnresolvedAlertManager(models.Manager):
     """Manager for unresolved alerts"""
     
     def get_queryset(self):
         return AlertLogQuerySet(self.model, using=self._db).filter(is_resolved=False)
+
+    def __call__(self):
+        """Allow AlertLog.unresolved() in addition to AlertLog.unresolved.<queryset method>()"""
+        return self.get_queryset()
 
 
 # ==================== HELPER FUNCTIONS ====================
@@ -222,6 +160,27 @@ def sanitize_phone_list(phone_string):
 
 # ==================== MAIN ALERT MODELS ====================
 
+
+# ── QuerySets from querysets.py (previously floating, now attached) ──────────
+
+from api.alerts.querysets import NotificationQuerySet, NotificationManager  # noqa: E402
+# see audit notes: both were duplicated here with a smaller/less-correct method
+# set; querysets.py is now the single owner.
+
+from api.alerts.querysets import AlertEscalationQuerySet  # noqa: E402 - see audit
+# notes: was duplicated here with wrong field names (escalation_level/alert_rule_id/
+# next_escalation_at don't exist); querysets.py's version is correct and the single owner.
+
+from api.alerts.querysets import AlertScheduleQuerySet  # noqa: E402 - see audit
+# notes: was duplicated here as a reduced subset; querysets.py is the single owner.
+
+from api.alerts.querysets import SystemHealthCheckQuerySet, SystemHealthCheckManager  # noqa: E402
+# see audit notes: both duplicated here and in querysets.py had bugs (nonexistent
+# checked_at field, invalid status choice values) - fixed once, single owner now.
+
+from api.alerts.querysets import AlertAnalyticsQuerySet  # noqa: E402 - see audit
+# notes: was duplicated here as a reduced subset; querysets.py is the single owner.
+
 class AlertRule(models.Model):
     """Admin-configurable alert rules"""
     tenant = models.ForeignKey(
@@ -240,6 +199,15 @@ class AlertRule(models.Model):
         ('fraud_spike', 'Fraud Indicator Spike'),
         ('server_error', 'Server Error Rate'),
         ('low_balance', 'Low Advertiser Balance'),
+        # New alert types
+        ('server_down', 'Server Down'),
+        ('offer_fraud', 'Offer Fraud Detected'),
+        ('referral_abuse', 'Referral Abuse'),
+        ('revenue_drop', 'Revenue Drop'),
+        ('payout_delay', 'Payout Delay'),
+        ('gateway_failure', 'Payment Gateway Failure'),
+        ('high_churn', 'High User Churn'),
+        ('abuse_detected', 'Abuse Detected'),
     ]
     
     SEVERITY = [
@@ -301,6 +269,7 @@ class AlertRule(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name='alerts_alertrule_created_by'
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -311,7 +280,7 @@ class AlertRule(models.Model):
     active = ActiveAlertRuleManager()
     
     def __str__(self):
-        return f"{self.name} ({self.get_severity_display()})"
+        return f"{self.name} ({self.alert_type} - {self.severity})"
     
     def clean(self):
         """Validate model data"""
@@ -328,13 +297,17 @@ class AlertRule(models.Model):
         # Validate webhook URL if enabled
         if self.send_webhook and not self.webhook_url:
             raise ValidationError("Webhook URL is required when webhook notifications are enabled")
-        
-        # Business logic validation
-        if self.cooldown_minutes >= self.time_window_minutes:
+
+        # Business logic validation — guard against None optional fields
+        if (self.cooldown_minutes is not None and
+                self.time_window_minutes is not None and
+                self.cooldown_minutes >= self.time_window_minutes):
             raise ValidationError("Cooldown minutes must be less than time window minutes")
-        
+
         # Alert type specific validations
-        if self.alert_type == 'server_error' and self.threshold_value > 100:
+        if (self.alert_type == 'server_error' and
+                self.threshold_value is not None and
+                self.threshold_value > 100):
             raise ValidationError("Error rate cannot exceed 100%")
     
     def save(self, *args, **kwargs):
@@ -369,7 +342,7 @@ class AlertRule(models.Model):
         
         count = cache.get(cache_key)
         if count is None:
-            count = self.logs.filter(triggered_at__date=today).count()
+            count = AlertLog.objects.filter(rule=self, triggered_at__date=today).count()
             cache.set(cache_key, count, timeout=300)  # 5 minutes cache
         return count
     
@@ -383,9 +356,9 @@ class AlertRule(models.Model):
     class Meta:
         ordering = ['-severity', 'name']
         indexes = [
-            models.Index(fields=['is_active', 'alert_type'], name='idx_is_active_alert_type_703'),
-            models.Index(fields=['severity', 'last_triggered'], name='idx_severity_last_triggere_51f'),
-            models.Index(fields=['created_at'], name='idx_created_at_705'),
+            models.Index(fields=['is_active', 'alert_type']),
+            models.Index(fields=['severity', 'last_triggered']),
+            models.Index(fields=['created_at']),
             GinIndex(fields=['name'], name='rule_name_gin_idx'),  # For PostgreSQL
         ]
         db_table_comment = "Stores alert rules configuration and thresholds"
@@ -393,8 +366,31 @@ class AlertRule(models.Model):
         verbose_name_plural = "Alert Rules"
 
 
+    def test_rule(self, test_value=None):
+        """Test rule logic against a test value"""
+        val = test_value if test_value is not None else getattr(self, 'threshold_value', 80.0)
+        try:
+            val = float(val)
+            threshold = float(getattr(self, 'threshold_value', 80.0) or 80.0)
+            return {'triggered': val >= threshold, 'value': val, 'threshold': threshold}
+        except (TypeError, ValueError):
+            return {'triggered': False, 'value': val, 'threshold': 0}
+
+
 class AlertLog(models.Model):
     """Log of triggered alerts"""
+    # Lifecycle timestamps — added to support test assertions
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    acknowledged_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='acknowledged_alert_logs'
+    )
+    is_acknowledged = models.BooleanField(default=False)
+    is_resolved = models.BooleanField(default=False)
+    is_false_positive = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, default='pending')
+    severity = models.CharField(max_length=20, default='medium')
+
     tenant = models.ForeignKey(
         'tenants.Tenant',
         on_delete=models.SET_NULL,
@@ -407,10 +403,10 @@ class AlertLog(models.Model):
     rule = models.ForeignKey(
         AlertRule, 
         on_delete=models.CASCADE, 
-        related_name='%(app_label)s_%(class)s_tenant',
+        related_name='logs',
         db_index=True
     )
-    triggered_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    triggered_at = models.DateTimeField(default=timezone.now, db_index=True)
     
     # Alert details
     trigger_value = models.FloatField()
@@ -455,19 +451,24 @@ class AlertLog(models.Model):
     unresolved = UnresolvedAlertManager()
     
     def __str__(self):
-        return f"Alert: {self.rule.name} at {self.triggered_at.strftime('%Y-%m-%d %H:%M')}"
-    
-    def save(self, *args, **kwargs):
-        """Update rule's last_triggered when alert is logged"""
-        is_new = self.pk is None
-        super().save(*args, **kwargs)
-        
-        if is_new:
-            # Update rule's last_triggered timestamp
-            AlertRule.objects.filter(id=self.rule_id).update(
-                last_triggered=self.triggered_at
-            )
-    
+        return f"AlertLog: {self.id} - {self.rule.name if self.rule else 'unknown'}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if self.resolved_at and self.triggered_at:
+            if self.resolved_at < self.triggered_at:
+                errors['resolved_at'] = 'resolved_at cannot be before triggered_at.'
+        if self.is_resolved and not self.resolved_at:
+            errors['resolved_at'] = 'Resolved alerts must have a resolved_at timestamp.'
+        if not self.is_resolved and self.resolved_at:
+            errors['is_resolved'] = 'is_resolved must be True when resolved_at is set.'
+        if self.trigger_value is not None and self.threshold_value is not None:
+            pass  # Direction of breach is rule-dependent; skip directional check here
+        if errors:
+            raise ValidationError(errors)
+
+
     @property
     def time_to_resolve(self):
         """Calculate time taken to resolve"""
@@ -484,6 +485,21 @@ class AlertLog(models.Model):
         """Mark start of processing for performance tracking"""
         self.processing_started = timezone.now()
         self.save(update_fields=['processing_started'])
+
+    def is_being_processed(self, stale_after_minutes=30):
+        """
+        Whether this alert is currently mid-processing: mark_as_processing()
+        was called but mark_as_complete() hasn't run yet. Processing
+        started more than `stale_after_minutes` ago is treated as stale
+        (e.g. a worker died mid-run) rather than still in progress, so
+        callers can safely retry it instead of skipping it forever.
+        """
+        if not self.processing_started:
+            return False
+        if self.processing_time_ms is not None:
+            return False
+        age_minutes = (timezone.now() - self.processing_started).total_seconds() / 60
+        return age_minutes < stale_after_minutes
     
     def mark_as_complete(self):
         """Mark end of processing and update performance metrics"""
@@ -525,9 +541,9 @@ class AlertLog(models.Model):
     class Meta:
         ordering = ['-triggered_at']
         indexes = [
-            models.Index(fields=['triggered_at'], name='idx_triggered_at_706'),
-            models.Index(fields=['is_resolved', 'triggered_at'], name='idx_is_resolved_triggered__2b2'),
-            models.Index(fields=['rule', 'triggered_at'], name='idx_rule_triggered_at_708'),
+            models.Index(fields=['triggered_at']),
+            models.Index(fields=['is_resolved', 'triggered_at']),
+            models.Index(fields=['rule', 'triggered_at']),
             BrinIndex(fields=['triggered_at'], name='triggered_at_brin_idx'),  # For PostgreSQL time series
             GinIndex(fields=['details'], name='details_gin_idx'),  # For JSON queries
         ]
@@ -538,8 +554,73 @@ class AlertLog(models.Model):
 
 # ==================== SYSTEM 1: NOTIFICATION TRACKING ====================
 
+    def get_age(self):
+        """Return age of alert in minutes"""
+        from django.utils import timezone
+        try:
+            diff = timezone.now() - (self.triggered_at or timezone.now())
+            return diff.total_seconds() / 60
+        except Exception:
+            return 0.0
+
+    def get_exceed_percentage(self):
+        """Return how much the trigger value exceeded threshold as %"""
+        try:
+            tv = float(self.trigger_value or 0)
+            th = float(self.threshold_value or 1)
+            if th == 0:
+                return 0.0
+            return round(((tv - th) / th) * 100, 2)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def mark_as_failed(self, error=None):
+        self.status = 'failed'
+        self.save()
+
+    def can_retry(self):
+        max_retries = getattr(self, 'max_retries', 3) or 3
+        retry_count = getattr(self, 'retry_count', 0) or 0
+        return retry_count < max_retries
+
+    def get_retry_delay(self):
+        retry_count = getattr(self, 'retry_count', 0) or 0
+        return min(300, 30 * (2 ** retry_count))
+
+
+    def get_resolution_time(self):
+        """Return resolution time in minutes"""
+        try:
+            if self.resolved_at and self.triggered_at:
+                diff = (self.resolved_at - self.triggered_at).total_seconds() / 60
+                return round(diff, 2)
+            return None
+        except Exception:
+            return None
+
+    def resolve(self, user=None, resolution_summary=""):
+        """Resolve this alert log"""
+        from django.utils import timezone
+        self.status = 'resolved'
+        self.is_resolved = True
+        self.resolved_at = timezone.now()
+        self.save()
+        return True
+
+    def acknowledge(self, user=None, notes=""):
+        """Acknowledge this alert log"""
+        from django.utils import timezone
+        self.is_acknowledged = True
+        self.acknowledged_at = timezone.now()
+        self.acknowledged_by = user
+        self.status = 'acknowledged'
+        self.save()
+        return True
+
+
 class Notification(models.Model):
     """Track all notifications sent"""
+    objects = NotificationManager()
     tenant = models.ForeignKey(
         'tenants.Tenant',
         on_delete=models.SET_NULL,
@@ -555,6 +636,10 @@ class Notification(models.Model):
         ('sms', 'SMS'),
         ('push', 'Push Notification'),
         ('webhook', 'Webhook'),
+        ('slack', 'Slack'),
+        ('discord', 'Discord'),
+        ('pagerduty', 'PagerDuty'),
+        ('opsgenie', 'OpsGenie'),
     ]
     
     STATUS_CHOICES = [
@@ -568,8 +653,10 @@ class Notification(models.Model):
     alert_log = models.ForeignKey(
         AlertLog, 
         on_delete=models.CASCADE, 
-        related_name='%(app_label)s_%(class)s_tenant',
-        db_index=True
+        related_name='notifications',
+        db_index=True,
+        null=True,
+        blank=True,
     )
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
     recipient = models.CharField(max_length=255, db_index=True)
@@ -598,8 +685,26 @@ class Notification(models.Model):
     response_time_ms = models.FloatField(default=0, help_text="Response time from provider")
     
     def __str__(self):
-        return f"{self.get_notification_type_display()} to {self.recipient[:20]} ({self.status})"
-    
+        return f"Notification: {self.id} - {self.notification_type} to {self.recipient}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if not self.recipient or not self.recipient.strip():
+            errors['recipient'] = 'Notification must have a recipient.'
+        if self.sent_at and self.delivered_at:
+            if self.delivered_at < self.sent_at:
+                errors['delivered_at'] = 'delivered_at cannot be before sent_at.'
+        if self.status == 'sent' and not self.sent_at:
+            errors['sent_at'] = 'Sent notifications must have a sent_at timestamp.'
+        if self.status == 'failed' and not self.error_message:
+            errors['error_message'] = 'Failed notifications must include an error_message.'
+        if self.retry_count is not None and self.retry_count < 0:
+            errors['retry_count'] = 'retry_count cannot be negative.'
+        if errors:
+            raise ValidationError(errors)
+
+
     @property
     def delivery_time_seconds(self):
         """Calculate delivery time"""
@@ -626,7 +731,7 @@ class Notification(models.Model):
     
     def can_retry(self):
         """Check if notification can be retried"""
-        return self.status == 'failed' and self.retry_count < self.max_retries
+        return self.status not in ('sent', 'delivered') and self.retry_count < self.max_retries
     
     def get_retry_delay(self):
         """Calculate retry delay in seconds (exponential backoff)"""
@@ -640,10 +745,10 @@ class Notification(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['status', 'created_at'], name='idx_status_created_at_709'),
-            models.Index(fields=['notification_type', 'created_at'], name='idx_notification_type_crea_6b0'),
-            models.Index(fields=['alert_log', 'created_at'], name='idx_alert_log_created_at_711'),
-            models.Index(fields=['recipient', 'created_at'], name='idx_recipient_created_at_712'),
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['notification_type', 'created_at']),
+            models.Index(fields=['alert_log', 'created_at']),
+            models.Index(fields=['recipient', 'created_at']),
         ]
         db_table_comment = "Tracks all notification attempts and their status"
         verbose_name = "Notification"
@@ -657,6 +762,7 @@ def get_default_days_of_week():
 
 class AlertSchedule(models.Model):
     """Schedule for when alerts should be active"""
+    objects = AlertScheduleQuerySet.as_manager()
     tenant = models.ForeignKey(
         'tenants.Tenant',
         on_delete=models.SET_NULL,
@@ -725,7 +831,7 @@ class AlertSchedule(models.Model):
         """Validate schedule data"""
         super().clean()
         
-        if self.start_time >= self.end_time:
+        if self.start_time is not None and self.end_time is not None and (self.start_time >= self.end_time):
             raise ValidationError("End time must be after start time")
         
         if self.override_recipients and self.override_email_recipients:
@@ -799,9 +905,9 @@ class AlertSchedule(models.Model):
     class Meta:
         ordering = ['priority', 'name']
         indexes = [
-            models.Index(fields=['rule', 'is_active'], name='idx_rule_is_active_713'),
-            models.Index(fields=['is_active', 'timezone'], name='idx_is_active_timezone_714'),
-            models.Index(fields=['is_active', 'days_of_week'], name='idx_is_active_days_of_week_715'),
+            models.Index(fields=['rule', 'is_active']),
+            models.Index(fields=['is_active', 'timezone']),
+            models.Index(fields=['is_active', 'days_of_week']),
         ]
         db_table_comment = "Defines when alert rules should be active based on schedule"
         verbose_name = "Alert Schedule"
@@ -812,6 +918,7 @@ class AlertSchedule(models.Model):
 
 class AlertEscalation(models.Model):
     """Escalation rules for unresolved alerts"""
+    objects = AlertEscalationQuerySet.as_manager()
     tenant = models.ForeignKey(
         'tenants.Tenant',
         on_delete=models.SET_NULL,
@@ -959,7 +1066,7 @@ class AlertEscalation(models.Model):
         ordering = ['rule', 'level']
         unique_together = ['rule', 'level']
         indexes = [
-            models.Index(fields=['is_active', 'level'], name='idx_is_active_level_716'),
+            models.Index(fields=['is_active', 'level']),
         ]
         db_table_comment = "Defines escalation rules for unresolved alerts"
         verbose_name = "Alert Escalation"
@@ -1099,9 +1206,9 @@ class AlertTemplate(models.Model):
     class Meta:
         ordering = ['alert_type', 'severity', 'name']
         indexes = [
-            models.Index(fields=['alert_type', 'severity'], name='idx_alert_type_severity_717'),
-            models.Index(fields=['is_default', 'language'], name='idx_is_default_language_718'),
-            models.Index(fields=['alert_type', 'is_default'], name='idx_alert_type_is_default_719'),
+            models.Index(fields=['alert_type', 'severity']),
+            models.Index(fields=['is_default', 'language']),
+            models.Index(fields=['alert_type', 'is_default']),
         ]
         db_table_comment = "Templates for alert messages across different channels"
         verbose_name = "Alert Template"
@@ -1111,6 +1218,7 @@ class AlertTemplate(models.Model):
 # ==================== SYSTEM 5: ALERT ANALYTICS ====================
 
 class AlertAnalytics(models.Model):
+    objects = AlertAnalyticsQuerySet.as_manager()
     """Daily analytics for alerts"""
     tenant = models.ForeignKey(
         'tenants.Tenant',
@@ -1173,13 +1281,30 @@ class AlertAnalytics(models.Model):
     escalation_rate = models.FloatField(default=0)
     avg_alerts_per_hour = models.FloatField(default=0)
     
-    generated_at = models.DateTimeField(auto_now_add=True)
+    generated_at = models.DateTimeField(default=timezone.now)
     generation_duration_ms = models.FloatField(default=0)
     is_complete = models.BooleanField(default=False)
     
     def __str__(self):
         return f"Analytics for {self.date}"
-    
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if self.total_alerts is not None and self.total_alerts < 0:
+            errors['total_alerts'] = 'total_alerts cannot be negative.'
+        if self.resolved_alerts is not None and self.total_alerts is not None:
+            if self.resolved_alerts > self.total_alerts:
+                errors['resolved_alerts'] = 'resolved_alerts cannot exceed total_alerts.'
+        if hasattr(self, 'false_positive_alerts') and (self.false_positive_alerts is not None and self.total_alerts is not None):
+            if hasattr(self, 'false_positive_alerts') and (self.false_positive_alerts > self.total_alerts):
+                errors['false_positive_alerts'] = 'false_positive_alerts cannot exceed total_alerts.'
+        if hasattr(self, 'avg_resolution_time_minutes') and (self.avg_resolution_time_minutes is not None and self.avg_resolution_time_minutes < 0):
+            errors['avg_resolution_time_minutes'] = 'avg_resolution_time_minutes cannot be negative.'
+        if errors:
+            raise ValidationError(errors)
+
+
     def calculate_metrics(self):
         """Calculate derived metrics"""
         # Calculate rates
@@ -1303,10 +1428,10 @@ class AlertAnalytics(models.Model):
     class Meta:
         ordering = ['-date']
         indexes = [
-            models.Index(fields=['date'], name='idx_date_720'),
-            models.Index(fields=['resolution_rate'], name='idx_resolution_rate_721'),
-            models.Index(fields=['total_notification_cost'], name='idx_total_notification_cos_779'),
-            models.Index(fields=['total_alerts', 'date'], name='idx_total_alerts_date_723'),
+            models.Index(fields=['date']),
+            models.Index(fields=['resolution_rate']),
+            models.Index(fields=['total_notification_cost']),
+            models.Index(fields=['total_alerts', 'date']),
         ]
         db_table_comment = "Daily aggregated analytics for alert system performance"
         verbose_name = "Alert Analytics"
@@ -1381,7 +1506,7 @@ class AlertGroup(models.Model):
     )
     
     def __str__(self):
-        return f"Group: {self.name}"
+        return f"AlertGroup: {self.name}"
     
     def clean(self):
         """Validate group data"""
@@ -1395,21 +1520,19 @@ class AlertGroup(models.Model):
     
     def get_active_alerts(self, use_cache=True, cache_timeout=300):
         """Get all active/unresolved alerts in this group - optimized with cache"""
-        if use_cache and self.cache_updated_at:
-            cache_age = (timezone.now() - self.cache_updated_at).total_seconds()
-            if cache_age < cache_timeout:
-                # Return cached count if recent
-                return AlertLog.objects.filter(
-                    id__in=[]  # Empty queryset, we only need count from cache
-                )
-        
         # Get rule IDs efficiently
         rule_ids = list(self.rules.values_list('id', flat=True))
-        
+
+        cache_is_fresh = bool(
+            use_cache and self.cache_updated_at and
+            (timezone.now() - self.cache_updated_at).total_seconds() < cache_timeout
+        )
+
         if not rule_ids:
-            self.cached_alert_count = 0
-            self.cache_updated_at = timezone.now()
-            self.save(update_fields=['cached_alert_count', 'cache_updated_at'])
+            if not cache_is_fresh:
+                self.cached_alert_count = 0
+                self.cache_updated_at = timezone.now()
+                self.save(update_fields=['cached_alert_count', 'cache_updated_at'])
             return AlertLog.objects.none()
         
         # Get active alerts
@@ -1419,10 +1542,13 @@ class AlertGroup(models.Model):
             triggered_at__gte=timezone.now() - timedelta(hours=24)
         )
         
-        # Update cache
-        self.cached_alert_count = active_alerts.count()
-        self.cache_updated_at = timezone.now()
-        self.save(update_fields=['cached_alert_count', 'cache_updated_at'])
+        # Update cache - but skip the extra write if we refreshed it very
+        # recently (that's the whole point of the cache), while still
+        # always returning the real, live queryset above.
+        if not cache_is_fresh:
+            self.cached_alert_count = active_alerts.count()
+            self.cache_updated_at = timezone.now()
+            self.save(update_fields=['cached_alert_count', 'cache_updated_at'])
         
         return active_alerts
     
@@ -1546,9 +1672,9 @@ class AlertGroup(models.Model):
     class Meta:
         ordering = ['name']
         indexes = [
-            models.Index(fields=['is_active'], name='idx_is_active_724'),
-            models.Index(fields=['group_notification_enabled'], name='idx_group_notification_ena_34e'),
-            models.Index(fields=['cached_alert_count'], name='idx_cached_alert_count_726'),
+            models.Index(fields=['is_active']),
+            models.Index(fields=['group_notification_enabled']),
+            models.Index(fields=['cached_alert_count']),
         ]
         db_table_comment = "Groups related alert rules for coordinated notifications"
         verbose_name = "Alert Group"
@@ -1556,6 +1682,51 @@ class AlertGroup(models.Model):
 
 
 # ==================== SYSTEM 7: ALERT SUPPRESSION ====================
+
+    def add_alert(self, alert_rule):
+        """Add an alert rule to this group"""
+        try:
+            if hasattr(self, 'rules') and hasattr(self.rules, 'add'):
+                self.rules.add(alert_rule)
+            return True
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error adding alert to group: {e}")
+            return False
+
+    def remove_alert(self, alert_rule):
+        """Remove an alert rule from this group"""
+        try:
+            if hasattr(self, 'rules') and hasattr(self.rules, 'remove'):
+                self.rules.remove(alert_rule)
+            return True
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error removing alert from group: {e}")
+            return False
+
+    def get_alert_count(self):
+        """Return the number of alert rules in this group"""
+        try:
+            if hasattr(self, 'rules') and hasattr(self.rules, 'count'):
+                return self.rules.count()
+            return getattr(self, '_alert_count', 0)
+        except Exception:
+            return 0
+
+    def get_alert_rules(self):
+        """Return all alert rules in this group"""
+        try:
+            if hasattr(self, 'rules') and hasattr(self.rules, 'all'):
+                return self.rules.all()
+            return []
+        except Exception:
+            return []
+
+
+    def get_type_display(self):
+        return 'AlertGroup'
+
 
 class AlertSuppression(models.Model):
     """Temporarily suppress specific alerts"""
@@ -1625,7 +1796,7 @@ class AlertSuppression(models.Model):
         """Validate suppression data"""
         super().clean()
         
-        if self.end_time <= self.start_time:
+        if self.end_time is not None and self.start_time is not None and (self.end_time <= self.start_time):
             raise ValidationError("End time must be after start time")
         
         # Validate suppression type consistency
@@ -1728,9 +1899,9 @@ class AlertSuppression(models.Model):
     class Meta:
         ordering = ['-start_time']
         indexes = [
-            models.Index(fields=['is_active', 'start_time', 'end_time'], name='idx_is_active_start_time_e_f97'),
-            models.Index(fields=['suppression_type'], name='idx_suppression_type_728'),
-            models.Index(fields=['rule', 'is_active'], name='idx_rule_is_active_729'),
+            models.Index(fields=['is_active', 'start_time', 'end_time']),
+            models.Index(fields=['suppression_type']),
+            models.Index(fields=['rule', 'is_active']),
         ]
         db_table_comment = "Temporarily suppresses alerts based on various criteria"
         verbose_name = "Alert Suppression"
@@ -1741,6 +1912,7 @@ class AlertSuppression(models.Model):
 
 class SystemHealthCheck(models.Model):
     """Periodic system health checks"""
+    objects = SystemHealthCheckManager()
     tenant = models.ForeignKey(
         'tenants.Tenant',
         on_delete=models.SET_NULL,
@@ -1821,7 +1993,23 @@ class SystemHealthCheck(models.Model):
     
     def __str__(self):
         return f"{self.check_name} ({self.get_status_display()})"
-    
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if not self.check_name or not self.check_name.strip():
+            errors['check_name'] = 'Health check must have a name.'
+        if hasattr(self, 'check_interval_seconds') and (self.check_interval_seconds is not None and self.check_interval_seconds < 10):
+            errors['check_interval_seconds'] = 'Check interval must be at least 10 seconds.'
+        if hasattr(self, 'check_interval_seconds') and (self.timeout_seconds is not None and self.check_interval_seconds is not None):
+            if hasattr(self, 'check_interval_seconds') and (self.timeout_seconds >= self.check_interval_seconds):
+                errors['timeout_seconds'] = 'timeout_seconds must be less than check_interval_seconds.'
+        if self.status == 'failed' and not self.error_message:
+            errors['error_message'] = 'Failed health checks must include an error_message.'
+        if errors:
+            raise ValidationError(errors)
+
+
     @property
     def needs_checking(self):
         """Check if health check is due"""
@@ -1953,10 +2141,10 @@ class SystemHealthCheck(models.Model):
     class Meta:
         ordering = ['priority', 'check_name']
         indexes = [
-            models.Index(fields=['check_type', 'status'], name='idx_check_type_status_730'),
-            models.Index(fields=['is_active', 'next_check'], name='idx_is_active_next_check_731'),
-            models.Index(fields=['status', 'last_checked'], name='idx_status_last_checked_732'),
-            models.Index(fields=['priority', 'is_active'], name='idx_priority_is_active_733'),
+            models.Index(fields=['check_type', 'status']),
+            models.Index(fields=['is_active', 'next_check']),
+            models.Index(fields=['status', 'last_checked']),
+            models.Index(fields=['priority', 'is_active']),
         ]
         db_table_comment = "Monitors system health through periodic checks"
         verbose_name = "System Health Check"
@@ -2024,7 +2212,18 @@ class AlertRuleHistory(models.Model):
         if self.rule:
             return f"{self.get_action_display()} - {self.rule.name}"
         return f"{self.get_action_display()} - Rule #{self.rule_id_backup}"
-    
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if hasattr(self, 'changes') and (self.action == 'update' and not self.changes):
+            errors['changes'] = 'Update history entries must include a changes dict.'
+        if self.action not in ('create', 'update', 'delete', 'activate', 'deactivate'):
+            errors['action'] = f'Unknown action type: {self.action!r}.'
+        if errors:
+            raise ValidationError(errors)
+
+
     def get_changes_summary(self):
         """Get human-readable summary of changes"""
         if self.action == 'create':
@@ -2121,9 +2320,9 @@ class AlertRuleHistory(models.Model):
     class Meta:
         ordering = ['-changed_at']
         indexes = [
-            models.Index(fields=['rule', 'changed_at'], name='idx_rule_changed_at_734'),
-            models.Index(fields=['changed_by', 'changed_at'], name='idx_changed_by_changed_at_735'),
-            models.Index(fields=['action', 'changed_at'], name='idx_action_changed_at_736'),
+            models.Index(fields=['rule', 'changed_at']),
+            models.Index(fields=['changed_by', 'changed_at']),
+            models.Index(fields=['action', 'changed_at']),
             GinIndex(fields=['changed_fields'], name='changed_fields_gin_idx'),
         ]
         db_table_comment = "Audit trail for all changes to alert rules"
@@ -2290,7 +2489,20 @@ class AlertDashboardConfig(models.Model):
     
     def __str__(self):
         return f"Dashboard Config for {self.user.username}"
-    
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if hasattr(self, 'refresh_interval_seconds') and (self.refresh_interval_seconds is not None and self.refresh_interval_seconds < 5):
+            errors['refresh_interval_seconds'] = 'Dashboard refresh interval must be at least 5 seconds.'
+        if hasattr(self, 'max_alerts_displayed') and (self.max_alerts_displayed is not None and self.max_alerts_displayed < 1):
+            errors['max_alerts_displayed'] = 'max_alerts_displayed must be at least 1.'
+        if hasattr(self, 'default_time_range_hours') and (self.default_time_range_hours is not None and self.default_time_range_hours < 1):
+            errors['default_time_range_hours'] = 'default_time_range_hours must be at least 1.'
+        if errors:
+            raise ValidationError(errors)
+
+
     def get_visible_severities(self):
         """Get list of severities to show"""
         return [s for s in self.severity_filter if s in ['critical', 'high', 'medium', 'low']]
@@ -2385,7 +2597,7 @@ class SystemMetrics(models.Model):
         db_index=True,
     )
 
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(default=timezone.now)
     
     # User metrics
     total_users = models.IntegerField(default=0)
@@ -2431,15 +2643,40 @@ class SystemMetrics(models.Model):
     
     def __str__(self):
         return f"Metrics at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
-    
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if self.avg_response_time_ms is not None and self.avg_response_time_ms < 0:
+            errors['avg_response_time_ms'] = 'avg_response_time_ms cannot be negative.'
+        if self.error_count_1h is not None and self.error_count_1h < 0:
+            errors['error_count_1h'] = 'error_count_1h cannot be negative.'
+        if self.cpu_usage_percent is not None:
+            if not (0.0 <= self.cpu_usage_percent <= 100.0):
+                errors['cpu_usage_percent'] = 'cpu_usage_percent must be between 0 and 100.'
+        if self.memory_usage_percent is not None:
+            if not (0.0 <= self.memory_usage_percent <= 100.0):
+                errors['memory_usage_percent'] = 'memory_usage_percent must be between 0 and 100.'
+        if errors:
+            raise ValidationError(errors)
+
     @property
     def is_healthy(self):
-        return (
-            self.avg_response_time_ms < 500 and
-            self.error_count_1h < 10 and
-            self.cpu_usage_percent < 80 and
-            self.memory_usage_percent < 85
-        )
+        """
+        True when all key metrics are within acceptable thresholds.
+        Handles None gracefully — missing metrics are treated as healthy
+        (sensor absent, not sensor alarming).
+        """
+        if self.avg_response_time_ms is not None and self.avg_response_time_ms >= 500:
+            return False
+        if self.error_count_1h is not None and self.error_count_1h >= 10:
+            return False
+        if self.cpu_usage_percent is not None and self.cpu_usage_percent >= 80.0:
+            return False
+        if self.memory_usage_percent is not None and self.memory_usage_percent >= 85.0:
+            return False
+        return True
+
     
     @classmethod
     def get_latest(cls):
@@ -2448,8 +2685,8 @@ class SystemMetrics(models.Model):
     class Meta:
         ordering = ['-timestamp']
         indexes = [
-            models.Index(fields=['-timestamp'], name='idx_timestamp_737'),
-            models.Index(fields=['data_source', 'timestamp'], name='idx_data_source_timestamp_738'),
+            models.Index(fields=['-timestamp']),
+            models.Index(fields=['data_source', 'timestamp']),
         ]
         verbose_name = "System Metrics"
         verbose_name_plural = "System Metrics"

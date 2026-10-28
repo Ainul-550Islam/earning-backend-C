@@ -28,12 +28,12 @@ class SourceChangeDetector:
             return {'changed': False}
 
         # Calculate similarity to determine severity
-        from ..utils.fuzzy import levenshtein_similarity
+        from api.localization.utils.fuzzy import levenshtein_similarity
         similarity = levenshtein_similarity(old_source, new_source)
         severity = 'minor' if similarity >= 80 else ('moderate' if similarity >= 50 else 'major')
 
         try:
-            from ..models.core import Translation
+            from api.localization.models.core import Translation
             qs = Translation.objects.filter(
                 key_id=translation_key_id,
                 is_approved=True,
@@ -59,7 +59,7 @@ class SourceChangeDetector:
     def get_needs_review(self, language_code: str = None) -> List[Dict]:
         """Review দরকার এমন translations list করে।"""
         try:
-            from ..models.core import Translation
+            from api.localization.models.core import Translation
             qs = Translation.objects.filter(needs_review=True)
             if language_code:
                 qs = qs.filter(language__code=language_code)
@@ -74,7 +74,7 @@ class SourceChangeDetector:
     def bulk_detect(self, limit: int = 500) -> Dict:
         """Existing translations-এর source hash mismatch বের করে।"""
         try:
-            from ..models.core import Translation, Language
+            from api.localization.models.core import Translation, Language
             default_lang = Language.objects.filter(is_default=True).first()
             if not default_lang:
                 return {'error': 'No default language found'}
@@ -111,7 +111,7 @@ class SegmentLockService:
     def lock(self, translation_id: int, locked_by_user) -> Dict:
         """Translation segment lock করে।"""
         try:
-            from ..models.core import Translation
+            from api.localization.models.core import Translation
             trans = Translation.objects.get(pk=translation_id)
             if not trans.is_approved:
                 return {'success': False, 'error': 'Only approved translations can be locked'}
@@ -126,7 +126,7 @@ class SegmentLockService:
     def unlock(self, translation_id: int, unlocked_by_user) -> Dict:
         """Translation segment unlock করে।"""
         try:
-            from ..models.core import Translation
+            from api.localization.models.core import Translation
             trans = Translation.objects.get(pk=translation_id)
             trans.is_locked = False
             trans.locked_by = None
@@ -139,7 +139,7 @@ class SegmentLockService:
     def bulk_lock_approved(self, language_code: str) -> Dict:
         """Language-এর সব approved translations lock করে।"""
         try:
-            from ..models.core import Translation
+            from api.localization.models.core import Translation
             count = Translation.objects.filter(
                 language__code=language_code, is_approved=True, is_locked=False
             ).update(is_locked=True)

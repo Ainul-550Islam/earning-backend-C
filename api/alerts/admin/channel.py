@@ -89,7 +89,7 @@ class AlertChannelAdmin(ModelAdmin):
             'fields': ('max_retries', 'retry_delay_minutes')
         }),
         ('Configuration', {
-            'fields': ('config', 'webhook_url')
+            'fields': ('config',)
         }),
         ('Status & Statistics', {
             'fields': ('status', 'last_success', 'last_failure', 'consecutive_failures',
@@ -227,7 +227,7 @@ class ChannelRouteAdmin(ModelAdmin):
             'fields': ('conditions', 'start_time', 'end_time', 'days_of_week')
         }),
         ('Escalation', {
-            'fields': ('escalation_delay_minutes', 'escalate_after_failures', 'escalation_users')
+            'fields': ('escalation_delay_minutes', 'escalate_after_failures')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')
@@ -454,7 +454,7 @@ class AlertRecipientAdmin(ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'recipient_type', 'description', 'is_active', 'priority')
+            'fields': ('name', 'recipient_type', 'is_active', 'priority')
         }),
         ('User Association', {
             'fields': ('user',)

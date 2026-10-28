@@ -3,6 +3,7 @@
 Celery Async Tasks।
 সব heavy/delayed কাজ এখানে।
 """
+from decimal import Decimal
 import logging
 from celery import shared_task
 from django.utils import timezone

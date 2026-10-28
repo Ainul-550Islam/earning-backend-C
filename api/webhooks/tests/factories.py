@@ -106,7 +106,7 @@ class WebhookDeliveryLogFactory(factory.django.DjangoModelFactory):
     ])
     response_code = factory.Iterator([200, 400, 500])
     response_body = factory.Faker('text', max_nb_chars=500)
-    duration_ms = fuzzy.FuzzyInteger(100, 5000)
+    response_time_ms = fuzzy.FuzzyInteger(100, 5000)
     attempt_number = fuzzy.FuzzyInteger(1, 5)
     max_attempts = 5
     next_retry_at = factory.LazyFunction(lambda: timezone.now() + timedelta(minutes=5))

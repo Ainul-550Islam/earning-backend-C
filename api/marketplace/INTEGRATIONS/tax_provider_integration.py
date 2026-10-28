@@ -39,12 +39,14 @@ def tax_breakdown(amount: Decimal, category_slug: str = "default") -> dict:
     total    = vat + sd
     return {
         "amount":       str(amount),
-        "vat_rate":     str(vat_rate * 100) + "%",
+        "vat_rate":     str(int(vat_rate * 100)) + "%",
         "vat_amount":   str(vat),
         "sd_rate":      str(sd_rate * 100) + "%",
         "sd_amount":    str(sd),
         "total_tax":    str(total),
         "total_payable":str(amount + total),
+        "vat":          str(vat),
+        "sd":           str(sd),
     }
 
 

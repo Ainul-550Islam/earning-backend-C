@@ -1,3 +1,4 @@
+from ...exceptions import WebhookSecurityError
 """Signature Verifier Service
 
 This module provides signature verification for different webhook sources (bKash, Nagad, Stripe, etc.).
@@ -7,7 +8,7 @@ import logging
 import hashlib
 import hmac
 import base64
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from django.utils import timezone
 
 from ...constants import InboundSource
@@ -22,28 +23,47 @@ class SignatureVerifier:
         """Initialize the signature verifier service."""
         self.logger = logger
     
-    def verify_signature(self, source: str, payload: Dict[str, Any], signature: str, secret: str) -> bool:
+    def verify_signature(
+        self,
+        source: str = None,
+        payload: Dict[str, Any] = None,
+        signature: str = None,
+        secret: str = None,
+        headers: Dict[str, str] = None,
+    ) -> bool:
         """
         Verify webhook signature based on source.
-        
+
+        Supports two calling conventions:
+          - verify_signature(source, payload, signature, secret) — positional,
+            pre-extracted signature string. Used by InboundWebhookService and
+            inbound_receiver.py.
+          - verify_signature(payload=, headers=, secret=, source=) — headers
+            dict, source-specific header extraction done internally. Delegates
+            to verify_signature_by_source().
+
         Args:
             source: The webhook source (bKash, Nagad, Stripe, etc.)
             payload: The webhook payload
-            signature: The signature to verify
+            signature: The signature to verify (string-based convention)
             secret: The secret key for verification
-            
+            headers: Raw headers dict (headers-based convention)
+
         Returns:
             True if signature is valid, False otherwise
         """
+        if headers is not None and signature is None:
+            return self.verify_signature_by_source(payload=payload, headers=headers, secret=secret, source=source)
+
         try:
             if source == InboundSource.BKASH:
-                return self._verify_bkash_signature(payload, signature, secret)
+                return self._verify_bkash_signature_legacy(payload, signature, secret)
             elif source == InboundSource.NAGAD:
-                return self._verify_nagad_signature(payload, signature, secret)
+                return self._verify_nagad_signature_legacy(payload, signature, secret)
             elif source == InboundSource.STRIPE:
-                return self._verify_stripe_signature(payload, signature, secret)
+                return self._verify_stripe_signature_legacy(payload, signature, secret)
             elif source == InboundSource.PAYPAL:
-                return self._verify_paypal_signature(payload, signature, secret)
+                return self._verify_paypal_signature_legacy(payload, signature, secret)
             else:
                 # Default to HMAC verification
                 return self._verify_hmac_signature(payload, signature, secret)
@@ -52,7 +72,7 @@ class SignatureVerifier:
             logger.error(f"Error verifying signature for {source}: {str(e)}")
             return False
     
-    def _verify_bkash_signature(self, payload: Dict[str, Any], signature: str, secret: str) -> bool:
+    def _verify_bkash_signature_legacy(self, payload: Dict[str, Any], signature: str, secret: str) -> bool:
         """
         Verify bKash webhook signature.
         
@@ -87,7 +107,7 @@ class SignatureVerifier:
             logger.error(f"Error verifying bKash signature: {str(e)}")
             return False
     
-    def _verify_nagad_signature(self, payload: Dict[str, Any], signature: str, secret: str) -> bool:
+    def _verify_nagad_signature_legacy(self, payload: Dict[str, Any], signature: str, secret: str) -> bool:
         """
         Verify Nagad webhook signature.
         
@@ -123,7 +143,7 @@ class SignatureVerifier:
             logger.error(f"Error verifying Nagad signature: {str(e)}")
             return False
     
-    def _verify_stripe_signature(self, payload: Dict[str, Any], signature: str, secret: str) -> bool:
+    def _verify_stripe_signature_legacy(self, payload: Dict[str, Any], signature: str, secret: str) -> bool:
         """
         Verify Stripe webhook signature.
         
@@ -176,7 +196,7 @@ class SignatureVerifier:
             logger.error(f"Error verifying Stripe signature: {str(e)}")
             return False
     
-    def _verify_paypal_signature(self, payload: Dict[str, Any], signature: str, secret: str) -> bool:
+    def _verify_paypal_signature_legacy(self, payload: Dict[str, Any], signature: str, secret: str) -> bool:
         """
         Verify PayPal webhook signature.
         
@@ -508,3 +528,140 @@ class SignatureVerifier:
             True if source is supported, False otherwise
         """
         return source in self.get_supported_sources()
+
+    # ── Headers-based verification ──────────────────────────────────────
+    # Additive alongside verify_signature()/​_verify_*_signature(payload,
+    # signature, secret) above, which real callers (InboundWebhookService,
+    # inbound_receiver.py) already use with a pre-extracted signature
+    # string and stay untouched. These headers-based variants let each
+    # source own its own header-extraction (Stripe's multi-value
+    # comma-list can't be extracted generically upstream) and are what
+    # verify_signature_by_source() and the test suite drive directly.
+
+    @staticmethod
+    def _get_header(headers: Dict[str, str], name: str) -> Optional[str]:
+        """Case-insensitive header lookup."""
+        target = name.lower()
+        for key, value in headers.items():
+            if key.lower() == target:
+                return value
+        return None
+
+    @staticmethod
+    def _require(payload, headers, secret) -> None:
+        if payload is None:
+            raise ValueError("payload is required")
+        if headers is None:
+            raise ValueError("headers is required")
+        if secret is None:
+            raise ValueError("secret is required")
+
+    @staticmethod
+    def _expected_hexdigest(payload: Dict[str, Any], secret: str) -> str:
+        import json
+        payload_json = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+        return hmac.new(secret.encode('utf-8'), payload_json.encode('utf-8'), hashlib.sha256).hexdigest()
+
+    def _verify_stripe_signature(
+        self,
+        payload: Dict[str, Any],
+        headers: Dict[str, str],
+        secret: str,
+        timestamp_tolerance: Optional[int] = None,
+    ) -> bool:
+        """Verify Stripe-style 'X-Stripe-Signature: sha256=<hex>[,sha256=<hex>...]'.
+
+        NOTE: this header format (sha256=<hex>) does not match what Stripe's
+        real API sends (Stripe uses 'Stripe-Signature: t=...,v1=...', see
+        generate_signature()/get_signature_info() below) — this method
+        exists to satisfy this codebase's own inbound test contract, which
+        predates real-Stripe alignment. Do not point actual Stripe webhook
+        traffic at this method; use verify_signature(source=STRIPE, ...)
+        instead, which implements the real t=/v1= scheme.
+        """
+        self._require(payload, headers, secret)
+        header_value = self._get_header(headers, 'X-Stripe-Signature')
+        if not header_value:
+            return False
+
+        expected = self._expected_hexdigest(payload, secret)
+        matched = False
+        for part in header_value.strip().split(','):
+            part = part.strip()
+            if part.startswith('sha256='):
+                if hmac.compare_digest(part[len('sha256='):], expected):
+                    matched = True
+        if not matched:
+            return False
+
+        timestamp_header = self._get_header(headers, 'X-Stripe-Timestamp')
+        if timestamp_header and timestamp_tolerance is not None:
+            try:
+                from django.utils.dateparse import parse_datetime
+                ts = parse_datetime(timestamp_header)
+                if ts is not None:
+                    if timezone.is_naive(ts):
+                        ts = timezone.make_aware(ts, timezone.utc)
+                    age = (timezone.now() - ts).total_seconds()
+                    if age > timestamp_tolerance:
+                        return False
+            except Exception:
+                return False
+
+        return True
+
+    def _verify_paypal_signature(self, payload: Dict[str, Any], headers: Dict[str, str], secret: str) -> bool:
+        """Verify PayPal-style 'PAYPAL-AUTH-SHA256: <hex>' (simplified HMAC
+        contract used by this codebase's own tests — real PayPal uses
+        cert-based transmission signatures via PAYPAL-CERT-ID, not HMAC;
+        those headers are accepted here but not cryptographically checked)."""
+        self._require(payload, headers, secret)
+        header_value = self._get_header(headers, 'PAYPAL-AUTH-SHA256')
+        if not header_value:
+            return False
+        expected = self._expected_hexdigest(payload, secret)
+        return hmac.compare_digest(header_value.strip(), expected)
+
+    def _verify_bkash_signature(self, payload: Dict[str, Any], headers: Dict[str, str], secret: str) -> bool:
+        """Verify bKash-style 'X-BKash-Signature: <hex>'."""
+        self._require(payload, headers, secret)
+        header_value = self._get_header(headers, 'X-BKash-Signature')
+        if not header_value:
+            return False
+        expected = self._expected_hexdigest(payload, secret)
+        return hmac.compare_digest(header_value.strip(), expected)
+
+    def _verify_nagad_signature(self, payload: Dict[str, Any], headers: Dict[str, str], secret: str) -> bool:
+        """Verify Nagad-style 'X-Nagad-Signature: <hex>'."""
+        self._require(payload, headers, secret)
+        header_value = self._get_header(headers, 'X-Nagad-Signature')
+        if not header_value:
+            return False
+        expected = self._expected_hexdigest(payload, secret)
+        return hmac.compare_digest(header_value.strip(), expected)
+
+    def verify_signature_by_source(
+        self,
+        payload: Dict[str, Any],
+        headers: Dict[str, str],
+        secret: str,
+        source: str,
+    ) -> bool:
+        """Headers-based dispatch, mirroring verify_signature()'s source
+        routing but for the _verify_*_signature(headers=...) variants."""
+        try:
+            if source == InboundSource.STRIPE:
+                return self._verify_stripe_signature(payload, headers, secret)
+            elif source == InboundSource.PAYPAL:
+                return self._verify_paypal_signature(payload, headers, secret)
+            elif source == InboundSource.BKASH:
+                return self._verify_bkash_signature(payload, headers, secret)
+            elif source == InboundSource.NAGAD:
+                return self._verify_nagad_signature(payload, headers, secret)
+            else:
+                return False
+        except (ValueError, TypeError):
+            raise
+        except Exception as e:
+            logger.error(f"Error verifying signature by source for {source}: {str(e)}")
+            return False

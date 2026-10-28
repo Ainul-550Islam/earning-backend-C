@@ -4,6 +4,7 @@ World #1 Feature: Automatic Facebook Pixel + Conversions API (CAPI) firing.
 Publishers can track conversions back to FB campaigns automatically.
 """
 import hashlib
+from api.smartlink.integrations.base import IntegrationBase
 import logging
 import threading
 from typing import Optional
@@ -13,7 +14,10 @@ from django.conf import settings
 logger = logging.getLogger('smartlink.integrations.facebook')
 
 
-class FacebookPixelService:
+class FacebookPixelService(IntegrationBase):
+    integration_name = "Facebook"
+    default_timeout  = 10
+
     """
     Fire Facebook Pixel events and Meta Conversions API (server-side).
     Used when publisher has Facebook tracking enabled on their SmartLink.
@@ -91,7 +95,7 @@ class FacebookPixelService:
         }
 
         try:
-            resp = requests.post(url, json=payload, timeout=5)
+            resp = self._post(url, payload, timeout=5)
             if resp.status_code == 200:
                 logger.debug(f"FB CAPI fired: {event_name} pixel={pixel_id}")
             else:

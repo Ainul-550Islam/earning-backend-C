@@ -13,7 +13,7 @@ class OfferProvider(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='%(app_label)s_%(class)s_tenant',
+        related_name='%(app_label)s_%(class)s_set',
         db_index=True,
     )
 
@@ -26,36 +26,42 @@ class OfferProvider(models.Model):
         ('cpx', 'CPX Research'),
         ('bitlabs', 'BitLabs'),
         ('pollfish', 'Pollfish'),
+        # Phase 2 networks
+        ('monlix',  'Monlix'),
+        ('ogads',   'OGAds'),
+        ('fyber',   'Fyber'),
+        ('liftoff', 'Liftoff (Vungle)'),
+        ('applift', 'AppLift'),
         ('custom', 'Custom Provider'),
     )
-    
+
     STATUS_CHOICES = (
         ('active', 'Active'),
         ('inactive', 'Inactive'),
         ('testing', 'Testing'),
         ('suspended', 'Suspended'),
     )
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, unique=True, null=True, blank=True)
     provider_type = models.CharField(max_length=50, choices=PROVIDER_TYPES, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', null=True, blank=True)
-    
+
     # API Configuration
     api_key = models.CharField(max_length=500, null=True, blank=True)
     api_secret = models.CharField(max_length=500, null=True, blank=True)
     app_id = models.CharField(max_length=200, null=True, blank=True)
     publisher_id = models.CharField(max_length=200, null=True, blank=True)
-    
+
     # URLs
     api_base_url = models.URLField(null=True, blank=True)
     webhook_url = models.URLField(null=True, blank=True)
     postback_url = models.URLField(null=True, blank=True)
-    
+
     # Security
     secret_key = models.CharField(max_length=500, blank=True, help_text='For webhook signature verification', null=True)
     ip_whitelist = models.JSONField(default=list, blank=True)
-    
+
     # Revenue Settings
     revenue_share = models.DecimalField(
         max_digits=5,
@@ -64,29 +70,29 @@ class OfferProvider(models.Model):
         validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
         help_text='Percentage of revenue shared with users'
     )
-    
+
     # Rate Limits
     rate_limit_per_minute = models.IntegerField(default=60)
     rate_limit_per_hour = models.IntegerField(default=3600)
-    
+
     # Statistics
     total_offers = models.IntegerField(default=0)
     total_conversions = models.IntegerField(default=0)
     total_revenue = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
-    
+
     # Settings
     auto_sync = models.BooleanField(default=True)
     sync_interval_minutes = models.IntegerField(default=60)
     last_sync = models.DateTimeField(null=True, blank=True)
-    
+
     # Metadata
     config = models.JSONField(default=dict, blank=True)
     notes = models.TextField(blank=True)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -95,10 +101,10 @@ class OfferProvider(models.Model):
         ]
         verbose_name = 'Offer Provider'
         verbose_name_plural = 'Offer Providers'
-    
+
     def __str__(self):
         return f"{self.name} ({self.get_provider_type_display()})"
-    
+
     def is_active(self):
         return self.status == 'active'
 
@@ -110,7 +116,7 @@ class OfferCategory(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='%(app_label)s_%(class)s_tenant',
+        related_name='%(app_label)s_%(class)s_set',
         db_index=True,
     )
 
@@ -119,28 +125,28 @@ class OfferCategory(models.Model):
     description = models.TextField(blank=True)
     icon = models.CharField(max_length=50, blank=True, help_text='Icon class name', null=True)
     color = models.CharField(max_length=7, default='#3B82F6', help_text='Hex color code', null=True, blank=True)
-    
+
     # Display
     display_order = models.IntegerField(default=0)
     is_featured = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    
+
     # SEO
     meta_title = models.CharField(max_length=200, null=True, blank=True)
     meta_description = models.TextField(blank=True)
-    
+
     # Statistics
     offer_count = models.IntegerField(default=0)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['display_order', 'name']
         verbose_name = 'Offer Category'
         verbose_name_plural = 'Offer Categories'
-    
+
     def __str__(self):
         return self.name
 
@@ -152,7 +158,7 @@ class Offer(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='%(app_label)s_%(class)s_tenant',
+        related_name='%(app_label)s_%(class)s_set',
         db_index=True,
     )
 
@@ -170,7 +176,7 @@ class Offer(models.Model):
         ('cashback', 'Cashback'),
         ('other', 'Other'),
     )
-    
+
     PLATFORMS = (
         ('all', 'All Platforms'),
         ('android', 'Android'),
@@ -179,7 +185,7 @@ class Offer(models.Model):
         ('mobile', 'Mobile (Android + iOS)'),
         ('desktop', 'Desktop'),
     )
-    
+
     STATUS_CHOICES = (
         ('active', 'Active'),
         ('paused', 'Paused'),
@@ -187,55 +193,55 @@ class Offer(models.Model):
         ('expired', 'Expired'),
         ('disabled', 'Disabled'),
     )
-    
+
     DIFFICULTY_LEVELS = (
         ('easy', 'Easy'),
         ('medium', 'Medium'),
         ('hard', 'Hard'),
     )
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
+
     # Provider Info
     provider = models.ForeignKey(
         OfferProvider,
         on_delete=models.CASCADE,
-        related_name='%(app_label)s_%(class)s_tenant'
+        related_name='offers'
     )
     external_offer_id = models.CharField(max_length=200, db_index=True, null=True, blank=True)
-    
+
     # Basic Info
     title = models.CharField(max_length=300, null=True, blank=True)
     description = models.TextField()
     short_description = models.CharField(max_length=500, null=True, blank=True)
-    
+
     # Categorization
     category = models.ForeignKey(
         OfferCategory,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='%(app_label)s_%(class)s_tenant'
+        related_name='offers'
     )
     offer_type = models.CharField(max_length=50, choices=OFFER_TYPES, null=True, blank=True)
     tags = models.JSONField(default=list, blank=True)
-    
+
     # Platform & Location
     platform = models.CharField(max_length=20, choices=PLATFORMS, default='all', null=True, blank=True)
     countries = models.JSONField(default=list, blank=True, help_text='ISO 2-letter country codes')
     excluded_countries = models.JSONField(default=list, blank=True)
-    
+
     # Media
     image_url = models.URLField(blank=True, validators=[URLValidator()])
     thumbnail_url = models.URLField(null=True, blank=True)
     icon_url = models.URLField(null=True, blank=True)
     video_url = models.URLField(null=True, blank=True)
-    
+
     # URLs
     click_url = models.URLField(max_length=2000, null=True, blank=True)
     tracking_url = models.URLField(max_length=2000, null=True, blank=True)
     preview_url = models.URLField(null=True, blank=True)
-    
+
     # Reward Info
     payout = models.DecimalField(
         max_digits=12,
@@ -243,75 +249,75 @@ class Offer(models.Model):
         validators=[MinValueValidator(Decimal('0.000001'))]
     )
     currency = models.CharField(max_length=3, default='USD', null=True, blank=True)
-    
+
     # User-facing reward (after revenue share)
     reward_amount = models.DecimalField(max_digits=12, decimal_places=6, default=0, null=True, blank=True)
     reward_currency = models.CharField(max_length=10, default='Points', null=True, blank=True)
-    
+
     # Bonus rewards
     bonus_amount = models.DecimalField(max_digits=12, decimal_places=6, default=0, null=True, blank=True)
     bonus_condition = models.TextField(blank=True, help_text='Condition for bonus reward')
-    
+
     # Difficulty & Time
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY_LEVELS, default='medium', null=True, blank=True)
     estimated_time_minutes = models.IntegerField(default=5, validators=[MinValueValidator(1)])
-    
+
     # Requirements
     min_age = models.IntegerField(default=18, validators=[MinValueValidator(13)])
     requires_signup = models.BooleanField(default=False)
     requires_card = models.BooleanField(default=False)
     requires_purchase = models.BooleanField(default=False)
-    
+
     # Instructions
     instructions = models.TextField(blank=True)
     steps = models.JSONField(default=list, blank=True)
     requirements_text = models.TextField(blank=True)
-    
+
     # Limits
     daily_cap = models.IntegerField(default=0, help_text='0 = unlimited')
     total_cap = models.IntegerField(default=0, help_text='0 = unlimited')
     user_limit = models.IntegerField(default=1, help_text='Times each user can complete')
-    
+
     # Status & Validity
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', null=True, blank=True)
     is_featured = models.BooleanField(default=False)
     is_trending = models.BooleanField(default=False)
     is_recommended = models.BooleanField(default=False)
-    
+
     # Dates
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
-    
+
     # Statistics
     view_count = models.IntegerField(default=0)
     click_count = models.IntegerField(default=0)
     conversion_count = models.IntegerField(default=0)
     completion_rate = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
-    
+
     # Revenue tracking
     total_revenue = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
     total_payout = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True, blank=True)
-    
+
     # Quality Score (0-100)
     quality_score = models.FloatField(default=50, validators=[MinValueValidator(0), MaxValueValidator(100)])
-    
+
     # Conversion tracking
     conversion_flow = models.JSONField(default=dict, blank=True, help_text='Steps in conversion funnel')
     postback_data = models.JSONField(default=dict, blank=True)
-    
+
     # Fraud prevention
     fraud_score = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     is_high_risk = models.BooleanField(default=False)
-    
+
     # Metadata
     metadata = models.JSONField(default=dict, blank=True)
     provider_data = models.JSONField(default=dict, blank=True, help_text='Raw data from provider')
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_synced = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         ordering = ['-is_featured', '-quality_score', '-reward_amount']
         indexes = [
@@ -326,110 +332,100 @@ class Offer(models.Model):
         unique_together = ['provider', 'external_offer_id']
         verbose_name = 'Offer'
         verbose_name_plural = 'Offers'
-    
+
     def __str__(self):
         return f"{self.title} - {self.reward_amount} {self.reward_currency}"
-    
+
     def is_active(self):
         """Check if offer is currently active"""
         if self.status != 'active':
             return False
-        
+
         now = timezone.now()
-        
+
         if self.start_date and now < self.start_date:
             return False
-        
+
         if self.end_date and now > self.end_date:
             return False
-        
+
         return True
-    
+
     def is_available_for_user(self, user):
-        """Check if offer is available for specific user"""
-        from api.fraud_detection.models import OfferCompletion
-        
+        """Check if offer is available (optionally for a specific user)."""
         if not self.is_active():
             return False
-        
-        # Check user limit
-        if self.user_limit > 0:
-            completion_count = OfferCompletion.objects.filter(
-                user=user,
-                offer=self,
-                status__in=['completed', 'pending']
-            ).count()
-            
-            if completion_count >= self.user_limit:
-                return False
-        
-        # Check daily cap
+        # Total cap — checked regardless of user
+        if self.total_cap > 0 and self.conversion_count >= self.total_cap:
+            return False
+        # Daily cap — checked regardless of user
         if self.daily_cap > 0:
-            today_completions = OfferCompletion.objects.filter(
-                offer=self,
-                status='completed',
-                completed_at__date=timezone.now().date()
+            today = OfferConversion.objects.filter(
+                offer=self, status='approved',
+                converted_at__date=timezone.now().date()
             ).count()
-            
-            if today_completions >= self.daily_cap:
+            if today >= self.daily_cap:
                 return False
-        
-        # Check total cap
-        if self.total_cap > 0:
-            if self.conversion_count >= self.total_cap:
+        if user is None:
+            return True
+        # Per-user limit
+        if self.user_limit > 0:
+            count = OfferConversion.objects.filter(
+                user=user, offer=self, status__in=['approved', 'pending']
+            ).count()
+            if count >= self.user_limit:
                 return False
-        
         return True
-    
+
     def increment_view(self):
         """Increment view count"""
         self.view_count += 1
         self.save(update_fields=['view_count'])
-    
+
     def increment_click(self):
         """Increment click count"""
         self.click_count += 1
         self.save(update_fields=['click_count'])
-    
+
     def increment_conversion(self):
         """Increment conversion count and update completion rate"""
         self.conversion_count += 1
-        
+
         if self.click_count > 0:
             self.completion_rate = (self.conversion_count / self.click_count) * 100
-        
+
         self.save(update_fields=['conversion_count', 'completion_rate'])
-    
+
     def calculate_quality_score(self):
         """Calculate offer quality score based on multiple factors"""
         score = 50  # Base score
-        
+
         # Completion rate (30 points max)
         if self.click_count > 10:
             score += min(30, self.completion_rate * 0.3)
-        
+
         # User engagement (20 points max)
         if self.view_count > 0:
             ctr = (self.click_count / self.view_count) * 100
             score += min(20, ctr * 0.2)
-        
+
         # Revenue performance (20 points max)
         if self.total_revenue > 0:
             score += min(20, (float(self.total_revenue) / 1000) * 20)
-        
+
         # Recency (10 points max)
         days_old = (timezone.now() - self.created_at).days
         if days_old < 30:
             score += 10
         elif days_old < 90:
             score += 5
-        
+
         # Fraud score penalty (-30 points max)
         score -= min(30, self.fraud_score * 0.3)
-        
+
         self.quality_score = max(0, min(100, score))
         self.save(update_fields=['quality_score'])
-        
+
         return self.quality_score
 
 
@@ -440,45 +436,45 @@ class OfferClick(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='%(app_label)s_%(class)s_tenant',
+        related_name='%(app_label)s_%(class)s_set',
         db_index=True,
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
+
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='clicks')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offerwall_offerclick_user', null=True, blank=True)
-    
+
     # Click data
     click_id = models.CharField(max_length=255, unique=True, db_index=True, null=True, blank=True)
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField()
-    
+
     # Device info
     device_type = models.CharField(max_length=50, null=True, blank=True)
     device_model = models.CharField(max_length=100, null=True, blank=True)
     os = models.CharField(max_length=50, null=True, blank=True)
     os_version = models.CharField(max_length=50, null=True, blank=True)
     browser = models.CharField(max_length=50, null=True, blank=True)
-    
+
     # Location
     country = models.CharField(max_length=2, null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
-    
+
     # Referrer
     referrer_url = models.URLField(blank=True, max_length=2000, null=True)
-    
+
     # Tracking
     session_id = models.CharField(max_length=255, null=True, blank=True)
     tracking_params = models.JSONField(default=dict, blank=True)
-    
+
     # Status
     is_converted = models.BooleanField(default=False)
     converted_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Timestamps
     clicked_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-clicked_at']
         indexes = [
@@ -489,9 +485,17 @@ class OfferClick(models.Model):
         ]
         verbose_name = 'Offer Click'
         verbose_name_plural = 'Offer Clicks'
-    
+
+    def save(self, *args, **kwargs):
+        if not self.click_id:
+            import uuid as _uuid
+            self.click_id = _uuid.uuid4().hex
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.user.username} clicked {self.offer.title}"
+        if self.user:
+            return f"{self.user.username} clicked {self.offer.title}"
+        return f"Anonymous clicked {self.offer.title}"
 
 
 class OfferConversion(models.Model):
@@ -501,7 +505,7 @@ class OfferConversion(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='%(app_label)s_%(class)s_tenant',
+        related_name='%(app_label)s_%(class)s_set',
         db_index=True,
     )
 
@@ -512,31 +516,31 @@ class OfferConversion(models.Model):
         ('chargeback', 'Chargeback'),
         ('reversed', 'Reversed'),
     )
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='%(app_label)s_%(class)s_tenant')
+
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='conversions')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offerwall_offerconversion_user', null=True, blank=True)
     click = models.ForeignKey(OfferClick, on_delete=models.SET_NULL, null=True, blank=True, related_name='offerwall_offerconversion_click')
-    
+
     # Conversion data
     conversion_id = models.CharField(max_length=255, unique=True, db_index=True, null=True, blank=True)
     external_WalletTransaction_id = models.CharField(max_length=255, blank=True, db_index=True, null=True)
-    
+
     # Payout
     payout_amount = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
     payout_currency = models.CharField(max_length=3, default='USD', null=True, blank=True)
-    
+
     # User reward
     reward_amount = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
     reward_currency = models.CharField(max_length=10, default='Points', null=True, blank=True)
-    
+
     # Bonus
     bonus_amount = models.DecimalField(max_digits=12, decimal_places=6, default=0, null=True, blank=True)
-    
+
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', null=True, blank=True)
-    
+
     # Verification
     is_verified = models.BooleanField(default=False)
     verified_at = models.DateTimeField(null=True, blank=True)
@@ -545,31 +549,31 @@ class OfferConversion(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='%(app_label)s_%(class)s_tenant'
+        related_name='%(app_label)s_%(class)s_set'
     )
-    
+
     # Transaction
     transaction = models.ForeignKey(
         'wallet.WalletTransaction',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='%(app_label)s_%(class)s_tenant'
+        related_name='%(app_label)s_%(class)s_set'
     )
-    
+
     # Provider data
     provider_data = models.JSONField(default=dict, blank=True)
     postback_data = models.JSONField(default=dict, blank=True)
-    
+
     # Notes
     notes = models.TextField(blank=True)
     rejection_reason = models.TextField(blank=True)
-    
+
     # Timestamps
     converted_at = models.DateTimeField(auto_now_add=True)
     approved_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-converted_at']
         indexes = [
@@ -580,57 +584,42 @@ class OfferConversion(models.Model):
         ]
         verbose_name = 'Offer Conversion'
         verbose_name_plural = 'Offer Conversions'
-    
+
     def __str__(self):
-        return f"{self.user.username} - {self.offer.title} - {self.status}"
-    
+        username = self.user.username if self.user else 'Anonymous'
+        title    = self.offer.title if self.offer else 'Unknown'
+        return f"{username} - {title} - {self.status}"
+
     def approve(self, approver=None):
-        """Approve conversion and credit user"""
+        """
+        Approve conversion.
+        Wallet credit + notification + referral + audit সব
+        post_save signal → signals.py এ হয়।
+        Returns False if already approved (idempotency).
+        """
         if self.status == 'approved':
             return False
-        
-        self.status = 'approved'
+        self.status      = 'approved'
         self.approved_at = timezone.now()
         self.verified_by = approver
         self.is_verified = True
         self.verified_at = timezone.now()
-        
-        # Create wallet transaction
-        try:
-            from api.wallet.models import WalletTransaction
-            
-            total_reward = self.reward_amount + self.bonus_amount
-            
-            txn = WalletTransaction.objects.create(
-                user=self.user,
-                transaction_type='credit',
-                amount=total_reward,
-                currency=self.reward_currency,
-                description=f'Offer completed: {self.offer.title}',
-                status='completed',
-                metadata={
-                    'offer_id': str(self.offer.id),
-                    'offer_title': self.offer.title,
-                    'conversion_id': self.conversion_id,
-                    'base_reward': float(self.reward_amount),
-                    'bonus_reward': float(self.bonus_amount),
-                }
-            )
-            self.transaction = txn
-        except Exception:
-            pass  # wallet transaction optional — conversion still approved
-        
-        self.save()
-        
+        self.save(update_fields=[
+            'status', 'approved_at', 'verified_by',
+            'is_verified', 'verified_at', 'updated_at',
+        ])
         return True
-    
+
     def reject(self, reason='', rejector=None):
-        """Reject conversion"""
-        self.status = 'rejected'
+        """Reject conversion. Notification + audit via post_save signal."""
+        self.status           = 'rejected'
         self.rejection_reason = reason
-        self.verified_by = rejector
-        self.verified_at = timezone.now()
-        self.save()
+        self.verified_by      = rejector
+        self.verified_at      = timezone.now()
+        self.save(update_fields=[
+            'status', 'rejection_reason', 'verified_by',
+            'verified_at', 'updated_at',
+        ])
 
 
 class OfferWall(models.Model):
@@ -640,68 +629,108 @@ class OfferWall(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='%(app_label)s_%(class)s_tenant',
+        related_name='%(app_label)s_%(class)s_set',
         db_index=True,
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
+
     name = models.CharField(max_length=100, null=True, blank=True)
     slug = models.SlugField(max_length=100, unique=True, null=True, blank=True)
     description = models.TextField(blank=True)
-    
+
     # Display settings
     title = models.CharField(max_length=200, null=True, blank=True)
     subtitle = models.CharField(max_length=300, null=True, blank=True)
     banner_image = models.URLField(null=True, blank=True)
-    
+
     # Filters
-    categories = models.ManyToManyField(OfferCategory, blank=True, related_name='%(app_label)s_%(class)s_tenant')
-    providers = models.ManyToManyField(OfferProvider, blank=True, related_name='%(app_label)s_%(class)s_tenant')
+    categories = models.ManyToManyField(OfferCategory, blank=True, related_name='%(app_label)s_%(class)s_set')
+    providers = models.ManyToManyField(OfferProvider, blank=True, related_name='%(app_label)s_%(class)s_set')
     offer_types = models.JSONField(default=list, blank=True)
     platforms = models.JSONField(default=list, blank=True)
-    
+
     # Targeting
     countries = models.JSONField(default=list, blank=True)
     min_payout = models.DecimalField(max_digits=12, decimal_places=6, default=0, null=True, blank=True)
-    
+
     # Display
     offers_per_page = models.IntegerField(default=20)
     sort_by = models.CharField(max_length=50, default='quality_score', null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    
+
     # Settings
     config = models.JSONField(default=dict, blank=True)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['name']
         verbose_name = 'Offer Wall'
         verbose_name_plural = 'Offer Walls'
-    
+
     def __str__(self):
         return self.name
-    
+
     def get_offers(self, user=None):
         """Get filtered offers for this wall"""
         offers = Offer.objects.filter(status='active')
-        
+
         if self.categories.exists():
             offers = offers.filter(category__in=self.categories.all())
-        
+
         if self.providers.exists():
             offers = offers.filter(provider__in=self.providers.all())
-        
+
         if self.offer_types:
             offers = offers.filter(offer_type__in=self.offer_types)
-        
+
         if self.platforms:
             offers = offers.filter(platform__in=self.platforms)
-        
-        if self.min_payout > 0:
+
+        if self.min_payout and self.min_payout > 0:
             offers = offers.filter(payout__gte=self.min_payout)
-        
-        return offers.order_by(f'-{self.sort_by}')
+
+        # FIX: OfferWall.countries filter was completely missing.
+        # The model has a countries JSONField but get_offers() never used it.
+        # Offers whose countries list is empty are considered global (available everywhere).
+        # If the wall targets specific countries, only include offers that either:
+        #   (a) have an empty countries list (global offer), or
+        #   (b) have at least one country overlapping with the wall's target countries.
+        if self.countries:
+            from django.db.models import Q
+            country_filter = Q(countries=[])  # global offers always included
+            for country_code in self.countries:
+                country_filter |= Q(countries__icontains=country_code)
+            offers = offers.filter(country_filter)
+
+        # Safe sort_by: whitelist allowed fields to prevent arbitrary DB expressions
+        allowed_sort_fields = {
+            'quality_score', 'reward_amount', 'payout',
+            'created_at', 'conversion_count', 'view_count',
+        }
+        sort_field = self.sort_by if self.sort_by in allowed_sort_fields else 'quality_score'
+
+        # FIX: exclude offers the user has already completed (approved conversions)
+        if user is not None:
+            completed_ids = OfferConversion.objects.filter(
+                user=user, status__in=['approved', 'pending']
+            ).values_list('offer_id', flat=True)
+            offers = offers.exclude(id__in=completed_ids)
+
+        return offers.order_by(f'-{sort_field}')
+
+
+# --- Deterministic model registry -------------------------------------------
+# Models in these modules were registered only as a side effect of URL/system-check
+# imports, so processes without those imports (makemigrations --skip-checks, shell,
+# workers) saw a smaller registry. Import them here so every process sees the same set.
+from importlib import import_module as _import_module  # noqa: E402
+
+for _mod in (
+    "api.offerwall.b2b.models",
+):
+    _import_module(_mod)
+del _import_module, _mod

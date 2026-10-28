@@ -28,7 +28,7 @@ def get_next_payment_date(frequency: str, last_payment: date = None) -> date:
 
 def get_publishers_due_for_payment() -> List:
     """Payment due publishers list।"""
-    from api.publisher_tools.publisher_management.publisher_payout import PayoutSchedule
+    from publisher_tools.publisher_management.publisher_payout import PayoutSchedule
     from django.utils import timezone
     today = timezone.now().date()
     due_schedules = PayoutSchedule.objects.filter(
@@ -44,7 +44,7 @@ def schedule_batch_payments(publishers: List) -> Dict:
     for pub in publishers:
         try:
             eligibility = __import__(
-                "api.publisher_tools.payment_settlement.payout_manager",
+                "publisher_tools.payment_settlement.payout_manager",
                 fromlist=["check_payout_eligibility"]
             ).check_payout_eligibility(pub)
             if eligibility["eligible"]:

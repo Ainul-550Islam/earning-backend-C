@@ -26,7 +26,7 @@ class Command(BaseCommand):
         """Add command arguments."""
         parser.add_argument(
             '--endpoint-id',
-            type=int,
+            type=str,
             help='Check specific endpoint ID (optional)',
         )
         parser.add_argument(
@@ -56,7 +56,11 @@ class Command(BaseCommand):
                 # Check specific endpoint
                 try:
                     endpoint = WebhookEndpoint.objects.get(id=endpoint_id)
-                    result = health_service.check_endpoint_health(endpoint)
+                    # BUG FIX: --timeout was parsed but never passed to
+                    # either service call below - it was a silent no-op,
+                    # always falling back to check_endpoint_health()'s own
+                    # default regardless of what the operator asked for.
+                    result = health_service.check_endpoint_health(endpoint, timeout_seconds=timeout)
                     
                     self._display_result(result, verbose)
                     
@@ -72,7 +76,11 @@ class Command(BaseCommand):
                     self.stdout.write("No active webhook endpoints found")
                     return
                 
-                results = health_service.check_all_endpoints()
+                # BUG FIX: same as above - check_all_endpoints() didn't
+                # even accept a timeout parameter before, so --timeout was
+                # doubly ineffective on this path. It now forwards to each
+                # check_endpoint_health() call (see HealthMonitorService).
+                results = health_service.check_all_endpoints(timeout_seconds=timeout)
                 
                 # Display results
                 if verbose:

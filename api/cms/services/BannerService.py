@@ -1,3 +1,4 @@
+from django.db import models
 import logging
 import json
 from datetime import datetime, timedelta
@@ -15,8 +16,9 @@ from ..models import (
     Banner, BannerImpression, BannerClick, BannerReward,
     ContentPage
 )
-from api.users.models import User, UserProfile
-from api.wallet.models import Transaction
+from django.contrib.auth import get_user_model
+User = get_user_model()
+# Transaction is owned by api.wallet — use lazy import when needed
 # from api.tasks.models import Task
 # from api.offerwall.models import Offer
 # from core.utils import get_client_ip

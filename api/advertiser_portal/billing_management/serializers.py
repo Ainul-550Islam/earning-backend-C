@@ -602,7 +602,7 @@ class PaymentRequestSerializer(serializers.Serializer):
     """Serializer for payment requests."""
     
     billing_profile_id = serializers.UUIDField()
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     payment_method_id = serializers.UUIDField()
     
     def validate_billing_profile_id(self, value):
@@ -625,7 +625,7 @@ class PaymentRequestSerializer(serializers.Serializer):
 class TaxCalculationRequestSerializer(serializers.Serializer):
     """Serializer for tax calculation requests."""
     
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     
     def validate_amount(self, value):
         """Validate amount."""

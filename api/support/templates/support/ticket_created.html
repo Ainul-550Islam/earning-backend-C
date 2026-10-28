@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0}
+.container{max-width:600px;margin:40px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+.header{background:#6366f1;color:#fff;padding:30px;text-align:center}
+.header h1{margin:0;font-size:24px}
+.body{padding:30px}
+.ticket-box{background:#f8f9ff;border-left:4px solid #6366f1;padding:15px;border-radius:4px;margin:20px 0}
+.field{margin:8px 0}.field strong{color:#4f46e5}
+.btn{display:inline-block;background:#6366f1;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:20px 0}
+.footer{background:#f9fafb;padding:20px;text-align:center;color:#6b7280;font-size:13px}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:bold}
+.urgent{background:#fef2f2;color:#dc2626}.high{background:#fff7ed;color:#ea580c}
+.medium{background:#fffbeb;color:#ca8a04}.low{background:#f0fdf4;color:#16a34a}
+</style></head><body>
+<div class="container">
+  <div class="header"><h1>🎫 Support Ticket Created</h1><p>We received your request</p></div>
+  <div class="body">
+    <p>Hello <strong>{{ username }}</strong>,</p>
+    <p>Your support ticket has been created successfully. Our team will respond within the timeframe below.</p>
+    <div class="ticket-box">
+      <div class="field"><strong>Ticket ID:</strong> #{{ ticket_id }}</div>
+      <div class="field"><strong>Subject:</strong> {{ subject }}</div>
+      <div class="field"><strong>Category:</strong> {{ category }}</div>
+      <div class="field"><strong>Priority:</strong> <span class="badge {{ priority|lower }}">{{ priority }}</span></div>
+      <div class="field"><strong>Expected Response:</strong> Within {{ sla_hours }} hour(s)</div>
+    </div>
+    <a href="{{ ticket_url }}" class="btn">View Your Ticket →</a>
+    <p>You will receive an email notification when our team responds.</p>
+  </div>
+  <div class="footer">© {{ year }} {{ site_name }} · <a href="{{ ticket_url }}">Manage Ticket</a></div>
+</div></body></html>

@@ -35,3 +35,50 @@ class IsSystemOrAdmin(BasePermission):
             and request.user.is_authenticated
             and (request.user.is_staff or request.user.is_superuser)
         )
+
+class IsOwnerOrReadOnly(IsAuthenticated):
+    """
+    Ainul Enterprise Engine — Object-level permission.
+
+    SAFE methods (GET, HEAD, OPTIONS) are allowed for any authenticated user.
+    Write methods (POST, PUT, PATCH, DELETE) require the user to own the object.
+
+    Used by: WebhookFilterViewSet, WebhookTemplateViewSet, WebhookBatchViewSet,
+             WebhookSecretViewSet, WebhookHealthViewSet, WebhookReplayViewSet,
+             InboundWebhookViewSet, InboundWebhookLogViewSet,
+             WebhookAnalyticsViewSet, AdminWebhookViewSet.
+
+    FIX: Was imported by 10 viewsets but never defined — caused ImportError at startup.
+    """
+
+    message = "You must be the owner to perform this action."
+
+    def has_object_permission(self, request, view, obj):
+        from rest_framework.permissions import SAFE_METHODS
+        if request.method in SAFE_METHODS:
+            return True
+        owner = (
+            getattr(obj, "owner", None)
+            or getattr(obj, "created_by", None)
+            or getattr(getattr(obj, "endpoint", None), "owner", None)
+        )
+        return owner is not None and owner == request.user
+
+
+class IsSuperUser(IsAuthenticated):
+    """
+    Ainul Enterprise Engine — Permits only superusers.
+
+    Used by AdminWebhookViewSet for destructive / privileged operations.
+
+    FIX: Was imported by AdminWebhookViewSet but never defined.
+    """
+
+    message = "Only superusers can perform this action."
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and request.user.is_superuser
+        )

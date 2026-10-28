@@ -121,9 +121,6 @@ def offerwall_offers_view(request):
         offset=int(request.query_params.get('offset', 0)),
     )
     return Response(data)
-
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def offerwall_categories_view(request):
     """GET /api/promotions/offerwall/categories/"""

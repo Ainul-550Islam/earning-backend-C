@@ -67,6 +67,14 @@ class WalletConfig(AppConfig):
         # via: from api.wallet.plugins import plugin_registry
         # plugin_registry.register(MyPlugin())
 
+        # ── 8. KB (Knowledge Base) rule signals ──────────────
+        try:
+            from api.wallet.signals_kb import connect_kb_signals
+            connect_kb_signals()
+        except Exception as e:
+            import logging
+            logging.getLogger("wallet.apps").warning(f"signals_kb: {e}")
+
         import logging
         logging.getLogger("wallet.apps").info(
             "WalletConfig.ready() — signals, events, receivers, registry, hooks all connected"

@@ -36,6 +36,7 @@ class GoogleAdManagerConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_gam_configs"
         verbose_name = _("Google Ad Manager Config")
         unique_together = [["publisher"]]

@@ -15,7 +15,7 @@ class CSVExcelImportService:
         CSV format: key,value (or key,source,translated for context)
         """
         try:
-            from ..models.core import Translation, TranslationKey, Language
+            from api.localization.models.core import Translation, TranslationKey, Language
             lang = Language.objects.filter(code=language_code, is_active=True).first()
             if not lang:
                 return {"success": False, "error": f"Language {language_code} not found"}
@@ -59,7 +59,7 @@ class CSVExcelImportService:
     def export_csv(self, language_code: str, include_source: bool = True) -> str:
         """Translator-friendly CSV export।"""
         try:
-            from ..models.core import Translation, Language
+            from api.localization.models.core import Translation, Language
             lang = Language.objects.filter(code=language_code).first()
             default_lang = Language.objects.filter(is_default=True).first()
             if not lang:

@@ -34,7 +34,7 @@ class PublisherTierService:
         Evaluate publisher traffic quality and assign tier.
         Called weekly by Celery task.
         """
-        from ...models import Click
+        from api.smartlink.models import Click
         from ...services.antifraud.ClickQualityScore import ClickQualityScore
 
         quality_svc = ClickQualityScore()
@@ -78,7 +78,7 @@ class PublisherTierService:
     def get_tier(self, publisher) -> str:
         """Get publisher's current tier."""
         try:
-            from ...models.extensions.smartlink_schedule import PublisherTier
+            from api.smartlink.models.extensions.smartlink_schedule import PublisherTier
             return PublisherTier.objects.get(publisher=publisher).tier
         except Exception:
             return 'standard'
@@ -90,7 +90,7 @@ class PublisherTierService:
 
     def _update_tier(self, publisher, tier: str, quality_score: float):
         """Update publisher tier record."""
-        from ...models.extensions.smartlink_schedule import PublisherTier
+        from api.smartlink.models.extensions.smartlink_schedule import PublisherTier
         benefits = self.TIER_BENEFITS[tier]
         now      = timezone.now()
         next_eval = now + datetime.timedelta(days=7)

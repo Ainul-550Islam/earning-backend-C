@@ -1,3 +1,4 @@
+from decimal import Decimal
 # api/offer_inventory/utils.py
 import hashlib
 import secrets

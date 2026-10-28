@@ -30,6 +30,7 @@ from .choices import (
     MessageType,
     BroadcastStatus,
     BroadcastAudienceType,
+    AuditAction,
     SupportThreadStatus,
     SupportThreadPriority,
     InboxItemType,
@@ -208,6 +209,12 @@ class InternalChat(TimestampedModel):
         indexes = [
             models.Index(fields=["status", "last_message_at"], name="msg_ic_status_lma_idx"),
             models.Index(fields=["created_by", "status"], name="msg_ic_creator_status_idx"),
+        ]
+        constraints = [
+            CheckConstraint(
+                check=Q(max_participants__gte=1),
+                name="msg_ic_max_participants_positive",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -450,6 +457,19 @@ class ChatMessage(TimestampedModel):
         null=True, blank=True,
         verbose_name=_("Call Log Data"),
         help_text=_("{call_id, type, status, duration_seconds, caller_id}"),
+    )
+    # Part 20 (world-system audit): interactive components attached to this
+    # message — buttons / select menus, Block-Kit-style. Populated from
+    # BotConfig.response_blocks by services.render_interactive_blocks();
+    # clicks are recorded via BotInteraction (see below) and dispatched
+    # through POST /messaging/bots/interact/.
+    interactive_blocks = models.JSONField(
+        default=list, blank=True,
+        verbose_name=_("Interactive Blocks"),
+        help_text=_(
+            "[{type: 'button', action_id, label, value, style}] "
+            "buttons/menus attached to this message, if any."
+        ),
     )
     # E2E encryption
     encrypted_content = models.BinaryField(
@@ -854,6 +874,20 @@ class SupportThread(TimestampedModel):
         )
         logger.info("SupportThread %s: %s → %s (agent=%s)", self.id, old, new_status, getattr(agent, "pk", "system"))
 
+        # Audit fix (Part 19): support_thread_status_changed had a real
+        # @receiver (on_support_thread_status_changed, dispatches a
+        # support.closed/support.opened webhook event) but nothing ever
+        # called .send() on it. transition_to() is called directly from
+        # 4 places (consumers.py, services.py, viewsets.py, admin.py) -
+        # firing it here, once, is the only way every caller is covered
+        # instead of only whichever call site happened to remember to.
+        # Local import matches this module's established pattern of
+        # never importing signals/services at module level from models.py.
+        from .signals import support_thread_status_changed
+        support_thread_status_changed.send(
+            sender=SupportThread, thread=self, old_status=old, new_status=new_status,
+        )
+
 
 # ---------------------------------------------------------------------------
 # SupportMessage  (EXISTING — unchanged)
@@ -935,6 +969,7 @@ class UserInbox(TimestampedModel):
     class Meta(TimestampedModel.Meta):
         verbose_name = _("User Inbox Item")
         verbose_name_plural = _("User Inbox Items")
+        ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["user", "is_read", "created_at"], name="msg_ui_user_read_created_idx"),
             models.Index(fields=["user", "item_type", "created_at"], name="msg_ui_user_type_created_idx"),
@@ -1108,6 +1143,7 @@ class UserPresence(TimestampedModel):
     class Meta(TimestampedModel.Meta):
         verbose_name = _("User Presence")
         verbose_name_plural = _("User Presences")
+        ordering = ["-last_seen_at"]
         indexes = [
             models.Index(fields=["status", "last_seen_at"], name="msg_up_status_lastseen_idx"),
         ]
@@ -1311,6 +1347,12 @@ class ChannelMember(TimestampedModel):
         constraints = [
             UniqueConstraint(fields=["channel", "user"], name="msg_cm_unique_channel_user"),
         ]
+        indexes = [
+            # Index for "all channels I'm in" query pattern
+            models.Index(fields=["user", "joined_at"], name="msg_cm_user_joined_idx"),
+            # Index for "all members of this channel" query pattern
+            models.Index(fields=["channel"], name="msg_cm_channel_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.user_id} in channel {self.channel_id}"
@@ -1341,6 +1383,7 @@ class ScheduledMessage(TimestampedModel):
         max_length=10,
         choices=MessageType.choices,
         default=MessageType.TEXT,
+        db_index=True,
         verbose_name=_("Message Type"),
     )
     attachments = models.JSONField(default=list, blank=True, verbose_name=_("Attachments"))
@@ -1417,6 +1460,12 @@ class MessagePin(TimestampedModel):
             UniqueConstraint(fields=["chat", "message"], name="msg_mp_unique_chat_message"),
         ]
         ordering = ["-pinned_at"]
+        indexes = [
+            # Index for "all pins in a chat, ordered by time" — most common list query
+            models.Index(fields=["chat", "pinned_at"], name="msg_mp_chat_pinnedat_idx"),
+            # Index for "who pinned" queries (admin/audit)
+            models.Index(fields=["pinned_by", "pinned_at"], name="msg_mp_pinnedby_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"Pinned msg {self.message_id} in chat {self.chat_id}"
@@ -1463,6 +1512,12 @@ class PollVote(TimestampedModel):
                 fields=["message", "user", "option_id"],
                 name="msg_pv_unique_msg_user_opt",
             ),
+        ]
+        indexes = [
+            # Index for "all votes on a poll" — tally queries
+            models.Index(fields=["message", "option_id"], name="msg_pv_msg_option_idx"),
+            # Index for "did this user vote?" — per-user check
+            models.Index(fields=["user", "message"], name="msg_pv_user_msg_idx"),
         ]
 
     def __str__(self) -> str:
@@ -1522,6 +1577,35 @@ class BotConfig(TimestampedModel):
         related_name="created_bots",
         verbose_name=_("Created By"),
     )
+    # Part 20 (world-system audit): trigger_value doubles as the command
+    # name when trigger_type=SLASH_COMMAND (e.g. "offer", matched against
+    # a leading "/offer ..." in message content). command_args_schema
+    # documents the expected positional args so callers/admins know what
+    # to pass; it is descriptive only — process_bot_triggers() does a
+    # plain whitespace split and does not enforce types.
+    command_args_schema = models.JSONField(
+        default=list, blank=True,
+        verbose_name=_("Slash-Command Argument Schema"),
+        help_text=_(
+            "Only used when trigger_type=SLASH_COMMAND. "
+            "e.g. [{\"name\": \"offer_id\", \"required\": true}]."
+        ),
+    )
+    # Structured interactive components (buttons / select menus) to attach
+    # to this bot's response message, Block-Kit-style. Rendered onto
+    # ChatMessage.interactive_blocks by services.render_interactive_blocks(),
+    # which also substitutes the same {user_name}/{chat_name}/{args[N]}
+    # placeholders used in response_template. Leave empty for a plain-text
+    # bot reply (fully backward compatible with pre-Part-20 bots).
+    response_blocks = models.JSONField(
+        default=list, blank=True,
+        verbose_name=_("Response Interactive Blocks"),
+        help_text=_(
+            "[{type: 'button', action_id, label, value, style}] rendered "
+            "onto the bot's reply message. Supports the same placeholders "
+            "as response_template."
+        ),
+    )
 
     class Meta(TimestampedModel.Meta):
         verbose_name = _("Bot Config")
@@ -1566,9 +1650,88 @@ class BotResponse(TimestampedModel):
     class Meta(TimestampedModel.Meta):
         verbose_name = _("Bot Response")
         verbose_name_plural = _("Bot Responses")
+        indexes = [
+            # Index for "all responses for this bot" — most common query
+            models.Index(fields=["bot", "created_at"], name="msg_br_bot_created_idx"),
+            # Index for "recent responses tied to a trigger message" — admin monitoring
+            models.Index(fields=["trigger_message", "created_at"], name="msg_br_trigmsg_created_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"BotResponse bot={self.bot_id} success={self.was_successful}"
+
+
+# ---------------------------------------------------------------------------
+# BotInteraction  (Part 20 — world-system audit: interactive components)
+# ---------------------------------------------------------------------------
+#
+# Records a user clicking a button / picking a select-menu option that a
+# bot attached to one of its messages (ChatMessage.interactive_blocks).
+# This is what turns BotConfig from a one-shot auto-reply into something
+# with the same click -> record -> react shape as Slack/Discord/Teams
+# interactive components. One row per click; a user re-clicking the same
+# action on the same message updates the existing row rather than
+# accumulating duplicates (see services.process_bot_interaction).
+
+class BotInteraction(TimestampedModel):
+    source_message = models.ForeignKey(
+        ChatMessage,
+        on_delete=models.CASCADE,
+        related_name="bot_interactions",
+        verbose_name=_("Source Message"),
+        help_text=_("The bot message whose interactive_blocks was clicked."),
+    )
+    bot = models.ForeignKey(
+        BotConfig,
+        on_delete=models.CASCADE,
+        related_name="interactions",
+        verbose_name=_("Bot"),
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="bot_interactions",
+        verbose_name=_("User"),
+        help_text=_("Who clicked/selected the component."),
+    )
+    action_id = models.CharField(
+        max_length=100,
+        verbose_name=_("Action ID"),
+        help_text=_("Matches the action_id of the clicked block in interactive_blocks."),
+    )
+    value = models.CharField(
+        max_length=500, blank=True, default="",
+        verbose_name=_("Value"),
+        help_text=_("The value carried by the clicked block, if any."),
+    )
+    resulting_message = models.ForeignKey(
+        ChatMessage,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="bot_interaction_results",
+        verbose_name=_("Resulting Message"),
+        help_text=_("Follow-up bot message sent in reaction to this click, if any."),
+    )
+
+    class Meta(TimestampedModel.Meta):
+        verbose_name = _("Bot Interaction")
+        verbose_name_plural = _("Bot Interactions")
+        indexes = [
+            models.Index(fields=["source_message", "action_id"], name="msg_bi_msg_action_idx"),
+            models.Index(fields=["bot", "created_at"], name="msg_bi_bot_created_idx"),
+        ]
+        constraints = [
+            # One click record per (user, message, action_id) — re-clicking
+            # updates value/resulting_message rather than piling up rows,
+            # matching how PollVote treats a re-vote as an update.
+            UniqueConstraint(
+                fields=["source_message", "action_id", "user"],
+                name="msg_bi_unique_user_action",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"BotInteraction user={self.user_id} action={self.action_id!r} msg={self.source_message_id}"
 
 
 # ---------------------------------------------------------------------------
@@ -1657,6 +1820,12 @@ class WebhookDelivery(TimestampedModel):
             models.Index(fields=["webhook", "is_successful"], name="msg_wd_wh_success_idx"),
             models.Index(fields=["next_retry_at", "is_successful"], name="msg_wd_retry_idx"),
         ]
+        constraints = [
+            CheckConstraint(
+                check=Q(attempt_count__gte=1),
+                name="msg_wd_attempt_count_positive",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Delivery {self.event_type} to {self.webhook_id} status={self.response_status}"
@@ -1739,6 +1908,12 @@ class UserBlock(TimestampedModel):
         verbose_name_plural = _("User Blocks")
         constraints = [
             UniqueConstraint(fields=["blocker", "blocked"], name="msg_ub_unique_blocker_blocked"),
+        ]
+        indexes = [
+            # Index for "all users this user has blocked" — blocklist view
+            models.Index(fields=["blocker", "created_at"], name="msg_ub_blocker_created_idx"),
+            # Index for "has this user been blocked by anyone" — reverse lookup
+            models.Index(fields=["blocked"], name="msg_ub_blocked_idx"),
         ]
 
     def __str__(self) -> str:
@@ -1861,6 +2036,12 @@ class MessageEditHistory(TimestampedModel):
         indexes = [
             models.Index(fields=["message", "created_at"], name="msg_meh_msg_created_idx"),
         ]
+        constraints = [
+            CheckConstraint(
+                check=Q(edit_number__gte=1),
+                name="msg_meh_edit_number_positive",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Edit #{self.edit_number} of msg {self.message_id} by {self.edited_by_id}"
@@ -1917,6 +2098,10 @@ class DisappearingMessageConfig(TimestampedModel):
     class Meta(TimestampedModel.Meta):
         verbose_name = _("Disappearing Message Config")
         verbose_name_plural = _("Disappearing Message Configs")
+        indexes = [
+            models.Index(fields=["chat", "is_enabled"], name="msg_disapp_chat_enabled_idx"),
+            models.Index(fields=["enabled_by"], name="msg_disapp_enabledby_idx"),
+        ]
 
     def __str__(self) -> str:
         status = "ON" if self.is_enabled else "OFF"
@@ -2059,6 +2244,13 @@ class UserStory(TimestampedModel):
             models.Index(fields=["user", "is_active", "expires_at"], name="msg_us_user_active_exp_idx"),
             models.Index(fields=["expires_at", "is_active"], name="msg_us_exp_active_idx"),
         ]
+        # No CheckConstraint on expires_at > created_at: tests legitimately
+        # construct already-expired stories (expires_at at/before "now",
+        # which is also when auto_now_add sets created_at) specifically to
+        # exercise the is_expired property - confirmed by
+        # TestUserStoryIsExpired.test_past_expiry_is_expired and
+        # test_expiry_exactly_now_is_expired both failing immediately
+        # against this constraint.
 
     def __str__(self) -> str:
         return f"Story [{self.story_type}] by {self.user_id} expires={self.expires_at}"
@@ -2115,6 +2307,12 @@ class StoryView(TimestampedModel):
             UniqueConstraint(fields=["story", "viewer"], name="msg_sv_unique_story_viewer"),
         ]
         ordering = ["-viewed_at"]
+        indexes = [
+            # Index for "view count for a story" — viewer list by time
+            models.Index(fields=["story", "viewed_at"], name="msg_sv_story_viewedat_idx"),
+            # Index for "all stories this user has seen" — for hiding seen stories
+            models.Index(fields=["viewer", "viewed_at"], name="msg_sv_viewer_viewedat_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.viewer_id} viewed story {self.story_id}"
@@ -2157,6 +2355,10 @@ class StoryHighlight(TimestampedModel):
         verbose_name = _("Story Highlight")
         verbose_name_plural = _("Story Highlights")
         ordering = ["order", "created_at"]
+        indexes = [
+            models.Index(fields=["user", "order"], name="msg_highlight_user_order_idx"),
+            models.Index(fields=["user", "created_at"], name="msg_highlight_user_created_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"Highlight: {self.title} by {self.user_id}"
@@ -2223,6 +2425,16 @@ class VoiceMessageTranscription(TimestampedModel):
     class Meta(TimestampedModel.Meta):
         verbose_name = _("Voice Message Transcription")
         verbose_name_plural = _("Voice Message Transcriptions")
+        indexes = [
+            models.Index(fields=["message"], name="msg_voicetrans_message_idx"),
+            models.Index(fields=["language", "is_processing"], name="msg_voicetrans_lang_proc_idx"),
+        ]
+        constraints = [
+            CheckConstraint(
+                check=Q(confidence__gte=0.0) & Q(confidence__lte=1.0),
+                name="msg_voicetrans_confidence_range",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Transcription of msg {self.message_id} ({self.duration_seconds:.1f}s)"
@@ -2354,6 +2566,10 @@ class MessageLinkPreview(TimestampedModel):
         ordering = ["position"]
         constraints = [
             UniqueConstraint(fields=["message", "preview"], name="msg_mlp_unique_msg_preview"),
+        ]
+        indexes = [
+            # Index for "all previews in a message" — ordered display
+            models.Index(fields=["message", "position"], name="msg_mlp_msg_position_idx"),
         ]
 
     def __str__(self) -> str:
@@ -2512,6 +2728,12 @@ class MediaAttachment(TimestampedModel):
             models.Index(fields=["message", "status"], name="msg_ma_message_status_idx"),
             models.Index(fields=["mimetype", "status"], name="msg_ma_mime_status_idx"),
         ]
+        constraints = [
+            CheckConstraint(
+                check=Q(nsfw_score__gte=0.0) & Q(nsfw_score__lte=1.0),
+                name="msg_ma_nsfw_score_range",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Media: {self.original_filename} [{self.status}] by {self.uploaded_by_id}"
@@ -2655,6 +2877,13 @@ class UserDevice(TimestampedModel):
     Tracks login history, trusted status, and suspicious activity.
     Separate from DeviceToken (which is just push token).
     """
+    PLATFORM_CHOICES = (
+        ("android", "Android"),
+        ("ios", "iOS"),
+        ("web", "Web"),
+        ("desktop", "Desktop"),
+    )
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -2675,6 +2904,7 @@ class UserDevice(TimestampedModel):
     )
     platform = models.CharField(
         max_length=20,
+        choices=PLATFORM_CHOICES,
         verbose_name=_("Platform"),
         help_text=_("android, ios, web, desktop"),
     )
@@ -2746,6 +2976,17 @@ class UserDevice(TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.device_name or self.device_id} ({self.platform}) — {self.user_id}"
+
+    def clean(self) -> None:
+        errors: dict = {}
+        if not self.device_id or not self.device_id.strip():
+            errors.setdefault("device_id", []).append(_("device_id must not be empty."))
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -2891,7 +3132,8 @@ class CPANotification(TimestampedModel):
     )
     priority = models.CharField(
         max_length=10,
-        default="NORMAL",
+        choices=NotificationPriority.choices,
+        default=NotificationPriority.NORMAL,
         verbose_name=_("Priority"),
     )
     # Reference to the business object that triggered this notification
@@ -2955,6 +3197,7 @@ class CPANotification(TimestampedModel):
     class Meta(TimestampedModel.Meta):
         verbose_name = _("CPA Notification")
         verbose_name_plural = _("CPA Notifications")
+        ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["recipient", "is_read", "created_at"],   name="msg_cpan_rcpt_read_idx"),
             models.Index(fields=["recipient", "notification_type"],        name="msg_cpan_rcpt_type_idx"),
@@ -2991,6 +3234,7 @@ class MessageTemplate(TimestampedModel):
     )
     category = models.CharField(
         max_length=15,
+        choices=MessageTemplateCategory.choices,
         default="custom",
         verbose_name=_("Category"),
     )
@@ -3027,6 +3271,11 @@ class MessageTemplate(TimestampedModel):
         verbose_name = _("Message Template")
         verbose_name_plural = _("Message Templates")
         ordering = ["-usage_count", "name"]
+        indexes = [
+            models.Index(fields=["category", "is_active"], name="msg_template_cat_active_idx"),
+            models.Index(fields=["created_by", "category"], name="msg_template_creator_idx"),
+            models.Index(fields=["usage_count"], name="msg_template_usage_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"Template: {self.name} [{self.category}]"
@@ -3035,6 +3284,11 @@ class MessageTemplate(TimestampedModel):
         """
         Render template with context variables.
         Returns (rendered_subject, rendered_body).
+
+        Pure rendering — no side effects. Callers that represent an actual
+        "use" of the template (e.g. send_to_user) are responsible for
+        calling the dedicated, atomic increment_template_usage() service
+        function themselves. Preview calls must NOT count as usage.
         """
         subject = self.subject
         body    = self.body
@@ -3042,8 +3296,6 @@ class MessageTemplate(TimestampedModel):
             placeholder = "{" + key + "}"
             subject = subject.replace(placeholder, str(value))
             body    = body.replace(placeholder, str(value))
-        # Increment usage count
-        MessageTemplate.objects.filter(pk=self.pk).update(usage_count=self.usage_count + 1)
         return subject, body
 
 
@@ -3109,7 +3361,8 @@ class CPABroadcast(TimestampedModel):
     # Status
     status = models.CharField(
         max_length=15,
-        default="DRAFT",
+        choices=BroadcastStatus.choices,
+        default=BroadcastStatus.DRAFT,
         db_index=True,
         verbose_name=_("Status"),
     )
@@ -3134,6 +3387,16 @@ class CPABroadcast(TimestampedModel):
         indexes = [
             models.Index(fields=["status", "scheduled_at"], name="msg_cpab_status_sched_idx"),
         ]
+        # No CheckConstraint on recipient/delivered/opened/clicked ordering:
+        # tried adding delivered<=recipient, opened<=delivered, clicked<=opened
+        # here, but track_broadcast_open()/track_broadcast_click() in
+        # services_cpa.py update opened_count/clicked_count purely from
+        # NotificationRead records, independent of delivered_count, and
+        # send_cpa_broadcast_task() raises delivered_count without ever
+        # touching recipient_count. None of the three orderings are actual
+        # invariants this codebase maintains - a DB constraint would have
+        # rejected real, legitimate writes (confirmed by two existing tests
+        # failing immediately: test_track_broadcast_open/click).
 
     def __str__(self) -> str:
         return f"CPABroadcast: {self.title[:60]} [{self.status}]"
@@ -3180,6 +3443,10 @@ class NotificationRead(TimestampedModel):
         verbose_name_plural = _("Notification Reads")
         constraints = [
             UniqueConstraint(fields=["broadcast", "user"], name="msg_nr_unique_broadcast_user"),
+        ]
+        indexes = [
+            # Index for "all broadcasts a user has seen" — deduplication
+            models.Index(fields=["user", "created_at"], name="msg_nr_user_created_idx"),
         ]
 
     def __str__(self) -> str:
@@ -3262,3 +3529,146 @@ class AffiliateConversationThread(TimestampedModel):
 
     def __str__(self) -> str:
         return f"Thread: affiliate={self.affiliate_id} ↔ manager={self.manager_id}"
+
+# ===========================================================================
+# Part 21 (world-system audit): Compliance Audit Trail & Retention
+# ===========================================================================
+#
+# Closes the second gap from the original world-system comparison (the
+# first, interactive bot components, was Part 20): before this, "retention"
+# meant a hardcoded 90-day cleanup_chats cron and a soft is_archived flag -
+# no record of who accessed/exported/deleted what, no way to stop a
+# specific chat or user's data from being purged while it's relevant to a
+# dispute or investigation, no per-tenant control over how long data is
+# kept. Enterprise world-system platforms (Slack/Teams/enterprise Twilio)
+# have all three; this module now does too.
+
+class AuditLogEntry(TimestampedModel):
+    """Append-only record of a compliance-relevant action. Nothing in this
+    app updates or deletes an AuditLogEntry after creation (there's no
+    service function to do so, by design) - an audit trail that can be
+    edited isn't one.
+
+    target_id is stored as a string (not a real FK) deliberately: the
+    whole point of an audit trail is that it survives the target being
+    deleted - a CASCADE or SET_NULL FK would either block the delete this
+    log exists to record, or silently lose which object it referred to.
+    """
+    actor = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="audit_log_entries",
+        verbose_name=_("Actor"),
+        help_text=_("Who performed the action. Null for system/automated actions (e.g. cleanup_chats)."),
+    )
+    action = models.CharField(
+        max_length=30, choices=AuditAction.choices,
+        verbose_name=_("Action"),
+    )
+    target_type = models.CharField(
+        max_length=50,
+        verbose_name=_("Target Type"),
+        help_text=_("Model name of the object acted on, e.g. 'ChatMessage', 'InternalChat', 'User'."),
+    )
+    target_id = models.CharField(
+        max_length=64,
+        verbose_name=_("Target ID"),
+        help_text=_("String form of the target's PK - stored as text so the log survives the target's deletion."),
+    )
+    metadata = models.JSONField(
+        default=dict, blank=True,
+        verbose_name=_("Metadata"),
+        help_text=_("Extra context, e.g. {'reason': ..., 'export_format': 'json', 'message_count': 42}."),
+    )
+
+    class Meta(TimestampedModel.Meta):
+        verbose_name = _("Audit Log Entry")
+        verbose_name_plural = _("Audit Log Entries")
+        indexes = [
+            models.Index(fields=["target_type", "target_id"], name="msg_ale_target_idx"),
+            models.Index(fields=["actor", "created_at"],       name="msg_ale_actor_created_idx"),
+            models.Index(fields=["action", "created_at"],      name="msg_ale_action_created_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"AuditLog: {self.action} on {self.target_type}={self.target_id} by actor={self.actor_id}"
+
+
+class RetentionPolicy(TimestampedModel):
+    """One row per tenant. chat_message_retention_days=None means
+    unlimited (no auto-expiry) - the safe default, so a tenant with no
+    explicit policy never has data silently start disappearing.
+    """
+    chat_message_retention_days = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name=_("Chat Message Retention (days)"),
+        help_text=_("Messages older than this are eligible for cleanup. Blank = unlimited (no auto-expiry)."),
+    )
+    updated_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="updated_retention_policies",
+        verbose_name=_("Last Updated By"),
+    )
+
+    class Meta(TimestampedModel.Meta):
+        verbose_name = _("Retention Policy")
+        verbose_name_plural = _("Retention Policies")
+        constraints = [
+            UniqueConstraint(fields=["tenant"], name="msg_rp_unique_tenant"),
+        ]
+
+    def __str__(self) -> str:
+        days = self.chat_message_retention_days
+        return f"RetentionPolicy: tenant={self.tenant_id} days={days if days is not None else 'unlimited'}"
+
+
+class LegalHold(TimestampedModel):
+    """Blocks cleanup_chats from deleting a specific chat and/or a
+    specific user's data while it's under hold, regardless of retention
+    policy or the chat's own soft-delete status. At least one of
+    chat/user must be set - enforced in services.apply_legal_hold(),
+    not as a DB CheckConstraint, matching how this codebase validates
+    elsewhere (service-layer raise, not DB-level constraints, for
+    business-rule checks as opposed to data-integrity ones).
+    """
+    chat = models.ForeignKey(
+        "InternalChat", on_delete=models.CASCADE, null=True, blank=True,
+        related_name="legal_holds",
+        verbose_name=_("Chat"),
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True,
+        related_name="legal_holds",
+        verbose_name=_("User"),
+        help_text=_("If set, ALL of this user's chats/messages are protected, not just one chat."),
+    )
+    reason = models.TextField(verbose_name=_("Reason"))
+    applied_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True,
+        related_name="legal_holds_applied",
+        verbose_name=_("Applied By"),
+    )
+    is_active = models.BooleanField(default=True, verbose_name=_("Is Active"))
+    released_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Released At"))
+    released_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="legal_holds_released",
+        verbose_name=_("Released By"),
+    )
+
+    class Meta(TimestampedModel.Meta):
+        verbose_name = _("Legal Hold")
+        verbose_name_plural = _("Legal Holds")
+        indexes = [
+            models.Index(fields=["chat", "is_active"], name="msg_lh_chat_active_idx"),
+            models.Index(fields=["user", "is_active"], name="msg_lh_user_active_idx"),
+        ]
+        constraints = [
+            CheckConstraint(
+                check=Q(is_active=True) | Q(released_at__isnull=False),
+                name="msg_lh_released_hold_has_timestamp",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        target = f"chat={self.chat_id}" if self.chat_id else f"user={self.user_id}"
+        return f"LegalHold({target}, active={self.is_active})"

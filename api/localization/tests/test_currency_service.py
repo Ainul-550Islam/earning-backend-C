@@ -12,14 +12,14 @@ class CurrencyFormatServiceTest(TestCase):
         self.currency = make_currency(code='TCF', name='Test Format Currency', symbol='T$')
 
     def test_format_amount_basic(self):
-        from localization.services.currency.CurrencyFormatService import CurrencyFormatService
+        from api.localization.services.currency.CurrencyFormatService import CurrencyFormatService
         service = CurrencyFormatService()
         # Without a CurrencyFormat object, falls back to currency.format_amount
         result = service.format(Decimal('1234.56'), 'TCF', 'te-cf')
         self.assertIsNotNone(result)
 
     def test_currency_parse(self):
-        from localization.services.currency.CurrencyFormatService import CurrencyFormatService
+        from api.localization.services.currency.CurrencyFormatService import CurrencyFormatService
         service = CurrencyFormatService()
         result = service.parse('$1,234.56', 'USD')
         self.assertEqual(result, Decimal('1234.56'))
@@ -27,7 +27,7 @@ class CurrencyFormatServiceTest(TestCase):
 
 class ExchangeRateServiceTest(TestCase):
     def test_convert_same_currency(self):
-        from localization.services.currency.ExchangeRateService import ExchangeRateService
+        from api.localization.services.currency.ExchangeRateService import ExchangeRateService
         service = ExchangeRateService()
         result = service.convert(Decimal('100'), 'USD', 'USD')
         self.assertIsNotNone(result)

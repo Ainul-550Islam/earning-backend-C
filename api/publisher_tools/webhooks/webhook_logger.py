@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from django.db.models import Count, Sum, Avg, Q
 from django.utils import timezone
 import logging
+from api.publisher_tools.models import WebhookDeliveryLog
 
 logger = logging.getLogger(__name__)
 

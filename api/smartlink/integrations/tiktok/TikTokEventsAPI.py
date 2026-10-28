@@ -4,6 +4,7 @@ Server-side conversion tracking for TikTok Ads.
 Publishers using TikTok traffic can track conversions automatically.
 """
 import hashlib
+from api.smartlink.integrations.base import IntegrationBase
 import logging
 import threading
 import requests
@@ -13,7 +14,10 @@ from django.conf import settings
 logger = logging.getLogger('smartlink.integrations.tiktok')
 
 
-class TikTokEventsAPI:
+class TikTokEventsAPI(IntegrationBase):
+    integration_name = "TikTok"
+    default_timeout  = 10
+
     """
     TikTok Events API (server-side pixel) integration.
     Fires Click and CompletePayment events for TikTok campaign optimization.

@@ -5,6 +5,8 @@ No DB writes here. Only SELECT.
 """
 from django.db.models import QuerySet
 from typing import Optional
+from api.kyc.models import KYC
+from api.kyc.models import KYCSubmission
 
 
 def get_kyc_for_user(user) -> Optional['KYC']:

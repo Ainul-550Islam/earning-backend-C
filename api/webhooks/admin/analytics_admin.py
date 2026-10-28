@@ -155,7 +155,7 @@ class WebhookAnalyticsAdmin(admin.ModelAdmin):
             writer.writerow(['Endpoint', 'Date', 'Total Sent', 'Success Count', 'Failed Count', 'Success Rate (%)', 'Avg Latency (ms)'])
             for analytics in queryset:
                 writer.writerow([
-                    analytics.endpoint.label or analytics.endpoint.url,
+                    analytics.endpoint.label or analytics.endpoint.target_url,
                     analytics.date, analytics.total_sent, analytics.success_count, analytics.failed_count,
                     (analytics.success_count / analytics.total_sent * 100) if analytics.total_sent > 0 else 0,
                     analytics.avg_latency_ms or 0
@@ -224,9 +224,9 @@ class WebhookHealthLogAdmin(admin.ModelAdmin):
             try:
                 health = service.check_endpoint_health(log.endpoint)
                 status = 'Healthy' if health['is_healthy'] else 'Unhealthy'
-                results.append(f"{log.endpoint.label or log.endpoint.url}: {status}")
+                results.append(f"{log.endpoint.label or log.endpoint.target_url}: {status}")
             except Exception as e:
-                results.append(f"{log.endpoint.label or log.endpoint.url}: Error - {str(e)}")
+                results.append(f"{log.endpoint.label or log.endpoint.target_url}: Error - {str(e)}")
         self.message_user(request, f"Health check results: {'; '.join(results)}")
     check_health.short_description = 'Check health for selected endpoints'
 

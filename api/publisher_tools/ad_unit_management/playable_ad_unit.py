@@ -23,6 +23,7 @@ class PlayableAdConfig(TimeStampedModel):
     supported_formats  = models.JSONField(default=list, blank=True, help_text="['html5','unity','construct']")
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_playable_ad_configs"
         verbose_name = _("Playable Ad Config")
 

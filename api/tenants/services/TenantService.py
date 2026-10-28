@@ -4,6 +4,7 @@ Tenant Service
 This service handles core tenant operations including creation,
 updates, deletion, and business logic for tenant management.
 """
+from django.db import models
 
 import uuid
 from datetime import timedelta

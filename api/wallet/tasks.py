@@ -1,3 +1,4 @@
+from django.db import models
 import time
 # wallet/tasks.py
 from celery import shared_task
@@ -12,6 +13,7 @@ from decimal import Decimal, InvalidOperation
 
 from .models import Wallet, WalletTransaction, UserPaymentMethod, Withdrawal
 from .serializers import get_safe_value, CircuitBreaker
+from api.wallet.models_webhook import WalletWebhookLog
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

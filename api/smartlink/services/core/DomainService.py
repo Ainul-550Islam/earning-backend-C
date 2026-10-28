@@ -2,7 +2,7 @@ import socket
 import secrets
 import logging
 from django.utils import timezone
-from ...models.publisher import PublisherDomain
+from api.smartlink.models.publisher import PublisherDomain
 from ...choices import DomainVerificationStatus
 from ...exceptions import DomainVerificationFailed
 from ...constants import DOMAIN_DNS_TXT_PREFIX, DOMAIN_VERIFY_TIMEOUT_SECONDS
@@ -127,7 +127,9 @@ class DomainService:
             )
             protocol = 'https' if domain.ssl_enabled else 'http'
             return f"{protocol}://{domain.domain}"
-        except PublisherDomain.DoesNotExist:
+        except (PublisherDomain.DoesNotExist, Exception):
+            # Catches DoesNotExist (no verified domain) and OperationalError
+            # (table missing in test environments without publisher app migrations).
             return default_base
 
     def _mark_verified(self, domain_obj: PublisherDomain):

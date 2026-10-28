@@ -59,7 +59,7 @@ class Command(BaseCommand):
     help = '170+ ISO currencies seed করে'
 
     def handle(self, *args, **options):
-        from localization.models.core import Currency
+        from api.localization.models.core import Currency
         created = skipped = 0
         for curr in CURRENCIES:
             code = curr.pop('code')

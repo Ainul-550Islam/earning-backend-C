@@ -31,19 +31,21 @@ class ClickDeduplicationServiceTest(TestCase):
         self.assertTrue(is_dup)
 
     @patch('django.core.cache.cache.get', return_value=None)
-    @patch('smartlink.models.UniqueClick.objects.filter')
+    @patch('api.smartlink.models.click.UniqueClick.objects.filter')
     def test_db_miss_returns_not_duplicate(self, mock_filter, mock_cache):
         mock_filter.return_value.filter.return_value.exists.return_value = False
         mock_filter.return_value.exists.return_value = False
         is_dup = self.service.is_duplicate('5.5.5.5', 'UA', 1, self.sl.pk)
         self.assertFalse(is_dup)
 
-    @patch('django.core.cache.cache.get', return_value=None)
-    @patch('django.core.cache.cache.set')
-    def test_mark_seen_sets_cache(self, mock_set, mock_get):
-        click = ClickFactory(smartlink=self.sl)
-        try:
-            self.service.mark_seen('1.2.3.4', 'UA', 1, self.sl.pk, click)
-        except Exception:
-            pass
-        mock_set.assert_called()
+    def test_mark_seen_sets_cache(self):
+        """mark_seen must write the fingerprint to cache regardless of DB outcome."""
+        # Patch cache.set AND UniqueClick.objects.get_or_create to avoid FK constraint
+        from api.smartlink.models.click import UniqueClick
+        from unittest.mock import patch, MagicMock
+        mock_uc = MagicMock()
+        with patch('django.core.cache.cache.get', return_value=None), \
+             patch('django.core.cache.cache.set') as mock_set, \
+             patch.object(UniqueClick.objects, 'get_or_create', return_value=(mock_uc, True)):
+            self.service.mark_seen('1.2.3.4', 'UA', 1, self.sl.pk, None)
+            mock_set.assert_called()

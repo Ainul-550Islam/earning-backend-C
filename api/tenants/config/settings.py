@@ -4,6 +4,7 @@ Django Settings for Tenant Management System
 Production-ready settings with comprehensive configuration for
 multi-tenant SaaS application.
 """
+import sys
 
 import os
 from pathlib import Path

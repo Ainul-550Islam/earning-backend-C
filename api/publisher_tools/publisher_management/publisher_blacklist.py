@@ -1,6 +1,7 @@
 # api/publisher_tools/publisher_management/publisher_blacklist.py
 """Publisher Blacklist — Advertiser, content, domain, keyword blacklists।"""
 from django.db import models
+from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from core.models import TimeStampedModel
@@ -21,17 +22,18 @@ class PublisherBlacklistEntry(TimeStampedModel):
         ('ip_block',          _('IP Address Block')),
     ]
 
-    publisher   = models.ForeignKey('publisher_tools.Publisher', on_delete=models.CASCADE, related_name='blacklist_entries', db_index=True)
+    publisher   = models.ForeignKey('publisher_tools.Publisher', on_delete=models.CASCADE, related_name='blacklist_entry_records', db_index=True)
     list_type   = models.CharField(max_length=30, choices=LIST_TYPE_CHOICES, db_index=True)
     value       = models.CharField(max_length=500, verbose_name=_("Blocked / Allowed Value"))
     reason      = models.TextField(blank=True)
     is_active   = models.BooleanField(default=True, db_index=True)
     expires_at  = models.DateTimeField(null=True, blank=True)
-    created_by  = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    created_by  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     metadata    = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        db_table = 'publisher_tools_publisher_blacklists'
+        app_label = 'publisher_tools'
+        db_table = 'publisher_tools_publisher_blacklist_entries'
         verbose_name = _('Blacklist Entry')
         verbose_name_plural = _('Blacklist Entries')
         ordering = ['-created_at']
@@ -69,11 +71,12 @@ class GlobalBlacklist(TimeStampedModel):
     reason      = models.CharField(max_length=500)
     severity    = models.CharField(max_length=10, choices=[('low','Low'),('medium','Medium'),('high','High'),('critical','Critical')], default='medium')
     is_active   = models.BooleanField(default=True, db_index=True)
-    added_by    = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    added_by    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     expires_at  = models.DateTimeField(null=True, blank=True)
     source      = models.CharField(max_length=100, blank=True, help_text=_("Where this came from (IAS, DoubleVerify, manual, etc.)"))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_global_blacklists'
         verbose_name = _('Global Blacklist Entry')
         verbose_name_plural = _('Global Blacklist Entries')

@@ -223,6 +223,7 @@ class CPIManager:
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def cpi_postback_view(request, mmp_provider, campaign_id):
     """Receive install postback from AppsFlyer/Adjust."""
@@ -238,8 +239,6 @@ def cpi_postback_view(request, mmp_provider, campaign_id):
         return Response(result)
     return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_cpi_campaign_view(request):
     """Advertiser creates CPI campaign."""
@@ -260,9 +259,6 @@ def create_cpi_campaign_view(request):
     if 'error' in result:
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     return Response(result, status=status.HTTP_201_CREATED)
-
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def cpi_offers_view(request):
     """GET /api/promotions/cpi/offers/?country=US&platform=android"""

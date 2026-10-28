@@ -30,6 +30,7 @@ class PlacementMediationStrategy(TimeStampedModel):
     auto_optimize       = models.BooleanField(default=False)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_placement_mediation_strategies"
         verbose_name = _("Placement Mediation Strategy")
 

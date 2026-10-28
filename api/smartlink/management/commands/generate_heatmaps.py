@@ -11,7 +11,7 @@ class Command(BaseCommand):
         parser.add_argument('--smartlink-slug', type=str, help='Build only for specific slug')
 
     def handle(self, *args, **options):
-        from ...models import SmartLink
+        from api.smartlink.models import SmartLink
         from ...services.analytics.HeatmapService import HeatmapService
 
         svc = HeatmapService()

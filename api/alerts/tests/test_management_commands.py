@@ -5,15 +5,16 @@ from django.test import TestCase
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
+from datetime import timedelta
 from io import StringIO
 import json
 
-from alerts.models.core import AlertRule, AlertLog, Notification, SystemMetrics
-from alerts.management.commands.process_alerts import Command as ProcessAlertsCommand
-from alerts.management.commands.generate_reports import Command as GenerateReportsCommand
-from alerts.management.commands.cleanup_alerts import Command as CleanupAlertsCommand
-from alerts.management.commands.test_alerts import Command as TestAlertsCommand
-from alerts.management.commands.check_health import Command as CheckHealthCommand
+from api.alerts.models.core import AlertRule, AlertLog, Notification, SystemMetrics
+from api.alerts.management.commands.process_alerts import Command as ProcessAlertsCommand
+from api.alerts.management.commands.alerts_generate_reports import Command as GenerateReportsCommand
+from api.alerts.management.commands.cleanup_alerts import Command as CleanupAlertsCommand
+from api.alerts.management.commands.test_alerts import Command as TestAlertsCommand
+from api.alerts.management.commands.check_health import Command as CheckHealthCommand
 
 
 class ProcessAlertsCommandTest(TestCase):
@@ -26,7 +27,7 @@ class ProcessAlertsCommandTest(TestCase):
         # Create test data
         self.alert_rule = AlertRule.objects.create(
             name='Test Alert Rule',
-            alert_type='cpu_usage',
+            alert_type='server_error',
             severity='high',
             threshold_value=80.0,
             is_active=True
@@ -103,7 +104,7 @@ class ProcessAlertsCommandTest(TestCase):
         # Create invalid alert rule
         invalid_rule = AlertRule.objects.create(
             name='Invalid Rule',
-            alert_type='invalid_type',
+            alert_type='server_error',
             severity='high',
             threshold_value=80.0,
             is_active=False  # Inactive rule
@@ -134,7 +135,7 @@ class GenerateReportsCommandTest(TestCase):
         for i in range(10):
             AlertRule.objects.create(
                 name=f'Alert {i}',
-                alert_type='cpu_usage' if i % 2 == 0 else 'memory_usage',
+                alert_type='server_error' if i % 2 == 0 else 'server_error',
                 severity='high' if i % 3 == 0 else 'medium',
                 threshold_value=80.0
             )
@@ -148,7 +149,7 @@ class GenerateReportsCommandTest(TestCase):
     
     def test_generate_daily_report(self):
         """Test generate daily report"""
-        call_command('generate_reports', 'daily', stdout=self.out)
+        call_command('alerts_generate_reports', 'daily', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Generating daily report', output)
@@ -157,7 +158,7 @@ class GenerateReportsCommandTest(TestCase):
     
     def test_generate_weekly_report(self):
         """Test generate weekly report"""
-        call_command('generate_reports', 'weekly', stdout=self.out)
+        call_command('alerts_generate_reports', 'weekly', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Generating weekly report', output)
@@ -165,7 +166,7 @@ class GenerateReportsCommandTest(TestCase):
     
     def test_generate_monthly_report(self):
         """Test generate monthly report"""
-        call_command('generate_reports', 'monthly', stdout=self.out)
+        call_command('alerts_generate_reports', 'monthly', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Generating monthly report', output)
@@ -173,7 +174,7 @@ class GenerateReportsCommandTest(TestCase):
     
     def test_generate_sla_report(self):
         """Test generate SLA report"""
-        call_command('generate_reports', 'sla', stdout=self.out)
+        call_command('alerts_generate_reports', 'sla', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Generating SLA report', output)
@@ -181,7 +182,7 @@ class GenerateReportsCommandTest(TestCase):
     
     def test_generate_performance_report(self):
         """Test generate performance report"""
-        call_command('generate_reports', 'performance', stdout=self.out)
+        call_command('alerts_generate_reports', 'performance', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Generating performance report', output)
@@ -192,14 +193,14 @@ class GenerateReportsCommandTest(TestCase):
         from datetime import date
         test_date = date.today()
         
-        call_command('generate_reports', 'daily', '--date', test_date.isoformat(), stdout=self.out)
+        call_command('alerts_generate_reports', 'daily', '--date', test_date.isoformat(), stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn(f'Date: {test_date}', output)
     
     def test_generate_report_with_format(self):
         """Test generate report with specific format"""
-        call_command('generate_reports', 'daily', '--format', 'json', stdout=self.out)
+        call_command('alerts_generate_reports', 'daily', '--format', 'json', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Format: json', output)
@@ -208,7 +209,7 @@ class GenerateReportsCommandTest(TestCase):
         """Test generate report with recipients"""
         recipients = 'admin@example.com,ops@example.com'
         
-        call_command('generate_reports', 'daily', '--recipients', recipients, stdout=self.out)
+        call_command('alerts_generate_reports', 'daily', '--recipients', recipients, stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Recipients:', output)
@@ -216,7 +217,7 @@ class GenerateReportsCommandTest(TestCase):
     
     def test_generate_report_auto_distribute(self):
         """Test generate report with auto distribute"""
-        call_command('generate_reports', 'daily', '--auto-distribute', stdout=self.out)
+        call_command('alerts_generate_reports', 'daily', '--auto-distribute', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Auto distribute: Yes', output)
@@ -224,7 +225,7 @@ class GenerateReportsCommandTest(TestCase):
     def test_generate_report_invalid_type(self):
         """Test generate report with invalid type"""
         with self.assertRaises(CommandError):
-            call_command('generate_reports', 'invalid_type', stdout=self.out)
+            call_command('alerts_generate_reports', 'invalid_type', stdout=self.out)
 
 
 class CleanupAlertsCommandTest(TestCase):
@@ -242,7 +243,7 @@ class CleanupAlertsCommandTest(TestCase):
             AlertLog.objects.create(
                 rule=AlertRule.objects.create(
                     name=f'Old Alert {i}',
-                    alert_type='cpu_usage',
+                    alert_type='server_error',
                     severity='medium',
                     threshold_value=80.0
                 ),
@@ -341,7 +342,7 @@ class TestAlertsCommandTest(TestCase):
         for i in range(5):
             AlertRule.objects.create(
                 name=f'Test Rule {i}',
-                alert_type='cpu_usage',
+                alert_type='server_error',
                 severity='high' if i % 2 == 0 else 'medium',
                 threshold_value=80.0,
                 is_active=True
@@ -374,10 +375,10 @@ class TestAlertsCommandTest(TestCase):
     
     def test_test_alerts_with_type(self):
         """Test test alerts with type filter"""
-        call_command('test_alerts', '--type', 'cpu_usage', stdout=self.out)
+        call_command('test_alerts', '--type', 'server_error', stdout=self.out)
         
         output = self.out.getvalue()
-        self.assertIn('Type filter: cpu_usage', output)
+        self.assertIn('Type filter: server_error', output)
     
     def test_test_alerts_active_only(self):
         """Test test alerts for active rules only"""
@@ -430,7 +431,7 @@ class CheckHealthCommandTest(TestCase):
         for i in range(5):
             AlertRule.objects.create(
                 name=f'Alert {i}',
-                alert_type='cpu_usage',
+                alert_type='server_error',
                 severity='high' if i % 2 == 0 else 'medium',
                 threshold_value=80.0,
                 is_active=i % 3 != 0  # Some inactive
@@ -545,7 +546,7 @@ class ManagementCommandsIntegrationTest(TestCase):
         self.out = StringIO()
         
         # 3. Generate reports
-        call_command('generate_reports', 'daily', stdout=self.out)
+        call_command('alerts_generate_reports', 'daily', stdout=self.out)
         report_output = self.out.getvalue()
         self.out = StringIO()
         
@@ -563,7 +564,7 @@ class ManagementCommandsIntegrationTest(TestCase):
         """Test error handling in command workflow"""
         # Test with invalid parameters
         try:
-            call_command('generate_reports', 'invalid_type', stdout=self.out)
+            call_command('alerts_generate_reports', 'invalid_type', stdout=self.out)
         except CommandError:
             pass  # Expected
         
@@ -581,7 +582,7 @@ class ManagementCommandsIntegrationTest(TestCase):
         for i in range(100):
             AlertRule.objects.create(
                 name=f'Rule {i}',
-                alert_type='cpu_usage',
+                alert_type='server_error',
                 severity='high',
                 threshold_value=80.0
             )

@@ -8,7 +8,7 @@ from django.utils import timezone
 
 def create_default_waterfall(ad_unit, networks: List = None) -> List:
     """Ad unit-এর জন্য default waterfall create করে।"""
-    from api.publisher_tools.models import MediationGroup, WaterfallItem
+    from publisher_tools.models import MediationGroup, WaterfallItem
     from api.ad_networks.models import AdNetwork
     group, created = MediationGroup.objects.get_or_create(
         ad_unit=ad_unit,
@@ -31,7 +31,7 @@ def create_default_waterfall(ad_unit, networks: List = None) -> List:
 
 def reorder_by_ecpm(group) -> List:
     """eCPM-based waterfall reorder।"""
-    from api.publisher_tools.models import WaterfallItem
+    from publisher_tools.models import WaterfallItem
     items = list(group.waterfall_items.filter(status="active").order_by("-avg_ecpm"))
     with transaction.atomic():
         for i, item in enumerate(items, start=1):
@@ -41,7 +41,7 @@ def reorder_by_ecpm(group) -> List:
 
 
 def get_waterfall_stats(group) -> Dict:
-    from api.publisher_tools.models import WaterfallItem
+    from publisher_tools.models import WaterfallItem
     from django.db.models import Sum, Avg
     items = group.waterfall_items.filter(status="active")
     return {
@@ -60,7 +60,7 @@ def get_waterfall_stats(group) -> Dict:
 
 def validate_waterfall(group) -> Dict:
     """Waterfall configuration validate করে।"""
-    from api.publisher_tools.models import WaterfallItem
+    from publisher_tools.models import WaterfallItem
     issues = []
     items = group.waterfall_items.filter(status="active").order_by("priority")
     if items.count() < 2:

@@ -20,6 +20,7 @@ class PublisherRatingConfig(TimeStampedModel):
     is_active            = models.BooleanField(default=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_rating_configs'
         verbose_name = _('Rating Config')
 
@@ -50,6 +51,7 @@ class PublisherRatingRecord(TimeStampedModel):
     response_at              = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_rating_records'
         verbose_name = _('Publisher Rating Record')
         verbose_name_plural = _('Publisher Rating Records')
@@ -96,6 +98,7 @@ class PublisherAggregateRating(TimeStampedModel):
     last_recalculated  = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_aggregate_ratings'
         verbose_name = _('Publisher Aggregate Rating')
 

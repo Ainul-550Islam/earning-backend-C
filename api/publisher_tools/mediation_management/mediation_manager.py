@@ -71,6 +71,7 @@ class MediationConfig(TimeStampedModel):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_mediation_configs'
         verbose_name = _('Mediation Config')
         verbose_name_plural = _('Mediation Configs')
@@ -127,6 +128,7 @@ class NetworkPerformanceSnapshot(TimeStampedModel):
     win_rate      = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_network_performance_snapshots'
         verbose_name = _('Network Performance Snapshot')
         verbose_name_plural = _('Network Performance Snapshots')

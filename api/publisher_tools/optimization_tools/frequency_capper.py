@@ -19,8 +19,8 @@ def get_recommended_frequency_cap(ad_format: str) -> Dict:
 
 
 def analyze_frequency_caps(publisher) -> Dict:
-    from api.publisher_tools.models import AdUnit
-    from api.publisher_tools.ad_unit_management.ad_unit_frequency import FrequencyCap
+    from publisher_tools.models import AdUnit
+    from publisher_tools.ad_unit_management.ad_unit_frequency import FrequencyCap
     units = AdUnit.objects.filter(publisher=publisher, status="active")
     over_capped = []
     under_capped = []

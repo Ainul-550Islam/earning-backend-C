@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def check_database_health():
     """Database connection ও query performance check করে।"""
     import time
-    from api.publisher_tools.models import Publisher
+    from publisher_tools.models import Publisher
     try:
         start = time.time()
         count = Publisher.objects.filter(status="active").count()
@@ -45,8 +45,8 @@ def check_cache_health():
 
 def check_pending_tasks():
     """Pending tasks ও backlogs check করে।"""
-    from api.publisher_tools.models import TrafficSafetyLog, PublisherInvoice
-    from api.publisher_tools.publisher_management.publisher_payout import PayoutRequest
+    from publisher_tools.models import TrafficSafetyLog, PublisherInvoice
+    from publisher_tools.publisher_management.publisher_payout import PayoutRequest
     pending_ivt      = TrafficSafetyLog.objects.filter(action_taken="pending").count()
     pending_invoices = PublisherInvoice.objects.filter(status="draft").count()
     pending_payouts  = PayoutRequest.objects.filter(status="pending").count()
@@ -63,7 +63,7 @@ def check_pending_tasks():
 
 def check_webhook_health():
     """Webhook delivery health check করে।"""
-    from api.publisher_tools.webhooks.webhook_manager import PublisherWebhook, WebhookDeliveryLog
+    from publisher_tools.models import PublisherWebhook, WebhookDeliveryLog
     total_webhooks   = PublisherWebhook.objects.filter(is_active=True).count()
     failed_webhooks  = PublisherWebhook.objects.filter(status="failed").count()
     pending_retries  = WebhookDeliveryLog.objects.filter(status="retrying").count()
@@ -78,7 +78,7 @@ def check_webhook_health():
 
 def check_publisher_quality():
     """Publisher quality metrics check করে।"""
-    from api.publisher_tools.models import Publisher, SiteQualityMetric
+    from publisher_tools.models import Publisher, SiteQualityMetric
     today = timezone.now().date()
     quality_alerts = SiteQualityMetric.objects.filter(date=today, has_alerts=True).count()
     malware_sites  = SiteQualityMetric.objects.filter(date=today, malware_detected=True).count()

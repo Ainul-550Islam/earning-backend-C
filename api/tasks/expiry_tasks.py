@@ -76,3 +76,58 @@ def deactivate_old_ips_task(days_old=30):
     except Exception as e:
         logger.error(f"[ERROR] Error in deactivate_old_ips_task: {e}")
         raise
+
+# ── Extended expiry tasks ─────────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60,
+             name='tasks.expiry_tasks.expire_kyc_verifications')
+def expire_kyc_verifications(self) -> dict:
+    """Mark KYC verifications as expired after their validity period."""
+    try:
+        from datetime import timedelta
+        from django.utils import timezone as tz
+        expired = 0
+        cutoff  = tz.now() - timedelta(days=365)  # KYC valid for 1 year
+        try:
+            from users.models import KYCVerification
+            expired = KYCVerification.objects.filter(
+                status='approved', approved_at__lt=cutoff
+            ).update(status='expired')
+        except ImportError:
+            pass
+        return {'status': 'success', 'expired': expired,
+                'timestamp': tz.now().isoformat()}
+    except Exception as exc:
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60,
+             name='tasks.expiry_tasks.expire_promotional_codes')
+def expire_promotional_codes(self) -> dict:
+    """Expire promo codes past their validity date."""
+    try:
+        from django.utils import timezone as tz
+        expired = 0
+        try:
+            from promotions.models import PromoCode
+            expired = PromoCode.objects.filter(
+                is_active=True, expires_at__lt=tz.now()
+            ).update(is_active=False)
+        except ImportError:
+            pass
+        return {'status': 'success', 'expired': expired,
+                'timestamp': tz.now().isoformat()}
+    except Exception as exc:
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=1, default_retry_delay=30,
+             name='tasks.expiry_tasks.expire_download_tokens')
+def expire_download_tokens(self) -> dict:
+    """Remove expired file download tokens from cache."""
+    from django.core.cache import cache as _c
+    from django.utils import timezone as tz
+    # Download tokens auto-expire via Redis TTL
+    # This task just logs the cleanup cycle
+    return {'status': 'success', 'message': 'Download tokens auto-expire via Redis TTL',
+            'timestamp': tz.now().isoformat()}

@@ -777,7 +777,8 @@ def register_signal_handlers():
         # Import all signal handler modules to register them
         from . import core
         from . import plan
-        from . import billing
+# DISABLED: billing.py does not exist
+#         from . import billing
         from . import security
         from . import analytics
         from . import onboarding

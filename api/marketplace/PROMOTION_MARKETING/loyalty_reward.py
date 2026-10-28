@@ -70,6 +70,12 @@ class LoyaltyAccount(models.Model):
         return "bronze"
 
 
+    @property
+    def points(self):
+        """Alias for points_balance — used in tests."""
+        return self.points_balance
+
+
 class LoyaltyTransaction(models.Model):
     TYPE_CHOICES = [
         ("earn",     "Points Earned"),
@@ -230,3 +236,34 @@ class LoyaltyService:
         spend_needed = TIER_THRESHOLDS[next_t] - acc.lifetime_spend
         return {"name": next_t, "spend_needed": str(max(0, spend_needed))}
 
+
+# ── Compatibility aliases used in test_promotions.py ─────────────────────────
+class LoyaltyEngine(LoyaltyService):
+    """Subclass adding test-friendly earn/redeem shortcuts."""
+
+    @classmethod
+    def _order_id(cls, order_id_str: str) -> int:
+        import hashlib
+        return int(hashlib.md5(order_id_str.encode()).hexdigest()[:8], 16) % 1_000_000
+
+    @classmethod
+    def earn(cls, user, tenant, order_amount, order_id_str: str):
+        """Earn points and return LoyaltyAccount with .points shortcut."""
+        cls.earn_points(user, tenant, order_amount, cls._order_id(order_id_str))
+        return LoyaltyAccount.objects.get(user=user, tenant=tenant)
+
+    @classmethod
+    def redeem(cls, user, tenant, max_order_amount, order_id_str: str):
+        """Redeem up to full balance (no cap) for the given order amount."""
+        from decimal import Decimal
+        try:
+            acc = LoyaltyAccount.objects.get(user=user, tenant=tenant)
+        except _LoyaltyAccountBase.DoesNotExist:
+            return Decimal("0.00")
+        # Compute max discount = min(balance value, order amount)
+        balance_bdt = Decimal(acc.points_balance) / REDEMPTION_RATE
+        discount = min(balance_bdt, max_order_amount)
+        points_to_redeem = int(discount * REDEMPTION_RATE)
+        if points_to_redeem < MIN_REDEEM_POINTS:
+            return Decimal("0.00")
+        return cls.redeem_points(user, tenant, points_to_redeem, cls._order_id(order_id_str))

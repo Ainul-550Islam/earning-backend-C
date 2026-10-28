@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import SmartLink, SmartLinkTag
+from api.smartlink.models import SmartLink, SmartLinkTag
 
 
 class SmartLinkTagSerializer(serializers.ModelSerializer):

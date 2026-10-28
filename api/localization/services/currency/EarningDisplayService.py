@@ -59,7 +59,7 @@ class EarningDisplayService:
                 )
             except Exception:
                 # Fallback: basic formatting
-                from ..models.core import Currency
+                from api.localization.models.core import Currency
                 curr = Currency.objects.filter(code=target_currency).first()
                 if curr:
                     formatted = curr.format_amount(converted_amount)
@@ -76,7 +76,7 @@ class EarningDisplayService:
 
             if show_original and target_currency != 'USD':
                 try:
-                    from ..models.core import Currency
+                    from api.localization.models.core import Currency
                     usd = Currency.objects.filter(code='USD').first()
                     result['original_formatted'] = usd.format_amount(amount_dec) if usd else f"${amount_dec:.2f}"
                 except Exception:
@@ -113,7 +113,7 @@ class EarningDisplayService:
             cached = cache.get(cache_key)
             if cached:
                 return cached
-            from ..models.core import UserLanguagePreference
+            from api.localization.models.core import UserLanguagePreference
             pref = UserLanguagePreference.objects.filter(
                 user=user, preferred_currency__isnull=False
             ).select_related('preferred_currency').first()

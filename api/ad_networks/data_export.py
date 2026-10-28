@@ -3,6 +3,7 @@ api/ad_networks/data_export.py
 Data export functionality for ad networks module
 SaaS-ready with tenant support
 """
+import uuid
 
 import logging
 import csv

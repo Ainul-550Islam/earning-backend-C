@@ -17,7 +17,7 @@ INDUSTRY_CTR_BENCHMARKS = {
 
 
 def get_ctr_by_format(publisher, days: int = 30) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     data = list(
         PublisherEarning.objects.filter(publisher=publisher, date__gte=start)
@@ -37,7 +37,7 @@ def get_ctr_by_format(publisher, days: int = 30) -> List[Dict]:
 
 
 def get_ctr_trend(publisher, days: int = 30) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     return list(
         PublisherEarning.objects.filter(publisher=publisher, date__gte=start)

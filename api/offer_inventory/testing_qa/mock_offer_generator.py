@@ -10,6 +10,7 @@ from decimal import Decimal
 from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from api.offer_inventory.models import Click
 
 logger = logging.getLogger(__name__)
 

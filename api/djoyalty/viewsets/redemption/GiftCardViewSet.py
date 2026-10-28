@@ -9,8 +9,9 @@ from ...serializers.GiftCardSerializer import GiftCardSerializer
 from ...services.redemption.GiftCardService import GiftCardService
 from ...pagination import DjoyaltyPagePagination
 from ...permissions import IsLoyaltyAdmin
+from ...mixins import DjoyaltyBaseViewSet
 
-class GiftCardViewSet(viewsets.ModelViewSet):
+class GiftCardViewSet(DjoyaltyBaseViewSet, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = GiftCard.objects.all().select_related('issued_to').order_by('-created_at')
     serializer_class = GiftCardSerializer
@@ -30,7 +31,7 @@ class GiftCardViewSet(viewsets.ModelViewSet):
             )
             return Response(GiftCardSerializer(gc).data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return self.err(str(e))
 
     @action(detail=False, methods=['post'])
     def redeem(self, request):
@@ -40,4 +41,4 @@ class GiftCardViewSet(viewsets.ModelViewSet):
             gc = GiftCardService.redeem(code, Decimal(str(amount)))
             return Response({'message': f'Redeemed. Remaining: {gc.remaining_value}'})
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return self.err(str(e))

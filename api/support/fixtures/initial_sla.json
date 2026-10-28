@@ -1,0 +1,54 @@
+[
+  {
+    "model": "support.slapolicy",
+    "pk": 1,
+    "fields": {
+      "name": "Urgent SLA",
+      "priority_level": "urgent",
+      "first_response_hours": 1,
+      "resolution_hours": 4,
+      "business_hours_only": false,
+      "is_active": true,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.slapolicy",
+    "pk": 2,
+    "fields": {
+      "name": "High SLA",
+      "priority_level": "high",
+      "first_response_hours": 4,
+      "resolution_hours": 24,
+      "business_hours_only": true,
+      "is_active": true,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.slapolicy",
+    "pk": 3,
+    "fields": {
+      "name": "Medium SLA",
+      "priority_level": "medium",
+      "first_response_hours": 8,
+      "resolution_hours": 48,
+      "business_hours_only": true,
+      "is_active": true,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.slapolicy",
+    "pk": 4,
+    "fields": {
+      "name": "Low SLA",
+      "priority_level": "low",
+      "first_response_hours": 24,
+      "resolution_hours": 72,
+      "business_hours_only": true,
+      "is_active": true,
+      "tenant": null
+    }
+  }
+]

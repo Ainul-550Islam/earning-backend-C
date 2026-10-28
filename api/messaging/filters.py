@@ -173,7 +173,11 @@ class MessageTemplateFilter(django_filters.FilterSet):
         fields = ["category", "is_active"]
 
     def filter_by_tag(self, queryset, name, value):
-        return queryset.filter(tags__contains=[value])
+        # tags__contains is a JSONField `contains` lookup, unsupported on
+        # SQLite (Postgres/MySQL/Oracle only). Filter in Python, then
+        # re-query by pk so the result is still a normal chainable QuerySet.
+        matching_ids = [obj.pk for obj in queryset if value in (obj.tags or [])]
+        return queryset.filter(pk__in=matching_ids)
 
 
 class AffiliateThreadFilter(django_filters.FilterSet):
@@ -193,7 +197,11 @@ class AffiliateThreadFilter(django_filters.FilterSet):
         return queryset.filter(manager_unread=0)
 
     def filter_by_tag(self, queryset, name, value):
-        return queryset.filter(tags__contains=[value])
+        # See MessageTemplateFilter.filter_by_tag above: __contains on a
+        # JSONField is unsupported on SQLite, so filter in Python and
+        # re-query by pk to keep returning a normal chainable QuerySet.
+        matching_ids = [obj.pk for obj in queryset if value in (obj.tags or [])]
+        return queryset.filter(pk__in=matching_ids)
 
 
 class MediaAttachmentFilter(django_filters.FilterSet):

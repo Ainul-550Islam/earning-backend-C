@@ -313,7 +313,7 @@ CELERY_BEAT_SCHEDULE = {
     
     'holiday-optimization': {
         'task': 'api.ad_networks.tasks.holiday_optimization',
-        'schedule': crontab(minute='0', hour='10', day_of_week='friday', month='11,12'),  # Fridays in Nov-Dec 10 AM
+        'schedule': crontab(minute='0', hour='10', day_of_week='friday', month_of_year='11,12'),  # Fridays in Nov-Dec 10 AM
         'options': {
             'queue': 'ad_networks_optimization',
             'priority': 3,

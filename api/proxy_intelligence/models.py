@@ -3,6 +3,7 @@ Proxy Intelligence Models
 =========================
 সমস্ত IP ডিটেকশন, ফ্রড, থ্রেট এবং রিস্ক স্কোরিং-এর জন্য Django models।
 """
+from django.utils import timezone
 
 import uuid
 from django.db import models

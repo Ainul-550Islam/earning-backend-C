@@ -58,6 +58,7 @@ class SiteQualityScore(TimeStampedModel):
     has_alerts          = models.BooleanField(default=False, db_index=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_quality_scores'
         verbose_name = _('Site Quality Score')
         unique_together = [['site', 'date']]

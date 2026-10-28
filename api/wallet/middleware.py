@@ -18,6 +18,12 @@ logger = logging.getLogger(__name__)
 class SafeIPMiddleware(MiddlewareMixin):
     """Safe IP Middleware"""
     
+    def __call__(self, request):
+        response = self.process_request(request)
+        if response:
+            return response
+        return self.get_response(request)
+
     def process_request(self, request):
         try:
             from .validators import extract_client_ip

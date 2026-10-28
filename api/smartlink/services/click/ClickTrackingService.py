@@ -1,6 +1,6 @@
 import logging
 from django.utils import timezone
-from ...models import Click, ClickMetadata, ClickSession
+from api.smartlink.models import Click, ClickMetadata, ClickSession
 from ...choices import DeviceType, OSType, BrowserType
 from .ClickDeduplicationService import ClickDeduplicationService
 from .SubIDParserService import SubIDParserService
@@ -30,7 +30,7 @@ class ClickTrackingService:
         Returns:
             Click instance
         """
-        from ...models import SmartLink
+        from api.smartlink.models import SmartLink
         try:
             smartlink = SmartLink.objects.get(pk=smartlink_id)
         except SmartLink.DoesNotExist:

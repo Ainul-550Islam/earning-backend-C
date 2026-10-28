@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 import math
 from typing import Optional
+import requests  # noqa: F401  (module-level so tests can patch it)
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +93,6 @@ def transcribe_audio(
 def _transcribe_whisper(audio_data: bytes, language: str = "") -> dict:
     """Transcribe using OpenAI Whisper API."""
     from django.conf import settings
-    import requests
     import io
 
     api_key = getattr(settings, "OPENAI_API_KEY", None)
@@ -129,7 +129,6 @@ def _transcribe_whisper(audio_data: bytes, language: str = "") -> dict:
 def _transcribe_google(audio_data: bytes, language: str = "en-US") -> dict:
     """Transcribe using Google Cloud Speech-to-Text."""
     from django.conf import settings
-    import requests
     import base64
 
     api_key = getattr(settings, "GOOGLE_STT_API_KEY", None)
@@ -176,7 +175,6 @@ def _transcribe_google(audio_data: bytes, language: str = "en-US") -> dict:
 def _transcribe_azure(audio_data: bytes, language: str = "en-US") -> dict:
     """Transcribe using Azure Cognitive Services Speech."""
     from django.conf import settings
-    import requests
 
     key = getattr(settings, "AZURE_SPEECH_KEY", None)
     region = getattr(settings, "AZURE_SPEECH_REGION", "eastus")

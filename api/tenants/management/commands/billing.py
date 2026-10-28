@@ -4,6 +4,7 @@ Billing Management Commands
 This module contains Django management commands for billing operations
 including invoice generation, dunning processing, and commission calculations.
 """
+from django.db import models
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone

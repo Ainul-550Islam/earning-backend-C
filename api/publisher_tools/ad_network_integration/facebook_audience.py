@@ -36,6 +36,7 @@ class FacebookAudienceNetworkConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_facebook_audience_configs"
         verbose_name = _("Facebook Audience Network Config")
         unique_together = [["publisher"]]

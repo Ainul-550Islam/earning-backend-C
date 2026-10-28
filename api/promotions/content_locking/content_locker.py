@@ -125,6 +125,9 @@ class ContentLocker:
 
 
 @api_view(['POST'])
+@api_view(['POST'])
+@api_view(['GET'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def create_content_locker_view(request):
     locker = ContentLocker()
@@ -137,8 +140,6 @@ def create_content_locker_view(request):
     )
     return Response(result, status=status.HTTP_201_CREATED)
 
-
-@api_view(['POST'])
 @permission_classes([AllowAny])
 def unlock_content_view(request, lock_id):
     visitor_id = request.data.get('visitor_id', '')
@@ -146,16 +147,11 @@ def unlock_content_view(request, lock_id):
     is_unlocked = locker.unlock_for_visitor(lock_id, visitor_id)
     return Response({'unlocked': is_unlocked})
 
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def check_content_unlocked_view(request, lock_id):
     visitor_id = request.query_params.get('visitor_id', '')
     locker = ContentLocker()
     return Response({'unlocked': locker.check_unlocked(lock_id, visitor_id)})
-
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def get_locker_offers_view(request, lock_id):
     locker = ContentLocker()

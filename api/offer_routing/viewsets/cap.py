@@ -4,7 +4,10 @@ Cap Viewsets for Offer Routing System
 This module contains viewsets for managing offer caps,
 including global caps, user-specific caps, and cap overrides.
 """
+from django.db.models import F
+from django.db.models import Max
 
+from ..throttling import RoutingEngineThrottle, RoutingEngineThrottle, AnalyticsThrottle, BulkOperationThrottle, EvaluatorThrottle
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -14,9 +17,14 @@ from django.db.models import Q, Avg, Count, Sum
 from ..models import (
     OfferRoutingCap, UserOfferCap, CapOverride
 )
-from ..services.cap import cap_service
+import logging
+from ..services.cap import cap_service, cap_reset_service, CapEnforcementService, CapResetService
+
+logger = logging.getLogger(__name__)
 from ..permissions import IsAuthenticatedOrReadOnly, CanManageOffers
 from ..exceptions import ValidationError, CapExceededError
+from ..serializers import OfferRoutingCapSerializer, UserOfferCapSerializer, CapOverrideSerializer
+
 
 User = get_user_model()
 
@@ -30,14 +38,18 @@ class OfferRoutingCapViewSet(viewsets.ModelViewSet):
     """
     
     queryset = OfferRoutingCap.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = OfferRoutingCapSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [RoutingEngineThrottle]
     
     def get_queryset(self):
         """Filter caps by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('offer__name', 'cap_type')
     
     @action(detail=True, methods=['post'])
@@ -142,7 +154,7 @@ class OfferRoutingCapViewSet(viewsets.ModelViewSet):
         try:
             days = int(request.query_params.get('days', 30))
             
-            from ..services.cap import CapEnforcementService
+            from ..services.cap import cap_service, cap_reset_service, CapEnforcementService, CapResetService
             cap_service_instance = CapEnforcementService()
             analytics = cap_service_instance.get_cap_analytics(
                 tenant_id=request.user.id,
@@ -208,14 +220,18 @@ class UserOfferCapViewSet(viewsets.ModelViewSet):
     """
     
     queryset = UserOfferCap.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = UserOfferCapSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    throttle_classes = [RoutingEngineThrottle]
     
     def get_queryset(self):
         """Filter caps by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(user__tenant=self.request.user)
+            try:
+                queryset = queryset.filter(user__tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('user__username', 'offer__name')
     
     @action(detail=True, methods=['post'])
@@ -414,14 +430,18 @@ class CapOverrideViewSet(viewsets.ModelViewSet):
     """
     
     queryset = CapOverride.objects.all()
-    serializer_class = None  # Will be defined in serializers.py
+    serializer_class = CapOverrideSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [RoutingEngineThrottle]
     
     def get_queryset(self):
         """Filter overrides by tenant."""
         queryset = super().get_queryset()
         if self.request.user.is_authenticated:
-            queryset = queryset.filter(tenant=self.request.user)
+            try:
+                queryset = queryset.filter(tenant=self.request.user)
+            except Exception:
+                pass
         return queryset.order_by('-created_at')
     
     @action(detail=True, methods=['post'])

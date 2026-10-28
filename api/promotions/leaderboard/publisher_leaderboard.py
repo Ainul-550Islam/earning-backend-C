@@ -103,8 +103,8 @@ class PublisherLeaderboard:
         else:  # all_time
             return timezone.datetime(2020, 1, 1, tzinfo=timezone.utc)
 
-    @staticmethod
-    def invalidate_cache():
+@staticmethod
+def invalidate_cache():
         for period in ['daily', 'weekly', 'monthly', 'yearly', 'all_time']:
             cache.delete(f'leaderboard:publisher:{period}:50')
 
@@ -117,9 +117,6 @@ def publisher_leaderboard_view(request):
     limit = min(int(request.query_params.get('limit', 50)), 100)
     lb = PublisherLeaderboard()
     return Response(lb.get_leaderboard(period=period, limit=limit))
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_rank_view(request):
     """GET /api/promotions/leaderboard/my-rank/?period=monthly"""

@@ -17,8 +17,8 @@ class SmartLinkSchedulerService:
         Evaluate all enabled schedules and update SmartLink active states.
         Called every minute by Celery Beat.
         """
-        from ...models.extensions.smartlink_schedule import SmartLinkSchedule
-        from ...models import SmartLink
+        from api.smartlink.models.extensions.smartlink_schedule import SmartLinkSchedule
+        from api.smartlink.models import SmartLink
 
         schedules = SmartLinkSchedule.objects.filter(
             is_enabled=True
@@ -74,7 +74,7 @@ class SmartLinkSchedulerService:
 
     def create_schedule(self, smartlink, params: dict):
         """Create or update a SmartLink schedule."""
-        from ...models.extensions.smartlink_schedule import SmartLinkSchedule
+        from api.smartlink.models.extensions.smartlink_schedule import SmartLinkSchedule
         schedule, _ = SmartLinkSchedule.objects.update_or_create(
             smartlink=smartlink,
             defaults={

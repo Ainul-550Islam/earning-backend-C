@@ -142,8 +142,8 @@ class SmartLinkRouter:
 class SmartLinkTrafficMatcher:
     """Extract visitor attributes from request headers."""
 
-    @staticmethod
-    def extract_visitor_profile(request) -> dict:
+@staticmethod
+def extract_visitor_profile(request) -> dict:
         """Parse User-Agent and headers to get device/OS/browser."""
         ua = request.META.get('HTTP_USER_AGENT', '').lower()
         ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
@@ -198,6 +198,7 @@ class SmartLinkTrafficMatcher:
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def smartlink_redirect_view(request, publisher_id, link_hash):
     """
@@ -219,9 +220,6 @@ def smartlink_redirect_view(request, publisher_id, link_hash):
     if 'error' in offer or not offer.get('offer_url'):
         return Response({'error': 'No offers available'}, status=404)
     return redirect(offer['offer_url'])
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_smartlink_view(request):
     """Publisher creates their SmartLink."""

@@ -2,6 +2,7 @@
 """
 Reusable mixins for views, viewsets, and models.
 """
+from django.db import models
 import logging
 from decimal import Decimal
 from rest_framework.response import Response

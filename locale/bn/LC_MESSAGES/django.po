@@ -1,0 +1,36 @@
+# Bengali translation for CMS
+msgid ""
+msgstr ""
+"Project-Id-Version: CMS 1.0\n"
+"Language: bn\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "title"
+msgstr "শিরোনাম"
+
+msgid "Welcome"
+msgstr "স্বাগতম"
+
+msgid "Earn Coins"
+msgstr "কয়েন আয় করুন"
+
+msgid "Withdraw"
+msgstr "উত্তোলন করুন"
+
+msgid "Leaderboard"
+msgstr "লিডারবোর্ড"
+
+msgid "Quiz"
+msgstr "কুইজ"
+
+msgid "Referral"
+msgstr "রেফারেল"
+
+msgid "Balance"
+msgstr "ব্যালেন্স"
+
+msgid "Offers"
+msgstr "অফার"

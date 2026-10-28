@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 _TWO_PLACES = Decimal("0.01")
 
-
 class FeeConfig:
     """
     Holds fee configuration for a single gateway.
@@ -140,7 +139,6 @@ class FeeConfig:
             f"No matching tier found for gross_amount={gross_amount}."
         )
 
-
 # ---------------------------------------------------------------------------
 # Default Gateway Configs
 # ---------------------------------------------------------------------------
@@ -172,7 +170,6 @@ DEFAULT_FEE_CONFIGS: dict[str, FeeConfig] = {
         max_fee=Decimal("0.00"),
     ),
 }
-
 
 class FeeCalculator:
     """

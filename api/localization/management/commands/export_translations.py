@@ -18,7 +18,7 @@ class Command(BaseCommand):
         output_file = options.get('output')
         namespace = options.get('namespace', '')
         approved_only = not options.get('all', False)
-        from localization.services.translation.TranslationExportService import TranslationExportService
+        from api.localization.services.translation.TranslationExportService import TranslationExportService
         service = TranslationExportService()
         if fmt == 'json':
             result = service.export_json(language_code, namespace, approved_only)

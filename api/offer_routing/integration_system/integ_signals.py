@@ -242,3 +242,29 @@ def create_performance_context(integration_id: str, metric_name: str,
             'metric_type': 'performance'
         }
     }
+
+class IntegrationSignals:
+    """Container for integration Django signals."""
+    from django.dispatch import Signal
+    
+    integration_registered = Signal()
+    integration_executed = Signal()
+    integration_failed = Signal()
+    integration_synced = Signal()
+    integration_health_checked = Signal()
+    integration_enabled = Signal()
+    integration_disabled = Signal()
+    integration_removed = Signal()
+    integration_config_updated = Signal()
+    auth_token_refreshed = Signal()
+    auth_token_revoked = Signal()
+    data_synced = Signal()
+    data_conflict_resolved = Signal()
+    event_published = Signal()
+    health_check_completed = Signal()
+    performance_threshold_exceeded = Signal()
+    audit_log_created = Signal()
+
+
+# Alias for backward-compat imports
+integration_signals = IntegrationSignals()

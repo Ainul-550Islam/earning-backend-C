@@ -84,6 +84,10 @@ class ActionPlugin(BasePlugin):
 class RoutingPlugin(BasePlugin):
     """Base class for routing strategy plugins."""
     
+    def execute(self, context):
+        """Execute this plugin with the given routing context."""
+        return context
+
     @abstractmethod
     def route(self, context: Dict[str, Any], routes: List[Any]) -> Optional[Any]:
         """Route to the best option."""
@@ -97,6 +101,10 @@ class RoutingPlugin(BasePlugin):
 class AnalyticsPlugin(BasePlugin):
     """Base class for analytics plugins."""
     
+    def execute(self, context):
+        """Execute this plugin with the given routing context."""
+        return context
+
     @abstractmethod
     def collect_data(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Collect analytics data."""
@@ -113,6 +121,10 @@ class AnalyticsPlugin(BasePlugin):
 class GeoConditionPlugin(ConditionPlugin):
     """Plugin for geographic condition evaluation."""
     
+    def execute(self, context):
+        """Execute this plugin with the given routing context."""
+        return context
+
     def __init__(self):
         super().__init__("geo_condition", "1.0.0")
         self.supported_countries = []
@@ -142,6 +154,10 @@ class GeoConditionPlugin(ConditionPlugin):
 class DeviceConditionPlugin(ConditionPlugin):
     """Plugin for device condition evaluation."""
     
+    def execute(self, context):
+        """Execute this plugin with the given routing context."""
+        return context
+
     def __init__(self):
         super().__init__("device_condition", "1.0.0")
         self.supported_devices = []
@@ -171,6 +187,10 @@ class DeviceConditionPlugin(ConditionPlugin):
 class TimeConditionPlugin(ConditionPlugin):
     """Plugin for time-based condition evaluation."""
     
+    def execute(self, context):
+        """Execute this plugin with the given routing context."""
+        return context
+
     def __init__(self):
         super().__init__("time_condition", "1.0.0")
     
@@ -275,6 +295,10 @@ class LogEventActionPlugin(ActionPlugin):
 class PriorityRoutingPlugin(RoutingPlugin):
     """Plugin for priority-based routing."""
     
+    def execute(self, context):
+        """Execute this plugin with the given routing context."""
+        return context
+
     def __init__(self):
         super().__init__("priority_routing", "1.0.0")
     
@@ -300,6 +324,10 @@ class PriorityRoutingPlugin(RoutingPlugin):
 class PersonalizedRoutingPlugin(RoutingPlugin):
     """Plugin for personalized routing."""
     
+    def execute(self, context):
+        """Execute this plugin with the given routing context."""
+        return context
+
     def __init__(self):
         super().__init__("personalized_routing", "1.0.0")
         self.user_preferences = {}
@@ -353,6 +381,10 @@ class PersonalizedRoutingPlugin(RoutingPlugin):
 class PerformanceAnalyticsPlugin(AnalyticsPlugin):
     """Plugin for performance analytics."""
     
+    def execute(self, context):
+        """Execute this plugin with the given routing context."""
+        return context
+
     def __init__(self):
         super().__init__("performance_analytics", "1.0.0")
         self.performance_data = {}

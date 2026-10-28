@@ -18,8 +18,6 @@ def public_status(request):
         return Response({'status':overall,'total':len(gateways),'healthy':healthy,'gateways':[{'name':g['display_name'],'status':g['health_status']} for g in gateways]})
     except Exception as e:
         return Response({'status':'unknown','error':str(e)})
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_health(request):
     """Admin health dashboard with full metrics."""

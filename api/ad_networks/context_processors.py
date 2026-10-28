@@ -3,6 +3,8 @@ api/ad_networks/context_processors.py
 Context processors for ad networks module
 SaaS-ready with tenant support
 """
+from django.db.models import Q
+from django.db.models import Sum
 
 import logging
 from datetime import datetime, timedelta

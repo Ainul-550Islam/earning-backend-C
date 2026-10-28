@@ -37,7 +37,7 @@ from .constants import ESCROW_RELEASE_DAYS, REVIEW_WINDOW_DAYS
 
 def add_to_cart(cart: Cart, variant: ProductVariant, quantity: int = 1) -> CartItem:
     """Add / update CartItem, enforcing stock limits."""
-    inventory: ProductInventory = variant.inventory
+    inventory: ProductInventory = ProductInventory.objects.get(variant=variant)
     if inventory.is_out_of_stock and not inventory.allow_backorder:
         raise OutOfStockException()
 

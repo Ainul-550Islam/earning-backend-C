@@ -90,7 +90,7 @@ class CurrencyFormatService:
         if cached:
             return cached
         try:
-            from ...models.core import Currency
+            from api.localization.models.core import Currency
             curr = Currency.objects.filter(code=currency_code).first()
             if curr:
                 result = (curr.symbol or currency_code, curr.symbol_position or 'before', curr.decimal_digits or 2)

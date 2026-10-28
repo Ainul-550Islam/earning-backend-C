@@ -4,7 +4,7 @@ from .factories import SmartLinkFactory, SmartLinkFallbackFactory
 
 
 class CeleryTasksTest(TestCase):
-    @patch('smartlink.services.click.ClickTrackingService.ClickTrackingService.record')
+    @patch('api.smartlink.services.click.ClickTrackingService.ClickTrackingService.record')
     def test_process_click_async_calls_service(self, mock_record):
         from ..tasks.click_processing_tasks import process_click_async
         sl = SmartLinkFactory()
@@ -21,14 +21,14 @@ class CeleryTasksTest(TestCase):
         )
         mock_record.assert_called_once()
 
-    @patch('smartlink.services.rotation.CapTrackerService.CapTrackerService.reset_daily_caps')
+    @patch('api.smartlink.services.rotation.CapTrackerService.CapTrackerService.reset_daily_caps')
     def test_reset_daily_caps_task(self, mock_reset):
         from ..tasks.cap_reset_tasks import reset_daily_caps
         mock_reset.return_value = 42
         result = reset_daily_caps()
         self.assertEqual(result['reset'], 42)
 
-    @patch('smartlink.services.core.SmartLinkCacheService.SmartLinkCacheService.warmup_all_active')
+    @patch('api.smartlink.services.core.SmartLinkCacheService.SmartLinkCacheService.warmup_all_active')
     def test_warmup_cache_task(self, mock_warmup):
         from ..tasks.cache_warmup_tasks import warmup_resolver_cache
         mock_warmup.return_value = 10
@@ -43,7 +43,7 @@ class CeleryTasksTest(TestCase):
         self.assertIn('broken_count', result)
         self.assertIsInstance(result['broken'], list)
 
-    @patch('smartlink.services.rotation.EPCOptimizer.EPCOptimizer.recalculate_scores')
+    @patch('api.smartlink.services.rotation.EPCOptimizer.EPCOptimizer.recalculate_scores')
     def test_update_epc_scores_task(self, mock_recalc):
         from ..tasks.epc_update_tasks import update_epc_scores
         mock_recalc.return_value = 25

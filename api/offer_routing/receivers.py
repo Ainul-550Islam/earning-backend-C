@@ -48,7 +48,7 @@ def offer_route_pre_save(sender, instance, **kwargs):
         if not instance.priority:
             instance.priority = 50
         
-        if not instance.status:
+        if hasattr(instance, 'status') and not instance.status:
             instance.status = 'draft'
         
         logger.debug(f"Pre-save processing for OfferRoute: {instance.name}")
@@ -100,7 +100,7 @@ def offer_route_pre_delete(sender, instance, **kwargs):
     """Handle pre-delete operations for OfferRoute."""
     try:
         # Check if route can be deleted
-        if instance.is_active and instance.routingdecisionlog_set.exists():
+        if instance.is_active and instance.routing_decisions_offer.exists():
             logger.warning(f"Deleting active route with history: {instance.name}")
         
         # Archive routing logs before deletion
@@ -695,3 +695,328 @@ __all__ = [
     'handle_performance_alert',
     'user_post_save',
 ]
+
+# ─── Auto-generated receivers for all offer_routing signals ───────────────────
+
+from django.dispatch import receiver
+from .signals import (
+    ab_test_assignment_made, ab_test_started, ab_test_completed,
+    ab_test_winner_selected, cap_exceeded, cap_reset,
+    cap_threshold_reached, cap_warning_threshold_reached,
+    cap_limit_reached, user_cap_exceeded,
+    fallback_triggered, fraud_detected,
+    offer_score_created, offer_score_updated,
+    personalization_updated, performance_alert,
+    performance_threshold_exceeded, system_health_degraded,
+    postback_received, postback_processed,
+    routing_decision_cached,
+)
+import logging
+_logger = logging.getLogger('offer_routing.signals')
+
+
+@receiver(ab_test_assignment_made)
+def on_ab_test_assignment(sender, **kwargs):
+    """Log A/B test assignment events."""
+    test_id = kwargs.get('test_id')
+    user_id = kwargs.get('user_id')
+    variant = kwargs.get('variant')
+    _logger.debug(f"A/B assignment: test={test_id} user={user_id} variant={variant}")
+
+
+@receiver(ab_test_started)
+def on_ab_test_started(sender, **kwargs):
+    """Handle A/B test start — clear relevant caches."""
+    test_id = kwargs.get('test_id')
+    _logger.info(f"A/B test started: {test_id}")
+    try:
+        from django.core.cache import cache
+        cache.delete(f'ab_test:{test_id}:status')
+    except Exception:
+        pass
+
+
+@receiver(ab_test_completed)
+def on_ab_test_completed(sender, **kwargs):
+    """Handle A/B test completion — trigger result aggregation."""
+    test_id = kwargs.get('test_id')
+    _logger.info(f"A/B test completed: {test_id}")
+
+
+@receiver(ab_test_winner_selected)
+def on_ab_test_winner(sender, **kwargs):
+    """Apply winning variant after A/B test concludes."""
+    test_id = kwargs.get('test_id')
+    winner = kwargs.get('winner_route_id')
+    _logger.info(f"A/B winner selected: test={test_id} winner_route={winner}")
+
+
+@receiver(cap_exceeded)
+def on_cap_exceeded(sender, **kwargs):
+    """Handle cap exceeded — log and optionally notify."""
+    offer_id = kwargs.get('offer_id')
+    cap_type = kwargs.get('cap_type', 'daily')
+    _logger.warning(f"Cap exceeded: offer={offer_id} type={cap_type}")
+
+
+@receiver(cap_threshold_reached)
+def on_cap_threshold(sender, **kwargs):
+    """Handle cap threshold warning (e.g. 80% used)."""
+    offer_id = kwargs.get('offer_id')
+    pct = kwargs.get('percentage', 0)
+    _logger.warning(f"Cap threshold {pct}% reached for offer={offer_id}")
+
+
+@receiver(cap_warning_threshold_reached)
+def on_cap_warning(sender, **kwargs):
+    """Early warning before cap is hit."""
+    offer_id = kwargs.get('offer_id')
+    _logger.info(f"Cap warning for offer={offer_id}")
+
+
+@receiver(cap_reset)
+def on_cap_reset(sender, **kwargs):
+    """Clear cap usage caches after a reset."""
+    offer_id = kwargs.get('offer_id')
+    _logger.info(f"Cap reset for offer={offer_id}")
+    try:
+        from django.core.cache import cache
+        cache.delete(f'cap:usage:{offer_id}')
+    except Exception:
+        pass
+
+
+@receiver(cap_limit_reached)
+def on_cap_limit_reached(sender, **kwargs):
+    """Full cap reached — remove offer from active routing."""
+    offer_id = kwargs.get('offer_id')
+    _logger.warning(f"Cap limit fully reached for offer={offer_id}")
+
+
+@receiver(user_cap_exceeded)
+def on_user_cap_exceeded(sender, **kwargs):
+    """User-level cap exceeded."""
+    user_id = kwargs.get('user_id')
+    offer_id = kwargs.get('offer_id')
+    _logger.info(f"User cap exceeded: user={user_id} offer={offer_id}")
+
+
+@receiver(fallback_triggered)
+def on_fallback_triggered(sender, **kwargs):
+    """Log when routing falls back to default offer pool."""
+    route_id = kwargs.get('route_id')
+    reason = kwargs.get('reason', 'no_match')
+    _logger.info(f"Fallback triggered: route={route_id} reason={reason}")
+
+
+@receiver(fraud_detected)
+def on_fraud_detected(sender, **kwargs):
+    """Handle fraud detection — blacklist if confidence is high."""
+    user_id = kwargs.get('user_id')
+    score = kwargs.get('fraud_score', 0)
+    _logger.warning(f"Fraud detected: user={user_id} score={score}")
+    if score and score > 0.95:
+        try:
+            from .models import RoutingBlacklist
+            from django.contrib.auth import get_user_model
+            user = get_user_model().objects.filter(id=user_id).first()
+            if user:
+                RoutingBlacklist.objects.get_or_create(
+                    blacklist_type='user',
+                    entity_id=str(user_id),
+                    defaults={'reason': f'Auto-blacklisted: fraud_score={score}', 'is_active': True}
+                )
+        except Exception:
+            pass
+
+
+@receiver(offer_score_created)
+@receiver(offer_score_updated)
+def on_offer_score_change(sender, **kwargs):
+    """Invalidate offer score caches when scores change."""
+    offer_id = kwargs.get('offer_id')
+    user_id = kwargs.get('user_id')
+    try:
+        from django.core.cache import cache
+        cache.delete(f'score:{offer_id}:{user_id}')
+        cache.delete(f'score:global:{offer_id}')
+    except Exception:
+        pass
+
+
+@receiver(personalization_updated)
+def on_personalization_updated(sender, **kwargs):
+    """Clear personalization caches when preferences update."""
+    user_id = kwargs.get('user_id')
+    try:
+        from django.core.cache import cache
+        cache.delete_pattern(f'personalization:*:{user_id}:*')
+    except Exception:
+        pass
+
+
+@receiver(performance_alert)
+@receiver(performance_threshold_exceeded)
+def on_performance_alert(sender, **kwargs):
+    """Log performance alerts."""
+    metric = kwargs.get('metric', 'unknown')
+    value = kwargs.get('value')
+    threshold = kwargs.get('threshold')
+    _logger.warning(f"Performance alert: {metric}={value} (threshold={threshold})")
+
+
+@receiver(system_health_degraded)
+def on_health_degraded(sender, **kwargs):
+    """Handle system health degradation."""
+    component = kwargs.get('component', 'unknown')
+    _logger.error(f"System health degraded: component={component}")
+
+
+@receiver(postback_received)
+def on_postback_received(sender, **kwargs):
+    """Log incoming postback."""
+    conversion_id = kwargs.get('conversion_id')
+    _logger.debug(f"Postback received: conversion={conversion_id}")
+
+
+@receiver(postback_processed)
+def on_postback_processed(sender, **kwargs):
+    """Handle postback processing completion."""
+    conversion_id = kwargs.get('conversion_id')
+    success = kwargs.get('success', True)
+    _logger.info(f"Postback processed: conversion={conversion_id} success={success}")
+
+
+@receiver(routing_decision_cached)
+def on_decision_cached(sender, **kwargs):
+    """Track cache effectiveness."""
+    _logger.debug("Routing decision cached")
+
+from .signals_cap import (
+    cap_alert_generated, cap_analytics_generated, cap_api_access,
+    cap_auto_adjusted, cap_config_exported, cap_config_imported,
+    cap_config_validated, cap_dependency_resolved, cap_emergency_triggered,
+    cap_external_sync_completed, cap_health_check_completed,
+    cap_monitoring_started, cap_monitoring_stopped, cap_performance_analyzed,
+    cap_report_generated, cap_updated, cap_violation_detected,
+    cap_warning_threshold_crossed, cap_webhook_called,
+)
+from .signals import route_activated, route_deactivated, route_performance_updated
+
+# ─── Cap signals ──────────────────────────────────────────────────────────────
+@receiver(cap_updated)
+def on_cap_updated(sender, **kwargs):
+    """Invalidate cap cache when a cap record is updated."""
+    try:
+        from django.core.cache import cache
+        offer_id = kwargs.get('offer_id')
+        if offer_id:
+            cache.delete(f'cap:config:{offer_id}')
+            cache.delete(f'cap:usage:{offer_id}')
+    except Exception: pass
+
+@receiver(cap_violation_detected)
+def on_cap_violation(sender, **kwargs):
+    """Log cap violations for audit."""
+    offer_id = kwargs.get('offer_id')
+    user_id  = kwargs.get('user_id')
+    _logger.warning(f"Cap violation: offer={offer_id} user={user_id}")
+
+@receiver(cap_warning_threshold_crossed)
+def on_cap_warning_crossed(sender, **kwargs):
+    """Warn when cap warning threshold crossed."""
+    offer_id = kwargs.get('offer_id')
+    _logger.info(f"Cap warning threshold crossed: offer={offer_id}")
+
+@receiver(cap_emergency_triggered)
+def on_cap_emergency(sender, **kwargs):
+    """Emergency cap trigger — disable routing for the offer."""
+    offer_id = kwargs.get('offer_id')
+    _logger.error(f"EMERGENCY cap triggered: offer={offer_id}")
+
+@receiver(cap_alert_generated)
+def on_cap_alert(sender, **kwargs):
+    _logger.warning(f"Cap alert: {kwargs}")
+
+@receiver(cap_analytics_generated)
+def on_cap_analytics(sender, **kwargs):
+    _logger.debug(f"Cap analytics generated")
+
+@receiver(cap_auto_adjusted)
+def on_cap_auto_adjusted(sender, **kwargs):
+    _logger.info(f"Cap auto-adjusted: {kwargs.get('offer_id')}")
+
+@receiver(cap_config_exported)
+def on_cap_config_exported(sender, **kwargs): pass
+
+@receiver(cap_config_imported)
+def on_cap_config_imported(sender, **kwargs):
+    try:
+        from django.core.cache import cache
+        cache.delete_pattern('cap:config:*')
+    except Exception: pass
+
+@receiver(cap_config_validated)
+def on_cap_config_validated(sender, **kwargs): pass
+
+@receiver(cap_dependency_resolved)
+def on_cap_dependency(sender, **kwargs): pass
+
+@receiver(cap_external_sync_completed)
+def on_cap_sync(sender, **kwargs):
+    _logger.info("Cap external sync completed")
+
+@receiver(cap_health_check_completed)
+def on_cap_health(sender, **kwargs): pass
+
+@receiver(cap_monitoring_started)
+def on_cap_monitoring_started(sender, **kwargs):
+    _logger.debug("Cap monitoring started")
+
+@receiver(cap_monitoring_stopped)
+def on_cap_monitoring_stopped(sender, **kwargs):
+    _logger.debug("Cap monitoring stopped")
+
+@receiver(cap_performance_analyzed)
+def on_cap_performance(sender, **kwargs): pass
+
+@receiver(cap_report_generated)
+def on_cap_report(sender, **kwargs): pass
+
+@receiver(cap_api_access)
+def on_cap_api_access(sender, **kwargs): pass
+
+@receiver(cap_webhook_called)
+def on_cap_webhook(sender, **kwargs):
+    _logger.debug(f"Cap webhook called: {kwargs.get('url')}")
+
+# ─── Route lifecycle signals ──────────────────────────────────────────────────
+@receiver(route_activated)
+def on_route_activated(sender, **kwargs):
+    """Warm up cache when a route is activated."""
+    route_id = kwargs.get('route_id')
+    _logger.info(f"Route activated: {route_id}")
+    try:
+        from django.core.cache import cache
+        cache.delete(f'route:status:{route_id}')
+    except Exception: pass
+
+@receiver(route_deactivated)
+def on_route_deactivated(sender, **kwargs):
+    """Clear route caches when deactivated."""
+    route_id = kwargs.get('route_id')
+    _logger.info(f"Route deactivated: {route_id}")
+    try:
+        from django.core.cache import cache
+        cache.delete(f'route:status:{route_id}')
+        cache.delete(f'route:cache:{route_id}')
+    except Exception: pass
+
+@receiver(route_performance_updated)
+def on_route_performance(sender, **kwargs):
+    """Invalidate performance stat caches."""
+    route_id = kwargs.get('route_id')
+    try:
+        from django.core.cache import cache
+        cache.delete(f'route:perf:{route_id}')
+    except Exception: pass

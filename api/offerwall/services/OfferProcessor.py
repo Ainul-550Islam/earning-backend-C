@@ -6,8 +6,30 @@ import requests
 from abc import ABC, abstractmethod
 from decimal import Decimal
 from django.utils import timezone
-from ..constants import *
-from ..exceptions import *
+from ..constants import (
+    PLATFORM_ALL,
+    PLATFORM_ANDROID,
+    PLATFORM_IOS,
+    PLATFORM_WEB,
+    PLATFORM_MOBILE,
+    PLATFORM_DESKTOP,
+    OFFER_TYPE_APP_INSTALL,
+    OFFER_TYPE_SURVEY,
+    OFFER_TYPE_VIDEO,
+    OFFER_TYPE_GAME,
+    OFFER_TYPE_SIGNUP,
+    API_TIMEOUT_DEFAULT,
+    API_TIMEOUT_SYNC,
+    RETRY_STATUS_CODES,
+    MAX_RETRY_ATTEMPTS,
+)
+from ..exceptions import (
+    InvalidProviderConfigException,
+    ProviderTimeoutException,
+    ProviderAPIException,
+    ProviderAuthenticationException,
+)
+from api.offerwall.exceptions import InvalidRewardException
 
 logger = logging.getLogger(__name__)
 
@@ -308,7 +330,7 @@ class OfferProcessor(ABC):
             str: Normalized offer type constant
         """
         if not offer_type:
-            return OFFER_TYPE_OTHER
+            return 'other'
         
         offer_type = offer_type.lower()
         
@@ -332,7 +354,7 @@ class OfferProcessor(ABC):
             if key in offer_type:
                 return value
         
-        return OFFER_TYPE_OTHER
+        return 'other'
     
     def validate_payout(self, payout):
         """

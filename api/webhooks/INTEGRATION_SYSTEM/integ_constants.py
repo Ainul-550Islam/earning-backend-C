@@ -93,13 +93,10 @@ class ValidationType(models.TextChoices):
     CUSTOM = 'custom', _('Custom Validation')
 
 
-class LogLevel(models.TextChoices):
-    """Log level choices."""
-    DEBUG = 'debug', _('Debug')
-    INFO = 'info', _('Info')
-    WARNING = 'warning', _('Warning')
-    ERROR = 'error', _('Error')
-    CRITICAL = 'critical', _('Critical')
+# CONSOLIDATION (this audit): was an independent, value-identical
+# duplicate of ../choices.py's LogLevel. Re-exported from there, now the
+# single owner.
+from ..choices import LogLevel  # noqa: E402,F401
 
 
 class HealthStatus(models.TextChoices):

@@ -1,18 +1,25 @@
 # serializers/country.py
 from rest_framework import serializers
 
+
 class CountrySerializer(serializers.ModelSerializer):
-    phone_code_display = serializers.SerializerMethodField()
     class Meta:
         from ..models.core import Country
         model = Country
-        fields = '__all__'
+        fields = [
+            'id', 'created_at', 'updated_at',
+            'code', 'code_alpha3',
+            'name', 'native_name',
+            'phone_code', 'phone_digits',
+            'flag_emoji', 'flag_svg_url',
+            'is_active',
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-    def get_phone_code_display(self, obj):
-        return obj.get_safe_phone_code() if obj else ''
+
 
 class CountryMinimalSerializer(serializers.ModelSerializer):
     class Meta:
         from ..models.core import Country
         model = Country
-        fields = ['code', 'name', 'flag_emoji', 'phone_code', 'continent']
+        fields = ['id', 'code', 'code_alpha3', 'name', 'native_name',
+                  'phone_code', 'flag_emoji', 'is_active']

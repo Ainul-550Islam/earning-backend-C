@@ -1,11 +1,18 @@
 from typing import Dict, Any, List, Optional, Tuple
+import time
+from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 from django.core.cache import cache
 from django.db.models import Q
-from ..models import RateLimitConfig, RateLimitLog, UserRateLimitProfile
-from .RedisRateLimiter import RedisRateLimiter
-from .TokenBucket import TokenBucket, LeakyBucket, FixedWindowCounter
+from api.rate_limit.models import RateLimitConfig, RateLimitLog, UserRateLimitProfile
+from api.rate_limit.services.RedisRateLimiter import RedisRateLimiter
+from api.rate_limit.services.TokenBucket import TokenBucket, LeakyBucket, FixedWindowCounter
+from api.rate_limit.services.AbuseDetectionService import AbuseDetectionService
+from api.rate_limit.services.IPBlockService import IPBlockService
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RateLimitService:
@@ -14,6 +21,8 @@ class RateLimitService:
     def __init__(self):
         self.redis_limiter = RedisRateLimiter()
         self.algorithm_cache = {}  # Cache algorithm instances
+        self.abuse_detection_service = AbuseDetectionService()
+        self.ip_block_service = IPBlockService()
     
     def get_applicable_configs(self, request) -> List[RateLimitConfig]:
         """
@@ -178,6 +187,9 @@ class RateLimitService:
         try:
             profile, created = UserRateLimitProfile.objects.get_or_create(user=user)
             
+            # Update last request time
+            profile.last_request_at = timezone.now()
+            
             # Update stats
             profile.total_requests += 1
             if not is_allowed:
@@ -236,7 +248,7 @@ class RateLimitService:
         """
         Check if user can complete more tasks of a specific type today
         """
-        from ..models import UserRateLimitProfile
+        from api.rate_limit.models import UserRateLimitProfile
         
         try:
             profile = UserRateLimitProfile.objects.get(user=user)
@@ -340,7 +352,7 @@ class RateLimitService:
             active_configs = RateLimitConfig.objects.filter(is_active=True).count()
             total_logs = RateLimitLog.objects.count()
             recent_logs = RateLimitLog.objects.filter(
-                timestamp__gte=timezone.now() - timezone.timedelta(hours=1)
+                timestamp__gte=timezone.now() - timedelta(hours=1)
             ).count()
             
             # Get Redis info
@@ -380,3 +392,113 @@ class RateLimitService:
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+
+    # ─────────────────────────────────────────────────────────
+    # Integration-friendly methods (called by integration_service.py)
+    # ─────────────────────────────────────────────────────────
+
+    def check_request_by_config(
+        self,
+        config,
+        identifier: str,
+        user_id=None,
+        ip_address: str = '',
+        extra_context: dict = None,
+    ) -> dict:
+        """
+        Check rate limit given an explicit config object + identifier.
+        Called by integration_service._run_check().
+
+        Returns unified dict with keys: allowed, reason, remaining, reset_at, extra
+        """
+        try:
+            is_allowed, metadata = self.redis_limiter.check_rate_limit_by_identifier(
+                identifier=identifier,
+                config=config,
+            )
+
+            # Map to unified response keys
+            return {
+                'allowed': is_allowed,
+                'reason': 'rate_limit_exceeded' if not is_allowed else '',
+                'remaining': metadata.get('remaining', -1),
+                'reset_at': metadata.get('reset_time'),
+                'extra': {
+                    'current': metadata.get('current', 0),
+                    'limit': metadata.get('limit', config.requests_per_unit),
+                    'identifier': identifier,
+                    **(extra_context or {}),
+                },
+            }
+        except Exception as e:
+            logger.error(f'check_request_by_config error: {e}')
+            return {'allowed': True, 'reason': 'error_fail_open', 'remaining': -1, 'reset_at': None, 'extra': {}}
+
+    def reset_user_limits_by_id(self, user_id: int, action_names: list = None):
+        """
+        Reset rate limits for a user by user_id.
+        Called by integration_service.reset_user_limits().
+        action_names: list of config names to reset (None = reset all).
+        """
+        try:
+            from api.rate_limit.models import RateLimitConfig
+            from django.db.models import Q
+
+            configs = RateLimitConfig.objects.filter(is_active=True)
+            if action_names:
+                configs = configs.filter(name__in=action_names)
+            else:
+                configs = configs.filter(
+                    Q(rate_limit_type='user', user_id=user_id) |
+                    Q(rate_limit_type='global') |
+                    Q(rate_limit_type='endpoint')
+                )
+
+            identifier = f'user:{user_id}'
+            for config in configs:
+                try:
+                    self.redis_limiter.reset_rate_limit(identifier, config)
+                except Exception as e:
+                    logger.debug(f'reset_rate_limit error for config {config.name}: {e}')
+
+            # Also reset Redis task keys
+            try:
+                today = __import__('time').strftime('%Y-%m-%d')
+                keys = self.redis_limiter.redis_client.keys(f'task_limit:{user_id}:*:{today}')
+                for key in keys:
+                    self.redis_limiter.redis_client.delete(key)
+            except Exception:
+                pass
+
+            logger.info(f'[RateLimitService] Reset limits for user_id={user_id} actions={action_names}')
+        except Exception as e:
+            logger.error(f'reset_user_limits_by_id error: {e}')
+
+    def check_rate_limit(self, identifier: str = None, config=None, request=None,
+                         user=None, endpoint=None, method=None, **kwargs) -> dict:
+        """Check rate limit for identifier. Returns {allowed, remaining, reset_at}.
+        Supports both positional identifier and keyword user=/endpoint=/method=."""
+        try:
+            # Build identifier from kwargs when not supplied directly
+            if identifier is None:
+                if user and hasattr(user, 'pk') and user.pk:
+                    identifier = str(user.pk)
+                elif endpoint:
+                    identifier = endpoint
+                else:
+                    identifier = 'anonymous'
+
+            if config is None:
+                return {'allowed': True, 'remaining': -1, 'reset_at': None}
+            return self.check_request_by_config(config=config, identifier=identifier)
+        except Exception:
+            return {'allowed': True, 'remaining': -1, 'reset_at': None}
+
+    def is_rate_limited(self, identifier: str, config=None) -> bool:
+        """Simple bool check - True if rate limited (blocked)."""
+        result = self.check_rate_limit(identifier=identifier, config=config)
+        return not result.get('allowed', True)
+
+    def get_rate_limit_info(self, identifier: str, config=None) -> dict:
+        """Get current rate limit info for identifier."""
+        return self.check_rate_limit(identifier=identifier, config=config)

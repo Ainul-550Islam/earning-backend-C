@@ -3,6 +3,7 @@ api/ad_networks/feature_flags.py
 Feature flags system for ad networks module
 SaaS-ready with tenant support
 """
+from typing import Tuple
 
 import logging
 from datetime import datetime, timedelta

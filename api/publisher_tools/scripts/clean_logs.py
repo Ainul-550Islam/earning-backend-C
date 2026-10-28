@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def clean_webhook_delivery_logs(days: int = 30):
     """Old webhook delivery logs cleanup করে।"""
-    from api.publisher_tools.webhooks.webhook_logger import cleanup_old_logs
+    from publisher_tools.webhooks.webhook_logger import cleanup_old_logs
     result = cleanup_old_logs(days)
     print(f"✅ Webhook logs cleaned: {result['total_deleted']} records deleted")
     return result
@@ -21,7 +21,7 @@ def clean_webhook_delivery_logs(days: int = 30):
 
 def clean_old_traffic_safety_logs(days: int = 90):
     """Old IVT logs cleanup করে।"""
-    from api.publisher_tools.models import TrafficSafetyLog
+    from publisher_tools.models import TrafficSafetyLog
     cutoff = timezone.now() - timedelta(days=days)
     deleted, _ = TrafficSafetyLog.objects.filter(
         detected_at__lt=cutoff,
@@ -34,7 +34,7 @@ def clean_old_traffic_safety_logs(days: int = 90):
 
 def clean_resolved_fraud_alerts(days: int = 60):
     """Resolved fraud alerts cleanup করে।"""
-    from api.publisher_tools.fraud_prevention.fraud_alert import FraudAlert
+    from publisher_tools.fraud_prevention.fraud_alert import FraudAlert
     cutoff = timezone.now() - timedelta(days=days)
     deleted, _ = FraudAlert.objects.filter(
         is_resolved=True, resolved_at__lt=cutoff,
@@ -45,7 +45,7 @@ def clean_resolved_fraud_alerts(days: int = 60):
 
 def clean_old_performance_snapshots(months: int = 12):
     """Old performance snapshots cleanup করে।"""
-    from api.publisher_tools.publisher_management.publisher_performance import PublisherPerformanceSnapshot
+    from publisher_tools.publisher_management.publisher_performance import PublisherPerformanceSnapshot
     cutoff = timezone.now() - timedelta(days=months * 30)
     deleted, _ = PublisherPerformanceSnapshot.objects.filter(created_at__lt=cutoff).delete()
     print(f"✅ Performance snapshots cleaned: {deleted} records")
@@ -54,7 +54,7 @@ def clean_old_performance_snapshots(months: int = 12):
 
 def clean_old_verification_tokens(days: int = 7):
     """Expired verification tokens cleanup করে।"""
-    from api.publisher_tools.publisher_management.publisher_verification import PublisherVerification
+    from publisher_tools.publisher_management.publisher_verification import PublisherVerification
     cutoff = timezone.now() - timedelta(days=days)
     deleted, _ = PublisherVerification.objects.filter(
         expires_at__lt=cutoff, status__in=["expired","failed"],
@@ -65,7 +65,7 @@ def clean_old_verification_tokens(days: int = 7):
 
 def clean_old_database_records(days: int = 90):
     """Old database_models records cleanup করে।"""
-    from api.publisher_tools.database_models.webhook_model import WebhookLogRecord
+    from analytics_warehouse.models import WebhookLogRecord
     cutoff = timezone.now() - timedelta(days=days)
     deleted, _ = WebhookLogRecord.objects.filter(
         created_at__lt=cutoff, is_processed=True,

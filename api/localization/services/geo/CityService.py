@@ -12,7 +12,7 @@ class CityService:
     def autocomplete(self, query: str, country_code: str = '', limit: int = 10) -> List[Dict]:
         """City name autocomplete"""
         try:
-            from ..models.core import City
+            from api.localization.models.core import City
             from django.db.models import Q
             qs = City.objects.filter(
                 is_active=True
@@ -33,7 +33,7 @@ class CityService:
     def get_capitals(self) -> List[Dict]:
         """All capital cities"""
         try:
-            from ..models.core import City
+            from api.localization.models.core import City
             capitals = City.objects.filter(is_capital=True, is_active=True).select_related('country', 'timezone')
             return [{
                 'name': c.name, 'country_code': c.country.code if c.country else '',

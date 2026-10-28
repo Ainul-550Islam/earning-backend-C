@@ -18,8 +18,8 @@ POSITION_VIEWABILITY = {
 
 def get_viewability_recommendations(site) -> List[Dict]:
     """Site viewability improvement recommendations।"""
-    from api.publisher_tools.models import AdPlacement
-    placements = AdPlacement.objects.filter(ad_unit__site=site, is_active=True)
+    from publisher_tools.models import AdPlacement
+    placements = AdPlacement.objects.select_related('ad_unit').filter(ad_unit__site=site, is_active=True)
     recommendations = []
     for p in placements:
         viewability = float(p.avg_viewability)
@@ -46,3 +46,8 @@ def calculate_viewability_impact_on_ecpm(viewability_pct: float, current_ecpm: f
         "current_ecpm": current_ecpm, "projected_ecpm": round(projected, 4),
         "uplift_pct": round(uplift_factor * 100, 2),
     }
+
+
+def calculate_viewability_lift(viewability_pct: float, current_ecpm: float) -> Dict:
+    """Alias used by optimization_tools exports and views."""
+    return calculate_viewability_impact_on_ecpm(viewability_pct, current_ecpm)

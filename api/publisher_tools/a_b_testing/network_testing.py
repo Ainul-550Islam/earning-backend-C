@@ -26,7 +26,7 @@ def create_network_champion_challenger(publisher, ad_unit, champion_network, cha
 
 
 def compare_network_performance(network_ids: List[str], days: int = 30) -> List[dict]:
-    from api.publisher_tools.models import WaterfallItem
+    from publisher_tools.models import WaterfallItem
     from django.db.models import Avg, Sum
     from django.utils import timezone
     from datetime import timedelta

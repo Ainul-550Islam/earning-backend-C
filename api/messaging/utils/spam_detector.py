@@ -15,6 +15,7 @@ import hashlib
 import logging
 import re
 from typing import Any
+import requests  # noqa: F401  (module-level so tests can patch it)
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,7 @@ def check_duplicate_message(user_id: Any, content: str, window_seconds: int = 60
         count = cache.get(key) or 0
         new_count = count + 1
         cache.set(key, new_count, window_seconds)
-        return count >= 2, count  # Duplicate if sent 3+ times in window
+        return new_count >= 3, new_count  # Duplicate if sent 3+ times in window
     except Exception:
         return False, 0
 
@@ -120,7 +121,6 @@ def check_toxicity(text: str) -> dict:
         return {"is_toxic": False, "toxic_score": 0.0}
 
     try:
-        import requests
         payload = {
             "comment": {"text": text[:3000]},
             "languages": ["en", "bn"],

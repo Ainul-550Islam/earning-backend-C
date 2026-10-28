@@ -131,4 +131,3 @@ class StatusPage:
         now = datetime.utcnow()
         return [m for m in self._maintenances
                 if now <= datetime.fromisoformat(m["start_time"]) <= now + timedelta(days=7)]
-

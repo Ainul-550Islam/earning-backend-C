@@ -3,6 +3,7 @@ api/ad_networks/viewset.py
 ViewSet for ad networks module
 SaaS-ready with tenant support
 """
+from rest_framework import filters
 
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action

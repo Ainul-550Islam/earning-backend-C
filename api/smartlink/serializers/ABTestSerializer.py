@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import SmartLinkVersion
+from api.smartlink.models import SmartLinkVersion
 
 
 class ABTestSerializer(serializers.ModelSerializer):

@@ -1,3 +1,5 @@
+from django.db import models
+from django.db.models import Max
 import logging
 import json
 import math
@@ -31,7 +33,8 @@ except LookupError:
     nltk.download('stopwords')
 
 from ..models import FAQ, FAQCategory, FAQFeedback, ContentPage
-from api.users.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 # from core.utils import get_client_ip, normalize_text
 # from search.models import SearchIndex
 

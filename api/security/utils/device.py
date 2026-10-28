@@ -1,3 +1,4 @@
+from django.db import models
 import requests
 import logging
 from datetime import timedelta
@@ -5,8 +6,16 @@ from typing import Optional, Dict, Any, List, Tuple, Callable
 from django.utils import timezone
 from django.conf import settings
 from django.http import HttpRequest
-from api.security.models import DeviceInfo, ClickTracker, SecurityLog, WithdrawalProtection
+from ..models import DeviceInfo, ClickTracker, SecurityLog, WithdrawalProtection
 import functools
+# DeviceInfo stub — replace with real import if available
+try:
+    from api.security.models import DeviceInfo
+except ImportError:
+    class DeviceInfo:
+        pass
+
+
 
 logger = logging.getLogger(__name__)
 

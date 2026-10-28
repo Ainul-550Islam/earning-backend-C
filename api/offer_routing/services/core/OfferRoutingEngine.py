@@ -4,6 +4,7 @@ Main Offer Routing Engine
 This is the main entry point for the offer routing system.
 Takes user + context and returns ranked offer list in <50ms.
 """
+from django.db import models
 
 import logging
 import time
@@ -11,19 +12,19 @@ from typing import Dict, List, Any, Optional, Tuple
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.core.cache import cache
-from ...models import (
+from offer_routing.models import (
     OfferRoute, RouteCondition, RouteAction,
     RoutingDecisionLog, UserOfferHistory
 )
-from ...utils import (
+from offer_routing.utils import (
     generate_cache_key, hash_context, calculate_score,
     extract_device_info, get_user_segment_info
 )
-from ...constants import (
+from offer_routing.constants import (
     ROUTING_CACHE_TIMEOUT, MAX_ROUTING_TIME_MS,
     DEFAULT_ROUTE_PRIORITY, MAX_OFFERS_PER_ROUTE
 )
-from ...exceptions import (
+from offer_routing.exceptions import (
     RoutingTimeoutError, RouteNotFoundError,
     OfferNotFoundError, CacheError
 )

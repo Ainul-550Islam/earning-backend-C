@@ -5,6 +5,7 @@ This module contains viewsets for system monitoring,
 health checks, and performance tracking.
 """
 
+from ..throttling import AnalyticsThrottle, RoutingEngineThrottle, AnalyticsThrottle, BulkOperationThrottle, EvaluatorThrottle
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -26,6 +27,7 @@ class MonitoringViewSet(viewsets.ViewSet):
     """
     
     permission_classes = [IsAuthenticatedOrReadOnly, CanViewAnalytics]
+    throttle_classes = [AnalyticsThrottle]
     
     @action(detail=False, methods=['get'])
     def system_health(self, request):

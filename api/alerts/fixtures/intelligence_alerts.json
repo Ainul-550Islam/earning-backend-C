@@ -1,0 +1,62 @@
+[
+{
+  "model": "alerts.alertcorrelation",
+  "pk": 1,
+  "fields": {
+    "tenant": null,
+    "name": "Temporal Burst Correlation",
+    "description": "",
+    "correlation_type": "temporal",
+    "status": "active",
+    "is_active": true,
+    "time_window_minutes": 60,
+    "correlation_threshold": 0.7,
+    "minimum_occurrences": 3,
+    "correlation_coefficient": null,
+    "p_value": null,
+    "confidence_level": null,
+    "pattern_description": "",
+    "pattern_regex": "",
+    "model_type": "statistical",
+    "model_parameters": {},
+    "correlation_strength": null,
+    "prediction_accuracy": null,
+    "created_by": null,
+    "created_at": "2026-07-03T02:28:07.099Z",
+    "updated_at": "2026-07-03T02:28:07.099Z",
+    "last_analyzed": null,
+    "primary_rules": [],
+    "secondary_rules": []
+  }
+},
+{
+  "model": "alerts.alertcorrelation",
+  "pk": 2,
+  "fields": {
+    "tenant": null,
+    "name": "Statistical Pattern Correlation",
+    "description": "",
+    "correlation_type": "statistical",
+    "status": "active",
+    "is_active": true,
+    "time_window_minutes": 60,
+    "correlation_threshold": 0.7,
+    "minimum_occurrences": 3,
+    "correlation_coefficient": null,
+    "p_value": null,
+    "confidence_level": null,
+    "pattern_description": "",
+    "pattern_regex": "",
+    "model_type": "statistical",
+    "model_parameters": {},
+    "correlation_strength": null,
+    "prediction_accuracy": null,
+    "created_by": null,
+    "created_at": "2026-07-03T02:28:07.102Z",
+    "updated_at": "2026-07-03T02:28:07.102Z",
+    "last_analyzed": null,
+    "primary_rules": [],
+    "secondary_rules": []
+  }
+}
+]

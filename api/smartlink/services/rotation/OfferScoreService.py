@@ -1,7 +1,8 @@
 import math
 import logging
+from api.smartlink.services.analytics.base import AnalyticsServiceBase
 from django.core.cache import cache
-from ...models import OfferScoreCache
+from api.smartlink.models import OfferScoreCache
 from ...constants import CACHE_TTL_EPC_SCORE, EPC_MIN_CLICKS_FOR_SCORE
 
 logger = logging.getLogger('smartlink.offer_score')
@@ -63,13 +64,10 @@ class OfferScoreService:
             offer_id=offer_id,
             country=country,
             device_type=device_type,
-            defaults={
-                'epc': epc,
-                'conversion_rate': cr,
-                'total_clicks': clicks,
-                'total_conversions': conversions,
-                'score': score,
-            }
+            defaults={**AnalyticsServiceBase.build_score_defaults(
+                epc=epc, cr=cr, clicks=clicks,
+                conversions=conversions, revenue=0,
+            ), 'score': score}
         )
 
         # Bust cache

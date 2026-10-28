@@ -555,6 +555,7 @@ def method_tenant_owner_required(method: Callable) -> Callable:
 def api_tenant_required(view_func: Callable) -> Callable:
     """DRF API view decorator for tenant context."""
     @api_view(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+    @api_view(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
     @permission_classes([IsAuthenticated])
     @functools.wraps(view_func)
     def wrapper(request, *args, **kwargs):
@@ -571,7 +572,7 @@ def api_tenant_required(view_func: Callable) -> Callable:
 
 def api_tenant_owner_required(view_func: Callable) -> Callable:
     """DRF API view decorator for tenant ownership."""
-    @api_view(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+
     @permission_classes([IsAuthenticated, IsTenantOwner])
     @functools.wraps(view_func)
     def wrapper(request, *args, **kwargs):

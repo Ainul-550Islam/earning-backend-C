@@ -20,13 +20,15 @@ class LanguageModelTest(TestCase):
         lang2 = make_language(code='te-d2', name='Default 2', is_default=True)
         lang2.is_default = True
         lang2.save()
-        from localization.models.core import Language
+        from api.localization.models.core import Language
         self.assertEqual(Language.objects.filter(is_default=True).count(), 1)
 
     def test_language_coverage_update(self):
         lang = make_language(code='te-cov', name='Coverage Test', is_default=False)
         lang.update_coverage()
-        self.assertIsNotNone(lang.coverage_percent)
+        # coverage_percent is set as instance attribute by update_coverage()
+        self.assertTrue(hasattr(lang, 'coverage_percent'))
+        self.assertIsInstance(lang.coverage_percent, float)
 
 
 class CountryModelTest(TestCase):
@@ -39,7 +41,7 @@ class CountryModelTest(TestCase):
         self.assertIn('TY', str(country))
 
     def test_get_active_countries(self):
-        from localization.models.core import Country
+        from api.localization.models.core import Country
         make_country(code='TZ', name='Test Z')
         qs = Country.get_active_countries()
         self.assertGreater(qs.count(), 0)
@@ -75,7 +77,7 @@ class TranslationModelTest(TestCase):
         self.assertEqual(trans.word_count, 3)
 
     def test_missing_translation_log(self):
-        from localization.models.translation import MissingTranslation
+        from api.localization.models.translation import MissingTranslation
         lang = make_language(code='te-mt', name='Missing Test', is_default=False)
         MissingTranslation.log_missing('test.missing.key', lang.code)
         self.assertTrue(MissingTranslation.objects.filter(key='test.missing.key', language=lang).exists())
@@ -83,7 +85,7 @@ class TranslationModelTest(TestCase):
 
 class TranslationMemoryTest(TestCase):
     def test_tm_add_segment(self):
-        from localization.services.translation.TranslationMemoryService import TranslationMemoryService
+        from api.localization.services.translation.TranslationMemoryService import TranslationMemoryService
         make_language(code='te-tm', name='TM Source', is_default=False)
         make_language(code='te-tm2', name='TM Target', is_default=False)
         service = TranslationMemoryService()
@@ -91,8 +93,8 @@ class TranslationMemoryTest(TestCase):
         self.assertIsNotNone(result)
 
     def test_tm_find_exact(self):
-        from localization.models.translation import TranslationMemory
-        from localization.services.translation.TranslationMemoryService import TranslationMemoryService
+        from api.localization.models.translation import TranslationMemory
+        from api.localization.services.translation.TranslationMemoryService import TranslationMemoryService
         make_language(code='te-src', name='Src', is_default=False)
         make_language(code='te-tgt', name='Tgt', is_default=False)
         service = TranslationMemoryService()

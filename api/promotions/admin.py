@@ -332,14 +332,7 @@ class CampaignAnalyticsAdmin(admin.ModelAdmin):
     readonly_fields = [f.name for f in CampaignAnalytics._meta.fields]
 
 
-# Force register all models
-from django.apps import apps as _apps
-_app_label = __name__.split(chr(46))[1]
-for _model in _apps.get_app_config(_app_label).get_models():
-    try:
-        admin.site.register(_model)
-    except admin.sites.AlreadyRegistered:
-        pass
+# Force register block removed
 
 
 def _force_register_promotions():

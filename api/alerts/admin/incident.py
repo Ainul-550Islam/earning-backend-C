@@ -87,7 +87,7 @@ class IncidentAdmin(ModelAdmin):
         }),
         ('Metrics', {
             'fields': ('response_time_minutes', 'resolution_time_minutes', 'total_downtime_minutes',
-                      'duration_minutes', 'severity_score')
+                      'duration_minutes')
         }),
         ('Impact Assessment', {
             'fields': ('affected_services', 'affected_users_count', 'affected_regions',

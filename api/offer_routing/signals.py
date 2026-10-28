@@ -15,7 +15,8 @@ from .models import (
     RoutingDecisionLog, OfferRoutingCap, UserOfferCap,
     RoutingABTest, RoutingConfig, RoutePerformanceStat,
     UserOfferHistory, OfferScore, UserPreferenceVector
-)
+,
+    ABTestAssignment, ABTestResult, FallbackRule, GeoRouteRule, CapOverride, DefaultOfferPool, OfferRoute)
 from .services.analytics import analytics_service
 from .services.cache import cache_service
 
@@ -511,7 +512,7 @@ def user_cap_post_delete(sender, instance, **kwargs):
 
 
 # Bulk operation signals
-@receiver(post_save, dispatch_uid='bulk_routing_update')
+# DISABLED: was connected to post_save but reads kwargs updates/tenant_id, which post_save never sends (silent no-op on every save). Wire it to a bulk-update signal if one exists.
 def bulk_routing_update(sender, **kwargs):
     """
     Handle bulk routing updates.
@@ -579,3 +580,198 @@ def connect_signals():
     Connect all routing signals.
     """
     logger.info("All routing signals connected")
+from django.dispatch import Signal
+
+# Performance monitoring signals
+performance_alert = Signal()
+
+
+# Route lifecycle signals
+route_created = Signal()
+route_updated = Signal()
+route_deleted = Signal()
+route_activated = Signal()
+route_deactivated = Signal()
+
+# Decision signals
+routing_decision_made = Signal()
+routing_decision_cached = Signal()
+
+# Cap signals
+cap_exceeded = Signal()
+cap_reset = Signal()
+
+# A/B test signals
+ab_test_started = Signal()
+ab_test_completed = Signal()
+ab_test_winner_selected = Signal()
+ab_test_winner = ab_test_winner_selected
+ab_test_assignment = ab_test_assignment_made if 'ab_test_assignment_made' in dir() else Signal()
+
+# Auto-added missing signals
+from django.dispatch import Signal
+offer_score_updated = Signal()
+offer_score_created = Signal()
+cap_threshold_reached = Signal()
+personalization_updated = Signal()
+ab_test_assignment_made = Signal()
+route_performance_updated = Signal()
+fallback_triggered = Signal()
+fraud_detected = Signal()
+postback_received = Signal()
+postback_processed = Signal()
+cap_limit_reached = Signal()
+cap_warning_threshold_reached = Signal()
+user_cap_exceeded = Signal()
+performance_threshold_exceeded = Signal()
+system_health_degraded = Signal()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ABTest signals
+# ─────────────────────────────────────────────────────────────────────────────
+
+@receiver(post_save, sender=ABTestAssignment)
+def ab_test_assignment_post_save(sender, instance, created, **kwargs):
+    """Invalidate AB test stats cache when a new assignment is created."""
+    if not created:
+        return
+    try:
+        from .services.cache import cache_service
+        cache_service.clear_pattern(f'ab_test:stats:{instance.test_id}:*')
+        logger.debug("AB test assignment cache cleared for test %s", instance.test_id)
+    except Exception as e:
+        logger.error("ab_test_assignment_post_save error: %s", e)
+
+
+@receiver(post_save, sender=ABTestResult)
+def ab_test_result_post_save(sender, instance, created, **kwargs):
+    """Invalidate AB test results cache when a new result event is recorded."""
+    if not created:
+        return
+    try:
+        from .services.cache import cache_service
+        cache_service.clear_pattern(f'ab_test:results:{instance.test_id}:*')
+        logger.debug("AB test result cache cleared for test %s", instance.test_id)
+    except Exception as e:
+        logger.error("ab_test_result_post_save error: %s", e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fallback signals
+# ─────────────────────────────────────────────────────────────────────────────
+
+@receiver(post_save, sender=FallbackRule)
+def fallback_rule_post_save(sender, instance, created, **kwargs):
+    """Invalidate fallback cache when a rule is created or updated."""
+    try:
+        from .services.cache import cache_service
+        cache_service.clear_pattern(f'fallback:rules:*')
+        logger.debug("Fallback rule cache invalidated for rule %s", instance.id)
+    except Exception as e:
+        logger.error("fallback_rule_post_save error: %s", e)
+
+
+@receiver(post_delete, sender=FallbackRule)
+def fallback_rule_post_delete(sender, instance, **kwargs):
+    """Invalidate fallback cache when a rule is deleted."""
+    try:
+        from .services.cache import cache_service
+        cache_service.clear_pattern(f'fallback:rules:*')
+        logger.debug("Fallback rule deleted: %s", instance.id)
+    except Exception as e:
+        logger.error("fallback_rule_post_delete error: %s", e)
+
+
+@receiver(post_save, sender=DefaultOfferPool)
+def default_offer_pool_post_save(sender, instance, created, **kwargs):
+    """Invalidate fallback pool cache when pool is updated."""
+    try:
+        from .services.cache import cache_service
+        cache_service.clear_pattern(f'fallback:pool:{instance.id}:*')
+        logger.debug("Default offer pool cache cleared: %s", instance.id)
+    except Exception as e:
+        logger.error("default_offer_pool_post_save error: %s", e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Geo targeting signals
+# ─────────────────────────────────────────────────────────────────────────────
+
+@receiver(post_save, sender=GeoRouteRule)
+def geo_route_rule_post_save(sender, instance, created, **kwargs):
+    """Invalidate geo targeting cache when a rule is updated."""
+    try:
+        from .services.cache import cache_service
+        cache_service.clear_pattern(f'geo:rules:*')
+        logger.debug("Geo route rule cache cleared for rule %s", instance.id)
+    except Exception as e:
+        logger.error("geo_route_rule_post_save error: %s", e)
+
+
+@receiver(post_delete, sender=GeoRouteRule)
+def geo_route_rule_post_delete(sender, instance, **kwargs):
+    """Invalidate geo targeting cache when a rule is deleted."""
+    try:
+        from .services.cache import cache_service
+        cache_service.clear_pattern(f'geo:rules:*')
+        logger.debug("Geo route rule deleted: %s", instance.id)
+    except Exception as e:
+        logger.error("geo_route_rule_post_delete error: %s", e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CapOverride signals
+# ─────────────────────────────────────────────────────────────────────────────
+
+@receiver(post_save, sender=CapOverride)
+def cap_override_post_save(sender, instance, created, **kwargs):
+    """Invalidate cap cache when an override is created or changed."""
+    try:
+        from .services.cache import cache_service
+        user_id = getattr(instance, 'user_id', None)
+        if user_id:
+            cache_service.clear_pattern(f'user_cap:*:{user_id}')
+        logger.debug("Cap override cache cleared for user %s", user_id)
+    except Exception as e:
+        logger.error("cap_override_post_save error: %s", e)
+
+
+@receiver(post_delete, sender=CapOverride)
+def cap_override_post_delete(sender, instance, **kwargs):
+    """Invalidate cap override cache on delete."""
+    try:
+        from .services.cache import cache_service
+        user_id = getattr(instance, 'user_id', None)
+        if user_id:
+            cache_service.clear_pattern(f'user_cap:*:{user_id}')
+        logger.debug("Cap override deleted for user %s", user_id)
+    except Exception as e:
+        logger.error("cap_override_post_delete error: %s", e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OfferRoute signals
+# ─────────────────────────────────────────────────────────────────────────────
+
+@receiver(post_save, sender=OfferRoute)
+def offer_route_post_save(sender, instance, created, **kwargs):
+    """Invalidate route cache and re-score on update."""
+    try:
+        from .services.cache import cache_service
+        cache_service.clear_pattern(f'routing:route:{instance.id}:*')
+        logger.debug("OfferRoute cache cleared for route %s", instance.id)
+    except Exception as e:
+        logger.error("offer_route_post_save error: %s", e)
+
+
+@receiver(post_delete, sender=OfferRoute)
+def offer_route_post_delete(sender, instance, **kwargs):
+    """Clean up cache entries when a route is deleted."""
+    try:
+        from .services.cache import cache_service
+        cache_service.clear_pattern(f'routing:route:{instance.id}:*')
+        cache_service.clear_pattern(f'score:{instance.id}:*')
+        logger.debug("OfferRoute deleted and cache cleared: %s", instance.id)
+    except Exception as e:
+        logger.error("offer_route_post_delete error: %s", e)
+

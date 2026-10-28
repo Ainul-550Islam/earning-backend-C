@@ -5,8 +5,13 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
 from ..models.threshold import (
-    ThresholdConfig, ThresholdBreach, AdaptiveThreshold, 
+    ThresholdConfig, ThresholdBreach, AdaptiveThreshold,
     ThresholdHistory, ThresholdProfile
+)
+from ..validators import (
+    validate_threshold_value,
+    validate_time_window,
+    validate_alert_severity,
 )
 
 User = get_user_model()
@@ -21,25 +26,52 @@ class ThresholdConfigSerializer(serializers.ModelSerializer):
         model = ThresholdConfig
         fields = [
             'id', 'alert_rule', 'alert_rule_name', 'threshold_type', 'primary_threshold',
-            'secondary_threshold', 'operator', 'time_window_minutes', 'is_active',
-            'config', 'created_by', 'created_by_name', 'created_at', 'updated_at'
+            'secondary_threshold', 'comparison_operator', 'calculation_window_minutes', 'is_active',
+            'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'created_by']
-    
+
     def validate_primary_threshold(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Primary threshold must be positive")
+        """Wire validate_threshold_value() from validators.py."""
+        threshold_type = (self.initial_data or {}).get('threshold_type', 'numeric')
+        result = validate_threshold_value(value, threshold_type=threshold_type)
+        if not result['valid']:
+            raise serializers.ValidationError(result['errors'])
         return value
-    
+
     def validate_secondary_threshold(self, value):
-        if value is not None and value <= 0:
-            raise serializers.ValidationError("Secondary threshold must be positive")
+        if value is None:
+            return value
+        result = validate_threshold_value(value, threshold_type='numeric')
+        if not result['valid']:
+            raise serializers.ValidationError(result['errors'])
         return value
-    
+
     def validate_time_window_minutes(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Time window must be positive")
+        """Wire validate_time_window() from validators.py."""
+        result = validate_time_window(value, unit='minutes')
+        if not result['valid']:
+            raise serializers.ValidationError(result['errors'])
         return value
+
+    def validate(self, attrs):
+        """
+        Cross-field: secondary_threshold must be > primary_threshold
+        when comparison_operator is range-based.
+        """
+        primary = attrs.get('primary_threshold') or getattr(self.instance, 'primary_threshold', None)
+        secondary = attrs.get('secondary_threshold') or getattr(self.instance, 'secondary_threshold', None)
+        operator = attrs.get('comparison_operator') or getattr(self.instance, 'comparison_operator', '')
+
+        if secondary is not None and primary is not None:
+            if operator in ('range', 'outside_range') and secondary <= primary:
+                raise serializers.ValidationError({
+                    'secondary_threshold': (
+                        f'secondary_threshold must exceed primary_threshold '
+                        f'for {operator} comparisons.'
+                    )
+                })
+        return attrs
 
 
 class ThresholdBreachSerializer(serializers.ModelSerializer):
@@ -49,6 +81,7 @@ class ThresholdBreachSerializer(serializers.ModelSerializer):
     acknowledged_by_name = serializers.CharField(source='acknowledged_by.get_full_name', read_only=True)
     resolved_by_name = serializers.CharField(source='resolved_by.get_full_name', read_only=True)
     duration_minutes = serializers.SerializerMethodField()
+    is_resolved = serializers.SerializerMethodField()
     
     class Meta:
         model = ThresholdBreach
@@ -56,10 +89,13 @@ class ThresholdBreachSerializer(serializers.ModelSerializer):
             'id', 'threshold_config', 'threshold_config_name', 'alert_log', 'alert_rule_name',
             'severity', 'breach_value', 'threshold_value', 'breach_percentage',
             'detected_at', 'acknowledged_at', 'acknowledged_by', 'acknowledged_by_name',
-            'resolved_at', 'resolved_by', 'resolved_by_name', 'is_resolved',
-            'notes', 'duration_minutes'
+            'resolved_at', 'resolved_by', 'resolved_by_name', 'status', 'is_resolved',
+            'resolution_notes', 'duration_minutes'
         ]
         read_only_fields = ['detected_at', 'acknowledged_at', 'acknowledged_by', 'resolved_at', 'resolved_by']
+
+    def get_is_resolved(self, obj):
+        return obj.status == 'resolved'
     
     def get_duration_minutes(self, obj):
         if obj.resolved_at:
@@ -70,34 +106,45 @@ class ThresholdBreachSerializer(serializers.ModelSerializer):
             from django.utils import timezone
             return (timezone.now() - obj.detected_at).total_seconds() / 60
 
+    def validate_severity(self, value):
+        """Wire validate_alert_severity() from validators.py."""
+        result = validate_alert_severity(value)
+        if not result['valid']:
+            raise serializers.ValidationError(result['errors'])
+        return result.get('normalized_severity', value)
+
+    def validate(self, attrs):
+        """breach_value must differ from threshold_value to constitute a real breach."""
+        breach_val = attrs.get('breach_value')
+        threshold_val = attrs.get('threshold_value')
+        if breach_val is not None and threshold_val is not None:
+            if breach_val == threshold_val:
+                raise serializers.ValidationError({
+                    'breach_value': 'breach_value must differ from threshold_value.'
+                })
+        return attrs
+
 
 class AdaptiveThresholdSerializer(serializers.ModelSerializer):
     """AdaptiveThreshold serializer"""
     threshold_config_name = serializers.CharField(source='threshold_config.name', read_only=True)
-    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     
     class Meta:
         model = AdaptiveThreshold
         fields = [
-            'id', 'threshold_config', 'threshold_config_name', 'adaptation_method',
-            'learning_period_days', 'min_samples', 'confidence_threshold',
-            'adaptation_frequency', 'current_threshold', 'adaptation_count',
-            'last_adaptation', 'is_active', 'config', 'created_by',
-            'created_by_name', 'created_at', 'updated_at'
+            'id', 'threshold_config', 'threshold_config_name', 'name', 'adaptation_method',
+            'adaptation_window_days', 'base_threshold', 'min_threshold', 'max_threshold',
+            'current_threshold', 'adaptation_count',
+            'last_adaptation', 'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'current_threshold', 'adaptation_count', 'last_adaptation']
     
-    def validate_learning_period_days(self, value):
+    def validate_adaptation_window_days(self, value):
         if value <= 0:
-            raise serializers.ValidationError("Learning period must be positive")
+            raise serializers.ValidationError("Adaptation window must be positive")
         return value
     
-    def validate_min_samples(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Minimum samples must be positive")
-        return value
-    
-    def validate_confidence_threshold(self, value):
+    def validate_confidence_threshold_placeholder(self, value):
         if not 0 <= value <= 1:
             raise serializers.ValidationError("Confidence threshold must be between 0 and 1")
         return value
@@ -125,7 +172,7 @@ class ThresholdProfileSerializer(serializers.ModelSerializer):
         model = ThresholdProfile
         fields = [
             'id', 'name', 'profile_type', 'description', 'is_default', 'is_active',
-            'threshold_settings', 'alert_type_mappings', 'created_by',
+            'alert_type_settings', 'created_by',
             'created_by_name', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'created_by']
@@ -158,13 +205,17 @@ class ThresholdBreachListSerializer(serializers.ModelSerializer):
     """Simplified ThresholdBreach serializer for list views"""
     threshold_config_name = serializers.CharField(source='threshold_config.name', read_only=True)
     alert_rule_name = serializers.CharField(source='alert_log.rule.name', read_only=True)
+    is_resolved = serializers.SerializerMethodField()
     
     class Meta:
         model = ThresholdBreach
         fields = [
             'id', 'threshold_config', 'threshold_config_name', 'alert_rule_name',
-            'severity', 'breach_value', 'detected_at', 'is_resolved'
+            'severity', 'breach_value', 'detected_at', 'status', 'is_resolved'
         ]
+
+    def get_is_resolved(self, obj):
+        return obj.status == 'resolved'
 
 
 class AdaptiveThresholdListSerializer(serializers.ModelSerializer):

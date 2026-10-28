@@ -1,3 +1,4 @@
+from typing import Optional, Any, List, Dict, Union
 # api/ad_networks/apps.py
 # SaaS-Ready Multi-Tenant Ad Networks App Configuration
 
@@ -214,13 +215,14 @@ class AdNetworksConfig(AppConfig):
             # Register periodic tasks
             from django_celery_beat.models import PeriodicTask, CrontabSchedule
             from django.utils import timezone
+            def _crontab(minute, hour):
+                kw = dict(minute=minute, hour=hour, day_of_week='*', day_of_month='*', month_of_year='*')
+                obj = CrontabSchedule.objects.filter(**kw).first()
+                return obj or CrontabSchedule.objects.create(timezone=timezone.get_current_timezone(), **kw)
+
             
             # Sync offers every hour
-            sync_schedule, created = CrontabSchedule.objects.get_or_create(
-                minute='0',
-                hour='*',
-                defaults={'timezone': timezone.get_current_timezone()}
-            )
+            sync_schedule = _crontab('0', '*')
             
             PeriodicTask.objects.get_or_create(
                 name='Sync Ad Networks Offers',
@@ -232,11 +234,7 @@ class AdNetworksConfig(AppConfig):
             )
             
             # Cleanup blacklist daily
-            cleanup_schedule, created = CrontabSchedule.objects.get_or_create(
-                minute='0',
-                hour='2',
-                defaults={'timezone': timezone.get_current_timezone()}
-            )
+            cleanup_schedule = _crontab('0', '2')
             
             PeriodicTask.objects.get_or_create(
                 name='Cleanup Expired Blacklist',
@@ -248,11 +246,7 @@ class AdNetworksConfig(AppConfig):
             )
             
             # Generate analytics daily
-            analytics_schedule, created = CrontabSchedule.objects.get_or_create(
-                minute='30',
-                hour='1',
-                defaults={'timezone': timezone.get_current_timezone()}
-            )
+            analytics_schedule = _crontab('30', '1')
             
             PeriodicTask.objects.get_or_create(
                 name='Generate Analytics',
@@ -271,45 +265,45 @@ class AdNetworksConfig(AppConfig):
     def _initialize_events(self):
         """Initialize event system"""
         try:
-            from .events import EventSystem
-            EventSystem.initialize()
-            logger.info("Event system initialized successfully")
+            from .events import EventBus
+            if EventBus:
+                logger.info("Event system initialized successfully")
         except Exception as e:
             logger.warning(f"Event system initialization error: {e}")
     
     def _initialize_hooks(self):
         """Initialize hooks system"""
         try:
-            from .hooks import HookSystem
-            HookSystem.initialize()
-            logger.info("Hooks system initialized successfully")
+            from .hooks import HookRegistry
+            if HookRegistry:
+                logger.info("Hooks system initialized successfully")
         except Exception as e:
             logger.warning(f"Hooks system initialization error: {e}")
     
     def _initialize_registry(self):
         """Initialize registry system"""
         try:
-            from .registry import ComponentRegistry
-            ComponentRegistry.initialize()
-            logger.info("Registry system initialized successfully")
+            from .registry import RegistryManager
+            if RegistryManager:
+                logger.info("Registry system initialized successfully")
         except Exception as e:
             logger.warning(f"Registry system initialization error: {e}")
     
     def _initialize_fraud_detection(self):
         """Initialize fraud detection system"""
         try:
-            from .fraud import FraudDetectionSystem
-            FraudDetectionSystem.initialize()
-            logger.info("Fraud detection system initialized successfully")
+            from .services.fraud_detection import FraudDetectionService
+            if FraudDetectionService:
+                logger.info("Fraud detection system initialized successfully")
         except Exception as e:
             logger.warning(f"Fraud detection initialization error: {e}")
     
     def _initialize_analytics(self):
         """Initialize analytics system"""
         try:
-            from .analytics import AnalyticsSystem
-            AnalyticsSystem.initialize()
-            logger.info("Analytics system initialized successfully")
+            from .analytics import NetworkAnalytics
+            if NetworkAnalytics:
+                logger.info("Analytics system initialized successfully")
         except Exception as e:
             logger.warning(f"Analytics system initialization error: {e}")
     

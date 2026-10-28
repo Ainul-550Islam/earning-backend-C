@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.utils import timezone
 from datetime import date, timedelta
 import logging
+from api.payment_gateways.referral.models import ReferralLink
 
 logger = logging.getLogger(__name__)
 

@@ -339,8 +339,6 @@ def export_my_transactions(request):
         return Response({'error': 'Invalid date format. Use YYYY-MM-DD'}, status=400)
     return exporter.export_transactions(user=request.user, start_date=start_d, end_date=end_d, fmt=fmt)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_my_conversions(request):
     """Export current publisher's conversions."""
@@ -355,8 +353,6 @@ def export_my_conversions(request):
         fmt=fmt,
     )
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_earnings_report(request):
     """Export monthly earnings report."""
@@ -366,16 +362,11 @@ def export_earnings_report(request):
     fmt   = request.GET.get('format', 'csv')
     return exporter.export_earnings_report(request.user, month, year, fmt)
 
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_export_all_transactions(request):
     """Admin: export all transactions."""
     fmt = request.GET.get('format', 'csv')
     return exporter.export_transactions(fmt=fmt)
-
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_export_publishers(request):
     """Admin: export publisher list."""

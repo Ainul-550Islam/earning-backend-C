@@ -2,6 +2,7 @@
 Notification Tasks
 """
 from celery import shared_task
+from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 import logging
@@ -22,6 +23,10 @@ def send_pending_notifications():
     except Exception as e:
         logger.error(f"Error in send_notifications: {e}")
         return {'sent': 0, 'failed': 0, 'total': 0}
+
+
+# Public alias - api.alerts.tasks.send_notifications is the name callers/tests use
+send_notifications = send_pending_notifications
 
 
 @shared_task
@@ -132,18 +137,26 @@ def update_recipient_availability():
     """Update recipient availability status"""
     try:
         from ..models.channel import AlertRecipient
+        from django.core.cache import cache
         
         recipients = AlertRecipient.objects.filter(is_active=True)
         
         updated_count = 0
+        available_count = 0
         for recipient in recipients:
             # Check if recipient is currently available
             is_available = recipient.is_available_now()
             
-            # Update availability status if needed
+            # Persist to cache - same key/pattern signals/channel.py's
+            # trigger_recipient_availability_check() uses for a single recipient,
+            # since that signal handler calls this task expecting it to do the
+            # same for all recipients in bulk.
+            cache.set(f'recipient_availability_{recipient.id}', is_available, timeout=300)
+            if is_available:
+                available_count += 1
             updated_count += 1
         
-        logger.info(f"Updated availability for {updated_count} recipients")
+        logger.info(f"Updated availability for {updated_count} recipients ({available_count} available)")
         return updated_count
         
     except Exception as e:

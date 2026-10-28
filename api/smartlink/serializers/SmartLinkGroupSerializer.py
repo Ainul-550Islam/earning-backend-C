@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import SmartLinkGroup
+from api.smartlink.models import SmartLinkGroup
 
 
 class SmartLinkGroupSerializer(serializers.ModelSerializer):

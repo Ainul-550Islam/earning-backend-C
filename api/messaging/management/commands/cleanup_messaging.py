@@ -3,7 +3,7 @@ Management command: cleanup_messaging
 Run all messaging cleanup tasks manually.
 Usage: python manage.py cleanup_messaging --all
 """
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
@@ -20,36 +20,49 @@ class Command(BaseCommand):
         parser.add_argument("--days", type=int, default=90, help="Retention days")
 
     def handle(self, *args, **options):
+        if options["days"] < 1:
+            raise CommandError("--days must be at least 1.")
+
         run_all = options["all"]
 
         if run_all or options["inbox"]:
-            from messaging.tasks import cleanup_old_inbox_items
+            from api.messaging.tasks import cleanup_old_inbox_items
             r = cleanup_old_inbox_items(days=options["days"])
             self.stdout.write(self.style.SUCCESS(f"Inbox cleanup: {r}"))
 
         if run_all or options["stories"]:
-            from messaging.tasks import cleanup_old_stories, expire_stories_task
+            from api.messaging.tasks import cleanup_old_stories, expire_stories_task
             r1 = expire_stories_task()
             r2 = cleanup_old_stories(days=7)
             self.stdout.write(self.style.SUCCESS(f"Stories: expired={r1} cleaned={r2}"))
 
         if run_all or options["calls"]:
-            from messaging.tasks import cleanup_old_call_sessions, expire_calls
+            from api.messaging.tasks import cleanup_old_call_sessions, expire_calls
             r1 = expire_calls()
             r2 = cleanup_old_call_sessions(days=30)
             self.stdout.write(self.style.SUCCESS(f"Calls: expired={r1} cleaned={r2}"))
 
         if run_all or options["edit_history"]:
-            from messaging.tasks import cleanup_old_edit_history
+            from api.messaging.tasks import cleanup_old_edit_history
             r = cleanup_old_edit_history(days=365)
             self.stdout.write(self.style.SUCCESS(f"Edit history: {r}"))
 
         if run_all or options["presence"]:
-            from messaging.tasks import cleanup_presence
+            from api.messaging.tasks import cleanup_presence
             r = cleanup_presence()
             self.stdout.write(self.style.SUCCESS(f"Presence: {r}"))
 
         if run_all or options["disappearing"]:
-            from messaging.tasks import expire_disappearing_messages_task
+            from api.messaging.tasks import expire_disappearing_messages_task
             r = expire_disappearing_messages_task()
             self.stdout.write(self.style.SUCCESS(f"Disappearing: {r}"))
+
+        ran_anything = run_all or any(
+            options[flag] for flag in
+            ("inbox", "stories", "calls", "edit_history", "presence", "disappearing")
+        )
+        if not ran_anything:
+            self.stdout.write(self.style.WARNING(
+                "No cleanup type selected - nothing to do. "
+                "Pass --all or one of --inbox/--stories/--calls/--edit-history/--presence/--disappearing."
+            ))

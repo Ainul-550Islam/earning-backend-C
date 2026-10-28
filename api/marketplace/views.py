@@ -11,7 +11,7 @@ from django.utils import timezone
 import logging
 
 from .models import (
-    Category, Product, ProductVariant, ProductInventory,
+    Category, Product, ProductVariant, ProductInventory, ProductAttribute,
     SellerProfile, SellerVerification, SellerPayout, CommissionConfig,
     Cart, CartItem, Order, OrderItem, OrderTracking,
     PaymentTransaction, EscrowHolding, RefundRequest,
@@ -20,7 +20,7 @@ from .models import (
 from .schemas import (
     CategorySerializer, CategoryTreeSerializer,
     ProductListSerializer, ProductDetailSerializer,
-    ProductVariantSerializer, ProductInventorySerializer,
+    ProductVariantSerializer, ProductInventorySerializer, ProductAttributeSerializer,
     SellerProfileSerializer, SellerVerificationSerializer,
     SellerPayoutSerializer, CommissionConfigSerializer,
     CartSerializer, CartItemSerializer,
@@ -142,6 +142,23 @@ class ProductInventoryViewSet(TenantFilterMixin, viewsets.ModelViewSet):
         return Response(ProductInventorySerializer(inventory).data)
 
 
+
+class ProductAttributeViewSet(TenantFilterMixin, viewsets.ModelViewSet):
+    """CRUD for product spec attributes (RAM, Color, Material …)."""
+    queryset = ProductAttribute.objects.all()
+    serializer_class = ProductAttributeSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        product_id = self.request.query_params.get("product")
+        if product_id:
+            qs = qs.filter(product_id=product_id)
+        return qs.order_by("sort_order", "name")
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.tenant)
+
 # ──────────────────────────────────────────────
 # SELLER
 # ──────────────────────────────────────────────
@@ -225,6 +242,17 @@ class CartViewSet(TenantFilterMixin, viewsets.ModelViewSet):
         qs = super().get_queryset()
         return qs.filter(user=self.request.user)
 
+    @action(detail=False, methods=["get"])
+    def current(self, request):
+        """Return (or create) the active cart for the current user."""
+        cart, _ = Cart.objects.get_or_create(
+            user=request.user,
+            tenant=getattr(request, "tenant", None),
+            is_active=True,
+            defaults={"session_key": ""},
+        )
+        return Response(CartSerializer(cart).data)
+
     @action(detail=True, methods=["post"])
     def add_item(self, request, pk=None):
         cart = self.get_object()
@@ -290,15 +318,21 @@ class OrderViewSet(TenantFilterMixin, viewsets.ModelViewSet):
             return qs.filter(user=self.request.user)
         return qs
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
     def confirm(self, request, pk=None):
         order = self.get_object()
+        if order.status != OrderStatus.PENDING:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": f"Cannot confirm: order is '{order.status}'."})
         order = confirm_order(order, confirmed_by=request.user)
         return Response(OrderDetailSerializer(order).data)
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
     def ship(self, request, pk=None):
         order = self.get_object()
+        if order.status != OrderStatus.CONFIRMED:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": f"Cannot ship: order must be CONFIRMED, not '{order.status}'."})
         order = mark_order_shipped(
             order,
             courier=request.data.get("courier", ""),
@@ -310,12 +344,21 @@ class OrderViewSet(TenantFilterMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def deliver(self, request, pk=None):
         order = self.get_object()
+        if order.status != OrderStatus.SHIPPED:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": f"Cannot deliver: order must be SHIPPED, not '{order.status}'."})
         order = mark_order_delivered(order, created_by=request.user)
         return Response(OrderDetailSerializer(order).data)
 
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
         order = self.get_object()
+        if order.status in (OrderStatus.DELIVERED, OrderStatus.CANCELLED):
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": f"Cannot cancel: order is '{order.status}'."})
+        if not request.user.is_staff and order.user != request.user:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You can only cancel your own orders.")
         reason = request.data.get("reason", "")
         order.cancel(reason)
         return Response({"status": "cancelled"})
@@ -368,6 +411,9 @@ class EscrowHoldingViewSet(TenantFilterMixin, viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
     def release(self, request, pk=None):
         escrow = self.get_object()
+        if escrow.release_after and escrow.release_after > timezone.now():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": f"Escrow not yet due. Release after: {escrow.release_after}."})
         payout = release_escrow_and_credit(escrow)
         return Response(SellerPayoutSerializer(payout).data)
 
@@ -384,7 +430,22 @@ class RefundRequestViewSet(TenantFilterMixin, viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(tenant=self.request.tenant, user=self.request.user)
+        from decimal import Decimal
+        data = serializer.validated_data
+        try:
+            refund = request_refund(
+                order_item=data["order_item"],
+                user=self.request.user,
+                reason=data.get("reason", ""),
+                description=data.get("description", ""),
+                amount=data.get("amount_requested", Decimal("0.00")),
+            )
+        except Exception as exc:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"detail": str(exc)})
+        refund.tenant = self.request.tenant
+        refund.save(update_fields=["tenant"])
+        serializer.instance = refund
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
     def approve(self, request, pk=None):
@@ -433,7 +494,14 @@ class ProductReviewViewSet(TenantFilterMixin, viewsets.ModelViewSet):
         return [AllowAny()]
 
     def perform_create(self, serializer):
-        serializer.save(tenant=self.request.tenant, user=self.request.user)
+        from rest_framework.exceptions import ValidationError
+        product = serializer.validated_data.get("product")
+        tenant  = getattr(self.request, "tenant", None)
+        if ProductReview.objects.filter(
+            tenant=tenant, product=product, user=self.request.user
+        ).exists():
+            raise ValidationError({"detail": "You have already reviewed this product."})
+        serializer.save(tenant=tenant, user=self.request.user)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def reply(self, request, pk=None):

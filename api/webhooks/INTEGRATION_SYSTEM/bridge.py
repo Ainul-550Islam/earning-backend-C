@@ -634,6 +634,7 @@ class MessageQueueBridge(BaseBridge):
         """Send message to RabbitMQ queue."""
         try:
             import json
+            import pika
             
             queue_name = destination or self.queue_name
             message_json = json.dumps(message)

@@ -60,3 +60,15 @@ def create_deal(tenant, product, deal_price: Decimal, starts_at, ends_at,
         max_quantity=max_quantity, date=starts_at.date(),
         starts_at=starts_at, ends_at=ends_at,
     )
+
+# ── Compatibility alias used in test_promotions.py ────────────────────────────
+class DealOfTheDayManager:
+    """Thin manager wrapper around module-level deal_of_day functions."""
+
+    @staticmethod
+    def get_todays_deal(tenant):
+        return get_todays_deal(tenant)
+
+    @staticmethod
+    def create(tenant, product, deal_price, starts_at, ends_at, **kwargs):
+        return create_deal(tenant, product, deal_price, starts_at, ends_at, **kwargs)

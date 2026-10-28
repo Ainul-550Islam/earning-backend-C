@@ -5,9 +5,13 @@ import hashlib
 import hmac
 import logging
 
-from api.offerwall.exceptions import InvalidWebhookSignatureException
+from api.offerwall.exceptions import InvalidWebhookSignatureException, ProviderAPIException
 from .OfferProcessor import OfferProcessor
-from ..constants import *
+from ..constants import (
+    STATUS_ACTIVE,
+    OFFERWALL_API_BASE,
+    PROVIDER_OFFERWALL,
+)
 
 logger = logging.getLogger(__name__)
 

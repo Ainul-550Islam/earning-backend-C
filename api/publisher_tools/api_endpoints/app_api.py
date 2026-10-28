@@ -15,7 +15,7 @@ class AppBulkAPIView(APIView):
         app_ids = request.data.get("app_ids", [])
         if not app_ids or not action:
             return Response({"success": False, "message": "app_ids and action required."}, status=400)
-        from api.publisher_tools.models import App
+        from publisher_tools.models import App
         publisher = request.user.publisher_profile if not request.user.is_staff else None
         qs = App.objects.filter(app_id__in=app_ids)
         if publisher:
@@ -27,7 +27,7 @@ class AppBulkAPIView(APIView):
             elif action == "deactivate":
                 count = qs.filter(status="active").update(status="inactive")
             elif action == "sync_store_metadata":
-                from api.publisher_tools.app_management.app_store import AppStoreMetadata
+                from publisher_tools.app_management.app_store import AppStoreMetadata
                 for app in qs:
                     try:
                         meta, _ = AppStoreMetadata.objects.get_or_create(app=app)
@@ -45,7 +45,7 @@ class AppSDKIntegrationView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, app_id=None):
-        from api.publisher_tools.models import App
+        from publisher_tools.models import App
         try:
             app = App.objects.get(app_id=app_id, publisher=request.user.publisher_profile)
         except App.DoesNotExist:

@@ -30,6 +30,8 @@ def plans_list(request):
 # ── Tenant subscription endpoints ──────────────────────────
 
 @api_view(['GET'])
+@api_view(['DELETE'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def my_subscription(request):
     """Current subscription info"""
@@ -66,8 +68,6 @@ def my_subscription(request):
             'custom_branding':        sub.plan.custom_branding,
         },
     })
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_usage(request):
@@ -86,9 +86,6 @@ def my_usage(request):
         'total_bdt': str(qs.aggregate(t=Sum('total_bdt'))['t'] or 0),
         'breakdown': list(by_type),
     })
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_invoices(request):
     """User's invoices"""
@@ -110,7 +107,6 @@ def my_invoices(request):
 
 # ── API Key management ─────────────────────────────────────
 
-@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def api_keys(request):
     """List / create API keys"""
@@ -143,8 +139,6 @@ def api_keys(request):
         'warning':  'This key will only be shown ONCE. Store it securely.',
     }, status=201)
 
-
-@api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def revoke_api_key(request, key_id):
     """Revoke an API key"""
@@ -161,7 +155,6 @@ def revoke_api_key(request, key_id):
 
 # ── Admin billing endpoints ────────────────────────────────
 
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def admin_subscriptions(request):
     """Admin — All subscriptions"""
@@ -176,9 +169,6 @@ def admin_subscriptions(request):
         'monthly_price': str(s.plan.monthly_price_bdt),
         'next_billing':  s.next_billing_date,
     } for s in qs[:100]])
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def admin_revenue(request):
     """Admin — Revenue summary"""

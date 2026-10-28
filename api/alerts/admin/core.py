@@ -557,7 +557,7 @@ class AlertLogAdmin(ModelAdmin):
     readonly_fields = [
         'triggered_at', 'trigger_value', 'threshold_value', 
         'message', 'details', 'email_sent', 'telegram_sent', 
-        'sms_sent', 'resolution_time',
+        'sms_sent', 'resolution_time', 'channels_used',
     ]
     
     fieldsets = (
@@ -572,7 +572,7 @@ class AlertLogAdmin(ModelAdmin):
         }),
         ('Resolution', {
             'fields': ('is_resolved', 'resolved_at', 'resolved_by', 'resolution_note', 
-                      'resolution_time', 'age')
+                      'resolution_time')
         }),
     )
     

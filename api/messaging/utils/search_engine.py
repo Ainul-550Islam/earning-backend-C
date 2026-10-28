@@ -23,11 +23,26 @@ ES_INDEX_CHANNELS = "messaging_channels"
 
 
 def get_es_client():
-    """Get Elasticsearch client from Django settings."""
+    """
+    Get Elasticsearch client from Django settings, or None if
+    ELASTICSEARCH_URL isn't configured.
+
+    Deliberately does NOT default es_url to "http://localhost:9200" -
+    doing so used to mean that in any environment where ES simply isn't
+    configured, this returned a real (if doomed) client instead of None,
+    so every caller that does `if es: es.ping()` / `es.search(...)` etc.
+    (views.py's /health check, index_message(), search_messages()) paid
+    for a real, retrying network connection attempt (multiple seconds of
+    exponential backoff) instead of detecting "not configured" and
+    falling back immediately. elasticsearch_setup.get_es_client() (the
+    other copy of this function) already got this right - matching it.
+    """
     from django.conf import settings
     try:
         from elasticsearch import Elasticsearch
-        es_url = getattr(settings, "ELASTICSEARCH_URL", "http://localhost:9200")
+        es_url = getattr(settings, "ELASTICSEARCH_URL", None)
+        if not es_url:
+            return None
         es_user = getattr(settings, "ELASTICSEARCH_USERNAME", None)
         es_pass = getattr(settings, "ELASTICSEARCH_PASSWORD", None)
 
@@ -39,57 +54,10 @@ def get_es_client():
         return None
 
 
-def ensure_index_exists() -> bool:
-    """Create Elasticsearch index with proper mappings if it doesn't exist."""
-    es = get_es_client()
-    if not es:
-        return False
-    try:
-        if not es.indices.exists(index=ES_INDEX_MESSAGES):
-            es.indices.create(index=ES_INDEX_MESSAGES, body={
-                "settings": {
-                    "number_of_shards": 1,
-                    "number_of_replicas": 1,
-                    "analysis": {
-                        "analyzer": {
-                            "message_analyzer": {
-                                "type": "custom",
-                                "tokenizer": "standard",
-                                "filter": ["lowercase", "asciifolding", "stop"],
-                            },
-                            "bangla_analyzer": {
-                                "type": "custom",
-                                "tokenizer": "standard",
-                                "filter": ["lowercase"],
-                            },
-                        }
-                    },
-                },
-                "mappings": {
-                    "properties": {
-                        "message_id":  {"type": "keyword"},
-                        "chat_id":     {"type": "keyword"},
-                        "sender_id":   {"type": "keyword"},
-                        "content":     {
-                            "type": "text",
-                            "analyzer": "message_analyzer",
-                            "fields": {
-                                "keyword": {"type": "keyword", "ignore_above": 256},
-                                "bangla": {"type": "text", "analyzer": "bangla_analyzer"},
-                            },
-                        },
-                        "message_type":{"type": "keyword"},
-                        "created_at":  {"type": "date"},
-                        "tenant_id":   {"type": "keyword"},
-                        "is_deleted":  {"type": "boolean"},
-                    }
-                },
-            })
-            logger.info("ensure_index_exists: Created index %s", ES_INDEX_MESSAGES)
-        return True
-    except Exception as exc:
-        logger.error("ensure_index_exists: %s", exc)
-        return False
+# ensure_index_exists is defined further below (see "Fix 2" block) so that it
+# delegates to elasticsearch_setup.ensure_index_exists, which carries the full
+# production mapping.  Do NOT add a second definition here — Python would
+# shadow it and callers would silently get whichever version is defined last.
 
 
 def index_message(message_id: Any, chat_id: Any, sender_id: Any,
@@ -120,21 +88,46 @@ def index_message(message_id: Any, chat_id: Any, sender_id: Any,
         return False
 
 
-def delete_from_index(message_id: Any) -> bool:
-    """Remove a deleted message from search index."""
-    es = get_es_client()
-    if not es:
-        return False
-    try:
-        es.update(
-            index=ES_INDEX_MESSAGES,
-            id=str(message_id),
-            doc={"is_deleted": True, "content": ""},
-        )
-        return True
-    except Exception as exc:
-        logger.error("delete_from_index: msg=%s error=%s", message_id, exc)
-        return False
+def upsert_search_index_row(msg) -> None:
+    """
+    Upsert the DB-side MessageSearchIndex mirror row for a ChatMessage.
+
+    Kept as a single shared helper because three call sites need to do
+    exactly this and stay identical: index_message_task (single-message
+    live indexing right after send), bulk_reindex_task, and the
+    sync_search_index management command.
+
+    Part 6 (management/commands/) audit note: before this fix, only
+    index_message_task ever wrote this table. bulk_reindex_task and
+    sync_search_index both called index_message() above directly, which
+    only writes to real Elasticsearch - so anything indexed via either
+    bulk path left MessageSearchIndex silently stale. That's more than
+    cosmetic: MessageSearchIndexViewSet's admin "browse index" endpoint
+    (GET /messaging/search-index/) reads ONLY from this table, and that
+    same viewset's own "rebuild" action (POST .../rebuild/) calls
+    bulk_reindex_task - so triggering a rebuild did not actually refresh
+    what an admin would then see when browsing the index they just
+    rebuilt.
+
+    Args:
+        msg: an already-loaded ChatMessage instance. Takes the object
+             rather than an id so bulk callers that already hold the
+             row from a queryset don't pay for a redundant per-message
+             re-fetch. Uses msg.chat_id/msg.tenant_id (not msg.chat/
+             msg.tenant) deliberately - both are plain FK columns, so
+             this never triggers a lazy related-object query even when
+             the caller's queryset used .only() without select_related
+             (sync_search_index management command does exactly that).
+    """
+    from ..models import MessageSearchIndex
+    MessageSearchIndex.objects.update_or_create(
+        message=msg,
+        defaults={
+            "chat_id": msg.chat_id,
+            "search_text": (msg.content or "").lower().strip(),
+            "tenant_id": msg.tenant_id,
+        },
+    )
 
 
 def search_messages(
@@ -158,7 +151,7 @@ def search_messages(
     if not es:
         return _db_search_fallback(
             user_id=user_id, query=query, chat_id=chat_id,
-            page=page, page_size=page_size,
+            tenant_id=tenant_id, page=page, page_size=page_size,
         )
 
     try:
@@ -181,14 +174,27 @@ def search_messages(
                 date_range["lte"] = to_date
             filter_clauses.append({"range": {"created_at": date_range}})
 
-        # Restrict to chats user participates in
-        if not chat_id:
-            from ..models import ChatParticipant
-            chat_ids = list(
-                ChatParticipant.objects.filter(user_id=user_id, left_at__isnull=True)
-                .values_list("chat_id", flat=True)[:500]
-            )
-            filter_clauses.append({"terms": {"chat_id": [str(c) for c in chat_ids]}})
+        # Restrict to chats user participates in. This must be
+        # unconditional - a requested chat_id is validated AGAINST this
+        # set, never used as a substitute for it. Previously this only
+        # ran when chat_id was absent, so ?chat_id=<any chat's id>
+        # bypassed chat-membership entirely and let any authenticated
+        # user full-text search any chat's message content platform-wide.
+        # Mirrors the already-correct pattern in _db_search_fallback().
+        from ..models import ChatParticipant
+        user_chat_ids = set(
+            str(c) for c in
+            ChatParticipant.objects.filter(user_id=user_id, left_at__isnull=True)
+            .values_list("chat_id", flat=True)[:500]
+        )
+        if chat_id:
+            if str(chat_id) not in user_chat_ids:
+                return {
+                    "results": [], "total": 0, "page": page, "page_size": page_size,
+                    "pages": 0, "query": query,
+                }
+        else:
+            filter_clauses.append({"terms": {"chat_id": list(user_chat_ids)}})
 
         body = {
             "query": {"bool": {"must": must_clauses, "filter": filter_clauses}},
@@ -239,11 +245,14 @@ def search_messages(
         }
     except Exception as exc:
         logger.error("search_messages: ES query failed: %s — falling back to DB", exc)
-        return _db_search_fallback(user_id=user_id, query=query, chat_id=chat_id, page=page, page_size=page_size)
+        return _db_search_fallback(
+            user_id=user_id, query=query, chat_id=chat_id,
+            tenant_id=tenant_id, page=page, page_size=page_size,
+        )
 
 
 def _db_search_fallback(user_id: Any, query: str, chat_id: Optional[str],
-                        page: int, page_size: int) -> dict:
+                        page: int, page_size: int, tenant_id: Optional[Any] = None) -> dict:
     """Fallback to ORM when Elasticsearch is unavailable."""
     from ..models import ChatMessage, ChatParticipant, MessageStatus
     if not query.strip():
@@ -261,6 +270,13 @@ def _db_search_fallback(user_id: Any, query: str, chat_id: Optional[str],
 
     if chat_id:
         qs = qs.filter(chat_id=chat_id)
+    if tenant_id:
+        # Part 6 audit fix: search_messages()'s ES query has always
+        # filtered by tenant_id correctly, but this DB fallback (used
+        # whenever ES is down or errors) silently dropped it - the
+        # parameter didn't even exist here, even though ChatMessage
+        # already carries a `tenant` field (from TimestampedModel).
+        qs = qs.filter(tenant_id=tenant_id)
 
     total = qs.count()
     msgs = qs[(page-1)*page_size: page*page_size]
@@ -299,3 +315,61 @@ def autocomplete_users(query: str, tenant_id: Any = None, limit: int = 10) -> li
     )[:limit]
     return [{"user_id": str(u.pk), "username": u.username,
              "full_name": u.get_full_name()} for u in qs]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fix 2: ensure_index_exists()
+# Previously: apps.py startup called this from search_engine but it only
+# existed in elasticsearch_setup.py → silent failure on startup.
+# This thin wrapper delegates to elasticsearch_setup while keeping search_engine
+# as the single runtime import target for tasks/views.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def ensure_index_exists(index: str = ES_INDEX_MESSAGES) -> bool:
+    """
+    Ensure the Elasticsearch index exists with the production mapping.
+
+    Delegates to elasticsearch_setup.ensure_index_exists() which holds the
+    full production mapping. Called by apps.py on startup.
+
+    Args:
+        index: Index name to create if missing. Defaults to ES_INDEX_MESSAGES.
+
+    Returns:
+        True if index exists or was created. False if ES unavailable.
+    """
+    try:
+        from .elasticsearch_setup import ensure_index_exists as _ensure
+        return _ensure(index=index)
+    except ImportError:
+        logger.debug("ensure_index_exists: elasticsearch_setup not importable.")
+        return False
+    except Exception as exc:
+        logger.warning("ensure_index_exists: %s", exc)
+        return False
+
+
+def delete_from_index(message_id: str) -> bool:
+    """
+    Soft-delete a message from the search index.
+    Called by delete_from_index_task in tasks.py.
+
+    Delegates to elasticsearch_setup.delete_from_index(), which holds the
+    canonical implementation — mirrors the ensure_index_exists() delegation
+    pattern above, for the same reason (avoid two divergent copies of the
+    same ES call silently shadowing each other).
+
+    Args:
+        message_id: UUID string of the ChatMessage to remove from results.
+
+    Returns:
+        True on success or if ES is unavailable. False on error.
+    """
+    try:
+        from .elasticsearch_setup import delete_from_index as _delete
+        return _delete(message_id)
+    except ImportError:
+        logger.debug("delete_from_index: elasticsearch_setup not importable.")
+        return False
+    except Exception as exc:
+        logger.warning("delete_from_index: %s", exc)
+        return False

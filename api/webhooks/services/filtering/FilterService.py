@@ -1,3 +1,5 @@
+from api.webhooks.validators import validate_filter_config
+from ...exceptions import WebhookFilterError
 """
 Webhook Filter Service
 
@@ -28,6 +30,41 @@ class FilterService:
         """Initialize filter service."""
         self.logger = logger
     
+    def evaluate_subscription_filters(self, filters: Dict[str, Any], event_data: Dict[str, Any]) -> bool:
+        """
+        Evaluate a WebhookSubscription.filters JSON blob against event
+        data. Format: {field_path: {'operator': ..., 'value': ...}, ...}
+        — every entry must match (AND semantics), same as
+        evaluate_filters() below does for WebhookFilter model rows.
+        Reuses the same _get_nested_value/_compare_values helpers as
+        evaluate_filter() so the two filtering mechanisms (WebhookFilter
+        rows vs. this inline per-subscription blob) stay consistent.
+
+        Args:
+            filters: The subscription's filters dict (empty/None = no
+                     filtering, always matches)
+            event_data: Event data to filter
+
+        Returns:
+            bool: True if event matches all filter criteria (or there are none)
+        """
+        if not filters:
+            return True
+
+        try:
+            for field_path, condition in filters.items():
+                operator = condition.get('operator')
+                expected_value = condition.get('value')
+                actual_value = self._get_nested_value(event_data, field_path)
+
+                if not self._compare_values(actual_value, operator, expected_value):
+                    return False
+
+            return True
+        except Exception as e:
+            self.logger.error(f"Error evaluating subscription filters: {str(e)}")
+            return False
+
     def evaluate_filter(self, webhook_filter: WebhookFilter, event_data: Dict[str, Any]) -> bool:
         """
         Evaluate a single filter against event data.
@@ -56,7 +93,7 @@ class FilterService:
             
             return result
             
-        except Exception as e:
+        except WebhookFilterError as e:
             self.logger.error(f"Filter evaluation error: {e}")
             return False
     
@@ -87,17 +124,25 @@ class FilterService:
     def _get_nested_value(self, data: Dict[str, Any], path: str) -> Any:
         """
         Get nested value from dictionary using dot notation.
-        
+
+        Tries real nested traversal first (e.g. "user.email" against
+        {"user": {"email": ...}}). If that finds nothing, falls back to
+        treating the whole dotted path as a single flattened key with
+        underscores in place of dots (e.g. "user.email" against
+        {"user_email": ...}) — event payloads in this codebase use both
+        shapes, and filters are authored with dot notation regardless of
+        which shape the actual payload uses.
+
         Args:
             data: Dictionary to search
             path: Dot-separated path (e.g., "user.email", "amount")
-            
+
         Returns:
             Any: Value at the path or None
         """
         keys = path.split('.')
         current = data
-        
+
         for key in keys:
             if isinstance(current, dict) and key in current:
                 current = current[key]
@@ -108,10 +153,33 @@ class FilterService:
                 else:
                     return None
             else:
-                return None
-        
-        return current
+                current = None
+                break
+
+        if current is not None:
+            return current
+
+        if isinstance(data, dict) and '.' in path:
+            flat_key = path.replace('.', '_')
+            if flat_key in data:
+                return data[flat_key]
+
+        return None
     
+    def _normalize_for_comparison(self, value: Any) -> str:
+        """
+        JSON-style string form for EQUALS/NOT_EQUALS comparison.
+
+        Python's str(bool) capitalizes ('True'/'False'), but
+        WebhookFilter.value is a JSONField and filter authors commonly
+        write boolean intent as a lowercase JSON-style string ('true').
+        Non-bool values are unaffected — this only changes representation
+        for actual bool instances on either side of the comparison.
+        """
+        if isinstance(value, bool):
+            return 'true' if value else 'false'
+        return str(value)
+
     def _compare_values(self, actual: Any, operator: str, expected: Any) -> bool:
         """
         Compare values based on operator.
@@ -129,10 +197,10 @@ class FilterService:
         
         try:
             if operator == FilterOperator.EQUALS:
-                return str(actual) == str(expected)
+                return self._normalize_for_comparison(actual) == self._normalize_for_comparison(expected)
             
             elif operator == FilterOperator.NOT_EQUALS:
-                return str(actual) != str(expected)
+                return self._normalize_for_comparison(actual) != self._normalize_for_comparison(expected)
             
             elif operator == FilterOperator.CONTAINS:
                 return str(expected).lower() in str(actual).lower()
@@ -154,79 +222,3 @@ class FilterService:
             self.logger.error(f"Value comparison error: {e}")
             return False
     
-    def validate_filter_config(self, webhook_filter: WebhookFilter) -> List[str]:
-        """
-        Validate filter configuration.
-        
-        Args:
-            webhook_filter: WebhookFilter instance
-            
-        Returns:
-            List[str]: List of validation errors
-        """
-        errors = []
-        
-        if not webhook_filter.field_path:
-            errors.append("Field path is required")
-        
-        if webhook_filter.operator not in [choice[0] for choice in FilterOperator.CHOICES]:
-            errors.append(f"Invalid operator: {webhook_filter.operator}")
-        
-        if not webhook_filter.value:
-            errors.append("Filter value is required")
-        
-        return errors
-    
-    def get_filter_summary(self, endpoint) -> Dict[str, Any]:
-        """
-        Get summary of active filters for an endpoint.
-        
-        Args:
-            endpoint: WebhookEndpoint instance
-            
-        Returns:
-            Dict: Filter summary
-        """
-        filters = endpoint.filters.filter(is_active=True)
-        
-        return {
-            'total_filters': filters.count(),
-            'filters': [
-                {
-                    'field_path': f.field_path,
-                    'operator': f.operator,
-                    'value': f.value,
-                }
-                for f in filters
-            ]
-        }
-    
-    def test_filter(self, webhook_filter: WebhookFilter, test_events: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Test a filter against multiple events.
-        
-        Args:
-            webhook_filter: WebhookFilter instance
-            test_events: List of test events
-            
-        Returns:
-            Dict: Test results
-        """
-        results = {
-            'filter': {
-                'field_path': webhook_filter.field_path,
-                'operator': webhook_filter.operator,
-                'value': webhook_filter.value,
-            },
-            'test_results': []
-        }
-        
-        for i, event_data in enumerate(test_events):
-            passed = self.evaluate_filter(webhook_filter, event_data)
-            results['test_results'].append({
-                'event_index': i,
-                'passed': passed,
-                'event_data': event_data
-            })
-        
-        return results

@@ -27,7 +27,7 @@ class AutoTranslationService:
         Target language-এর missing translations auto-translate করে।
         """
         try:
-            from ...models.core import Language, Translation, TranslationKey
+            from api.localization.models.core import Language, Translation, TranslationKey
 
             target_lang = Language.objects.filter(code=language_code, is_active=True).first()
             if not target_lang:
@@ -36,6 +36,9 @@ class AutoTranslationService:
                         'failed': 0, 'dry_run': dry_run}
 
             source_lang = Language.objects.filter(code=source_language_code, is_active=True).first()
+            if not source_lang:
+                # Fall back to the default language
+                source_lang = Language.objects.filter(is_default=True, is_active=True).first()
             if not source_lang:
                 return {'success': False, 'error': f'Source language {source_language_code} not found',
                         'language': language_code, 'total_missing': 0, 'translated': 0,
@@ -134,7 +137,7 @@ class AutoTranslationService:
     ) -> Dict:
         """Single key translate করে"""
         try:
-            from ...models.core import Translation, TranslationKey, Language
+            from api.localization.models.core import Translation, TranslationKey, Language
             tkey = TranslationKey.objects.filter(key=key).first()
             if not tkey:
                 return {'success': False, 'error': f'Key {key} not found'}

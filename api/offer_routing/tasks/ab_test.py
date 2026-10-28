@@ -4,6 +4,10 @@ A/B Test Tasks for Offer Routing System
 This module contains background tasks for A/B testing,
 including test evaluation, winner declaration, and analytics.
 """
+from datetime import timedelta
+from django.db.models import Avg
+from django.db.models import Count
+from django.db.models import Sum
 
 import logging
 from celery import shared_task

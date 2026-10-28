@@ -256,6 +256,10 @@ class QuizManager:
 
 
 @api_view(['GET'])
+@api_view(['POST'])
+@api_view(['POST'])
+@api_view(['POST'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def get_quiz_view(request, quiz_id):
     """GET /api/promotions/quiz/<quiz_id>/?pub=123"""
@@ -266,8 +270,6 @@ def get_quiz_view(request, quiz_id):
         return Response(quiz, status=status.HTTP_404_NOT_FOUND)
     return Response(quiz)
 
-
-@api_view(['POST'])
 @permission_classes([AllowAny])
 def start_quiz_session_view(request, quiz_id):
     """POST /api/promotions/quiz/<quiz_id>/start/"""
@@ -280,8 +282,6 @@ def start_quiz_session_view(request, quiz_id):
     result = manager.start_quiz_session(quiz_id, visitor_id, pub_id)
     return Response(result)
 
-
-@api_view(['POST'])
 @permission_classes([AllowAny])
 def submit_answer_view(request, session_id):
     """POST /api/promotions/quiz/session/<session_id>/answer/"""
@@ -293,8 +293,6 @@ def submit_answer_view(request, session_id):
     )
     return Response(result)
 
-
-@api_view(['POST'])
 @permission_classes([AllowAny])
 def complete_quiz_view(request, session_id):
     """POST /api/promotions/quiz/session/<session_id>/complete/"""
@@ -306,9 +304,6 @@ def complete_quiz_view(request, session_id):
     if 'error' in result:
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     return Response(result)
-
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def create_quiz_campaign_view(request):
     """POST /api/promotions/quiz/create/"""

@@ -28,6 +28,7 @@ from api.users.models import (
     RateLimitTracker,
     UserBehavior
 )
+from api.users.models import User
 
 
 def get_client_ip(request):

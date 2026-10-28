@@ -30,7 +30,7 @@ class Command(BaseCommand):
         parser.add_argument('--force',     action='store_true', help='Recalculate even if finalized')
 
     def handle(self, *args, **options):
-        from api.publisher_tools.models import Publisher, PublisherEarning
+        from publisher_tools.models import Publisher, PublisherEarning
 
         target_date  = options.get('date')
         target_month = options.get('month')
@@ -91,8 +91,8 @@ class Command(BaseCommand):
         force: bool,
     ) -> dict:
         """Publisher-এর earnings calculate করে"""
-        from api.publisher_tools.models import PublisherEarning
-        from api.publisher_tools.utils import calculate_ecpm, calculate_ctr, calculate_fill_rate
+        from publisher_tools.models import PublisherEarning
+        from publisher_tools.utils import calculate_ecpm, calculate_ctr, calculate_fill_rate
 
         # Determine date range
         if target_date:
@@ -160,8 +160,8 @@ def run_earnings_calculation(
     """
     Programmatic interface — code থেকে call করার জন্য।
     """
-    from api.publisher_tools.models import Publisher, PublisherEarning
-    from api.publisher_tools.utils import calculate_ecpm, calculate_ctr, calculate_fill_rate
+    from publisher_tools.models import Publisher, PublisherEarning
+    from publisher_tools.utils import calculate_ecpm, calculate_ctr, calculate_fill_rate
 
     results = []
 

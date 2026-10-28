@@ -108,7 +108,7 @@ class ClickQualityScore:
         Generate publisher quality report.
         Used for publisher tier assignment and payout adjustments.
         """
-        from ...models import Click
+        from api.smartlink.models import Click
         cutoff = timezone.now() - datetime.timedelta(days=days)
         clicks = Click.objects.filter(
             smartlink__publisher_id=publisher_id,

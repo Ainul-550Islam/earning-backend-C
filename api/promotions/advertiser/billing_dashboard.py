@@ -106,8 +106,6 @@ def advertiser_billing_view(request):
     dashboard = AdvertiserBillingDashboard()
     return Response(dashboard.get_billing_summary(request.user.id))
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def advertiser_transactions_view(request):
     """GET /api/promotions/advertiser/billing/transactions/"""
@@ -116,9 +114,6 @@ def advertiser_transactions_view(request):
         advertiser_id=request.user.id,
         page=int(request.query_params.get('page', 1)),
     ))
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def advertiser_invoice_view(request):
     """GET /api/promotions/advertiser/billing/invoice/?month=2025-04"""

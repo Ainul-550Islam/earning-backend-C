@@ -1,0 +1,12 @@
+{% extends "cms/email/base_email.html" %}
+{% block subject %}👥 Referral Bonus Earned!{% endblock %}
+{% block content %}
+<p>Hi {{ username }},</p>
+<p>Great news! Your referral <strong>{{ referred_username }}</strong> just completed their first offer.</p>
+<div class="highlight">
+  <div class="amount">+{{ bonus_coins|floatformat:0 }} Coins</div>
+  <p style="margin:4px 0 0;color:#555">Referral bonus credited to your account</p>
+</div>
+<p>Keep sharing your referral link — you earn every time your friends complete offers!</p>
+<a href="{{ site_url }}/referral/" class="btn">My Referral Dashboard →</a>
+{% endblock %}

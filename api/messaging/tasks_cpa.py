@@ -15,6 +15,13 @@ def deliver_cpa_notification_task(self, notification_id: str) -> dict:
     - NORMAL: push only
     - HIGH: push + inbox badge update
     - URGENT: push + email + SMS
+
+    Part 6 audit note: SMS is not implemented - CPANotification.sms_sent
+    exists as a real model field (confirming it was intended, not just
+    docstring aspiration), but no SMS provider is configured anywhere in
+    this codebase. Flagged rather than guessed at (no provider chosen, no
+    credentials) - sms_sent stays False and results["sms"] reports
+    "not_configured" rather than silently claiming success.
     """
     from .models import CPANotification
     from .utils.notifier import _send_push_to_user
@@ -27,29 +34,57 @@ def deliver_cpa_notification_task(self, notification_id: str) -> dict:
 
     results = {"notification_id": notification_id}
 
-    # Push notification
-    try:
-        ok = _send_push_to_user(
-            user_id=notif.recipient_id,
-            title=notif.title,
-            body=notif.body[:200],
-            data={
-                "type": notif.notification_type,
-                "object_type": notif.object_type,
-                "object_id": notif.object_id,
-                "action_url": notif.action_url,
-            },
-            priority="high" if notif.priority in ("HIGH", "URGENT") else "normal",
-        )
-        CPANotification.objects.filter(pk=notification_id).update(
-            push_sent=True, push_sent_at=timezone.now()
-        )
-        results["push"] = "sent" if ok else "failed"
-    except Exception as exc:
-        results["push_error"] = str(exc)
+    # Part 6 audit fix: CPABroadcast has explicit send_push/send_email/
+    # send_sms fields an admin configures per-campaign, but
+    # send_cpa_broadcast_task's created notifications were previously
+    # delivered purely by this task's own priority-based heuristic,
+    # completely ignoring them - a broadcast explicitly configured with
+    # send_email=False would still get an email if its priority happened
+    # to be HIGH/URGENT, and send_email=True had no effect at NORMAL
+    # priority. Broadcast-originated notifications now carry their
+    # channel intent in payload (set by send_cpa_broadcast_task below);
+    # anything else - every notify_*() call in services_cpa.py - has no
+    # such keys and falls back to the original priority-based behavior
+    # unchanged.
+    channel_prefs = notif.payload if isinstance(notif.payload, dict) else {}
+    want_push  = channel_prefs.get("send_push", True)
+    want_email = channel_prefs.get("send_email", notif.priority in ("HIGH", "URGENT"))
+    want_sms   = channel_prefs.get("send_sms", False)
 
-    # Email (URGENT or HIGH notifications)
-    if notif.priority in ("HIGH", "URGENT"):
+    # Push notification
+    if want_push:
+        try:
+            ok = _send_push_to_user(
+                user_id=notif.recipient_id,
+                title=notif.title,
+                body=notif.body[:200],
+                data={
+                    "type": notif.notification_type,
+                    "object_type": notif.object_type,
+                    "object_id": notif.object_id,
+                    "action_url": notif.action_url,
+                },
+                priority="high" if notif.priority in ("HIGH", "URGENT") else "normal",
+            )
+            if ok:
+                # Part 6 audit fix: this update used to run unconditionally
+                # right after the call, regardless of whether `ok` was True
+                # or False - marking push_sent=True (and stamping
+                # push_sent_at) for pushes that had actually failed (e.g.
+                # no active device tokens, every platform failed), as long
+                # as _send_push_to_user() itself didn't raise. push_sent is
+                # meant to record success, not "an attempt was made".
+                CPANotification.objects.filter(pk=notification_id).update(
+                    push_sent=True, push_sent_at=timezone.now()
+                )
+            results["push"] = "sent" if ok else "failed"
+        except Exception as exc:
+            results["push_error"] = str(exc)
+    else:
+        results["push"] = "skipped"
+
+    # Email
+    if want_email:
         try:
             _send_notification_email(
                 user_id=notif.recipient_id,
@@ -64,6 +99,17 @@ def deliver_cpa_notification_task(self, notification_id: str) -> dict:
             results["email"] = "sent"
         except Exception as exc:
             results["email_error"] = str(exc)
+    else:
+        results["email"] = "skipped"
+
+    # SMS - not implemented, see docstring note above.
+    if want_sms:
+        logger.warning(
+            "deliver_cpa_notification_task: SMS requested for notification=%s "
+            "but no SMS provider is configured - skipping.",
+            notification_id,
+        )
+        results["sms"] = "not_configured"
 
     # Real-time WebSocket (if user is connected)
     try:
@@ -113,10 +159,10 @@ def _send_notification_email(user_id, title, body, action_url, action_label):
         logger.warning("_send_notification_email: user=%s error=%s", user_id, exc)
 
 
-@shared_task(name="messaging.send_cpa_broadcast")
-def send_cpa_broadcast_task(broadcast_id: str) -> dict:
+@shared_task(bind=True, max_retries=2, name="messaging.send_cpa_broadcast")
+def send_cpa_broadcast_task(self, broadcast_id: str) -> dict:
     """Execute a CPA broadcast — resolve audience and send notifications."""
-    from .models import CPABroadcast
+    from .models import CPABroadcast, CPANotification
     from .services_cpa import _resolve_cpa_broadcast_audience, _create_notification
     from django.utils import timezone
 
@@ -132,11 +178,28 @@ def send_cpa_broadcast_task(broadcast_id: str) -> dict:
         total = len(recipient_ids)
         CPABroadcast.objects.filter(pk=broadcast_id).update(recipient_count=total)
 
-        delivered = 0
+        # Part 6 audit fix: on a retry after partial failure (this task
+        # has max_retries=2 and a broad except below that can re-run the
+        # whole function), audience resolution and notification creation
+        # both re-ran from scratch, re-notifying everyone including
+        # recipients who'd already gotten a notification in the earlier,
+        # failed attempt - duplicate pushes/emails for a subset of the
+        # audience on any retry. CPANotification has no direct FK to
+        # CPABroadcast, but every notification this task creates carries
+        # the broadcast's id in its payload (below), so that's used to
+        # find and skip recipients already notified for *this* broadcast.
+        already_notified = set(
+            CPANotification.objects.filter(
+                payload__broadcast_id=str(broadcast.id)
+            ).values_list("recipient_id", flat=True)
+        )
+        delivered = len(already_notified)
         BATCH_SIZE = 500
         for i in range(0, total, BATCH_SIZE):
             batch = recipient_ids[i:i + BATCH_SIZE]
             for uid in batch:
+                if uid in already_notified:
+                    continue
                 try:
                     _create_notification(
                         recipient_id=uid,
@@ -149,6 +212,15 @@ def send_cpa_broadcast_task(broadcast_id: str) -> dict:
                         payload={
                             "broadcast_id": str(broadcast.id),
                             "audience_filter": broadcast.audience_filter,
+                            # Part 6 audit fix: the broadcast's own
+                            # delivery-channel configuration was
+                            # previously created here but never actually
+                            # read by anything - deliver_cpa_notification_
+                            # task now reads these to decide which
+                            # channels to attempt for this notification.
+                            "send_push": broadcast.send_push,
+                            "send_email": broadcast.send_email,
+                            "send_sms": broadcast.send_sms,
                         },
                         tenant=broadcast.tenant,
                     )
@@ -165,10 +237,12 @@ def send_cpa_broadcast_task(broadcast_id: str) -> dict:
         return {"ok": True, "broadcast_id": broadcast_id, "delivered": delivered, "total": total}
 
     except Exception as exc:
+        logger.error("send_cpa_broadcast_task: FAILED id=%s: %s", broadcast_id, exc)
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc, countdown=30)
         CPABroadcast.objects.filter(pk=broadcast_id).update(
             status="FAILED", error_message=str(exc)[:500]
         )
-        logger.error("send_cpa_broadcast_task: FAILED id=%s: %s", broadcast_id, exc)
         raise
 
 

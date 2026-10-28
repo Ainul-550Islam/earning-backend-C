@@ -38,7 +38,6 @@ class CacheManager:
             os.environ.get('redis_url') or
             None
         )
-        print(f"[CACHE MANAGER] REDIS_URL={redis_url}")
         print(f"[CACHE MANAGER] ENV KEYS WITH REDIS: {[k for k in os.environ if 'REDIS' in k.upper()]}")
 
         if redis_url:
@@ -128,7 +127,7 @@ class CacheManager:
             redis_url = redis_config.get('url') or os.environ.get('REDIS_URL')
             if redis_url:
                 import redis as redis_lib
-                client = redis_lib.from_url(redis_url, decode_responses=redis_config['decode_responses'])
+                client = redis_lib.from_url(redis_url, protocol=2, decode_responses=redis_config['decode_responses'])
                 redis_service = RedisService(
                     host=redis_config['host'],
                     port=redis_config['port'],

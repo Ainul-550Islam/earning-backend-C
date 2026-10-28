@@ -2,10 +2,10 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..models import SmartLink
-from ..serializers.PublisherAPISerializer import PublisherAPISerializer
+from api.smartlink.models import SmartLink
+from api.smartlink.serializers.PublisherAPISerializer import PublisherAPISerializer
 from ..services.analytics.SmartLinkAnalyticsService import SmartLinkAnalyticsService
-from ..permissions import IsPublisher
+from api.smartlink.permissions import IsPublisher
 
 
 class PublisherAPIViewSet(viewsets.GenericViewSet):

@@ -36,6 +36,7 @@ class AppLovinConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_applovin_configs"
         verbose_name = _("AppLovin Config")
         unique_together = [["publisher"]]

@@ -97,7 +97,7 @@ class LQAService:
                            "text": f"Extra placeholder: {extra}"})
         # Untranslated check (for non-similar scripts)
         if src_lang != tgt_lang and len(translated) > 5:
-            from ..utils.fuzzy import levenshtein_similarity
+            from api.localization.utils.fuzzy import levenshtein_similarity
             sim = levenshtein_similarity(source, translated)
             if sim > 90:
                 issues.append({"category": "accuracy", "type": "untranslated", "severity": "critical",

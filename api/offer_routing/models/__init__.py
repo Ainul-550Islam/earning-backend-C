@@ -90,3 +90,4 @@ __all__ = [
 # Django will discover models through the app registry
 # The models will be available for makemigrations and migrate commands
 # when Django apps are loaded properly.
+from .security import SecurityEvent

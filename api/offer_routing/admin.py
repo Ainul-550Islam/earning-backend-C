@@ -261,13 +261,15 @@ class UserOfferCapAdmin(ModelAdmin):
 
 @admin.register(CapOverride)
 class CapOverrideAdmin(ModelAdmin):
-    list_display = ['tenant', 'override_type', 'override_cap', 'reason', 'valid_from', 'valid_to']
-    list_filter = ['override_type', 'tenant']
+    list_display = ['tenant', 'override_type', 'override_cap', 'override_value',
+                    'cap_type', 'reason', 'valid_from', 'valid_to', 'is_active']
+    list_filter = ['override_type', 'cap_type', 'is_active', 'tenant']
     search_fields = ['offer__name', 'tenant__username', 'reason']
+    readonly_fields = ['created_at', 'updated_at']
     ordering = ['-valid_from']
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('tenant')
+        return super().get_queryset(request).select_related('tenant', 'offer', 'user')
 
 
 @admin.register(FallbackRule)
@@ -397,6 +399,8 @@ class ABTestAssignmentAdmin(ModelAdmin):
         return (obj.conversions / obj.impressions) * 100
     conversion_rate.short_description = 'CR %'
 
+    readonly_fields = ['assigned_at']
+
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'test')
 
@@ -419,6 +423,8 @@ class ABTestResultAdmin(ModelAdmin):
             return 0.0
         return (obj.variant_conversions / obj.variant_impressions) * 100
     variant_cr.short_description = 'Variant CR %'
+
+    readonly_fields = ['created_at']
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('test')
@@ -570,3 +576,110 @@ def export_decision_logs(modeladmin, request, queryset):
 OfferRoutingCapAdmin.actions = [reset_caps]
 RoutingInsightAdmin.actions = [resolve_insights]
 RoutingDecisionLogAdmin.actions = [export_decision_logs]
+
+# ── Deep scan additions — previously unregistered models ─────────────────────
+
+try:
+    from .models import (
+        GeoRouteRule, DeviceRouteRule, UserSegmentRule,
+        TimeRouteRule, BehaviorRouteRule,
+        ClickFraudSignal, FraudPattern, SecurityEvent,
+        OfferQualityScore, NetworkPerformanceCache,
+        UserJourneyStep, TenantSettings, TenantBilling, TenantInvoice,
+        RoutingTemplate, RoutingConfig,
+    )
+
+    @admin.register(GeoRouteRule)
+    class GeoRouteRuleAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'route', 'country', 'region', 'is_include']
+        list_filter   = ['is_include']
+        search_fields = ['country', 'region', 'city']
+
+    @admin.register(DeviceRouteRule)
+    class DeviceRouteRuleAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'route', 'device_type', 'os_type', 'browser', 'is_include']
+        list_filter   = ['device_type', 'is_include']
+
+    @admin.register(UserSegmentRule)
+    class UserSegmentRuleAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'route', 'segment_type', 'value', 'operator']
+        list_filter   = ['segment_type', 'operator']
+
+    @admin.register(TimeRouteRule)
+    class TimeRouteRuleAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'route', 'day_of_week', 'hour_from', 'hour_to', 'timezone']
+        list_filter   = ['day_of_week', 'timezone']
+
+    @admin.register(BehaviorRouteRule)
+    class BehaviorRouteRuleAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'route', 'event_type', 'min_count', 'window_days']
+        list_filter   = ['event_type', 'operator']
+
+    @admin.register(ClickFraudSignal)
+    class ClickFraudSignalAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'user', 'signal_type', 'risk_score', 'created_at']
+        list_filter   = ['signal_type', 'severity', 'is_resolved']
+        ordering      = ['-created_at']
+
+    @admin.register(FraudPattern)
+    class FraudPatternAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'name', 'pattern_type', 'is_active']
+        list_filter   = ['is_active', 'pattern_type']
+
+    @admin.register(SecurityEvent)
+    class SecurityEventAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'event_type', 'severity', 'user', 'created_at']
+        list_filter   = ['severity', 'event_type']
+        readonly_fields = ['created_at']
+        ordering      = ['-created_at']
+
+    @admin.register(OfferQualityScore)
+    class OfferQualityScoreAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'offer', 'network', 'overall_score', 'quality_grade']
+        list_filter   = ['quality_grade', 'tenant']
+        ordering      = ['-overall_score']
+
+    @admin.register(NetworkPerformanceCache)
+    class NetworkPerformanceCacheAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'tenant', 'network', 'avg_access_time_ms', 'hit_rate']
+        list_filter   = ['tenant', 'cache_type']
+        ordering      = ['-created_at']
+
+    @admin.register(UserJourneyStep)
+    class UserJourneyStepAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'user', 'step_type', 'offer', 'timestamp']
+        list_filter   = ['step_type']
+        ordering      = ['-timestamp']
+
+    @admin.register(TenantSettings)
+    class TenantSettingsAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'user', 'max_routing_time_ms', 'cache_enabled', 'personalization_enabled']
+        list_filter   = ['cache_enabled', 'personalization_enabled']
+
+    @admin.register(TenantBilling)
+    class TenantBillingAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'user', 'plan_name', 'plan_tier', 'routing_requests_used', 'routing_requests_allowed']
+        list_filter   = ['plan_tier', 'billing_cycle_start']
+        ordering      = ['-created_at']
+
+    @admin.register(TenantInvoice)
+    class TenantInvoiceAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'user', 'invoice_number', 'amount', 'status', 'due_date']
+        list_filter   = ['status']
+        search_fields = ['invoice_number', 'user__username']
+        ordering      = ['-created_at']
+
+    @admin.register(RoutingTemplate)
+    class RoutingTemplateAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'name', 'category', 'is_public']
+        list_filter   = ['category', 'is_public']
+        search_fields = ['name']
+
+    @admin.register(RoutingConfig)
+    class RoutingConfigAdmin(admin.ModelAdmin):
+        list_display  = ['id', 'key', 'value', 'is_active']
+        list_filter   = ['is_active']
+
+except ImportError as e:
+    import logging
+    logging.getLogger('offer_routing.admin').warning(f"Admin registration skipped: {e}")

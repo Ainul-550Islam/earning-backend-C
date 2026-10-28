@@ -102,6 +102,7 @@ class FinanceOfferManager:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
 def finance_submit_view(request, offer_id):
     mgr = FinanceOfferManager()
@@ -115,9 +116,6 @@ def finance_submit_view(request, offer_id):
         subid=request.data.get('subid', ''),
     )
     return Response(result)
-
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def finance_offers_list_view(request):
     niches = [{'niche': k, 'payout_range': f'${v["payout_range"][0]}-${v["payout_range"][1]}',

@@ -115,6 +115,7 @@ class CreativeService:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def upload_creative_view(request):
     service = CreativeService()
@@ -130,15 +131,10 @@ def upload_creative_view(request):
     )
     return Response(result, status=status.HTTP_201_CREATED)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def campaign_creatives_view(request, campaign_id):
     service = CreativeService()
     return Response({'creatives': service.get_campaign_creatives(campaign_id, request.user.id)})
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def standard_sizes_view(request):
     service = CreativeService()

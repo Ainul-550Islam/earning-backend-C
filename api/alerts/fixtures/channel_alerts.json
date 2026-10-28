@@ -1,0 +1,116 @@
+[
+{
+  "model": "alerts.alertchannel",
+  "pk": 1,
+  "fields": {
+    "tenant": null,
+    "name": "Primary Email Channel",
+    "channel_type": "email",
+    "description": "",
+    "is_enabled": true,
+    "priority": 1,
+    "rate_limit_per_minute": 10,
+    "rate_limit_per_hour": 100,
+    "rate_limit_per_day": 1000,
+    "max_retries": 3,
+    "retry_delay_minutes": 5,
+    "config": {
+      "smtp_host": "smtp.example.com"
+    },
+    "status": "active",
+    "last_success": null,
+    "last_failure": null,
+    "consecutive_failures": 0,
+    "total_sent": 0,
+    "total_failed": 0,
+    "success_rate": 100.0,
+    "created_by": null,
+    "created_at": "2026-07-03T02:28:07.005Z",
+    "updated_at": "2026-07-03T02:28:07.005Z"
+  }
+},
+{
+  "model": "alerts.alertchannel",
+  "pk": 2,
+  "fields": {
+    "tenant": null,
+    "name": "Ops Slack Channel",
+    "channel_type": "slack",
+    "description": "",
+    "is_enabled": true,
+    "priority": 2,
+    "rate_limit_per_minute": 10,
+    "rate_limit_per_hour": 100,
+    "rate_limit_per_day": 1000,
+    "max_retries": 3,
+    "retry_delay_minutes": 5,
+    "config": {
+      "webhook_url": "https://hooks.slack.com/services/EXAMPLE"
+    },
+    "status": "active",
+    "last_success": null,
+    "last_failure": null,
+    "consecutive_failures": 0,
+    "total_sent": 0,
+    "total_failed": 0,
+    "success_rate": 100.0,
+    "created_by": null,
+    "created_at": "2026-07-03T02:28:07.047Z",
+    "updated_at": "2026-07-03T02:28:07.047Z"
+  }
+},
+{
+  "model": "alerts.channelroute",
+  "pk": 1,
+  "fields": {
+    "tenant": null,
+    "name": "Critical to Slack",
+    "description": "",
+    "route_type": "severity_based",
+    "is_active": true,
+    "priority": 1,
+    "conditions": {
+      "severity": [
+        "critical"
+      ]
+    },
+    "start_time": null,
+    "end_time": null,
+    "days_of_week": [],
+    "escalation_delay_minutes": 60,
+    "escalate_after_failures": 3,
+    "created_by": null,
+    "created_at": "2026-07-03T02:28:07.069Z",
+    "updated_at": "2026-07-03T02:28:07.069Z",
+    "source_rules": [],
+    "source_channels": [],
+    "destination_channels": []
+  }
+},
+{
+  "model": "alerts.channelroute",
+  "pk": 2,
+  "fields": {
+    "tenant": null,
+    "name": "Default to Email",
+    "description": "",
+    "route_type": "rule_based",
+    "is_active": true,
+    "priority": 2,
+    "conditions": {
+      "default": true
+    },
+    "start_time": null,
+    "end_time": null,
+    "days_of_week": [],
+    "escalation_delay_minutes": 60,
+    "escalate_after_failures": 3,
+    "created_by": null,
+    "created_at": "2026-07-03T02:28:07.072Z",
+    "updated_at": "2026-07-03T02:28:07.072Z",
+    "source_rules": [],
+    "source_channels": [],
+    "destination_channels": []
+  }
+}
+]

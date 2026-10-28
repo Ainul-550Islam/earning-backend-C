@@ -1,6 +1,7 @@
 from django.template.loader import render_to_string
 from django.utils.html import escape
 import os
+from datetime import datetime
 
 class HTMLReport:
     """

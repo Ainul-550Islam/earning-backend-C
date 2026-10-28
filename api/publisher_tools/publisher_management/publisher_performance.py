@@ -3,6 +3,7 @@
 from decimal import Decimal
 from datetime import date, timedelta
 from django.db import models
+from django.conf import settings
 from django.db.models import Sum, Avg
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -25,9 +26,10 @@ class PublisherPerformanceTarget(TimeStampedModel):
     bonus_threshold        = models.DecimalField(max_digits=14, decimal_places=4, default=Decimal('0.0000'), help_text=_("Revenue needed for performance bonus"))
     bonus_amount           = models.DecimalField(max_digits=10, decimal_places=4, default=Decimal('0.0000'))
     is_bonus_achieved      = models.BooleanField(default=False)
-    set_by                 = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    set_by                 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_performance_targets'
         verbose_name = _('Performance Target')
         unique_together = [['publisher', 'year', 'month']]
@@ -37,7 +39,7 @@ class PublisherPerformanceTarget(TimeStampedModel):
         return f"{self.publisher.publisher_id} — Target {self.year}-{self.month:02d}: ${self.target_revenue}"
 
     def get_actual_performance(self):
-        from api.publisher_tools.models import PublisherEarning
+        from publisher_tools.models import PublisherEarning
         from calendar import monthrange
         last_day = monthrange(self.year, self.month)[1]
         start = date(self.year, self.month, 1)
@@ -85,6 +87,7 @@ class PublisherPerformanceSnapshot(TimeStampedModel):
     created_at_date    = models.DateField(auto_now_add=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_performance_snapshots'
         verbose_name = _('Performance Snapshot')
         unique_together = [['publisher', 'year', 'month']]
@@ -109,6 +112,7 @@ class PublisherLeaderboard(TimeStampedModel):
     published_at     = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_leaderboards'
         verbose_name = _('Publisher Leaderboard')
         unique_together = [['year', 'month']]

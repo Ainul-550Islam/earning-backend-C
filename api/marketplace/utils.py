@@ -66,16 +66,22 @@ def format_price(value: Decimal, currency: str = "BDT") -> str:
 
 def unique_slugify(model_class, name: str, instance=None) -> str:
     """Generate a unique slug for a model, appending a number if needed."""
+    from django.core.exceptions import FieldDoesNotExist
     base = slugify(name)
     slug = base
     n = 1
-    qs = model_class.objects.filter(slug=slug)
+    try:
+        model_class._meta.get_field('slug')
+        slug_field = 'slug'
+    except FieldDoesNotExist:
+        slug_field = 'store_slug'
+    qs = model_class.objects.filter(**{slug_field: slug})
     if instance and instance.pk:
         qs = qs.exclude(pk=instance.pk)
     while qs.exists():
-        slug = f"{base}-{n}"
+        slug = f'{base}-{n}'
         n += 1
-        qs = model_class.objects.filter(slug=slug)
+        qs = model_class.objects.filter(**{slug_field: slug})
         if instance and instance.pk:
             qs = qs.exclude(pk=instance.pk)
     return slug

@@ -1,6 +1,8 @@
 """
 Django FilterSet classes for filtering audit logs
 """
+from datetime import timedelta
+from django.db.models import Count
 
 import django_filters
 from django_filters import rest_framework as filters

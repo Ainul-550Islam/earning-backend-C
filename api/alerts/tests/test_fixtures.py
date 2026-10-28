@@ -7,12 +7,12 @@ from django.utils import timezone
 from io import StringIO
 import json
 
-from alerts.models.core import AlertRule, AlertLog, Notification, SystemMetrics
-from alerts.models.threshold import ThresholdConfig, ThresholdBreach
-from alerts.models.channel import AlertChannel, ChannelRoute
-from alerts.models.incident import Incident, IncidentTimeline
-from alerts.models.intelligence import AlertCorrelation
-from alerts.models.reporting import AlertReport
+from api.alerts.models.core import AlertRule, AlertLog, Notification, SystemMetrics
+from api.alerts.models.threshold import ThresholdConfig, ThresholdBreach
+from api.alerts.models.channel import AlertChannel, ChannelRoute
+from api.alerts.models.incident import Incident, IncidentTimeline
+from api.alerts.models.intelligence import AlertCorrelation
+from api.alerts.models.reporting import AlertReport
 
 
 class AlertFixturesTest(TestCase):
@@ -24,7 +24,7 @@ class AlertFixturesTest(TestCase):
     def test_load_core_fixtures(self):
         """Test loading core alert fixtures"""
         # Load core fixtures
-        call_command('loaddata', 'alerts/fixtures/core_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/core_alerts.json', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Installed', output)
@@ -37,7 +37,7 @@ class AlertFixturesTest(TestCase):
     def test_load_threshold_fixtures(self):
         """Test loading threshold fixtures"""
         # Load threshold fixtures
-        call_command('loaddata', 'alerts/fixtures/threshold_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/threshold_alerts.json', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Installed', output)
@@ -49,7 +49,7 @@ class AlertFixturesTest(TestCase):
     def test_load_channel_fixtures(self):
         """Test loading channel fixtures"""
         # Load channel fixtures
-        call_command('loaddata', 'alerts/fixtures/channel_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/channel_alerts.json', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Installed', output)
@@ -61,7 +61,7 @@ class AlertFixturesTest(TestCase):
     def test_load_incident_fixtures(self):
         """Test loading incident fixtures"""
         # Load incident fixtures
-        call_command('loaddata', 'alerts/fixtures/incident_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/incident_alerts.json', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Installed', output)
@@ -73,7 +73,7 @@ class AlertFixturesTest(TestCase):
     def test_load_intelligence_fixtures(self):
         """Test loading intelligence fixtures"""
         # Load intelligence fixtures
-        call_command('loaddata', 'alerts/fixtures/intelligence_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/intelligence_alerts.json', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Installed', output)
@@ -84,7 +84,7 @@ class AlertFixturesTest(TestCase):
     def test_load_reporting_fixtures(self):
         """Test loading reporting fixtures"""
         # Load reporting fixtures
-        call_command('loaddata', 'alerts/fixtures/reporting_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/reporting_alerts.json', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Installed', output)
@@ -95,7 +95,7 @@ class AlertFixturesTest(TestCase):
     def test_load_system_metrics_fixtures(self):
         """Test loading system metrics fixtures"""
         # Load system metrics fixtures
-        call_command('loaddata', 'alerts/fixtures/system_metrics.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/system_metrics.json', stdout=self.out)
         
         output = self.out.getvalue()
         self.assertIn('Installed', output)
@@ -107,13 +107,13 @@ class AlertFixturesTest(TestCase):
         """Test loading all alert fixtures"""
         # Load all fixtures
         fixtures = [
-            'alerts/fixtures/core_alerts.json',
-            'alerts/fixtures/threshold_alerts.json',
-            'alerts/fixtures/channel_alerts.json',
-            'alerts/fixtures/incident_alerts.json',
-            'alerts/fixtures/intelligence_alerts.json',
-            'alerts/fixtures/reporting_alerts.json',
-            'alerts/fixtures/system_metrics.json'
+            'api/alerts/fixtures/core_alerts.json',
+            'api/alerts/fixtures/threshold_alerts.json',
+            'api/alerts/fixtures/channel_alerts.json',
+            'api/alerts/fixtures/incident_alerts.json',
+            'api/alerts/fixtures/intelligence_alerts.json',
+            'api/alerts/fixtures/reporting_alerts.json',
+            'api/alerts/fixtures/system_metrics.json'
         ]
         
         for fixture in fixtures:
@@ -136,7 +136,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_data_integrity(self):
         """Test fixture data integrity"""
         # Load core fixtures
-        call_command('loaddata', 'alerts/fixtures/core_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/core_alerts.json', stdout=self.out)
         
         # Check data integrity
         for alert_log in AlertLog.objects.all():
@@ -154,9 +154,9 @@ class AlertFixturesTest(TestCase):
         """Test fixture relationships"""
         # Load all fixtures
         fixtures = [
-            'alerts/fixtures/core_alerts.json',
-            'alerts/fixtures/threshold_alerts.json',
-            'alerts/fixtures/channel_alerts.json'
+            'api/alerts/fixtures/core_alerts.json',
+            'api/alerts/fixtures/threshold_alerts.json',
+            'api/alerts/fixtures/channel_alerts.json'
         ]
         
         for fixture in fixtures:
@@ -177,7 +177,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_timestamps(self):
         """Test fixture timestamps"""
         # Load core fixtures
-        call_command('loaddata', 'alerts/fixtures/core_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/core_alerts.json', stdout=self.out)
         
         # Check timestamps
         for alert_log in AlertLog.objects.all():
@@ -191,7 +191,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_severity_values(self):
         """Test fixture severity values"""
         # Load core fixtures
-        call_command('loaddata', 'alerts/fixtures/core_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/core_alerts.json', stdout=self.out)
         
         # Check valid severity values
         valid_severities = ['low', 'medium', 'high', 'critical']
@@ -206,8 +206,8 @@ class AlertFixturesTest(TestCase):
         """Test fixture notification types"""
         # Load core and channel fixtures
         fixtures = [
-            'alerts/fixtures/core_alerts.json',
-            'alerts/fixtures/channel_alerts.json'
+            'api/alerts/fixtures/core_alerts.json',
+            'api/alerts/fixtures/channel_alerts.json'
         ]
         
         for fixture in fixtures:
@@ -223,7 +223,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_channel_types(self):
         """Test fixture channel types"""
         # Load channel fixtures
-        call_command('loaddata', 'alerts/fixtures/channel_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/channel_alerts.json', stdout=self.out)
         
         # Check valid channel types
         valid_types = ['email', 'sms', 'telegram', 'webhook', 'slack']
@@ -234,7 +234,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_incident_severities(self):
         """Test fixture incident severities"""
         # Load incident fixtures
-        call_command('loaddata', 'alerts/fixtures/incident_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/incident_alerts.json', stdout=self.out)
         
         # Check valid incident severities
         valid_severities = ['low', 'medium', 'high', 'critical']
@@ -245,7 +245,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_incident_statuses(self):
         """Test fixture incident statuses"""
         # Load incident fixtures
-        call_command('loaddata', 'alerts/fixtures/incident_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/incident_alerts.json', stdout=self.out)
         
         # Check valid incident statuses
         valid_statuses = ['open', 'investigating', 'identified', 'resolved', 'closed']
@@ -256,7 +256,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_correlation_types(self):
         """Test fixture correlation types"""
         # Load intelligence fixtures
-        call_command('loaddata', 'alerts/fixtures/intelligence_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/intelligence_alerts.json', stdout=self.out)
         
         # Check valid correlation types
         valid_types = ['temporal', 'causal', 'pattern', 'statistical']
@@ -267,7 +267,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_report_types(self):
         """Test fixture report types"""
         # Load reporting fixtures
-        call_command('loaddata', 'alerts/fixtures/reporting_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/reporting_alerts.json', stdout=self.out)
         
         # Check valid report types
         valid_types = ['daily', 'weekly', 'monthly', 'sla', 'performance', 'custom']
@@ -278,7 +278,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_system_metrics_values(self):
         """Test fixture system metrics values"""
         # Load system metrics fixtures
-        call_command('loaddata', 'alerts/fixtures/system_metrics.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/system_metrics.json', stdout=self.out)
         
         # Check valid metrics values
         for metrics in SystemMetrics.objects.all():
@@ -291,13 +291,13 @@ class AlertFixturesTest(TestCase):
         """Test fixture data consistency"""
         # Load all fixtures
         fixtures = [
-            'alerts/fixtures/core_alerts.json',
-            'alerts/fixtures/threshold_alerts.json',
-            'alerts/fixtures/channel_alerts.json',
-            'alerts/fixtures/incident_alerts.json',
-            'alerts/fixtures/intelligence_alerts.json',
-            'alerts/fixtures/reporting_alerts.json',
-            'alerts/fixtures/system_metrics.json'
+            'api/alerts/fixtures/core_alerts.json',
+            'api/alerts/fixtures/threshold_alerts.json',
+            'api/alerts/fixtures/channel_alerts.json',
+            'api/alerts/fixtures/incident_alerts.json',
+            'api/alerts/fixtures/intelligence_alerts.json',
+            'api/alerts/fixtures/reporting_alerts.json',
+            'api/alerts/fixtures/system_metrics.json'
         ]
         
         for fixture in fixtures:
@@ -324,13 +324,13 @@ class AlertFixturesTest(TestCase):
         start_time = time.time()
         
         fixtures = [
-            'alerts/fixtures/core_alerts.json',
-            'alerts/fixtures/threshold_alerts.json',
-            'alerts/fixtures/channel_alerts.json',
-            'alerts/fixtures/incident_alerts.json',
-            'alerts/fixtures/intelligence_alerts.json',
-            'alerts/fixtures/reporting_alerts.json',
-            'alerts/fixtures/system_metrics.json'
+            'api/alerts/fixtures/core_alerts.json',
+            'api/alerts/fixtures/threshold_alerts.json',
+            'api/alerts/fixtures/channel_alerts.json',
+            'api/alerts/fixtures/incident_alerts.json',
+            'api/alerts/fixtures/intelligence_alerts.json',
+            'api/alerts/fixtures/reporting_alerts.json',
+            'api/alerts/fixtures/system_metrics.json'
         ]
         
         for fixture in fixtures:
@@ -348,7 +348,7 @@ class AlertFixturesTest(TestCase):
         # Create test data
         alert_rule = AlertRule.objects.create(
             name='Dump Test Rule',
-            alert_type='cpu_usage',
+            alert_type='server_error',
             severity='high',
             threshold_value=80.0
         )
@@ -362,10 +362,10 @@ class AlertFixturesTest(TestCase):
         
         # Dump data
         self.out = StringIO()
-        call_command('dumpdata', 'alerts.core', '--indent', '2', stdout=self.out)
+        call_command('dumpdata', 'alerts', '--indent', '2', stdout=self.out)
         
         dump_output = self.out.getvalue()
-        self.assertIn('DumpTest Rule', dump_output)
+        self.assertIn('Dump Test Rule', dump_output)
         self.assertIn('Dump test alert', dump_output)
         
         # Clear data
@@ -380,7 +380,7 @@ class AlertFixturesTest(TestCase):
         """Test fixture error handling"""
         # Try to load non-existent fixture
         with self.assertRaises(Exception):
-            call_command('loaddata', 'alerts/fixtures/non_existent.json', stdout=self.out)
+            call_command('loaddata', 'api/alerts/fixtures/non_existent.json', stdout=self.out)
         
         # Try to load malformed fixture
         # This would require creating a malformed JSON file
@@ -390,11 +390,11 @@ class AlertFixturesTest(TestCase):
         """Test fixture dependencies"""
         # Load fixtures in correct order
         # Core should be loaded first as other fixtures depend on it
-        call_command('loaddata', 'alerts/fixtures/core_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/core_alerts.json', stdout=self.out)
         
         # Then load dependent fixtures
-        call_command('loaddata', 'alerts/fixtures/threshold_alerts.json', stdout=self.out)
-        call_command('loaddata', 'alerts/fixtures/channel_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/threshold_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/channel_alerts.json', stdout=self.out)
         
         # Verify dependencies are satisfied
         for threshold_config in ThresholdConfig.objects.all():
@@ -408,7 +408,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_uniqueness(self):
         """Test fixture uniqueness constraints"""
         # Load fixtures
-        call_command('loaddata', 'alerts/fixtures/core_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/core_alerts.json', stdout=self.out)
         
         # Check uniqueness constraints are satisfied
         # Names should be unique for certain models
@@ -424,13 +424,13 @@ class AlertFixturesTest(TestCase):
         """Test fixture data volume"""
         # Load all fixtures
         fixtures = [
-            'alerts/fixtures/core_alerts.json',
-            'alerts/fixtures/threshold_alerts.json',
-            'alerts/fixtures/channel_alerts.json',
-            'alerts/fixtures/incident_alerts.json',
-            'alerts/fixtures/intelligence_alerts.json',
-            'alerts/fixtures/reporting_alerts.json',
-            'alerts/fixtures/system_metrics.json'
+            'api/alerts/fixtures/core_alerts.json',
+            'api/alerts/fixtures/threshold_alerts.json',
+            'api/alerts/fixtures/channel_alerts.json',
+            'api/alerts/fixtures/incident_alerts.json',
+            'api/alerts/fixtures/intelligence_alerts.json',
+            'api/alerts/fixtures/reporting_alerts.json',
+            'api/alerts/fixtures/system_metrics.json'
         ]
         
         for fixture in fixtures:
@@ -445,7 +445,7 @@ class AlertFixturesTest(TestCase):
     def test_fixture_cleanup(self):
         """Test fixture cleanup"""
         # Load fixtures
-        call_command('loaddata', 'alerts/fixtures/core_alerts.json', stdout=self.out)
+        call_command('loaddata', 'api/alerts/fixtures/core_alerts.json', stdout=self.out)
         
         # Verify data loaded
         initial_count = AlertRule.objects.count()

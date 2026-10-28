@@ -2,7 +2,7 @@
 Alert Intelligence Services
 """
 from django.core.cache import cache
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 from datetime import timedelta
 import logging
@@ -184,13 +184,15 @@ class AlertPredictionService:
             return []
     
     @staticmethod
-    def evaluate_prediction_accuracy():
-        """Evaluate accuracy of prediction models"""
+    def evaluate_prediction_accuracy(prediction_id=None):
+        """Evaluate accuracy of prediction models (all active ones, or only `prediction_id`)"""
         try:
             models = AlertPrediction.objects.filter(
                 is_active=True,
                 training_status='completed'
             )
+            if prediction_id is not None:
+                models = models.filter(pk=prediction_id)
             
             evaluations = []
             
@@ -249,7 +251,7 @@ class AlertPredictionService:
             logger.error(f"Error evaluating model accuracy: {e}")
             return {
                 'accuracy_score': 0.0,
-                'error': str(e)
+                'error': 'Operation failed'
             }
     
     @staticmethod
@@ -354,7 +356,14 @@ class AnomalyDetectionService:
             if 'window_size_minutes' in new_thresholds:
                 model.window_size_minutes = new_thresholds['window_size_minutes']
             
-            model.save()
+            # Do NOT call model.save() here: it fires the AnomalyDetectionModel post_save signal,
+            # which enqueues update_anomaly_thresholds again -> endless task loop.
+            AnomalyDetectionModel.objects.filter(pk=model.pk).update(
+                sensitivity=model.sensitivity,
+                anomaly_threshold=model.anomaly_threshold,
+                window_size_minutes=model.window_size_minutes,
+                updated_at=timezone.now(),
+            )
             
             logger.info(f"Updated thresholds for anomaly model {model_id}")
             return True
@@ -529,8 +538,11 @@ class RootCauseAnalysisService:
             incident = Incident.objects.get(id=incident_id)
             
             # Create RCA record
+            # RootCauseAnalysis has no `incident` FK (create(incident=...) raised
+            # TypeError, so no automatic RCA was ever created); it tracks incidents in
+            # the `related_incidents` JSON list.
             rca = RootCauseAnalysis.objects.create(
-                incident=incident,
+                related_incidents=[incident.id],
                 **analysis_data
             )
             
@@ -667,11 +679,22 @@ class RootCauseAnalysisService:
 
 
 class IntelligenceIntegrationService:
-    """Integration service for all intelligence components"""
-    
+    """Integration service for all intelligence components.
+    Delegates to AlertIntelligence (services/intelligence/alert_intelligence.py)
+    for deep per-alert analysis and threshold recommendations.
+    """
+
+    @staticmethod
+    def _get_alert_intelligence():
+        """Lazy-load AlertIntelligence to avoid circular imports."""
+        from .intelligence.alert_intelligence import AlertIntelligence
+        return AlertIntelligence()
+
     @staticmethod
     def run_intelligence_pipeline():
-        """Run complete intelligence analysis pipeline"""
+        """Run complete intelligence analysis pipeline.
+        Includes AlertIntelligence deep analysis in addition to service-level pipeline.
+        """
         try:
             results = {
                 'correlations': AlertCorrelationService.analyze_all_correlations(),
@@ -679,17 +702,30 @@ class IntelligenceIntegrationService:
                 'anomalies': AnomalyDetectionService.run_anomaly_detection(),
                 'timestamp': timezone.now().isoformat()
             }
-            
-            logger.info(f"Intelligence pipeline completed: {results}")
+
+            # FIXED: run AlertIntelligence deep analysis for recent unresolved alerts
+            try:
+                from ..models.core import AlertLog
+                ai = IntelligenceIntegrationService._get_alert_intelligence()
+                recent_alerts = AlertLog.objects.filter(status='pending').order_by('-triggered_at')[:50]
+                if recent_alerts.exists():
+                    ai_results = ai.analyze_alert_patterns(list(recent_alerts))
+                    results['ai_pattern_analysis'] = ai_results
+            except Exception as ai_err:
+                logger.warning(f"AlertIntelligence pattern analysis failed (non-critical): {ai_err}")
+
+            logger.info(f"Intelligence pipeline completed")
             return results
-            
+
         except Exception as e:
             logger.error(f"Error running intelligence pipeline: {e}")
             return None
     
     @staticmethod
     def get_intelligence_dashboard_data():
-        """Get comprehensive intelligence dashboard data"""
+        """Get comprehensive intelligence dashboard data.
+        Includes AlertIntelligence threshold recommendations.
+        """
         try:
             dashboard_data = {
                 'correlation_summary': AlertCorrelationService.get_correlation_summary(),
@@ -700,9 +736,22 @@ class IntelligenceIntegrationService:
                 'prediction_models': AlertPredictionService.evaluate_prediction_accuracy(),
                 'last_updated': timezone.now().isoformat()
             }
-            
+
+            # FIXED: include threshold recommendations from AlertIntelligence
+            try:
+                from ..models.core import AlertRule
+                ai = IntelligenceIntegrationService._get_alert_intelligence()
+                threshold_recs = [
+                    rec for rule in AlertRule.objects.filter(is_active=True)[:20]
+                    if (rec := ai.recommend_threshold_adjustment(rule))
+                ]
+                if threshold_recs:
+                    dashboard_data['threshold_recommendations'] = threshold_recs
+            except Exception as ai_err:
+                logger.warning(f"AlertIntelligence threshold recs failed (non-critical): {ai_err}")
+
             return dashboard_data
-            
+
         except Exception as e:
             logger.error(f"Error getting intelligence dashboard data: {e}")
             return None

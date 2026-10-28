@@ -626,6 +626,96 @@ class RoutingOptimizer:
         
         return recommendations
     
+    def get_optimization_recommendations(self, tenant_id: int) -> Dict[str, Any]:
+        """
+        Analyse current performance data and return actionable recommendations
+        without modifying any configuration.
+
+        Returns a dict with:
+            recommendations (list), metrics_snapshot (dict), generated_at (str)
+        """
+        from django.utils import timezone
+        recommendations = []
+        metrics_snapshot = {}
+
+        try:
+            from .analytics import RoutingAnalyticsService
+            analytics = RoutingAnalyticsService()
+            perf = analytics.get_performance_metrics(tenant_id=tenant_id, days=30)
+            metrics_snapshot = perf
+
+            avg_cr = perf.get('conversion_rate', 0)
+            avg_rt = perf.get('avg_response_time_ms', 0)
+            total_decisions = perf.get('total_decisions', 0)
+
+            # Route-priority recommendations
+            route_result = self.optimize_route_priorities(tenant_id)
+            priority_recs = route_result.get('recommendations', [])
+            estimated_improvement = route_result.get('performance_improvement', 0)
+            if priority_recs:
+                recommendations.append({
+                    'type': 'route_priorities',
+                    'priority': 'high' if avg_cr < 2 else 'medium',
+                    'title': 'Route Priority Optimisation Available',
+                    'description': (
+                        f'Current avg conversion rate: {avg_cr:.2f}%. '
+                        f'{len(priority_recs)} route(s) identified for re-prioritisation.'
+                    ),
+                    'action': '; '.join(priority_recs[:3]),
+                    'estimated_impact': f'{estimated_improvement:.1f}% improvement',
+                })
+
+            # Score-weight recommendations
+            weight_result = self.optimize_score_weights(tenant_id)
+            weight_recs = weight_result.get('recommendations', [])
+            if weight_recs:
+                recommendations.append({
+                    'type': 'score_weights',
+                    'priority': 'medium',
+                    'title': 'Score Weight Optimisation Available',
+                    'description': (
+                        f'{len(weight_recs)} scoring config(s) could be rebalanced.'
+                    ),
+                    'action': '; '.join(weight_recs[:3]),
+                    'estimated_impact': f"{weight_result.get('performance_improvement', 0):.1f}% improvement",
+                })
+
+            # Personalisation recommendations
+            pers_result = self.optimize_personalization_config(tenant_id)
+            pers_recs = pers_result.get('recommendations', [])
+            if pers_recs:
+                recommendations.append({
+                    'type': 'personalization',
+                    'priority': 'low',
+                    'title': 'Personalisation Config Review',
+                    'description': (
+                        f'{len(pers_recs)} personalisation config(s) flagged for review.'
+                    ),
+                    'action': '; '.join(pers_recs[:3]),
+                    'estimated_impact': f"{pers_result.get('performance_improvement', 0):.1f}% improvement",
+                })
+
+            # Response-time recommendation
+            if avg_rt > 100:
+                recommendations.append({
+                    'type': 'route_priorities',
+                    'priority': 'medium',
+                    'title': 'High Average Response Time',
+                    'description': f'Average response time is {avg_rt:.1f} ms.',
+                    'action': 'Optimise route ordering and enable caching to reduce latency.',
+                    'estimated_impact': '20-30% reduction in response time',
+                })
+
+        except Exception as e:
+            logger.error(f"get_optimization_recommendations error for tenant {tenant_id}: {e}")
+
+        return {
+            'recommendations': recommendations,
+            'total_recommendations': len(recommendations),
+            'metrics_snapshot': metrics_snapshot,
+            'generated_at': timezone.now().isoformat(),
+        }
+
     def optimize_all_configurations(self, tenant_id: int) -> Dict[str, Any]:
         """Optimize all configurations for a tenant."""
         try:

@@ -4,6 +4,7 @@ Offer Ranker Service
 Sorts scored offers and applies diversity rules to ensure
 optimal offer presentation and user experience.
 """
+import math
 
 import logging
 import random
@@ -12,17 +13,17 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q, Count
 from django.core.cache import cache
-from ...models import (
+from offer_routing.models import (
     OfferRoute, UserOfferHistory, OfferAffinityScore,
     UserPreferenceVector, RoutingDecisionLog
 )
-from ...choices import RoutingDecisionReason
-from ...constants import (
+from offer_routing.choices import RoutingDecisionReason
+from offer_routing.constants import (
     MAX_OFFERS_PER_REQUEST, DIVERSITY_THRESHOLD,
     RANKING_CACHE_TIMEOUT, MIN_OFFERS_FOR_DIVERSITY
 )
-from ...exceptions import RankingError, ConfigurationError
-from ...utils import calculate_diversity_score, get_user_recent_offers
+from offer_routing.exceptions import RankingError, ConfigurationError
+from offer_routing.utils import calculate_diversity_score, get_user_recent_offers
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

@@ -15,7 +15,7 @@ class WebhookHealthLogSerializer(serializers.ModelSerializer):
     """Serializer for WebhookHealthLog model."""
     
     endpoint_label = serializers.CharField(source='endpoint.label', read_only=True)
-    endpoint_url = serializers.URLField(source='endpoint.url', read_only=True)
+    endpoint_url = serializers.URLField(source='endpoint.target_url', read_only=True)
     
     class Meta:
         model = WebhookHealthLog
@@ -104,7 +104,7 @@ class WebhookHealthLogListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing webhook health logs."""
     
     endpoint_label = serializers.CharField(source='endpoint.label', read_only=True)
-    endpoint_url = serializers.URLField(source='endpoint.url', read_only=True)
+    endpoint_url = serializers.URLField(source='endpoint.target_url', read_only=True)
     
     class Meta:
         model = WebhookHealthLog

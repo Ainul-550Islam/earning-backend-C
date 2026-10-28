@@ -4,6 +4,7 @@ Onboarding Management Commands
 This module contains Django management commands for onboarding operations
 including completion, reminders, and trial extensions.
 """
+from django.db import models
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone

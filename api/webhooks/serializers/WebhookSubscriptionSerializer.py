@@ -1,3 +1,4 @@
+# Custom exception available: from ..exceptions import WebhookValidationError
 """Webhook Subscription Serializer
 
 This module contains the serializer for the WebhookSubscription model.
@@ -16,7 +17,7 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
     """Serializer for WebhookSubscription model."""
     
     endpoint_label = serializers.CharField(source='endpoint.label', read_only=True)
-    endpoint_url = serializers.URLField(source='endpoint.url', read_only=True)
+    endpoint_url = serializers.URLField(source='endpoint.target_url', read_only=True)
     
     class Meta:
         model = WebhookSubscription
@@ -27,7 +28,7 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
             'endpoint_url',
             'event_type',
             'is_active',
-            'filter_config',
+            'filters',
             'created_at',
             'updated_at'
         ]
@@ -43,36 +44,10 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
         
         return value
     
-    def validate_event_type(self, value):
-        """Validate event type format."""
-        if not value:
-            raise serializers.ValidationError("Event type is required.")
-        
-        # Validate event type format (e.g., 'user.created')
-        if '.' not in value:
-            raise serializers.ValidationError("Event type must be in format 'domain.event'.")
-        
-        return value
-    
-    def validate_filter_config(self, value):
-        """Validate filter configuration."""
-        if value is None:
-            return value
-        
-        if not isinstance(value, dict):
-            raise serializers.ValidationError("Filter configuration must be a dictionary.")
-        
-        # Validate filter structure
-        for field_path, filter_config in value.items():
-            if not isinstance(filter_config, dict):
-                raise serializers.ValidationError(f"Filter configuration for '{field_path}' must be a dictionary.")
-            
-            if 'operator' not in filter_config:
-                raise serializers.ValidationError(f"Filter configuration for '{field_path}' must have an 'operator' field.")
-            
-            if 'value' not in filter_config:
-                raise serializers.ValidationError(f"Filter configuration for '{field_path}' must have a 'value' field.")
-        
+    def validate_filters(self, value):
+        """Filters must be a JSON object."""
+        if value is not None and not isinstance(value, dict):
+            raise serializers.ValidationError("Filters must be a JSON object.")
         return value
     
     def validate(self, attrs):
@@ -109,7 +84,7 @@ class WebhookSubscriptionUpdateSerializer(WebhookSubscriptionSerializer):
     class Meta(WebhookSubscriptionSerializer.Meta):
         fields = [
             'is_active',
-            'filter_config',
+            'filters',
             'updated_at'
         ]
         read_only_fields = ['updated_at']
@@ -156,7 +131,7 @@ class WebhookSubscriptionListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing webhook subscriptions."""
     
     endpoint_label = serializers.CharField(source='endpoint.label', read_only=True)
-    endpoint_url = serializers.URLField(source='endpoint.url', read_only=True)
+    endpoint_url = serializers.URLField(source='endpoint.target_url', read_only=True)
     
     class Meta:
         model = WebhookSubscription

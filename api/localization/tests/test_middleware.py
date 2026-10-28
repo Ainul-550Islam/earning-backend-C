@@ -9,7 +9,7 @@ class MiddlewareTest(TestCase):
     def test_middleware_does_not_crash(self):
         """Middleware basic smoke test"""
         from django.http import HttpResponse
-        from localization.middleware import LocalizationMiddleware
+        from api.localization.middleware import LocalizationMiddleware
 
         def get_response(request):
             return HttpResponse("OK")

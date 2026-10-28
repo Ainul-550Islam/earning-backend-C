@@ -7,9 +7,11 @@ from decimal import Decimal
 from django.shortcuts import get_object_or_404
 from ...models.core import Customer
 from ...services.points.PointsEngine import PointsEngine
+from ...serializers.PointsSerializer import LoyaltyPointsSerializer
 from ...permissions import IsPublicAPIClient
+from ...mixins import DjoyaltyBaseViewSet
 
-class PublicAPIViewSet(viewsets.ViewSet):
+class PublicAPIViewSet(DjoyaltyBaseViewSet, viewsets.ViewSet):
     permission_classes = [IsPublicAPIClient]
 
     @action(detail=False, methods=['get'])
@@ -31,4 +33,4 @@ class PublicAPIViewSet(viewsets.ViewSet):
             points = PointsEngine.process_earn(customer, Decimal(str(spend_amount)))
             return Response({'points_earned': str(points)}, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return self.err(str(e))

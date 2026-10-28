@@ -53,13 +53,13 @@ class Campaign(AdvertiserPortalBaseModel, StatusModel, AuditModel, BudgetModel, 
     # Campaign Objective and Strategy
     objective = models.CharField(
         max_length=50,
-        choices=CampaignObjectiveEnum.choices,
+        choices=CampaignObjectiveEnum.choices(),
         db_index=True,
         help_text="Campaign objective"
     )
     bidding_strategy = models.CharField(
         max_length=50,
-        choices=BiddingStrategyEnum.choices,
+        choices=BiddingStrategyEnum.choices(),
         default=BiddingStrategyEnum.MANUAL_CPC.value,
         help_text="Bidding strategy"
     )

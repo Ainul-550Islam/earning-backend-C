@@ -1,5 +1,6 @@
 # api/publisher_tools/ad_placements/placement_floor_price.py
 """Placement Floor Price — Dynamic floor price management."""
+from typing import Dict
 from decimal import Decimal
 from datetime import timedelta
 from django.db import models
@@ -25,6 +26,7 @@ class FloorPriceRule(TimeStampedModel):
     ends_at          = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_floor_price_rules"
         verbose_name = _("Floor Price Rule")
         ordering = ["-priority", "-created_at"]
@@ -67,7 +69,7 @@ def get_effective_floor_price(placement, context: dict = None) -> Decimal:
 def suggest_floor_price(placement, days: int = 30) -> Dict:
     """Historical eCPM data-র ভিত্তিতে floor price suggest করে।"""
     from django.db.models import Avg
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     agg = PublisherEarning.objects.filter(
         ad_unit=placement.ad_unit, date__gte=start, impressions__gt=0,

@@ -524,3 +524,8 @@ class RouteEvaluator:
 
 # Singleton instance
 route_evaluator = RouteEvaluator()
+# Single owner: canonical implementations live in subpackage
+try:
+    from offer_routing.services.core import RouteEvaluator
+except ImportError:
+    pass

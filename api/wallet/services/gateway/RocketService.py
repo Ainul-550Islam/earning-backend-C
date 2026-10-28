@@ -12,7 +12,7 @@ class RocketService:
 
     @classmethod
     def disburse(cls, receiver_mobile: str, amount: Decimal, reference: str = "") -> dict:
-        from ..integration.rocket_integration import RocketService as RS
+        from ...integration.rocket_integration import RocketService as RS
         return RS.disburse(receiver_mobile, amount, reference)
 
     @classmethod

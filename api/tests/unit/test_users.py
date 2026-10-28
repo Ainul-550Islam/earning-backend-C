@@ -10,12 +10,13 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from rest_framework import status
-from rest_framework.test import APITestCase, APIRequestFactory
+from rest_framework.test import APITestCase, APIRequestFactory, APIClient
 
 from api.users.models import User, UserProfile, OTP, UserActivity, UserDevice
 from api.users.serializers import (
     UserRegistrationSerializer, UserLoginSerializer,
-    UserSerializer, ChangePasswordSerializer, VerifyOTPSerializer
+    UserSerializer, ChangePasswordSerializer, VerifyOTPSerializer,
+    UserProfileSerializer
 )
 from api.users.services import UserService, OTPService, TokenService
 from api.users.factories import UserFactory, UserProfileFactory, OTPFactory
@@ -415,8 +416,8 @@ class TestUserLoginSerializer(APITestCase):
         self.assertIn('device_name', serializer.validated_data)
 
 
-class Test'users.User'(APITestCase):
-    """Test 'users.User'"""
+class TestUserProfileSerializer(APITestCase):
+    """Test UserProfileSerializer"""
     
     def setUp(self):
         self.user = UserFactory.create()
@@ -424,7 +425,7 @@ class Test'users.User'(APITestCase):
     
     def test_profile_serialization(self):
         """Test profile serialization"""
-        serializer = 'users.User'(self.profile)
+        serializer = UserProfileSerializer(self.profile)
         
         expected_fields = [
             'user_id', 'username', 'email', 'full_name', 'gender',
@@ -446,7 +447,7 @@ class Test'users.User'(APITestCase):
             'occupation': 'Updated Job'
         }
         
-        serializer = 'users.User'(self.profile, data=data, partial=True)
+        serializer = UserProfileSerializer(self.profile, data=data, partial=True)
         self.assertTrue(serializer.is_valid())
         
         updated_profile = serializer.save()

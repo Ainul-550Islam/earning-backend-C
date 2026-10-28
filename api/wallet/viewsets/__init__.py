@@ -28,3 +28,10 @@ __all__ = [
     "LiabilityReportViewSet", "AdminWalletViewSet",
     "PublicWalletViewSet",
 ]
+
+# AIInsight ViewSet
+try:
+    from .AIInsightViewSet import AIInsightViewSet
+    __all__ = list(__all__) + ["AIInsightViewSet"]
+except ImportError:
+    pass

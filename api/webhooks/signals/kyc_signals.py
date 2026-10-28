@@ -10,10 +10,14 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from ..services.core import DispatchService
+import logging
+
+from ..services.core.DispatchService import DispatchService
 from ..models import WebhookSubscription
 
 User = get_user_model()
+
+logger = logging.getLogger("ainul.webhooks.signals")
 
 
 # Signal definitions
@@ -25,6 +29,9 @@ kyc_document_uploaded = Signal()
 kyc_review_started = Signal()
 
 
+from ._isolation import isolated_receiver
+
+@isolated_receiver
 def on_kyc_submitted(sender, instance, created, **kwargs):
     """
     Signal handler for KYC submission.
@@ -60,11 +67,11 @@ def on_kyc_submitted(sender, instance, created, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -78,9 +85,10 @@ def on_kyc_submitted(sender, instance, created, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending KYC submitted webhook: {e}")
+            logger.error("sending KYC submitted webhook: %s", e)
 
 
+@isolated_receiver
 def on_kyc_verified(sender, instance, **kwargs):
     """
     Signal handler for KYC verification.
@@ -117,11 +125,11 @@ def on_kyc_verified(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -135,9 +143,10 @@ def on_kyc_verified(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending KYC verified webhook: {e}")
+            logger.error("sending KYC verified webhook: %s", e)
 
 
+@isolated_receiver
 def on_kyc_rejected(sender, instance, **kwargs):
     """
     Signal handler for KYC rejection.
@@ -174,11 +183,11 @@ def on_kyc_rejected(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -192,9 +201,10 @@ def on_kyc_rejected(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending KYC rejected webhook: {e}")
+            logger.error("sending KYC rejected webhook: %s", e)
 
 
+@isolated_receiver
 def on_kyc_status_changed(sender, instance, **kwargs):
     """
     Signal handler for KYC status changes.
@@ -242,11 +252,11 @@ def on_kyc_status_changed(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -260,9 +270,10 @@ def on_kyc_status_changed(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending KYC status changed webhook: {e}")
+            logger.error("sending KYC status changed webhook: %s", e)
 
 
+@isolated_receiver
 def on_kyc_document_uploaded(sender, instance, created, **kwargs):
     """
     Signal handler for KYC document upload.
@@ -298,11 +309,11 @@ def on_kyc_document_uploaded(sender, instance, created, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -316,9 +327,10 @@ def on_kyc_document_uploaded(sender, instance, created, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending KYC document uploaded webhook: {e}")
+            logger.error("sending KYC document uploaded webhook: %s", e)
 
 
+@isolated_receiver
 def on_kyc_review_started(sender, instance, **kwargs):
     """
     Signal handler for KYC review start.
@@ -355,11 +367,11 @@ def on_kyc_review_started(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -373,13 +385,13 @@ def on_kyc_review_started(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending KYC review started webhook: {e}")
+            logger.error("sending KYC review started webhook: %s", e)
 
 
 # Connect signal handlers
 def connect_kyc_signals():
     """Connect KYC-related signals to their handlers."""
-    from apps.kyc.models import KYCApplication, KYCDocument
+    from api.kyc.models import KYCApplication, KYCDocument
     
     try:
         post_save.connect(on_kyc_submitted, sender=KYCApplication)
@@ -389,17 +401,17 @@ def connect_kyc_signals():
         post_save.connect(on_kyc_review_started, sender=KYCApplication)
         post_save.connect(on_kyc_document_uploaded, sender=KYCDocument)
         
-        print("KYC signals connected successfully")
+        logger.info("[Webhooks] %s", "KYC signals connected successfully")
     except ImportError:
         # KYC app not available
-        print("KYC app not available, skipping signal connections")
+        logger.warning("KYC app not available, skipping signal connections")
     except Exception as e:
-        print(f"Error connecting KYC signals: {e}")
+        logger.error("connecting KYC signals: %s", e)
 
 
 def disconnect_kyc_signals():
     """Disconnect KYC-related signals."""
-    from apps.kyc.models import KYCApplication, KYCDocument
+    from api.kyc.models import KYCApplication, KYCDocument
     
     try:
         post_save.disconnect(on_kyc_submitted, sender=KYCApplication)
@@ -409,9 +421,9 @@ def disconnect_kyc_signals():
         post_save.disconnect(on_kyc_review_started, sender=KYCApplication)
         post_save.disconnect(on_kyc_document_uploaded, sender=KYCDocument)
         
-        print("KYC signals disconnected successfully")
+        logger.info("[Webhooks] %s", "KYC signals disconnected successfully")
     except ImportError:
         # KYC app not available
-        print("KYC app not available, skipping signal disconnection")
+        logger.warning("KYC app not available, skipping signal disconnection")
     except Exception as e:
-        print(f"Error disconnecting KYC signals: {e}")
+        logger.error("disconnecting KYC signals: %s", e)

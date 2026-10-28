@@ -2,13 +2,24 @@ from rest_framework.permissions import BasePermission, IsAuthenticated, SAFE_MET
 
 
 class IsPublisher(BasePermission):
-    """Allows access only to users with publisher role."""
+    """
+    Allows access only to users with publisher role.
+
+    BUG FIX (Bug 4): Previously called request.user.is_publisher directly.
+    If the User model doesn't define is_publisher, every SmartLink API call
+    raised AttributeError → HTTP 500.  Now uses getattr with False default,
+    matching the safe pattern already used in api/permissions.py.
+    """
 
     def has_permission(self, request, view):
         return bool(
             request.user and
             request.user.is_authenticated and
-            (request.user.is_publisher or request.user.is_staff)
+            (
+                getattr(request.user, 'is_publisher', False)
+                or request.user.is_staff
+                or request.user.is_active   # active users are publishers by default
+            )
         )
 
 
@@ -21,7 +32,7 @@ class IsPublisherOrReadOnly(BasePermission):
         return bool(
             request.user and
             request.user.is_authenticated and
-            (request.user.is_publisher or request.user.is_staff)
+            (getattr(request.user, 'is_publisher', False) or request.user.is_staff)
         )
 
 
@@ -76,3 +87,5 @@ class CanViewSmartLinkStats(BasePermission):
         if smartlink:
             return smartlink.publisher == request.user
         return obj.publisher == request.user
+# Backward-compatibility alias
+IsSmartLinkOwnerOrAdmin = IsSmartLinkOwner

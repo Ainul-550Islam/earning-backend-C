@@ -5,6 +5,7 @@ Popularity-Based Recommender — সবচেয়ে জনপ্রিয় 
 Cold-start problem এর সবচেয়ে কার্যকর fallback।
 New users, anonymous users, low-data situations।
 """
+from django.db import models
 
 import logging
 from typing import List, Dict, Optional

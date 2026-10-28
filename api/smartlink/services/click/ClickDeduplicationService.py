@@ -1,7 +1,7 @@
 import logging
 from django.core.cache import cache
 from django.utils import timezone
-from ...models import UniqueClick
+from api.smartlink.models import UniqueClick
 from ...utils import click_fingerprint
 from ...constants import CACHE_TTL_UNIQUE_CLICK, CLICK_DEDUP_WINDOW_HOURS
 
@@ -46,7 +46,7 @@ class ClickDeduplicationService:
         Mark a click as seen (first occurrence).
         Writes to Redis cache and creates UniqueClick DB record.
         """
-        from ...models import SmartLink
+        from api.smartlink.models import SmartLink
         fingerprint = click_fingerprint(ip, user_agent, offer_id)
         cache_key = f"unique_click:{fingerprint}"
         today = timezone.now().date()

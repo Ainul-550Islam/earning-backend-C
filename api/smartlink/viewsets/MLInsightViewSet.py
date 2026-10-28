@@ -6,7 +6,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..permissions import IsPublisher
+from api.smartlink.permissions import IsPublisher
 from ..services.ml.SmartRotationMLEngine import SmartRotationMLEngine
 from ..services.ml.FraudMLScorer import FraudMLScorer
 from ..services.antifraud.ClickQualityScore import ClickQualityScore
@@ -102,7 +102,7 @@ class MLInsightViewSet(viewsets.GenericViewSet):
         GET /api/smartlink/ml/rotation-explain/?smartlink_id=X&country=BD&device=mobile
         Explain why ML chose a specific offer for a given context.
         """
-        from ..models import SmartLink
+        from api.smartlink.models import SmartLink
         sl_id  = int(request.query_params.get('smartlink_id', 0))
         country = request.query_params.get('country', 'US')
         device  = request.query_params.get('device', 'mobile')

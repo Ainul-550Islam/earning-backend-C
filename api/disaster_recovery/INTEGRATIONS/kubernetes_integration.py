@@ -1,6 +1,7 @@
 """
 Kubernetes Integration — DR operations for Kubernetes workloads
 """
+import os
 import logging
 import json
 import subprocess

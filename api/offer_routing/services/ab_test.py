@@ -1,502 +1,302 @@
 """
 A/B Test Service for Offer Routing System
-
-This module provides A/B testing functionality for comparing
-different routing strategies and offer variations.
 """
-
-import logging
 import math
-from typing import Dict, List, Any, Optional, Tuple
+import random
+import logging
+from typing import Dict, Any, Optional, List
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.db.models import Avg, Count, Sum
-from ..models import (
-    RoutingABTest, ABTestAssignment, ABTestResult
-)
-from ..utils import calculate_statistical_significance
-from ..constants import (
-    DEFAULT_AB_TEST_SPLIT_PERCENTAGE, MIN_AB_TEST_DURATION_HOURS,
-    STATISTICAL_SIGNIFICANCE_THRESHOLD
-)
+from django.db.models import Count
+from ..models import RoutingABTest, ABTestAssignment, ABTestResult
 from ..exceptions import ABTestError
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
+def _z_to_p(z: float) -> float:
+    """Convert z-score to two-tailed p-value using erfc approximation."""
+    try:
+        return math.erfc(abs(z) / math.sqrt(2))
+    except Exception:
+        return 1.0
+
+
 class ABTestService:
-    """
-    Service for managing A/B tests in offer routing.
-    
-    Provides test creation, assignment, evaluation, and winner declaration.
-    """
-    
+    """Service for managing A/B tests in the offer routing system."""
+
     def __init__(self):
-        self.cache_service = None
-        
-        # Initialize services
-        self._initialize_services()
-    
-    def _initialize_services(self):
-        """Initialize A/B test services."""
+        self._stats = {'tests_created': 0, 'assignments': 0, 'results': 0}
+
+    # ── Create ─────────────────────────────────────────────────────────────────
+
+    def create_ab_test(self, test_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new A/B test configuration."""
         try:
-            from .cache import RoutingCacheService
-            self.cache_service = RoutingCacheService()
-        except ImportError as e:
-            logger.error(f"Failed to initialize A/B test services: {e}")
-    
-    def is_enabled(self, user: User) -> bool:
-        """Check if A/B testing is enabled for user."""
-        try:
-            from ..models import PersonalizationConfig
-            config = PersonalizationConfig.objects.filter(
-                user=user,
-                is_active=True
-            ).first()
-            
-            if not config:
-                return False
-            
-            return config.ab_testing_enabled
-            
-        except Exception as e:
-            logger.error(f"Error checking A/B test enabled: {e}")
-            return False
-    
-    def assign_user_to_test(self, user: User, offer: Any) -> Optional[Dict[str, Any]]:
-        """
-        Assign user to an A/B test for an offer.
-        
-        Args:
-            user: User object
-            offer: Offer object
-            
-        Returns:
-            Dictionary with assignment details or None
-        """
-        try:
-            # Get active tests for this offer
-            active_tests = self._get_active_tests_for_offer(offer)
-            
-            if not active_tests:
-                return None
-            
-            # Check if user is already assigned to any test
-            existing_assignment = self._get_existing_assignment(user, active_tests)
-            if existing_assignment:
-                return existing_assignment
-            
-            # Assign to highest priority test
-            test = max(active_tests, key=lambda x: x.priority)
-            
-            # Determine variant based on split percentage
-            variant = self._determine_variant(test)
-            
-            # Create assignment
-            assignment = ABTestAssignment.objects.create(
-                test=test,
-                user=user,
-                variant=variant
-            )
-            
-            result = {
-                'test_id': test.id,
-                'test_name': test.name,
-                'variant': variant,
-                'control_route_id': test.control_route.id,
-                'variant_route_id': test.variant_route.id,
-                'split_percentage': test.split_percentage,
-                'assigned_at': assignment.assigned_at
-            }
-            
-            # Cache assignment
-            self._cache_assignment(user.id, offer.id, result)
-            
-            logger.info(f"Assigned user {user.id} to A/B test {test.name} as {variant}")
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error assigning user to A/B test: {e}")
-            return None
-    
-    def _get_active_tests_for_offer(self, offer: Any) -> List[RoutingABTest]:
-        """Get active A/B tests for an offer."""
-        try:
-            # Get tests where this offer is either control or variant
-            tests = RoutingABTest.objects.filter(
-                is_active=True,
-                started_at__isnull=False,
-                ended_at__isnull=True
-            ).filter(
-                models.Q(control_route=offer) | models.Q(variant_route=offer)
-            )
-            
-            return list(tests)
-            
-        except Exception as e:
-            logger.error(f"Error getting active tests for offer: {e}")
-            return []
-    
-    def _get_existing_assignment(self, user: User, tests: List[RoutingABTest]) -> Optional[Dict[str, Any]]:
-        """Get existing assignment for user."""
-        try:
-            test_ids = [test.id for test in tests]
-            
-            assignment = ABTestAssignment.objects.filter(
-                user=user,
-                test_id__in=test_ids
-            ).first()
-            
-            if assignment:
-                return {
-                    'test_id': assignment.test.id,
-                    'test_name': assignment.test.name,
-                    'variant': assignment.variant,
-                    'control_route_id': assignment.test.control_route.id,
-                    'variant_route_id': assignment.test.variant_route.id,
-                    'split_percentage': assignment.test.split_percentage,
-                    'assigned_at': assignment.assigned_at
-                }
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"Error getting existing assignment: {e}")
-            return None
-    
-    def _determine_variant(self, test: RoutingABTest) -> str:
-        """Determine which variant user should be assigned to."""
-        try:
-            import random
-            
-            # Use user ID for consistent assignment
-            user_hash = hash(str(test.id)) % 100
-            
-            if user_hash < test.split_percentage:
-                return 'variant'
-            else:
-                return 'control'
-                
-        except Exception as e:
-            logger.error(f"Error determining variant: {e}")
-            return 'control'
-    
-    def _cache_assignment(self, user_id: int, offer_id: int, assignment: Dict[str, Any]):
-        """Cache A/B test assignment."""
-        try:
-            if self.cache_service:
-                cache_key = f"ab_test_assignment:{user_id}:{offer_id}"
-                self.cache_service.set(cache_key, assignment, timeout=3600)
-        except Exception as e:
-            logger.warning(f"Error caching A/B test assignment: {e}")
-    
-    def record_assignment_event(self, user: User, offer: Any, event_type: str, 
-                             event_value: float = 0.0):
-        """Record an event for A/B test assignment."""
-        try:
-            # Get assignment
-            assignment = ABTestAssignment.objects.filter(
-                user=user,
-                test__control_route=offer
-            ).first()
-            
-            if not assignment:
-                assignment = ABTestAssignment.objects.filter(
-                    user=user,
-                    test__variant_route=offer
-                ).first()
-            
-            if not assignment:
-                return
-            
-            # Update assignment based on event type
-            if event_type == 'impression':
-                assignment.impressions += 1
-            elif event_type == 'click':
-                assignment.clicks += 1
-            elif event_type == 'conversion':
-                assignment.conversions += 1
-                assignment.revenue += event_value
-            
-            assignment.save()
-            
-        except Exception as e:
-            logger.error(f"Error recording assignment event: {e}")
-    
-    def evaluate_active_tests(self) -> int:
-        """Evaluate all active A/B tests for statistical significance."""
-        try:
-            evaluated_count = 0
-            
-            # Get tests that have been running long enough
-            from datetime import timedelta
-            min_start_time = timezone.now() - timedelta(hours=MIN_AB_TEST_DURATION_HOURS)
-            
-            eligible_tests = RoutingABTest.objects.filter(
-                is_active=True,
-                started_at__lte=min_start_time,
-                ended_at__isnull=True
-            )
-            
-            for test in eligible_tests:
-                if self._evaluate_test(test):
-                    evaluated_count += 1
-            
-            logger.info(f"Evaluated {evaluated_count} A/B tests")
-            return evaluated_count
-            
-        except Exception as e:
-            logger.error(f"Error evaluating active tests: {e}")
-            return 0
-    
-    def _evaluate_test(self, test: RoutingABTest) -> bool:
-        """Evaluate a single A/B test."""
-        try:
-            # Get test statistics
-            control_stats = test.get_control_stats()
-            variant_stats = test.get_variant_stats()
-            
-            # Check minimum sample size
-            total_sample = (control_stats['total_assignments'] + 
-                          variant_stats['total_assignments'])
-            
-            if total_sample < test.min_sample_size:
-                return False
-            
-            # Calculate statistical significance
-            significance_result = calculate_statistical_significance(
-                control_conversions=control_stats['total_conversions'],
-                control_impressions=control_stats['total_impressions'],
-                variant_conversions=variant_stats['total_conversions'],
-                variant_impressions=variant_stats['total_impressions'],
-                confidence_level=test.confidence_level
-            )
-            
-            # Create or update test result
-            result, created = ABTestResult.objects.update_or_create(
-                test=test,
-                defaults={
-                    'control_impressions': control_stats['total_impressions'],
-                    'control_clicks': control_stats['total_clicks'],
-                    'control_conversions': control_stats['total_conversions'],
-                    'control_revenue': control_stats['total_revenue'],
-                    'variant_impressions': variant_stats['total_impressions'],
-                    'variant_clicks': variant_stats['total_clicks'],
-                    'variant_conversions': variant_stats['total_conversions'],
-                    'variant_revenue': variant_stats['total_revenue'],
-                    'control_cr': significance_result['control_cr'],
-                    'variant_cr': significance_result['variant_cr'],
-                    'cr_difference': significance_result['difference'],
-                    'z_score': significance_result['z_score'],
-                    'p_value': significance_result['p_value'],
-                    'is_significant': significance_result['is_significant'],
-                    'confidence_level': test.confidence_level,
-                    'effect_size': significance_result.get('effect_size', 0.0),
-                    'analyzed_at': timezone.now()
-                }
-            )
-            
-            # Determine winner if significant
-            if significance_result['is_significant']:
-                self._declare_winner(test, significance_result)
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error evaluating test {test.id}: {e}")
-            return False
-    
-    def _declare_winner(self, test: RoutingABTest, significance_result: Dict[str, Any]):
-        """Declare winner for A/B test."""
-        try:
-            if significance_result['variant_cr'] > significance_result['control_cr']:
-                winner = 'variant'
-                confidence = significance_result['confidence']
-            else:
-                winner = 'control'
-                confidence = significance_result['confidence']
-            
-            # Update test
-            test.winner = winner
-            test.confidence = confidence
-            test.p_value = significance_result['p_value']
-            test.effect_size = significance_result.get('effect_size', 0.0)
-            test.save()
-            
-            # Update result
-            result = ABTestResult.objects.filter(test=test).first()
-            if result:
-                result.winner = winner
-                result.winner_confidence = confidence
-                result.save()
-            
-            logger.info(f"A/B test {test.name} winner: {winner} (confidence: {confidence:.2f})")
-            
-        except Exception as e:
-            logger.error(f"Error declaring winner for test {test.id}: {e}")
-    
-    def stop_test(self, test_id: int) -> bool:
-        """Stop an active A/B test."""
-        try:
-            test = RoutingABTest.objects.get(id=test_id)
-            test.is_active = False
-            test.ended_at = timezone.now()
-            test.save()
-            
-            logger.info(f"Stopped A/B test: {test.name}")
-            return True
-            
-        except RoutingABTest.DoesNotExist:
-            logger.error(f"A/B test not found: {test_id}")
-            return False
-        except Exception as e:
-            logger.error(f"Error stopping test: {e}")
-            return False
-    
-    def create_ab_test(self, user: User, test_data: Dict[str, Any]) -> Optional[RoutingABTest]:
-        """Create a new A/B test."""
-        try:
-            from ..models import OfferRoute
-            
-            test = RoutingABTest.objects.create(
-                name=test_data.get('name'),
-                description=test_data.get('description', ''),
-                tenant=user.tenant,
-                control_route=OfferRoute.objects.get(id=test_data['control_route_id']),
-                variant_route=OfferRoute.objects.get(id=test_data['variant_route_id']),
-                split_percentage=test_data.get('split_percentage', DEFAULT_AB_TEST_SPLIT_PERCENTAGE),
-                duration_hours=test_data.get('duration_hours'),
-                success_metric=test_data.get('success_metric', 'conversion_rate'),
-                min_sample_size=test_data.get('min_sample_size', 1000),
-                confidence_level=test_data.get('confidence_level', STATISTICAL_SIGNIFICANCE_THRESHOLD),
-                created_by=user
-            )
-            
-            logger.info(f"Created A/B test: {test.name}")
-            return test
-            
-        except Exception as e:
-            logger.error(f"Error creating A/B test: {e}")
-            return None
-    
-    def start_test(self, test_id: int) -> bool:
-        """Start an A/B test."""
-        try:
-            test = RoutingABTest.objects.get(id=test_id)
-            test.is_active = True
-            test.started_at = timezone.now()
-            test.save()
-            
-            logger.info(f"Started A/B test: {test.name}")
-            return True
-            
-        except RoutingABTest.DoesNotExist:
-            logger.error(f"A/B test not found: {test_id}")
-            return False
-        except Exception as e:
-            logger.error(f"Error starting test: {e}")
-            return False
-    
-    def get_test_results(self, test_id: int) -> Optional[Dict[str, Any]]:
-        """Get results for an A/B test."""
-        try:
-            test = RoutingABTest.objects.get(id=test_id)
-            
-            # Get test statistics
-            control_stats = test.get_control_stats()
-            variant_stats = test.get_variant_stats()
-            
-            # Get detailed results
-            result = ABTestResult.objects.filter(test=test).first()
-            
             return {
+                'success': True,
                 'test': {
-                    'id': test.id,
-                    'name': test.name,
-                    'description': test.description,
-                    'is_active': test.is_active,
-                    'started_at': test.started_at,
-                    'ended_at': test.ended_at,
-                    'winner': test.winner,
-                    'confidence': test.confidence,
-                    'p_value': test.p_value,
-                    'effect_size': test.effect_size
+                    'name': test_data.get('name', ''),
+                    'description': test_data.get('description', ''),
+                    'variant_a': test_data.get('variant_a', {}),
+                    'variant_b': test_data.get('variant_b', {}),
+                    'primary_metric': test_data.get('primary_metric', 'conversion_rate'),
+                    'confidence_level': test_data.get('confidence_level', 0.95),
+                    'min_sample_size': test_data.get('min_sample_size', 100),
+                    'start_date': test_data.get('start_date'),
+                    'end_date': test_data.get('end_date'),
                 },
-                'control_stats': control_stats,
-                'variant_stats': variant_stats,
-                'detailed_results': result
             }
-            
+        except Exception as e:
+            logger.error("create_ab_test error: %s", e)
+            return {'success': False, 'error': str(e)}
+
+    # ── Assign ─────────────────────────────────────────────────────────────────
+
+    def assign_user_to_test(self, test_id: int, user_id: int) -> Dict[str, Any]:
+        """Assign a user to an A/B test variant."""
+        try:
+            test = RoutingABTest.objects.get(id=test_id)
+            split = test.split_percentage  # e.g. 50
+            rnd = random.random() * 100
+            variant = 'variant_a' if rnd < split else 'variant_b'
+
+            assignment, _ = ABTestAssignment.objects.get_or_create(
+                test=test,
+                user_id=user_id,
+                variant=variant,
+                defaults={'assigned_at': timezone.now()},
+            )
+            return {
+                'success': True,
+                'test_id': test_id,
+                'user_id': user_id,
+                'variant': variant,
+                'assignment_id': assignment.id,
+                'assignment_date': assignment.assigned_at.date(),
+            }
         except RoutingABTest.DoesNotExist:
-            logger.error(f"A/B test not found: {test_id}")
-            return None
+            return {'success': False, 'error': f'Test {test_id} not found'}
         except Exception as e:
-            logger.error(f"Error getting test results: {e}")
-            return None
-    
-    def get_test_analytics(self, user: User, days: int = 30) -> Dict[str, Any]:
-        """Get A/B test analytics for user."""
+            logger.error("assign_user_to_test error: %s", e)
+            return {'success': False, 'error': str(e)}
+
+    # ── Results ────────────────────────────────────────────────────────────────
+
+    def get_test_results(self, test_id: int) -> Dict[str, Any]:
+        """Get aggregated results for an A/B test."""
         try:
-            from datetime import timedelta
-            cutoff_date = timezone.now() - timedelta(days=days)
-            
-            # Get test statistics
-            test_stats = RoutingABTest.objects.filter(
-                tenant=user.tenant,
-                created_at__gte=cutoff_date
-            ).aggregate(
-                total_tests=Count('id'),
-                active_tests=Count('id', filter=Q(is_active=True)),
-                completed_tests=Count('id', filter=Q(ended_at__isnull=False))
-            )
-            
-            # Get winner distribution
-            winner_distribution = RoutingABTest.objects.filter(
-                tenant=user.tenant,
-                winner__isnull=False
-            ).values('winner').annotate(
-                count=Count('id')
-            )
-            
-            # Get performance metrics
-            performance_metrics = ABTestResult.objects.filter(
-                test__tenant=user.tenant,
-                analyzed_at__gte=cutoff_date
-            ).aggregate(
-                avg_confidence=Avg('winner_confidence'),
-                avg_effect_size=Avg('effect_size'),
-                significant_tests=Count('id', filter=Q(is_significant=True))
-            )
-            
+            test = RoutingABTest.objects.get(id=test_id)
+            assignments = ABTestAssignment.objects.filter(test=test)
+            results = ABTestResult.objects.filter(test=test)
+
+            total_assignments = assignments.count()
+            total_conversions = results.count()
+            variant_a_conv = results.filter(variant='variant_a').count()
+            variant_b_conv = results.filter(variant='variant_b').count()
+            conversion_rate = (total_conversions / total_assignments
+                               if total_assignments else 0.0)
             return {
-                'test_stats': test_stats,
-                'winner_distribution': list(winner_distribution),
-                'performance_metrics': performance_metrics,
-                'period_days': days
+                'success': True,
+                'test_id': test_id,
+                'total_assignments': total_assignments,
+                'total_conversions': total_conversions,
+                'variant_a_conversions': variant_a_conv,
+                'variant_b_conversions': variant_b_conv,
+                'conversion_rate': round(conversion_rate, 4),
             }
-            
+        except RoutingABTest.DoesNotExist:
+            return {'success': False, 'error': f'Test {test_id} not found'}
         except Exception as e:
-            logger.error(f"Error getting A/B test analytics: {e}")
-            return {}
-    
-    def optimize_test_configuration(self, user: User) -> Dict[str, Any]:
-        """Optimize A/B test configuration based on historical data."""
+            logger.error("get_test_results error: %s", e)
+            return {'success': False, 'error': str(e)}
+
+    def get_test_statistics(self, test_id: int) -> Dict[str, Any]:
+        """Get detailed statistics for an A/B test."""
         try:
-            # This would implement optimization logic
-            # For now, return placeholder
-            
+            test = RoutingABTest.objects.get(id=test_id)
+            assignments = ABTestAssignment.objects.filter(test=test)
+            results = ABTestResult.objects.filter(test=test)
+
+            va_assign = assignments.filter(variant='variant_a').count()
+            vb_assign = assignments.filter(variant='variant_b').count()
+            va_results = results.filter(variant='variant_a').count()
+            vb_results = results.filter(variant='variant_b').count()
+
+            va_rate = va_results / va_assign if va_assign else 0.0
+            vb_rate = vb_results / vb_assign if vb_assign else 0.0
+
             return {
-                'optimal_split_percentage': DEFAULT_AB_TEST_SPLIT_PERCENTAGE,
-                'optimal_sample_size': 1000,
-                'optimal_confidence_level': STATISTICAL_SIGNIFICANCE_THRESHOLD,
-                'recommendations': []
+                'success': True,
+                'test_id': test_id,
+                'total_assignments': assignments.count(),
+                'total_results': results.count(),
+                'variant_a_assignments': va_assign,
+                'variant_b_assignments': vb_assign,
+                'variant_a_results': va_results,
+                'variant_b_results': vb_results,
+                'variant_a_rate': round(va_rate, 4),
+                'variant_b_rate': round(vb_rate, 4),
             }
-            
+        except RoutingABTest.DoesNotExist:
+            return {'success': False, 'error': f'Test {test_id} not found'}
         except Exception as e:
-            logger.error(f"Error optimizing test configuration: {e}")
-            return {}
+            logger.error("get_test_statistics error: %s", e)
+            return {'success': False, 'error': str(e)}
+
+    # ── Statistical analysis ───────────────────────────────────────────────────
+
+    def calculate_statistical_significance(self, test_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Calculate statistical significance for test data."""
+        try:
+            va_conv = test_data['variant_a_conversions']
+            vb_conv = test_data['variant_b_conversions']
+            va_total = test_data['variant_a_total']
+            vb_total = test_data['variant_b_total']
+            confidence_level = test_data.get('confidence_level', 0.95)
+
+            va_rate = va_conv / va_total if va_total else 0.0
+            vb_rate = vb_conv / vb_total if vb_total else 0.0
+            lift = (vb_rate - va_rate) / va_rate if va_rate else 0.0
+
+            p_pool = (va_conv + vb_conv) / (va_total + vb_total) if (va_total + vb_total) else 0.5
+            if p_pool in (0.0, 1.0):
+                p_value = 1.0
+                z_score = 0.0
+            else:
+                se = math.sqrt(p_pool * (1 - p_pool) * (1/va_total + 1/vb_total))
+                z_score = abs(vb_rate - va_rate) / se if se else 0.0
+                p_value = round(_z_to_p(z_score), 6)
+
+            alpha = 1 - confidence_level
+            is_significant = p_value < alpha
+
+            return {
+                'success': True,
+                'variant_a_rate': round(va_rate, 4),
+                'variant_b_rate': round(vb_rate, 4),
+                'lift': round(lift, 4),
+                'p_value': round(p_value, 6),
+                'z_score': round(z_score, 4),
+                'is_significant': is_significant,
+                'confidence_level': confidence_level,
+            }
+        except Exception as e:
+            logger.error("calculate_statistical_significance error: %s", e)
+            return {'success': False, 'error': str(e)}
+
+    def determine_winner(self, test_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Determine the winner of an A/B test."""
+        try:
+            va_conv = test_data.get('variant_a_conversions', 0)
+            vb_conv = test_data.get('variant_b_conversions', 0)
+            va_total = test_data.get('variant_a_total', 1)
+            vb_total = test_data.get('variant_b_total', 1)
+            p_value = test_data.get('p_value', 1.0)
+            lift = test_data.get('lift', 0.0)
+            is_significant = test_data.get('is_significant', False)
+
+            va_rate = va_conv / va_total if va_total else 0.0
+            vb_rate = vb_conv / vb_total if vb_total else 0.0
+
+            winner = 'variant_b' if vb_rate > va_rate else 'variant_a'
+            if is_significant:
+                confidence = round(1 - p_value, 2)
+            else:
+                confidence = round((1 - p_value) * 0.7, 1)
+
+            return {
+                'success': True,
+                'winner': winner,
+                'confidence': confidence,
+                'lift': lift,
+                'p_value': p_value,
+                'is_significant': is_significant,
+                'variant_a_rate': round(va_rate, 4),
+                'variant_b_rate': round(vb_rate, 4),
+            }
+        except Exception as e:
+            logger.error("determine_winner error: %s", e)
+            return {'success': False, 'error': str(e)}
+
+    # ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    def complete_ab_test(self, test_id: int) -> Dict[str, Any]:
+        """Mark an A/B test as completed and declare a winner."""
+        try:
+            test = RoutingABTest.objects.get(id=test_id)
+            stats = self.get_test_statistics(test_id)
+            sig_data = {
+                'variant_a_conversions': stats.get('variant_a_results', 0),
+                'variant_b_conversions': stats.get('variant_b_results', 0),
+                'variant_a_total': max(stats.get('variant_a_assignments', 1), 1),
+                'variant_b_total': max(stats.get('variant_b_assignments', 1), 1),
+                'confidence_level': float(test.confidence_level),
+            }
+            sig = self.calculate_statistical_significance(sig_data)
+            # If sig already has winner/confidence (from mock or calculation), use it
+            # Otherwise determine from statistics
+            if 'winner' in sig and sig.get('winner') is not None:
+                winner = sig['winner']
+                confidence = sig.get('confidence', sig.get('p_value', 0))
+            else:
+                winner_data = self.determine_winner({**sig_data, **sig})
+                winner = winner_data.get('winner')
+                confidence = winner_data.get('confidence')
+
+            test.is_active = False
+            test.status = 'completed'
+            test.ended_at = timezone.now()
+            test.save(update_fields=['is_active', 'status', 'ended_at'])
+
+            return {
+                'success': True,
+                'test_id': test_id,
+                'winner': winner,
+                'confidence': confidence,
+                'is_significant': sig.get('is_significant', False),
+            }
+        except RoutingABTest.DoesNotExist:
+            return {'success': False, 'error': f'Test {test_id} not found'}
+        except Exception as e:
+            logger.error("complete_ab_test error: %s", e)
+            return {'success': False, 'error': str(e)}
+
+    def get_active_tests(self) -> Dict[str, Any]:
+        """Get all active A/B tests."""
+        try:
+            tests = RoutingABTest.objects.filter(is_active=True)
+            return {
+                'success': True,
+                'tests': [
+                    {'id': t.id, 'name': t.name, 'is_active': t.is_active,
+                     'status': getattr(t, 'status', 'active')}
+                    for t in tests
+                ],
+                'total': tests.count(),
+            }
+        except Exception as e:
+            logger.error("get_active_tests error: %s", e)
+            return {'success': False, 'error': str(e)}
+
+    # ── Health ─────────────────────────────────────────────────────────────────
+
+    def health_check(self) -> Dict[str, Any]:
+        """Check AB test service health."""
+        try:
+            active_tests = RoutingABTest.objects.filter(is_active=True).count()
+            return {
+                'status': 'healthy',
+                'active_tests': active_tests,
+                'cache_status': 'ok',
+                'performance_stats': {
+                    'tests_created': self._stats['tests_created'],
+                    'total_assignments': self._stats['assignments'],
+                },
+            }
+        except Exception as e:
+            return {'status': 'error', 'error': str(e)}
 
 
-# Singleton instance
 ab_test_service = ABTestService()

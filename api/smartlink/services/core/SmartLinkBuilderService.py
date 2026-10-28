@@ -1,6 +1,6 @@
 import logging
 from django.db import transaction
-from ...models import SmartLink, OfferPool, OfferPoolEntry, TargetingRule, SmartLinkFallback, SmartLinkRotation
+from api.smartlink.models import SmartLink, OfferPool, OfferPoolEntry, TargetingRule, SmartLinkFallback, SmartLinkRotation
 from .SmartLinkService import SmartLinkService
 from ...exceptions import TargetingConfigError
 from ...validators import validate_redirect_url
@@ -85,10 +85,42 @@ class SmartLinkBuilderService:
         return smartlink
 
     def _add_offer_to_pool(self, pool: OfferPool, offer_config: dict):
-        """Add a single offer entry to the pool."""
-        try:
+        """
+        Add a single offer entry to the pool.
+
+        BUG FIX (Bug 6): Previously used a hardcoded
             from api.offer_inventory.models import Offer
-            offer = Offer.objects.get(pk=offer_config['offer_id'])
+        which ignored the configurable SMARTLINK_OFFER_MODEL setting and
+        crashed immediately if offer_inventory wasn't installed.
+
+        Now resolves the Offer model dynamically via django.apps.get_model()
+        using the SMARTLINK_OFFER_MODEL setting (default: 'offer_inventory.Offer').
+        Raises ValueError so the caller (build()) knows the pool is incomplete.
+        """
+        from django.conf import settings
+        from django.apps import apps
+
+        offer_model_label = getattr(
+            settings, 'SMARTLINK_OFFER_MODEL', 'offer_inventory.Offer'
+        )
+        try:
+            OfferModel = apps.get_model(offer_model_label)
+        except LookupError as e:
+            logger.error(
+                f"SMARTLINK_OFFER_MODEL '{offer_model_label}' not found. "
+                f"Check INSTALLED_APPS. Error: {e}"
+            )
+            raise ValueError(
+                f"Offer model '{offer_model_label}' is not installed. "
+                f"Set SMARTLINK_OFFER_MODEL in settings."
+            ) from e
+
+        offer_id = offer_config.get('offer_id')
+        if not offer_id:
+            raise ValueError("offer_config must contain 'offer_id'.")
+
+        try:
+            offer = OfferModel.objects.get(pk=offer_id)
             OfferPoolEntry.objects.create(
                 pool=pool,
                 offer=offer,
@@ -98,8 +130,11 @@ class SmartLinkBuilderService:
                 cap_per_month=offer_config.get('cap_per_month'),
                 epc_override=offer_config.get('epc_override'),
             )
+        except OfferModel.DoesNotExist:
+            raise ValueError(f"Offer#{offer_id} does not exist.")
         except Exception as e:
-            logger.error(f"Failed to add offer {offer_config.get('offer_id')} to pool: {e}")
+            logger.error(f"Failed to add offer#{offer_id} to pool#{pool.pk}: {e}")
+            raise
 
     def _setup_targeting(self, smartlink: SmartLink, targeting_config: dict):
         """Create all targeting sub-models for the SmartLink."""
@@ -109,7 +144,7 @@ class SmartLinkBuilderService:
         )
 
         if 'geo' in targeting_config:
-            from ...models import GeoTargeting
+            from api.smartlink.models import GeoTargeting
             geo = targeting_config['geo']
             GeoTargeting.objects.create(
                 rule=rule,
@@ -120,7 +155,7 @@ class SmartLinkBuilderService:
             )
 
         if 'device' in targeting_config:
-            from ...models import DeviceTargeting
+            from api.smartlink.models import DeviceTargeting
             dev = targeting_config['device']
             DeviceTargeting.objects.create(
                 rule=rule,
@@ -129,7 +164,7 @@ class SmartLinkBuilderService:
             )
 
         if 'os' in targeting_config:
-            from ...models import OSTargeting
+            from api.smartlink.models import OSTargeting
             os_cfg = targeting_config['os']
             OSTargeting.objects.create(
                 rule=rule,
@@ -138,7 +173,7 @@ class SmartLinkBuilderService:
             )
 
         if 'time' in targeting_config:
-            from ...models import TimeTargeting
+            from api.smartlink.models import TimeTargeting
             t = targeting_config['time']
             TimeTargeting.objects.create(
                 rule=rule,
@@ -149,7 +184,7 @@ class SmartLinkBuilderService:
             )
 
         if 'isp' in targeting_config:
-            from ...models import ISPTargeting
+            from api.smartlink.models import ISPTargeting
             isp = targeting_config['isp']
             ISPTargeting.objects.create(
                 rule=rule,
@@ -159,7 +194,7 @@ class SmartLinkBuilderService:
             )
 
         if 'language' in targeting_config:
-            from ...models import LanguageTargeting
+            from api.smartlink.models import LanguageTargeting
             lang = targeting_config['language']
             LanguageTargeting.objects.create(
                 rule=rule,

@@ -75,14 +75,14 @@ class Command(BaseCommand):
                     # Check if rotation is needed
                     if not force and not rotation_service.is_rotation_needed(endpoint, grace_period):
                         self.stdout.write(
-                            f"Skipping {endpoint.url}: rotation not needed"
+                            f"Skipping {endpoint.target_url}: rotation not needed"
                         )
                         skipped_count += 1
                         continue
                     
                     if dry_run:
                         self.stdout.write(
-                            f"Would rotate secret for {endpoint.url}"
+                            f"Would rotate secret for {endpoint.target_url}"
                         )
                         rotated_count += 1
                     else:
@@ -92,14 +92,14 @@ class Command(BaseCommand):
                         if success:
                             self.stdout.write(
                                 self.style.SUCCESS(
-                                    f"Rotated secret for {endpoint.url}"
+                                    f"Rotated secret for {endpoint.target_url}"
                                 )
                             )
                             rotated_count += 1
                         else:
                             self.stdout.write(
                                 self.style.ERROR(
-                                    f"Failed to rotate secret for {endpoint.url}"
+                                    f"Failed to rotate secret for {endpoint.target_url}"
                                 )
                             )
                             error_count += 1
@@ -107,7 +107,7 @@ class Command(BaseCommand):
                 except Exception as e:
                     self.stderr.write(
                         self.style.ERROR(
-                            f"Error rotating {endpoint.url}: {e}"
+                            f"Error rotating {endpoint.target_url}: {e}"
                         )
                     )
                     error_count += 1

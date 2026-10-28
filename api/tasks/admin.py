@@ -1857,3 +1857,14 @@ def _force_register_tasks():
         print(f"[OK] tasks registered {registered} models")
     except Exception as e:
         print(f"[WARN] tasks: {e}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# IMPORT NEW MODEL ADMIN REGISTRATIONS
+# ══════════════════════════════════════════════════════════════════════════════
+try:
+    from .admin_new_models import register_all_new_models
+    register_all_new_models()
+    print("[OK] New task model admins registered from admin_new_models.py")
+except Exception as _e:
+    print(f"[WARN] admin_new_models import: {_e}")

@@ -12,7 +12,7 @@ BEST_FORMATS_BY_DEVICE  = {
 
 
 def get_device_performance(publisher, days: int = 30) -> Dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.db.models import Sum, Avg
     from django.utils import timezone
     from datetime import timedelta

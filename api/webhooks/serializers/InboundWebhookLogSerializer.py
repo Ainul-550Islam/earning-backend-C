@@ -7,6 +7,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
 from ..models import InboundWebhookLog, InboundWebhook
+from ..validators import validate_headers as _validate_headers
 
 User = get_user_model()
 
@@ -48,13 +49,10 @@ class InboundWebhookLogSerializer(serializers.ModelSerializer):
         return value
     
     def validate_headers(self, value):
-        """Validate headers."""
+        """Validate headers (delegates to canonical validators.py)."""
         if value is None:
             return value
-        
-        if not isinstance(value, dict):
-            raise serializers.ValidationError("Headers must be a dictionary.")
-        return value
+        return _validate_headers(value)
     
     def validate_signature(self, value):
         """Validate signature."""
@@ -200,7 +198,7 @@ class InboundWebhookLogFilterSerializer(serializers.Serializer):
             return value
         
         from ..constants import InboundSource
-        valid_sources = [source.value for source in InboundSource]
+        valid_sources = [choice[0] for choice in InboundSource.CHOICES]
         if value not in valid_sources:
             raise serializers.ValidationError(f"Source must be one of: {valid_sources}")
         return value

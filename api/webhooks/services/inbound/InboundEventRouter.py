@@ -5,11 +5,13 @@ This module provides routing of inbound webhook events to correct handler functi
 
 import logging
 import importlib
+import inspect
 from typing import Dict, Any, Optional, List
 from django.utils import timezone
 from django.conf import settings
 
 from ...models import InboundWebhook, InboundWebhookLog, InboundWebhookRoute, InboundWebhookError
+from ...exceptions import WebhookDispatchError
 
 logger = logging.getLogger(__name__)
 
@@ -22,19 +24,31 @@ class InboundEventRouter:
         self.logger = logger
         self.handler_cache = {}
     
-    def route_event(self, inbound: InboundWebhook, payload: Dict[str, Any], headers: Dict[str, Any], log: InboundWebhookLog) -> List[Dict[str, Any]]:
+    def route_event(self, inbound, payload: Dict[str, Any] = None, headers: Dict[str, Any] = None, log: InboundWebhookLog = None):
         """
-        Route an inbound webhook event to appropriate handlers.
-        
+        Two calling conventions:
+          - route_event(inbound, payload, headers, log) -> list — original,
+            routes within one InboundWebhook's own routes, executes every
+            matching route, logs InboundWebhookError records against `log`.
+            Used by InboundWebhookService.
+          - route_event(event_data) -> bool — newer, routes globally across
+            all active InboundWebhookRoutes ordered by priority, calls only
+            the first match's handler with event_data itself, no log/error
+            recording. New, test-driven.
+
         Args:
-            inbound: The inbound webhook configuration
-            payload: The webhook payload
-            headers: HTTP headers from the request
-            log: The inbound webhook log
-            
+            inbound: The inbound webhook configuration, OR event_data dict
+                (new convention: {'event_type':, 'data':})
+            payload: The webhook payload (old convention only)
+            headers: HTTP headers from the request (old convention only)
+            log: The inbound webhook log (old convention only)
+
         Returns:
-            List of routing results
+            List of routing results (old convention), or bool (new convention)
         """
+        if payload is None and headers is None and log is None:
+            return self._route_event_simple(inbound)
+
         try:
             # Get active routes for this inbound webhook
             routes = inbound.routes.filter(is_active=True)
@@ -89,6 +103,38 @@ class InboundEventRouter:
             )
             
             return []
+
+    def _route_event_simple(self, event_data: Dict[str, Any]) -> bool:
+        """New-convention route_event(event_data): global routing by
+        priority, first match wins, handler called with event_data itself."""
+        try:
+            routes = InboundWebhookRoute.objects.filter(is_active=True).order_by('priority', 'created_at')
+            for route in routes:
+                if self._matches_event_pattern(route.event_pattern, event_data):
+                    handler = self._resolve_handler(route.handler_function)
+                    if handler is None:
+                        continue
+                    try:
+                        result = handler(event_data)
+                        return bool(result)
+                    except Exception as e:
+                        logger.error(f"Handler '{route.handler_function}' raised: {str(e)}")
+                        return False
+            return False
+        except Exception as e:
+            logger.error(f"Error in simple event routing: {str(e)}")
+            return False
+
+    def _resolve_handler(self, handler_function: str):
+        """Resolve a bare handler_function name against api.webhooks.handlers."""
+        try:
+            from ... import handlers as handlers_module
+        except ImportError:
+            try:
+                handlers_module = importlib.import_module('api.webhooks.handlers')
+            except ImportError:
+                return None
+        return getattr(handlers_module, handler_function, None)
     
     def _should_route_to_handler(self, route: InboundWebhookRoute, payload: Dict[str, Any]) -> bool:
         """
@@ -241,14 +287,16 @@ class InboundEventRouter:
             # Check cache first
             if handler_path in self.handler_cache:
                 return self.handler_cache[handler_path]
-            
-            # Parse module and function name
-            parts = handler_path.rsplit('.', 1)
-            if len(parts) != 2:
-                return None
-            
-            module_path, function_name = parts
-            
+
+            if '.' in handler_path:
+                # Fully-qualified path, e.g. 'myapp.handlers.payment_handler'
+                module_path, function_name = handler_path.rsplit('.', 1)
+            else:
+                # Bare name (the normal case) - resolve against the
+                # well-known handlers module rather than requiring every
+                # InboundWebhookRoute row to store a full dotted path.
+                module_path, function_name = 'api.webhooks.handlers', handler_path
+
             # Import module
             module = importlib.import_module(module_path)
             

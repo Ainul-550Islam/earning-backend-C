@@ -1,15 +1,23 @@
+from django.db.models import Avg
+from django.db.models import Count
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 from django.utils import timezone
 from datetime import timedelta
 from django.db import transaction
 from django.db.models import Q
-from ..models import (
+from api.fraud_detection.models import (
     FraudAttempt, FraudAlert, UserRiskProfile,
     FraudRule, DeviceFingerprint, IPReputation
 )
-from api.users.models import User
-from api.wallet.models import WalletTransaction
+try:
+    from api.users.models import User
+except ImportError:
+    User = None  # type: ignore
+try:
+    from api.wallet.models import WalletTransaction
+except ImportError:
+    WalletTransaction = None  # type: ignore
 import json
 
 logger = logging.getLogger(__name__)

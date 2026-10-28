@@ -16,14 +16,6 @@ class CacheableModelMixin:
     Usage:
         class MyModel(CacheableModelMixin, models.Model):
 
-    tenant = models.ForeignKey(
-        'tenants.Tenant',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='%(app_label)s_%(class)s_tenant',
-        db_index=True,
-    )
             cache_operation_map = {
                 'create': 'user_create',
                 'update': 'user_update',

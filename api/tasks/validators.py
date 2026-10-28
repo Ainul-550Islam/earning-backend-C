@@ -78,3 +78,50 @@ def validate_reward_points(value: Optional[float]) -> Tuple[bool, str]:
         return True, ""
     except (TypeError, ValueError):
         return False, "Points must be a number."
+
+
+# ── Extended validators ────────────────────────────────────────────────────
+
+import re
+from decimal import Decimal, InvalidOperation
+
+
+def validate_task_id(task_id: str) -> bool:
+    """Task IDs must be alphanumeric + underscores, 3-100 chars."""
+    return bool(re.match(r'^[A-Z0-9_]{3,100}$', task_id))
+
+
+def validate_payout_amount(amount, min_val: Decimal = Decimal('0.001'),
+                            max_val: Decimal = Decimal('10000')) -> tuple:
+    """Validate a payout amount. Returns (is_valid, error_msg)."""
+    try:
+        d = Decimal(str(amount))
+        if d < min_val:
+            return False, f'Amount must be >= {min_val}'
+        if d > max_val:
+            return False, f'Amount must be <= {max_val}'
+        return True, ''
+    except (InvalidOperation, TypeError):
+        return False, 'Invalid amount format'
+
+
+def validate_webhook_url(url: str) -> tuple:
+    """Validate a webhook URL. Returns (is_valid, error_msg)."""
+    if not url:
+        return False, 'URL is required'
+    if not url.startswith('http'):
+        return False, 'URL must start with http:// or https://'
+    if len(url) > 2000:
+        return False, 'URL too long (max 2000 chars)'
+    return True, ''
+
+
+def validate_country_code(code: str) -> bool:
+    """Validate ISO 3166-1 alpha-2 country code."""
+    return bool(code and len(code) == 2 and code.isalpha() and code.isupper())
+
+
+def validate_postback_signature(body: str, signature: str, secret: str) -> bool:
+    """Validate HMAC-SHA256 postback signature."""
+    from api.tasks.helpers import verify_hmac_sha256
+    return verify_hmac_sha256(body, secret, signature)

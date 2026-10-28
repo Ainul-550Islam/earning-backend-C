@@ -14,7 +14,7 @@ class TranslationImportService:
     def import_json(self, data: Dict, language_code: str, overwrite: bool = True) -> Dict:
         """JSON dict import করে — {'key': 'value', ...}"""
         try:
-            from ...models.core import Language, Translation, TranslationKey
+            from api.localization.models.core import Language, Translation, TranslationKey
             if not isinstance(data, dict):
                 return {'success': False, 'error': 'Data must be a dict'}
             lang = Language.objects.filter(code=language_code).first()
@@ -28,7 +28,7 @@ class TranslationImportService:
                 parts = key_str.split('.')
                 category = parts[0] if len(parts) > 1 else 'common'
                 tkey, _ = TranslationKey.objects.get_or_create(
-                    key=key_str, defaults={'category': category, 'is_active': True}
+                    key=key_str, defaults={'category': category}
                 )
                 trans, was_created = Translation.objects.get_or_create(
                     key=tkey, language=lang,
@@ -51,7 +51,7 @@ class TranslationImportService:
     def import_po(self, po_content: str, language_code: str) -> Dict:
         """Gettext PO format import করে"""
         try:
-            from ...models.core import Language
+            from api.localization.models.core import Language
             lang = Language.objects.filter(code=language_code).first()
             if not lang:
                 return {'success': False, 'error': f'Language {language_code} not found'}
@@ -90,7 +90,7 @@ class TranslationImportService:
         """XLIFF format import করে"""
         try:
             import xml.etree.ElementTree as ET
-            from ...models.core import Language
+            from api.localization.models.core import Language
             lang = Language.objects.filter(code=language_code).first()
             if not lang:
                 return {'success': False, 'error': f'Language {language_code} not found'}

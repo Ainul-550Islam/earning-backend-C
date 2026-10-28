@@ -18,13 +18,42 @@ from .HeatmapViewSet import HeatmapViewSet
 from .InsightViewSet import InsightViewSet
 from .AdminSmartLinkViewSet import AdminSmartLinkViewSet
 from .PublisherAPIViewSet import PublisherAPIViewSet
+# New viewsets (previously unexposed service logic)
+from .ScheduleViewSet import ScheduleViewSet
+from .TemplateViewSet import TemplateViewSet
+from .PublisherTierViewSet import PublisherTierViewSet
+from .IntegrationViewSet import IntegrationViewSet
+from .UtilityViewSet import (
+    CurrencyViewSet,
+    GeoIPViewSet,
+    CacheViewSet,
+    SecurityViewSet,
+    NotificationViewSet,
+)
 
 __all__ = [
-    'SmartLinkViewSet', 'SmartLinkGroupViewSet', 'TargetingRuleViewSet',
-    'GeoTargetingViewSet', 'DeviceTargetingViewSet', 'OfferPoolViewSet',
-    'OfferPoolEntryViewSet', 'ClickViewSet', 'RedirectLogViewSet',
-    'SmartLinkStatViewSet', 'ABTestViewSet', 'DomainViewSet',
-    'PublisherSmartLinkViewSet', 'LandingPageViewSet', 'PreLanderViewSet',
+    # Core CRUD
+    'SmartLinkViewSet', 'SmartLinkGroupViewSet',
+    'TargetingRuleViewSet', 'GeoTargetingViewSet', 'DeviceTargetingViewSet',
+    'OfferPoolViewSet', 'OfferPoolEntryViewSet',
+    'ClickViewSet', 'RedirectLogViewSet', 'SmartLinkStatViewSet',
+    'ABTestViewSet', 'DomainViewSet',
+    # Publisher
+    'PublisherSmartLinkViewSet', 'PublisherAPIViewSet',
+    # Content
+    'LandingPageViewSet', 'PreLanderViewSet',
     'OfferBlacklistViewSet', 'HeatmapViewSet', 'InsightViewSet',
-    'AdminSmartLinkViewSet', 'PublisherAPIViewSet',
+    # Admin
+    'AdminSmartLinkViewSet',
+    # New
+    'ScheduleViewSet', 'TemplateViewSet', 'PublisherTierViewSet',
+    'IntegrationViewSet',
+    'CurrencyViewSet', 'GeoIPViewSet', 'CacheViewSet',
+    'SecurityViewSet', 'NotificationViewSet',
 ]
+from .BusinessViewSets import (
+    APIKeyViewSet,
+    WebhookViewSet,
+    PayoutViewSet,
+    PublisherProfileViewSet,
+)

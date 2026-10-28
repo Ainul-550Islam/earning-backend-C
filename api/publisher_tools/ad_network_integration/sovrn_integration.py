@@ -35,6 +35,7 @@ class SovrnConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_sovrn_configs"
         verbose_name = _("Sovrn Config")
         unique_together = [["publisher"]]

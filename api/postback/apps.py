@@ -10,6 +10,7 @@ class PostbackConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self):
+        from . import b2b_admin  # noqa: F401
         import api.postback.admin
         from . import receivers
         from .signals import (
@@ -45,3 +46,15 @@ class PostbackConfig(AppConfig):
             _force_register_postback()
         except Exception as e:
             pass
+
+        # Register postback network adapters (CPAlead, Generic, etc.)
+        from .adapters.registry import register_all_adapters
+        register_all_adapters()
+
+        # Connect postback_reversed signal
+        from .signals import postback_reversed
+        from .receivers import on_postback_reversed
+        postback_reversed.connect(
+            on_postback_reversed,
+            dispatch_uid="postback.on_reversed",
+        )

@@ -29,7 +29,7 @@ class ConversionFunnelService:
         Returns step-by-step funnel:
         Total Clicks → Unique Clicks → Non-Fraud → Non-Bot → Conversions
         """
-        from ...models import Click
+        from api.smartlink.models import Click
         cutoff = timezone.now() - datetime.timedelta(days=days)
 
         qs = Click.objects.filter(smartlink=smartlink, created_at__gte=cutoff)
@@ -105,7 +105,7 @@ class ConversionFunnelService:
 
     def get_geo_funnel(self, smartlink, days: int = 7) -> list:
         """Funnel breakdown by country — shows which geos convert best."""
-        from ...models import Click
+        from api.smartlink.models import Click
         cutoff = timezone.now() - datetime.timedelta(days=days)
 
         rows = (
@@ -139,7 +139,7 @@ class ConversionFunnelService:
 
     def get_time_funnel(self, smartlink, days: int = 7) -> list:
         """Conversion rate by hour of day — find peak conversion hours."""
-        from ...models import Click
+        from api.smartlink.models import Click
         cutoff = timezone.now() - datetime.timedelta(days=days)
 
         rows = (

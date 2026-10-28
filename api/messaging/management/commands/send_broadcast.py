@@ -16,7 +16,7 @@ class Command(BaseCommand):
         use_async    = options.get("use_async", False)
 
         if use_async:
-            from messaging.tasks import send_broadcast_async
+            from api.messaging.tasks import send_broadcast_async
             task = send_broadcast_async.delay(broadcast_id)
             self.stdout.write(f"✅ Queued broadcast {broadcast_id} — task: {task.id}")
         else:

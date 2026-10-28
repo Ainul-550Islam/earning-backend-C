@@ -1,6 +1,6 @@
 # api/djoyalty/services/tiers/TierBenefitService.py
 """
-TierBenefitService — Customer এর tier benefits retrieve করে।
+TierBenefitService -- Customer এর tier benefits retrieve করে।
 """
 import logging
 from typing import List
@@ -42,7 +42,7 @@ class TierBenefitService:
     @staticmethod
     def get_all_tier_benefits_grouped() -> dict:
         """
-        সব tier এর benefits tier_name → [benefits] format এ।
+        সব tier এর benefits tier_name -> [benefits] format এ।
         Admin overview এর জন্য।
         """
         try:

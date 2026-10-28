@@ -1,4 +1,5 @@
 import time
+from api.smartlink.utils import get_client_ip
 import logging
 from django.core.cache import cache
 from django.http import HttpResponseRedirect, HttpResponse
@@ -59,11 +60,8 @@ class SmartLinkRedirectMiddleware:
         return None
 
     def _get_ip(self, request) -> str:
-        for header in ('HTTP_CF_IPCOUNTRY', 'HTTP_X_REAL_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'):
-            ip = request.META.get(header)
-            if ip:
-                return ip.split(',')[0].strip()
-        return '0.0.0.0'
+        # Single canonical implementation in api.smartlink.utils.get_client_ip
+        return get_client_ip(request)
 
     def _is_ip_blocked(self, ip: str) -> bool:
         """Check Redis for blocked IP (fraud system)."""

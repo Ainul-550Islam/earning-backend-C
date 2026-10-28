@@ -1,6 +1,10 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 # api/djoyalty/viewsets/tiers/UserTierViewSet.py
 """
-UserTierViewSet — Customer এর current ও historical tier management।
+UserTierViewSet -- Customer এর current ও historical tier management।
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -17,9 +21,10 @@ from ...services.tiers.TierUpgradeService import TierUpgradeService
 from ...services.tiers.TierDowngradeService import TierDowngradeService
 from ...permissions import IsLoyaltyAdmin
 from ...pagination import DjoyaltyPagePagination
+from ...mixins import DjoyaltyBaseViewSet
 
 
-class UserTierViewSet(viewsets.ReadOnlyModelViewSet):
+class UserTierViewSet(DjoyaltyBaseViewSet, viewsets.ReadOnlyModelViewSet):
     """
     Customer tier management endpoints।
     - list: সব current user tiers
@@ -27,8 +32,8 @@ class UserTierViewSet(viewsets.ReadOnlyModelViewSet):
     - evaluate: Tier re-evaluate করো
     - my_tier: Customer নিজের tier info
     - history: Tier change history
-    - force_upgrade: Admin — force upgrade
-    - force_downgrade: Admin — force downgrade
+    - force_upgrade: Admin -- force upgrade
+    - force_downgrade: Admin -- force downgrade
     - progress: Upgrade progress detail
     """
     permission_classes = [IsAuthenticated]
@@ -56,14 +61,18 @@ class UserTierViewSet(viewsets.ReadOnlyModelViewSet):
     def evaluate(self, request):
         """Customer এর tier re-evaluate করো।"""
         customer_id = request.data.get('customer_id')
-        customer = get_object_or_404(Customer, pk=customer_id)
-        user_tier = TierEvaluationService.evaluate(customer, tenant=customer.tenant)
-        if user_tier:
-            return Response({
-                'message': f'Tier evaluated: {user_tier.tier.name}',
-                'tier': UserTierSerializer(user_tier).data,
-            })
-        return Response({'message': 'No tier change required.'})
+        try:
+            customer = get_object_or_404(Customer, pk=customer_id)
+            user_tier = TierEvaluationService.evaluate(customer, tenant=customer.tenant)
+            if user_tier:
+                return Response({
+                    'message': f'Tier evaluated: {user_tier.tier.name}',
+                    'tier': UserTierSerializer(user_tier).data,
+                })
+            return Response({'message': 'No tier change required.'})
+        except Exception as e:
+            logger.error('UserTierViewSet.evaluate error: %s', e)
+            return Response({'error': str(e)}, status=500)
 
     @action(detail=False, methods=['get'])
     def my_tier(self, request):
@@ -73,7 +82,7 @@ class UserTierViewSet(viewsets.ReadOnlyModelViewSet):
         """
         customer_id = request.query_params.get('customer_id')
         if not customer_id:
-            return Response({'error': 'customer_id required'}, status=status.HTTP_400_BAD_REQUEST)
+            return self.err('customer_id required')
 
         customer = get_object_or_404(Customer, pk=customer_id)
         user_tier = customer.user_tiers.filter(is_current=True).select_related('tier').first()
@@ -142,23 +151,31 @@ class UserTierViewSet(viewsets.ReadOnlyModelViewSet):
         """Customer এর tier change history।"""
         customer_id = request.query_params.get('customer_id')
         if not customer_id:
-            return Response({'error': 'customer_id required'}, status=status.HTTP_400_BAD_REQUEST)
-        customer = get_object_or_404(Customer, pk=customer_id)
-        history = TierHistory.objects.filter(customer=customer).order_by('-created_at')
-        page = self.paginate_queryset(history)
-        if page is not None:
-            return self.get_paginated_response(UserTierHistorySerializer(page, many=True).data)
-        return Response(UserTierHistorySerializer(history, many=True).data)
+            return self.err('customer_id required')
+        try:
+            customer = get_object_or_404(Customer, pk=customer_id)
+            history = TierHistory.objects.filter(customer=customer).order_by('-created_at')
+            page = self.paginate_queryset(history)
+            if page is not None:
+                return self.get_paginated_response(UserTierHistorySerializer(page, many=True).data)
+            return Response(UserTierHistorySerializer(history, many=True).data)
+        except Exception as e:
+            logger.error('UserTierViewSet.history error: %s', e)
+            return Response({'error': str(e)}, status=500)
 
     @action(detail=False, methods=['get'])
     def progress(self, request):
         """Customer এর upgrade progress detail।"""
         customer_id = request.query_params.get('customer_id')
         if not customer_id:
-            return Response({'error': 'customer_id required'}, status=status.HTTP_400_BAD_REQUEST)
-        customer = get_object_or_404(Customer, pk=customer_id)
-        progress = TierUpgradeService.get_upgrade_progress(customer)
-        return Response(progress)
+            return self.err('customer_id required')
+        try:
+            customer = get_object_or_404(Customer, pk=customer_id)
+            progress = TierUpgradeService.get_upgrade_progress(customer)
+            return Response(progress)
+        except Exception as e:
+            logger.error('UserTierViewSet.progress error: %s', e)
+            return Response({'error': str(e)}, status=500)
 
     @action(detail=False, methods=['post'], permission_classes=[IsLoyaltyAdmin])
     def force_upgrade(self, request):
@@ -171,16 +188,20 @@ class UserTierViewSet(viewsets.ReadOnlyModelViewSet):
                 {'error': 'customer_id and tier_name required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        customer = get_object_or_404(Customer, pk=customer_id)
-        user_tier = TierUpgradeService.force_upgrade(
-            customer, target_tier, reason=reason, tenant=customer.tenant
-        )
-        if user_tier:
-            return Response({
-                'message': f'Customer upgraded to {target_tier}',
-                'tier': UserTierSerializer(user_tier).data,
-            })
-        return Response({'error': 'Upgrade failed'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            customer = get_object_or_404(Customer, pk=customer_id)
+            user_tier = TierUpgradeService.force_upgrade(
+                customer, target_tier, reason=reason, tenant=customer.tenant
+            )
+            if user_tier:
+                return Response({
+                    'message': f'Customer upgraded to {target_tier}',
+                    'tier': UserTierSerializer(user_tier).data,
+                })
+            return self.err('Upgrade failed')
+        except Exception as e:
+            logger.error('UserTierViewSet.force_upgrade error: %s', e)
+            return Response({'error': str(e)}, status=500)
 
     @action(detail=False, methods=['post'], permission_classes=[IsLoyaltyAdmin])
     def force_downgrade(self, request):
@@ -193,13 +214,17 @@ class UserTierViewSet(viewsets.ReadOnlyModelViewSet):
                 {'error': 'customer_id and tier_name required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        customer = get_object_or_404(Customer, pk=customer_id)
-        user_tier = TierDowngradeService.force_downgrade(
-            customer, target_tier, reason=reason, tenant=customer.tenant
-        )
-        if user_tier:
-            return Response({
-                'message': f'Customer downgraded to {target_tier}',
-                'tier': UserTierSerializer(user_tier).data,
-            })
-        return Response({'error': 'Downgrade failed'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            customer = get_object_or_404(Customer, pk=customer_id)
+            user_tier = TierDowngradeService.force_downgrade(
+                customer, target_tier, reason=reason, tenant=customer.tenant
+            )
+            if user_tier:
+                return Response({
+                    'message': f'Customer downgraded to {target_tier}',
+                    'tier': UserTierSerializer(user_tier).data,
+                })
+            return self.err('Downgrade failed')
+        except Exception as e:
+            logger.error('UserTierViewSet.force_downgrade error: %s', e)
+            return Response({'error': str(e)}, status=500)

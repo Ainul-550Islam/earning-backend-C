@@ -4,6 +4,7 @@ Postback Service for Offer Routing System
 This module provides comprehensive postback handling and conversion tracking,
 including validation, fraud detection, and revenue attribution.
 """
+from django.db import models
 
 import logging
 import hashlib

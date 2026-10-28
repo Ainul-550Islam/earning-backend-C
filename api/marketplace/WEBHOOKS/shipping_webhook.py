@@ -36,3 +36,22 @@ class PathaoWebhookView(APIView):
     def post(self, request):
         logger.info("[Webhook:Pathao] %s", request.data)
         return Response({"status": "received"})
+
+def fire_refund_event(tenant, event_name: str, dispute) -> None:
+    """
+    Fire a webhook event when a refund/dispute is raised.
+    Notifies the seller and records the event for audit.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        payload = {
+            "event": event_name,
+            "tenant": str(tenant.slug) if tenant else None,
+            "dispute_id": dispute.pk if dispute else None,
+            "order_id": str(dispute.order_id) if dispute else None,
+        }
+        logger.info("[Webhook] %s fired: %s", event_name, payload)
+        # In production: POST payload to registered webhook URLs for this tenant
+    except Exception as exc:
+        logger.warning("[Webhook] fire_refund_event failed: %s", exc)

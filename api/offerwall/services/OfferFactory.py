@@ -4,7 +4,16 @@ Offer Factory - Factory pattern for creating offer processors
 import logging
 from typing import Type, Dict, Optional
 from .OfferProcessor import OfferProcessor
-from ..constants import *
+from ..constants import (
+    PROVIDER_TAPJOY,
+    PROVIDER_ADGEM,
+    PROVIDER_ADGATE,
+    PROVIDER_OFFERWALL,
+    PROVIDER_PERSONA,
+    PROVIDER_CPX,
+    PROVIDER_BITLABS,
+    PROVIDER_POLLFISH,
+)
 from ..exceptions import InvalidProviderConfigException
 
 logger = logging.getLogger(__name__)
@@ -321,6 +330,42 @@ def auto_register_processors():
     except ImportError:
         logger.warning("PersonaService not available")
 
+    # ── Phase-2 networks ──────────────────────────────────────
+    try:
+        from .MonlixService import MonlixService
+        from ..constants import PROVIDER_MONLIX
+        OfferFactory.register_processor(PROVIDER_MONLIX, MonlixService)
+    except ImportError:
+        logger.warning("MonlixService not available")
+
+    try:
+        from .OGAdsService import OGAdsService
+        from ..constants import PROVIDER_OGADS
+        OfferFactory.register_processor(PROVIDER_OGADS, OGAdsService)
+    except ImportError:
+        logger.warning("OGAdsService not available")
+
+    try:
+        from .FyberService import FyberService
+        from ..constants import PROVIDER_FYBER
+        OfferFactory.register_processor(PROVIDER_FYBER, FyberService)
+    except ImportError:
+        logger.warning("FyberService not available")
+
+    try:
+        from .LiftoffService import LiftoffService
+        from ..constants import PROVIDER_LIFTOFF
+        OfferFactory.register_processor(PROVIDER_LIFTOFF, LiftoffService)
+    except ImportError:
+        logger.warning("LiftoffService not available")
+
+    try:
+        from .AppLiftService import AppLiftService
+        from ..constants import PROVIDER_APPLIFT
+        OfferFactory.register_processor(PROVIDER_APPLIFT, AppLiftService)
+    except ImportError:
+        logger.warning("AppLiftService not available")
+
 
 # Auto-register on module import
 auto_register_processors()
@@ -338,3 +383,38 @@ def create_processor(provider):
         OfferProcessor instance
     """
     return OfferFactory.create_processor(provider)
+
+# ─────────────────────────────────────────────────────────────
+# FIX: apps.py calls OfferFactory.register_all() but the method
+# was named auto_register_processors() → AttributeError on startup.
+# register_all() is now a proper classmethod alias.
+# ─────────────────────────────────────────────────────────────
+
+@classmethod
+def register_all(cls):
+    """
+    Register all available processor classes.
+    Called by apps.OfferwallConfig.ready() on startup.
+    Alias for auto_register_processors().
+    """
+    auto_register_processors()
+    logger.info(
+        f'[OfferFactory] registered processors: '
+        f'{list(cls._processors.keys())}'
+    )
+
+# Patch it onto the class
+OfferFactory.register_all = classmethod(
+    lambda cls: auto_register_processors()
+)
+
+
+# Survey provider processors (registered at module load)
+try:
+    from api.offerwall.services.survey.SurveyProviderService import (
+        CPXResearchService, BitLabsService, PollfishService)
+    OfferFactory._processors['cpx']      = CPXResearchService
+    OfferFactory._processors['bitlabs']  = BitLabsService
+    OfferFactory._processors['pollfish'] = PollfishService
+except (ImportError, AttributeError):
+    pass

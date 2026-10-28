@@ -3,6 +3,7 @@ Enhanced Security Models with Defensive Coding Practices
 Author: System Security Team
 Version: 2.0.0
 """
+from django.core.exceptions import PermissionDenied
 
 from django.db import models
 from django.conf import settings
@@ -47,6 +48,9 @@ from django.db.models.signals import post_save, pre_save
 from typing import Optional, Dict, Any, List, Tuple, Union
 from datetime import timedelta
 
+# Import HashChainedModel for integrity verification
+from .hash_chain import HashChainedModel
+
 # ডিফল্ট ভ্যালুর জন্য ফাংশন
 def get_hours_default():
     return list(range(0, 24))
@@ -69,6 +73,288 @@ logger = logging.getLogger(__name__)
 
 
 # ==================== DEFENSIVE CODING UTILITIES ====================
+
+class UserBan(models.Model):
+    """UserBan model implementing defensive coding principles"""
+    
+    # 1. Null Object Pattern and default values
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE, 
+        related_name='security_bans',
+        verbose_name="User",
+        help_text="The user who is banned")
+    
+    reason = models.TextField(
+        verbose_name="Reason",
+        help_text="Detailed reason for the ban",
+        default="No reason provided",  # Default value
+        blank=False,
+        null=False
+    )
+    
+    is_permanent = models.BooleanField(
+        default=False,
+        verbose_name="Permanent Ban",
+        help_text="Check if this is a permanent ban"
+    )
+    
+    banned_until = models.DateTimeField(
+        null=True, 
+        blank=True,
+        verbose_name="Ban Until",
+        help_text="End date for temporary ban"
+    )
+    
+    banned_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Banned At",
+        help_text="When the ban started"
+    )
+    
+    is_active_ban = models.BooleanField(
+        default=True,
+        verbose_name="Active Ban",
+        help_text="Whether this ban is currently active"
+    )
+    
+    # 2. Model-level constraints
+    class Meta:
+        db_table = 'security_userban'
+        verbose_name = 'User Ban'
+        verbose_name_plural = 'User Bans'
+        
+        # Ensure only one active ban per user
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'is_active_ban'],
+                condition=models.Q(is_active_ban=True),
+                name='unique_active_ban_per_user'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['user', 'is_active_ban'], name='idx_user_is_active_ban_1708'),
+            models.Index(fields=['banned_until'], name='idx_banned_until_1709'),
+            models.Index(fields=['banned_at'], name='idx_banned_at_1710'),
+        ]
+    
+    # 3. Validation in clean method
+    def clean(self) -> None:
+        """Validate model data before saving"""
+        errors = {}
+        
+        # Type validation and logical constraints
+        if self.is_permanent and self.banned_until:
+            errors['banned_until'] = "Permanent bans cannot have an expiration date."
+        
+        if not self.is_permanent and not self.banned_until:
+            errors['banned_until'] = "Temporary bans must have an expiration date."
+        
+        if self.banned_until and self.banned_until <= timezone.now():
+            errors['banned_until'] = "Ban expiration must be in the future."
+        
+        # Graceful degradation: Log issues but don't crash
+        if errors:
+            logger.warning(f"UserBan validation errors: {errors}")
+            raise ValidationError(errors)
+    
+    def save(self, *args, **kwargs) -> None:
+        """Override save with defensive programming"""
+        try:
+            # Auto-clean before saving
+            self.full_clean()
+            
+            # Set sensible defaults
+            if self.is_permanent:
+                self.banned_until = None
+            
+            # Ensure consistency
+            if self.banned_until and self.banned_until <= timezone.now():
+                self.is_active_ban = False
+            
+            super().save(*args, **kwargs)
+            
+        except Exception as e:
+            # Graceful degradation: Log error but don't crash
+            logger.error(f"Failed to save UserBan: {e}")
+            raise
+    
+    # 4. Business logic methods with type hints
+    def is_currently_active(self) -> bool:
+        """Check if ban is currently active"""
+        if not self.is_active_ban:
+            return False
+        
+        if self.is_permanent:
+            return True
+        
+        if self.banned_until:
+            return timezone.now() < self.banned_until
+        
+        return False
+    
+    def get_remaining_duration(self) -> Optional[timedelta]:
+        """Get remaining ban duration with null safety"""
+        if not self.is_currently_active():
+            return None
+        
+        if self.is_permanent:
+            return None  # Infinite duration
+        
+        if self.banned_until:
+            return self.banned_until - timezone.now()
+        
+        return None
+    
+    def deactivate_ban(self, reason: str = "Manually deactivated") -> Tuple[bool, str]:
+        """Safely deactivate a ban with error handling"""
+        try:
+            if not self.is_active_ban:
+                return False, "Ban is already inactive"
+            
+            self.is_active_ban = False
+            self.reason = f"{self.reason} | Deactivated: {reason}"
+            self.save()
+            
+            logger.info(f"Ban {self.id} deactivated for user {self.user.id}")
+            return True, "Ban successfully deactivated"
+            
+        except Exception as e:
+            logger.error(f"Failed to deactivate ban {self.id}: {e}")
+            return False, f"Error deactivating ban: {str(e)}"
+    
+    # 5. Factory method for creating bans
+    @classmethod
+    def create_temporary_ban(cls, user, reason: str, days: int = 7) -> 'UserBan':
+        """Factory method for creating temporary bans"""
+        if days <= 0:
+            raise ValueError("Ban duration must be positive")
+        
+        # Check for existing active bans first
+        existing_ban = cls.objects.filter(
+            user=user,
+            is_active_ban=True
+        ).first()
+        
+        if existing_ban:
+            raise ValidationError(f"User {user.id} already has an active ban")
+        
+        return cls(
+            user=user,
+            reason=reason,
+            is_permanent=False,
+            banned_until=timezone.now() + timedelta(days=days),
+            is_active_ban=True
+        )
+    
+    @classmethod
+    def create_permanent_ban(cls, user, reason: str) -> 'UserBan':
+        """Factory method for creating permanent bans"""
+        # Check for existing active bans
+        existing_ban = cls.objects.filter(
+            user=user,
+            is_active_ban=True
+        ).first()
+        
+        if existing_ban:
+            raise ValidationError(f"User {user.id} already has an active ban")
+        
+        return cls(
+            user=user,
+            reason=reason,
+            is_permanent=True,
+            banned_until=None,
+            is_active_ban=True
+        )
+    
+    # 6. Query methods for common operations
+    @classmethod
+    def get_active_bans(cls, user_id: Optional[int] = None):
+        """Get all currently active bans"""
+        queryset = cls.objects.filter(is_active_ban=True)
+        
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        
+        # Filter by expiration for temporary bans
+        now = timezone.now()
+        return queryset.filter(
+            models.Q(is_permanent=True) |
+            models.Q(banned_until__gt=now)
+        )
+    
+    @classmethod
+    def is_user_banned(cls, user_id: int) -> Tuple[bool, Optional['UserBan']]:
+        """Check if a user is currently banned"""
+        try:
+            active_bans = cls.get_active_bans(user_id=user_id)
+            ban = active_bans.first()
+            return (ban is not None, ban)
+        except Exception as e:
+            # Graceful degradation: Log error but return safe default
+            logger.error(f"Error checking ban status for user {user_id}: {e}")
+            return (False, None)
+    
+    @classmethod
+    def cleanup_expired_bans(cls) -> int:
+        """Clean up expired temporary bans - returns count of cleaned bans"""
+        try:
+            now = timezone.now()
+            expired_bans = cls.objects.filter(
+                is_active_ban=True,
+                is_permanent=False,
+                banned_until__lte=now
+            )
+            
+            count = expired_bans.count()
+            expired_bans.update(is_active_ban=False)
+            
+            if count > 0:
+                logger.info(f"Cleaned up {count} expired bans")
+            
+            return count
+            
+        except Exception as e:
+            logger.error(f"Error cleaning up expired bans: {e}")
+            return 0
+    
+    # 7. String representation and admin methods
+    def __str__(self) -> str:
+        ban_type = "Permanent" if self.is_permanent else "Temporary"
+        status = "Active" if self.is_currently_active() else "Inactive"
+        return f"{ban_type} Ban for {self.user} - {status}"
+    
+    @property
+    def duration_info(self) -> str:
+        """User-friendly duration information"""
+        if self.is_permanent:
+            return "Permanent"
+        
+        if not self.banned_until:
+            return "Unknown duration"
+        
+        remaining = self.get_remaining_duration()
+        if remaining:
+            days = remaining.days
+            return f"{days} day(s) remaining"
+        
+        return "Expired"
+
+
+@receiver(pre_save, sender=UserBan)
+def validate_ban_consistency(sender, instance, **kwargs):
+    """Signal handler for additional validation"""
+    if instance.is_permanent:
+        instance.banned_until = None
+    
+    # Ensure banned_until is in future for temporary bans
+    if instance.banned_until and instance.banned_until <= timezone.now():
+        instance.is_active_ban = False
+
+
+
+
+
 
 class NullSafe:
     """Null Object Pattern Implementation"""
@@ -94,6 +380,16 @@ class NullSafe:
         except Exception as e:
             logger.warning(f"Function call failed: {e}")
             return default
+    
+    @staticmethod
+    def get_value(data, key: str, default=None):
+        """Safely get value from dict or object attribute"""
+        try:
+            if isinstance(data, dict):
+                return data.get(key, default)
+            return getattr(data, key, default)
+        except Exception:
+            return default
 
 
 class GracefulDegradation:
@@ -110,6 +406,28 @@ class GracefulDegradation:
                     return default_value
             return wrapper
         return decorator
+    
+    def __init__(self, default_return=None, log_error=True):
+        self.default_return = default_return
+        self.log_error = log_error
+    
+    def __call__(self, func):
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if self.log_error:
+                    logger.error(f"Error in {func.__name__}: {str(e)}")
+                return self.default_return
+        return wrapper
+    
+    @staticmethod
+    def safe_execute(func, *args, **kwargs):
+        """Safely execute a function, return error dict on failure"""
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return {"error": str(e), "status": "degraded"}
 
 
 def cache_result(timeout: int = 300):
@@ -601,54 +919,9 @@ def device_pre_save(sender, instance, **kwargs):
         logger.error(f"Pre-save hook failed: {e}")
 
 
-# ==================== MANAGER ====================
+from .managers import DeviceInfoManager
 
-class DeviceInfoManager(models.Manager):
-    """Custom manager for DeviceInfo"""
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('user')
-    
-    def active_devices(self, hours: int = 24):
-        """Get devices active in last X hours"""
-        cutoff = timezone.now() - timedelta(hours=hours)
-        return self.get_queryset().filter(last_activity__gte=cutoff)
-    
-    def high_risk_devices(self):
-        """Get high risk devices"""
-        return self.get_queryset().filter(risk_score__gte=70)
-    
-    def suspicious_devices(self):
-        """Get suspicious devices"""
-        return self.get_queryset().filter(
-            Q(is_rooted=True) | Q(is_emulator=True) | Q(risk_score__gte=50)
-        )
-    
-    def trusted_devices(self):
-        """Get trusted devices"""
-        return self.get_queryset().filter(is_trusted=True)
-    
-    def devices_by_user(self, user):
-        """Get all devices for a user"""
-        if not user:
-            return self.none()
-        return self.get_queryset().filter(user=user)
-    
-    def devices_by_ip(self, ip: str):
-        """Get devices by IP address"""
-        if not ip:
-            return self.none()
-        return self.get_queryset().filter(last_ip=ip)
-
-
-# Add manager to model
-DeviceInfo.add_to_class('objects', DeviceInfoManager())
-
-logger.info("DeviceInfo model loaded successfully")
-
-
-
-class SecurityLog(models.Model):
+class SecurityLog(HashChainedModel):
     """Security event logging"""
     
     EVENT_TYPE_CHOICES = [
@@ -742,7 +1015,7 @@ class SecurityLog(models.Model):
     request_path = models.CharField(max_length=500, blank=True, null=True)
     request_method = models.CharField(max_length=10, blank=True, null=True)
     
-    details = models.JSONField(default=dict, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -758,6 +1031,24 @@ class SecurityLog(models.Model):
     
     def __str__(self):
         return f"{self.security_type} - {self.ip_address} - {self.created_at}"
+    
+    def _get_critical_fields(self) -> Dict[str, Any]:
+        """
+        Get critical fields for SecurityLog hash calculation
+        """
+        return {
+            'security_type': self.security_type,
+            'severity': self.severity,
+            'ip_address': str(self.ip_address),
+            'user_id': str(self.user.id) if self.user else None,
+            'description': self.description,
+            'risk_score': str(self.risk_score),
+            'user_agent': self.user_agent,
+            'metadata': json.dumps(self.metadata, sort_keys=True) if self.metadata else '{}'
+            # NOTE: created_at excluded - it's auto_now_add, so it's None at
+            # hash-calculation time (pre-save) but populated after INSERT,
+            # which caused every integrity verification to fail.
+        }
     
     def save(self, *args, **kwargs):
         """Override save to validate IP"""
@@ -2565,7 +2856,16 @@ class PasswordHistory(models.Model):
         related_name='changed_passwords')
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     
+    strength_score = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Password strength score"
+    )
+    is_compromised = models.BooleanField(default=False, help_text="Whether password was compromised")
+    metadata = models.JSONField(default=dict, blank=True)
+    
     class Meta:
+        db_table = 'security_passwordhistory'
         ordering = ['-created_at']
         verbose_name_plural = 'Password Histories'
     
@@ -3124,286 +3424,7 @@ def safe_model_save(model_instance, **kwargs):
 
 # ==================== ENHANCED EXISTING MODELS ====================
 
-class UserBan(models.Model):
-    """UserBan model implementing defensive coding principles"""
-    
-    # 1. Null Object Pattern and default values
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE, 
-        related_name='security_bans',
-        verbose_name="User",
-        help_text="The user who is banned")
-    
-    reason = models.TextField(
-        verbose_name="Reason",
-        help_text="Detailed reason for the ban",
-        default="No reason provided",  # Default value
-        blank=False,
-        null=False
-    )
-    
-    is_permanent = models.BooleanField(
-        default=False,
-        verbose_name="Permanent Ban",
-        help_text="Check if this is a permanent ban"
-    )
-    
-    banned_until = models.DateTimeField(
-        null=True, 
-        blank=True,
-        verbose_name="Ban Until",
-        help_text="End date for temporary ban"
-    )
-    
-    banned_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Banned At",
-        help_text="When the ban started"
-    )
-    
-    is_active_ban = models.BooleanField(
-        default=True,
-        verbose_name="Active Ban",
-        help_text="Whether this ban is currently active"
-    )
-    
-    # 2. Model-level constraints
-    class Meta:
-        db_table = 'security_userban'
-        verbose_name = 'User Ban'
-        verbose_name_plural = 'User Bans'
-        
-        # Ensure only one active ban per user
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'is_active_ban'],
-                condition=models.Q(is_active_ban=True),
-                name='unique_active_ban_per_user'
-            )
-        ]
-        indexes = [
-            models.Index(fields=['user', 'is_active_ban'], name='idx_user_is_active_ban_1708'),
-            models.Index(fields=['banned_until'], name='idx_banned_until_1709'),
-            models.Index(fields=['banned_at'], name='idx_banned_at_1710'),
-        ]
-    
-    # 3. Validation in clean method
-    def clean(self) -> None:
-        """Validate model data before saving"""
-        errors = {}
-        
-        # Type validation and logical constraints
-        if self.is_permanent and self.banned_until:
-            errors['banned_until'] = "Permanent bans cannot have an expiration date."
-        
-        if not self.is_permanent and not self.banned_until:
-            errors['banned_until'] = "Temporary bans must have an expiration date."
-        
-        if self.banned_until and self.banned_until <= timezone.now():
-            errors['banned_until'] = "Ban expiration must be in the future."
-        
-        # Graceful degradation: Log issues but don't crash
-        if errors:
-            logger.warning(f"UserBan validation errors: {errors}")
-            raise ValidationError(errors)
-    
-    def save(self, *args, **kwargs) -> None:
-        """Override save with defensive programming"""
-        try:
-            # Auto-clean before saving
-            self.full_clean()
-            
-            # Set sensible defaults
-            if self.is_permanent:
-                self.banned_until = None
-            
-            # Ensure consistency
-            if self.banned_until and self.banned_until <= timezone.now():
-                self.is_active_ban = False
-            
-            super().save(*args, **kwargs)
-            
-        except Exception as e:
-            # Graceful degradation: Log error but don't crash
-            logger.error(f"Failed to save UserBan: {e}")
-            raise
-    
-    # 4. Business logic methods with type hints
-    def is_currently_active(self) -> bool:
-        """Check if ban is currently active"""
-        if not self.is_active_ban:
-            return False
-        
-        if self.is_permanent:
-            return True
-        
-        if self.banned_until:
-            return timezone.now() < self.banned_until
-        
-        return False
-    
-    def get_remaining_duration(self) -> Optional[timedelta]:
-        """Get remaining ban duration with null safety"""
-        if not self.is_currently_active():
-            return None
-        
-        if self.is_permanent:
-            return None  # Infinite duration
-        
-        if self.banned_until:
-            return self.banned_until - timezone.now()
-        
-        return None
-    
-    def deactivate_ban(self, reason: str = "Manually deactivated") -> Tuple[bool, str]:
-        """Safely deactivate a ban with error handling"""
-        try:
-            if not self.is_active_ban:
-                return False, "Ban is already inactive"
-            
-            self.is_active_ban = False
-            self.reason = f"{self.reason} | Deactivated: {reason}"
-            self.save()
-            
-            logger.info(f"Ban {self.id} deactivated for user {self.user.id}")
-            return True, "Ban successfully deactivated"
-            
-        except Exception as e:
-            logger.error(f"Failed to deactivate ban {self.id}: {e}")
-            return False, f"Error deactivating ban: {str(e)}"
-    
-    # 5. Factory method for creating bans
-    @classmethod
-    def create_temporary_ban(cls, user, reason: str, days: int = 7) -> 'UserBan':
-        """Factory method for creating temporary bans"""
-        if days <= 0:
-            raise ValueError("Ban duration must be positive")
-        
-        # Check for existing active bans first
-        existing_ban = cls.objects.filter(
-            user=user,
-            is_active_ban=True
-        ).first()
-        
-        if existing_ban:
-            raise ValidationError(f"User {user.id} already has an active ban")
-        
-        return cls(
-            user=user,
-            reason=reason,
-            is_permanent=False,
-            banned_until=timezone.now() + timedelta(days=days),
-            is_active_ban=True
-        )
-    
-    @classmethod
-    def create_permanent_ban(cls, user, reason: str) -> 'UserBan':
-        """Factory method for creating permanent bans"""
-        # Check for existing active bans
-        existing_ban = cls.objects.filter(
-            user=user,
-            is_active_ban=True
-        ).first()
-        
-        if existing_ban:
-            raise ValidationError(f"User {user.id} already has an active ban")
-        
-        return cls(
-            user=user,
-            reason=reason,
-            is_permanent=True,
-            banned_until=None,
-            is_active_ban=True
-        )
-    
-    # 6. Query methods for common operations
-    @classmethod
-    def get_active_bans(cls, user_id: Optional[int] = None):
-        """Get all currently active bans"""
-        queryset = cls.objects.filter(is_active_ban=True)
-        
-        if user_id:
-            queryset = queryset.filter(user_id=user_id)
-        
-        # Filter by expiration for temporary bans
-        now = timezone.now()
-        return queryset.filter(
-            models.Q(is_permanent=True) |
-            models.Q(banned_until__gt=now)
-        )
-    
-    @classmethod
-    def is_user_banned(cls, user_id: int) -> Tuple[bool, Optional['UserBan']]:
-        """Check if a user is currently banned"""
-        try:
-            active_bans = cls.get_active_bans(user_id=user_id)
-            ban = active_bans.first()
-            return (ban is not None, ban)
-        except Exception as e:
-            # Graceful degradation: Log error but return safe default
-            logger.error(f"Error checking ban status for user {user_id}: {e}")
-            return (False, None)
-    
-    @classmethod
-    def cleanup_expired_bans(cls) -> int:
-        """Clean up expired temporary bans - returns count of cleaned bans"""
-        try:
-            now = timezone.now()
-            expired_bans = cls.objects.filter(
-                is_active_ban=True,
-                is_permanent=False,
-                banned_until__lte=now
-            )
-            
-            count = expired_bans.count()
-            expired_bans.update(is_active_ban=False)
-            
-            if count > 0:
-                logger.info(f"Cleaned up {count} expired bans")
-            
-            return count
-            
-        except Exception as e:
-            logger.error(f"Error cleaning up expired bans: {e}")
-            return 0
-    
-    # 7. String representation and admin methods
-    def __str__(self) -> str:
-        ban_type = "Permanent" if self.is_permanent else "Temporary"
-        status = "Active" if self.is_currently_active() else "Inactive"
-        return f"{ban_type} Ban for {self.user} - {status}"
-    
-    @property
-    def duration_info(self) -> str:
-        """User-friendly duration information"""
-        if self.is_permanent:
-            return "Permanent"
-        
-        if not self.banned_until:
-            return "Unknown duration"
-        
-        remaining = self.get_remaining_duration()
-        if remaining:
-            days = remaining.days
-            return f"{days} day(s) remaining"
-        
-        return "Expired"
-
-
-@receiver(pre_save, sender=UserBan)
-def validate_ban_consistency(sender, instance, **kwargs):
-    """Signal handler for additional validation"""
-    if instance.is_permanent:
-        instance.banned_until = None
-    
-    # Ensure banned_until is in future for temporary bans
-    if instance.banned_until and instance.banned_until <= timezone.now():
-        instance.is_active_ban = False
-
-
-
-
+# UserBan moved to top
 class EnhancedUserBan(UserBan):
     """Enhanced UserBan with defensive coding"""
     
@@ -3442,30 +3463,6 @@ class EnhancedUserBan(UserBan):
         except Exception as e:
             logger.error(f"Error calculating ban time: {str(e)}")
             return "Unknown"
-
-
-class GracefulDegradation:
-    """Decorator for implementing graceful degradation pattern"""
-    
-    def __init__(self, default_return=None, log_error=True):
-        self.default_return = default_return
-        self.log_error = log_error
-    
-    def __call__(self, func):
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                if self.log_error:
-                    logger.error(f"Error in {func.__name__}: {str(e)}")
-                return self.default_return
-        return wrapper
-    
-    @classmethod
-    def with_default(cls, default_value):
-        """Factory method to create decorator with specific default value"""
-        return cls(default_return=default_value)
-
 
 class ClickTracker(models.Model):
     """
@@ -4818,8 +4815,7 @@ class ModelConstraints:
         
         # Example constraint: Ensure risk_score is between 0-100
         constraints.append(
-            models.CheckConstraint(
-                check=models.Q(risk_score__gte=0) & models.Q(risk_score__lte=100),
+            models.CheckConstraint(check=models.Q(risk_score__gte=0) & models.Q(risk_score__lte=100),
                 name='valid_risk_score'
             )
         )
@@ -5388,9 +5384,9 @@ class MaintenanceMode(models.Model):
             return None
         
         
-class SecurityConfig(models.Model):
+class SecurityConfiguration(models.Model):
     """
-    SecurityConfig model with comprehensive defensive coding
+    SecurityConfiguration model with comprehensive defensive coding
     Centralized security configuration management
     """
     
@@ -5557,7 +5553,7 @@ class SecurityConfig(models.Model):
             
         except Exception as e:
             # Graceful Degradation: Log error but don't crash
-            logger.error(f"SecurityConfig validation error for {self.name}: {e}")
+            logger.error(f"SecurityConfiguration validation error for {self.name}: {e}")
             errors['non_field_errors'] = "An unexpected validation error occurred"
         
         if errors:
@@ -5667,14 +5663,14 @@ class SecurityConfig(models.Model):
             # Ensure only one default per type
             if self.is_default:
                 # Remove default flag from other configs of same type
-                SecurityConfig.objects.filter(
+                SecurityConfiguration.objects.filter(
                     config_type=self.config_type,
                     is_default=True
                 ).exclude(pk=self.pk if self.pk else None).update(is_default=False)
             
             # Update version if this is an update
             if self.pk:
-                original = SecurityConfig.objects.get(pk=self.pk)
+                original = SecurityConfiguration.objects.get(pk=self.pk)
                 if original.config_data != self.config_data:
                     self.version += 1
             
@@ -5684,7 +5680,7 @@ class SecurityConfig(models.Model):
             self._clear_config_cache()
             
         except Exception as e:
-            logger.error(f"Failed to save SecurityConfig {self.name}: {e}")
+            logger.error(f"Failed to save SecurityConfiguration {self.name}: {e}")
             raise
     
     def get_default_config(self) -> Dict[str, Any]:
@@ -5827,14 +5823,14 @@ class SecurityConfig(models.Model):
         except Exception:
             return False
     
-    def clone_config(self, new_name: str, created_by=None) -> Optional['SecurityConfig']:
+    def clone_config(self, new_name: str, created_by=None) -> Optional['SecurityConfiguration']:
         """Create a clone of this configuration"""
         try:
             # Ensure unique name
-            if SecurityConfig.objects.filter(name=new_name).exists():
+            if SecurityConfiguration.objects.filter(name=new_name).exists():
                 raise ValidationError(f"Configuration with name '{new_name}' already exists")
             
-            cloned_config = SecurityConfig(
+            cloned_config = SecurityConfiguration(
                 name=new_name,
                 description=f"Cloned from {self.name}",
                 config_type=self.config_type,
@@ -5857,7 +5853,7 @@ class SecurityConfig(models.Model):
             return None
     
     @classmethod
-    def get_active_config(cls, config_type: str, name: str = None) -> Optional['SecurityConfig']:
+    def get_active_config(cls, config_type: str, name: str = None) -> Optional['SecurityConfiguration']:
         """Get active configuration by type and optional name"""
         try:
             cache_key = f'security_config:{config_type}:{name or "default"}'
@@ -8107,4 +8103,474 @@ class WithdrawalProtection(models.Model):
         """Calculate monthly remaining limit (placeholder)"""
         # In real implementation, you would calculate based on actual withdrawals this month
         return self.monthly_limit
+
+
+# ==================== MISSING MODELS - NEW SYSTEM MODELS ====================
+
+class ThreatIntelligence(models.Model):
+    """Threat Intelligence model - NEW"""
+    
+    THREAT_TYPES = [
+        ('malware', 'Malware'),
+        ('phishing', 'Phishing'),
+        ('botnet', 'Botnet'),
+        ('ddos', 'DDoS'),
+        ('sql_injection', 'SQL Injection'),
+        ('xss', 'Cross-Site Scripting'),
+        ('zero_day', 'Zero-Day Exploit'),
+        ('apt', 'Advanced Persistent Threat'),
+        ('ransomware', 'Ransomware'),
+        ('trojan', 'Trojan'),
+    ]
+    
+    # Core fields as specified
+    ip_range = models.CharField(max_length=255, help_text="IP address or range")
+    threat_type = models.CharField(max_length=50, choices=THREAT_TYPES, db_index=True)
+    source = models.CharField(max_length=100, help_text="Threat intelligence source")
+    confidence = models.DecimalField(
+        max_digits=3, 
+        decimal_places=2, 
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Confidence level (0.0-1.0)"
+    )
+    expires_at = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        help_text="When this threat intelligence expires"
+    )
+    
+    # Additional fields for comprehensive tracking
+    indicator = models.CharField(max_length=500, blank=True, help_text="Threat indicator (hash, domain, etc.)")
+    indicator_type = models.CharField(max_length=50, blank=True, help_text="Type of indicator")
+    severity = models.CharField(
+        max_length=20, 
+        choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High'), ('critical', 'Critical')],
+        default='medium'
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Threat Intelligence"
+        verbose_name_plural = "Threat Intelligence"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['ip_range', 'is_active']),
+            models.Index(fields=['threat_type', 'severity']),
+            models.Index(fields=['source', 'confidence']),
+        ]
+    
+    def __str__(self):
+        return f"{self.threat_type} - {self.ip_range} ({self.source})"
+    
+    def is_expired(self):
+        """Check if threat intelligence has expired"""
+        if not self.expires_at:
+            return False
+        return timezone.now() > self.expires_at
+
+
+class SecurityIncident(HashChainedModel):
+    """Security Incident model - NEW"""
+    
+    INCIDENT_TYPES = [
+        ('unauthorized_access', 'Unauthorized Access'),
+        ('data_breach', 'Data Breach'),
+        ('malware_detection', 'Malware Detection'),
+        ('phishing_attempt', 'Phishing Attempt'),
+        ('ddos_attack', 'DDoS Attack'),
+        ('account_takeover', 'Account Takeover'),
+        ('insider_threat', 'Insider Threat'),
+        ('suspicious_activity', 'Suspicious Activity'),
+        ('policy_violation', 'Policy Violation'),
+        ('system_compromise', 'System Compromise'),
+    ]
+    
+    SEVERITY_LEVELS = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('investigating', 'Investigating'),
+        ('contained', 'Contained'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    ]
+    
+    # Core fields as specified
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='security_incidents',
+        help_text="User associated with this incident"
+    )
+    incident_type = models.CharField(max_length=50, choices=INCIDENT_TYPES, db_index=True)
+    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open', db_index=True)
+    opened_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    resolved_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    
+    # Additional fields for comprehensive incident management
+    title = models.CharField(max_length=200, help_text="Incident title")
+    description = models.TextField(help_text="Detailed incident description")
+    affected_systems = models.JSONField(default=list, blank=True, help_text="List of affected systems")
+    impact_assessment = models.TextField(blank=True, help_text="Assessment of incident impact")
+    mitigation_steps = models.JSONField(default=list, blank=True, help_text="Steps taken to mitigate")
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_incidents',
+        help_text="Staff member assigned to this incident"
+    )
+    priority = models.CharField(
+        max_length=20,
+        choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High'), ('urgent', 'Urgent')],
+        default='medium'
+    )
+    resolution_details = models.TextField(blank=True, help_text="Details about resolution")
+    lessons_learned = models.TextField(blank=True, help_text="Lessons learned from incident")
+    metadata = models.JSONField(default=dict, blank=True)
+    
+    # Timestamps
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Security Incident"
+        verbose_name_plural = "Security Incidents"
+        ordering = ['-opened_at']
+        indexes = [
+            models.Index(fields=['status', 'severity']),
+            models.Index(fields=['incident_type', 'opened_at']),
+            models.Index(fields=['user', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.incident_type} - {self.title}"
+    
+    def _get_critical_fields(self) -> Dict[str, Any]:
+        """
+        Get critical fields for SecurityIncident hash calculation
+        """
+        return {
+            'incident_type': self.incident_type,
+            'severity': self.severity,
+            'status': self.status,
+            'user_id': str(self.user.id) if self.user else None,
+            'title': self.title,
+            'description': self.description,
+            'priority': self.priority,
+            'affected_systems': json.dumps(self.affected_systems, sort_keys=True) if self.affected_systems else '[]',
+            'impact_assessment': self.impact_assessment,
+            # NOTE: opened_at excluded - it's auto_now_add, so it's None at
+            # hash-calculation time (pre-save) but populated after INSERT,
+            # which caused every integrity verification to fail.
+            'resolved_at': self.resolved_at.isoformat() if self.resolved_at else None,
+            'metadata': json.dumps(self.metadata, sort_keys=True) if self.metadata else '{}'
+        }
+    
+    def is_resolved(self):
+        """Check if incident is resolved"""
+        return self.status in ['resolved', 'closed']
+    
+    def get_duration(self):
+        """Get incident duration"""
+        if self.resolved_at:
+            return self.resolved_at - self.opened_at
+        return timezone.now() - self.opened_at
+
+
+class TrustedDevice(models.Model):
+    """Trusted Device model - NEW"""
+    
+    # Core fields as specified
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='trusted_devices',
+        help_text="User who owns this trusted device"
+    )
+    device_fingerprint = models.CharField(
+        max_length=255, 
+        unique=True, 
+        db_index=True,
+        help_text="Unique device fingerprint"
+    )
+    device_name = models.CharField(max_length=100, help_text="Human-readable device name")
+    last_seen = models.DateTimeField(auto_now=True, db_index=True)
+    is_trusted = models.BooleanField(default=True, db_index=True)
+    
+    # Additional fields for comprehensive device management
+    device_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('mobile', 'Mobile'),
+            ('tablet', 'Tablet'),
+            ('desktop', 'Desktop'),
+            ('laptop', 'Laptop'),
+            ('iot', 'IoT Device'),
+            ('other', 'Other'),
+        ],
+        default='desktop'
+    )
+    platform = models.CharField(max_length=50, blank=True, help_text="Operating system")
+    browser = models.CharField(max_length=100, blank=True, help_text="Browser information")
+    ip_address = models.GenericIPAddressField(null=True, blank=True, db_index=True)
+    user_agent = models.TextField(blank=True, help_text="User agent string")
+    trust_score = models.IntegerField(
+        default=100,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Trust score (0-100)"
+    )
+    expires_at = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        help_text="When trust expires"
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Trusted Device"
+        verbose_name_plural = "Trusted Devices"
+        ordering = ['-last_seen']
+        indexes = [
+            models.Index(fields=['user', 'is_trusted']),
+            models.Index(fields=['device_fingerprint', 'is_trusted']),
+            models.Index(fields=['last_seen', 'is_trusted']),
+        ]
+        unique_together = [['user', 'device_fingerprint']]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.device_name}"
+    
+    def is_expired(self):
+        """Check if trust has expired"""
+        if not self.expires_at:
+            return False
+        return timezone.now() > self.expires_at
+    
+    def update_last_seen(self):
+        """Update last seen timestamp"""
+        self.last_seen = timezone.now()
+        self.save(update_fields=['last_seen'])
+
+class SecurityPolicy(models.Model):
+    """Security Policy model - NEW"""
+    
+    # Core fields as specified
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='security_policies',
+        help_text="Tenant this policy belongs to"
+    )
+    policy_key = models.CharField(max_length=100, db_index=True, help_text="Policy configuration key")
+    value = models.JSONField(help_text="Policy value (JSON)")
+    is_active = models.BooleanField(default=True, db_index=True)
+    
+    # Additional fields for comprehensive policy management
+    description = models.TextField(blank=True, help_text="Policy description")
+    policy_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('password', 'Password Policy'),
+            ('session', 'Session Policy'),
+            ('access', 'Access Control'),
+            ('audit', 'Audit Policy'),
+            ('encryption', 'Encryption Policy'),
+            ('network', 'Network Policy'),
+            ('data', 'Data Protection Policy'),
+            ('compliance', 'Compliance Policy'),
+        ],
+        default='access'
+    )
+    priority = models.IntegerField(
+        default=100,
+        validators=[MinValueValidator(1), MaxValueValidator(1000)],
+        help_text="Policy priority (1-1000)"
+    )
+    enforced = models.BooleanField(default=True, help_text="Whether policy is actively enforced")
+    metadata = models.JSONField(default=dict, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Security Policy"
+        verbose_name_plural = "Security Policies"
+        ordering = ['policy_type', 'priority']
+        indexes = [
+            models.Index(fields=['tenant', 'policy_key', 'is_active']),
+            models.Index(fields=['policy_type', 'is_active']),
+            models.Index(fields=['priority', 'is_active']),
+        ]
+        unique_together = [['tenant', 'policy_key']]
+    
+    def __str__(self):
+        tenant_name = self.tenant.name if self.tenant else 'Global'
+        return f"{tenant_name} - {self.policy_key}"
+    
+    def get_effective_value(self):
+        """Get effective policy value considering inheritance"""
+        if self.value is not None:
+            return self.value
+        
+        # Check parent tenant policy
+        if self.tenant and self.tenant.parent:
+            parent_policy = SecurityPolicy.objects.filter(
+                tenant=self.tenant.parent,
+                policy_key=self.policy_key,
+                is_active=True
+            ).first()
+            if parent_policy:
+                return parent_policy.get_effective_value()
+        
+        # Return global policy
+        global_policy = SecurityPolicy.objects.filter(
+            tenant__isnull=True,
+            policy_key=self.policy_key,
+            is_active=True
+        ).first()
+        return global_policy.value if global_policy else None
+
+
+class SecurityInsight(models.Model):
+    """Security Insight model - NEW"""
+    
+    # Core fields as specified
+    date = models.DateField(unique=True, db_index=True)
+    total_events = models.IntegerField(default=0, help_text="Total security events")
+    critical_count = models.IntegerField(default=0, help_text="Number of critical events")
+    blocked_ips = models.JSONField(default=list, blank=True, help_text="List of blocked IP addresses")
+    locked_accounts = models.JSONField(default=list, blank=True, help_text="List of locked accounts")
+    
+    # Additional fields for comprehensive security analytics
+    high_count = models.IntegerField(default=0, help_text="Number of high severity events")
+    medium_count = models.IntegerField(default=0, help_text="Number of medium severity events")
+    low_count = models.IntegerField(default=0, help_text="Number of low severity events")
+    
+    # Event type breakdown
+    failed_logins = models.IntegerField(default=0)
+    successful_logins = models.IntegerField(default=0)
+    suspicious_activities = models.IntegerField(default=0)
+    fraud_attempts = models.IntegerField(default=0)
+    malware_detections = models.IntegerField(default=0)
+    phishing_attempts = models.IntegerField(default=0)
+    ddos_attacks = models.IntegerField(default=0)
+    data_breaches = models.IntegerField(default=0)
+    
+    # Geographic distribution
+    countries_affected = models.JSONField(default=list, blank=True, help_text="List of affected countries")
+    
+    # Risk assessment
+    risk_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text="Overall risk score (0-100)"
+    )
+    
+    # System health metrics
+    system_health_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=100.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text="System health score (0-100)"
+    )
+    
+    # Response metrics
+    avg_response_time = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0.0,
+        help_text="Average response time in seconds"
+    )
+    
+    # Metadata and timestamps
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Security Insight"
+        verbose_name_plural = "Security Insights"
+        ordering = ['-date']
+        indexes = [
+            models.Index(fields=['date', 'risk_score']),
+            models.Index(fields=['total_events', 'critical_count']),
+            models.Index(fields=['date', 'system_health_score']),
+        ]
+    
+    def __str__(self):
+        return f"Security Insight - {self.date}"
+    
+    def get_severity_breakdown(self):
+        """Get breakdown of events by severity"""
+        return {
+            'critical': self.critical_count,
+            'high': self.high_count,
+            'medium': self.medium_count,
+            'low': self.low_count
+        }
+    
+    def get_event_breakdown(self):
+        """Get breakdown of events by type"""
+        return {
+            'failed_logins': self.failed_logins,
+            'successful_logins': self.successful_logins,
+            'suspicious_activities': self.suspicious_activities,
+            'fraud_attempts': self.fraud_attempts,
+            'malware_detections': self.malware_detections,
+            'phishing_attempts': self.phishing_attempts,
+            'ddos_attacks': self.ddos_attacks,
+            'data_breaches': self.data_breaches
+        }
+    
+    def calculate_risk_score(self):
+        """Calculate overall risk score based on metrics"""
+        try:
+            # Weight factors for different metrics
+            critical_weight = 0.4
+            high_weight = 0.3
+            medium_weight = 0.2
+            low_weight = 0.1
+            
+            # Calculate weighted score
+            weighted_score = (
+                self.critical_count * critical_weight +
+                self.high_count * high_weight +
+                self.medium_count * medium_weight +
+                self.low_count * low_weight
+            )
+            
+            # Normalize to 0-100 scale
+            if self.total_events > 0:
+                normalized_score = min(100.0, (weighted_score / self.total_events) * 100)
+            else:
+                normalized_score = 0.0
+            
+            return round(normalized_score, 2)
+        except Exception as e:
+            logger.error(f"Error calculating risk score: {e}")
+            return 0.0
     

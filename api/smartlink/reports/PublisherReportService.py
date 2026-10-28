@@ -38,7 +38,7 @@ class PublisherReportService:
             group_by:    'date' | 'country' | 'device_type' | 'offer' | 'hour'
             include_fraud: bool (default False)
         """
-        from ..models import Click, SmartLink
+        from api.smartlink.models import Click, SmartLink
 
         date_from = params.get('date_from')
         date_to   = params.get('date_to')
@@ -99,7 +99,7 @@ class PublisherReportService:
 
     def top_performers(self, publisher_id: int, days: int = 7, limit: int = 10) -> dict:
         """Identify top-performing SmartLinks by EPC and revenue."""
-        from ..models import SmartLink, Click
+        from api.smartlink.models import SmartLink, Click
         cutoff = timezone.now() - datetime.timedelta(days=days)
 
         links = (
@@ -125,7 +125,7 @@ class PublisherReportService:
         Generate 7×24 heatmap data (day of week × hour of day).
         Shows when traffic is highest quality.
         """
-        from ..models import Click
+        from api.smartlink.models import Click
         cutoff = timezone.now() - datetime.timedelta(days=days)
 
         rows = (
@@ -163,7 +163,7 @@ class PublisherReportService:
 
     def quality_report(self, publisher_id: int, days: int = 30) -> dict:
         """Publisher traffic quality breakdown."""
-        from ..models import Click
+        from api.smartlink.models import Click
         cutoff = timezone.now() - datetime.timedelta(days=days)
 
         qs = Click.objects.filter(

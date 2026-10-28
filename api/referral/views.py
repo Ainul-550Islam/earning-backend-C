@@ -7,7 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from decimal import Decimal
 import logging
@@ -129,7 +129,7 @@ class ReferralLeaderboardView(APIView):
 
         top = Referral.objects.values('referrer').annotate(
             total=Count('id'),
-            active=Count('id', filter=__import__('django.db.models', fromlist=['Q']).Q(referred_user__is_active=True))
+            active=Count('id', filter=Q(referred_user__is_active=True))
         ).order_by('-total')[:50]
 
         leaderboard = []
@@ -161,14 +161,14 @@ class ReferralLeaderboardView(APIView):
 # ─── Admin APIs (পুরনো views compatible) ──────────────────────
 
 @api_view(['GET'])
+@api_view(['DELETE'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def get_referral_stats(request):
     """পুরনো endpoint — backward compatible"""
     stats = ReferralService.get_referral_stats(request.user)
     return Response(stats)
-
-
-@api_view(['GET'])
+@api_view(['DELETE'])
 @permission_classes([IsAdminUser])
 def admin_referral_overview(request):
     """Admin: সব referral stats একসাথে"""
@@ -184,8 +184,6 @@ def admin_referral_overview(request):
         'level2_count': ReferralChain.objects.filter(level=2).count(),
         'level3_count': ReferralChain.objects.filter(level=3).count(),
     })
-
-
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_referrals_list(request):
@@ -200,9 +198,7 @@ def admin_referrals_list(request):
         'created': r.created_at.strftime('%Y-%m-%d'),
     } for r in refs]
     return Response({'referrals': data, 'total': len(data)})
-
-
-@api_view(['DELETE'])
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_delete_referral(request, referral_id):
     try:
@@ -210,9 +206,7 @@ def admin_delete_referral(request, referral_id):
         return Response({'success': True})
     except Referral.DoesNotExist:
         return Response({'error': 'Not found'}, status=404)
-
-
-@api_view(['GET', 'POST'])
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_referral_settings(request):
     settings = ReferralSettings.objects.first()
@@ -242,9 +236,7 @@ def admin_referral_settings(request):
     cache.delete('referral_settings')
 
     return Response({'success': True, 'message': 'Settings updated'})
-
-
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_recent_earnings(request):
     earnings = ReferralEarning.objects.select_related(
@@ -262,9 +254,7 @@ def admin_recent_earnings(request):
         'date': e.created_at.strftime('%Y-%m-%d %H:%M'),
     } for e in earnings]
     return Response({'earnings': data})
-
-
-@api_view(['DELETE'])
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_delete_earning(request, earning_id):
     try:
@@ -272,8 +262,6 @@ def admin_delete_earning(request, earning_id):
         return Response({'success': True})
     except ReferralEarning.DoesNotExist:
         return Response({'error': 'Not found'}, status=404)
-
-
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_stats_by_date(request):
@@ -283,9 +271,6 @@ def admin_stats_by_date(request):
         .values('date').annotate(count=Count('id')).order_by('date')
     )
     return Response({'data': data})
-
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_create_referral(request):
     from django.contrib.auth import get_user_model
@@ -298,8 +283,6 @@ def admin_create_referral(request):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
 
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_give_bonus(request, referral_id):
     try:
@@ -314,8 +297,6 @@ def admin_give_bonus(request, referral_id):
     except Referral.DoesNotExist:
         return Response({'error': 'Not found'}, status=404)
 
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_adjust_commission(request, referral_id):
     try:
@@ -327,8 +308,6 @@ def admin_adjust_commission(request, referral_id):
     except Referral.DoesNotExist:
         return Response({'error': 'Not found'}, status=404)
 
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_toggle_program(request):
     settings = ReferralSettings.objects.first()
@@ -339,17 +318,14 @@ def admin_toggle_program(request):
     from django.core.cache import cache
     cache.delete('referral_settings')
     return Response({'is_active': settings.is_active})
-
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_search_users(request):
     from django.contrib.auth import get_user_model
     User = get_user_model()
     q = request.query_params.get('q', '')
     users = User.objects.filter(
-        __import__('django.db.models', fromlist=['Q']).Q(username__icontains=q) |
-        __import__('django.db.models', fromlist=['Q']).Q(email__icontains=q)
+        Q(username__icontains=q) |
+        Q(email__icontains=q)
     )[:20]
     return Response({'users': [{'id': u.id, 'username': u.username, 'email': u.email} for u in users]})
 
@@ -1020,3 +996,42 @@ def admin_search_users(request):
 #     settings_obj.is_active = not settings_obj.is_active
 #     settings_obj.save()
 #     return Response({'is_active': settings_obj.is_active})
+
+
+# ── Referral Redirect Views ──────────────────────────────────────────────────
+
+from django.shortcuts import redirect as django_redirect
+from django.conf import settings as django_settings
+from .middleware import COOKIE_NAME
+
+def referral_redirect(request, code: str):
+    """
+    /api/referral/go/<code>/ → redirect to signup page with ref cookie.
+    CPAlead style referral link redirect.
+    """
+    from api.referral.services.ReferralCodeService import ReferralCodeService
+
+    # Track click
+    ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
+    if ',' in ip:
+        ip = ip.split(',')[0].strip()
+    ReferralCodeService.track_click(code_value=code, ip=ip)
+
+    # Redirect to frontend signup page
+    frontend_url = getattr(django_settings, 'FRONTEND_URL', '/')
+    signup_url = f"{frontend_url.rstrip('/')}/register?ref={code}"
+
+    response = django_redirect(signup_url)
+    response.set_cookie(
+        COOKIE_NAME,
+        code,
+        max_age=30 * 86400,
+        httponly=True,
+        samesite='Lax',
+    )
+    return response
+
+
+def referral_redirect_with_signup(request, code: str):
+    """Same as referral_redirect — alias for short URL pattern."""
+    return referral_redirect(request, code)

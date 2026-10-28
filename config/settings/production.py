@@ -49,7 +49,6 @@ if _redis_url:
     }
     CELERY_BROKER_URL = _redis_url
     CELERY_RESULT_BACKEND = _redis_url
-print(f'[PRODUCTION DEBUG] REDIS_URL={_redis_url}')
 
 # Reduce logging
 LOGGING = {

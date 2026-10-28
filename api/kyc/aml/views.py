@@ -7,6 +7,7 @@ from .screening_service import AMLScreeningService
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def run_aml_screening(request, kyc_id):
     """Admin — Run AML/PEP/Sanctions screening on a KYC"""
@@ -28,8 +29,6 @@ def run_aml_screening(request, kyc_id):
         'matches': result.matches,
     })
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def aml_screening_history(request, kyc_id):
     """AML screening history for a KYC"""
@@ -46,8 +45,6 @@ def aml_screening_history(request, kyc_id):
     } for s in screenings]
     return Response(data)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def aml_alerts_list(request):
     """All open AML alerts"""
@@ -67,8 +64,6 @@ def aml_alerts_list(request):
     } for a in alerts]
     return Response(data)
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def aml_resolve_alert(request, alert_id):
     """Resolve an AML alert"""
@@ -90,9 +85,6 @@ def aml_resolve_alert(request, alert_id):
     alert.resolved_at   = timezone.now()
     alert.save()
     return Response({'message': f'Alert {action}d', 'status': alert.status})
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def aml_false_positive(request, screening_id):
     """Mark AML screening as false positive"""

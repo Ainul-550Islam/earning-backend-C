@@ -316,8 +316,6 @@ def health_view(request):
     status  = 200 if health['status'] in ('healthy', 'degraded') else 503
     return Response({'status': health['status'], 'timestamp': health['timestamp']}, status=status)
 
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def dashboard_view(request):
     """Admin monitoring dashboard."""
@@ -330,8 +328,6 @@ def dashboard_view(request):
         'active_alerts':  monitor.get_active_alerts(),
     })
 
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def prometheus_view(request):
     """Prometheus metrics endpoint."""
@@ -341,9 +337,6 @@ def prometheus_view(request):
         monitor.get_prometheus_metrics(),
         content_type='text/plain; version=0.0.4',
     )
-
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def alerts_view(request):
     """Active alerts endpoint."""

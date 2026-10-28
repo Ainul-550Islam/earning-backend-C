@@ -81,14 +81,14 @@ class SmartLinkLiveConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _verify_ownership(self) -> bool:
-        from ..models import SmartLink
+        from api.smartlink.models import SmartLink
         if self.user.is_staff:
             return SmartLink.objects.filter(slug=self.slug).exists()
         return SmartLink.objects.filter(slug=self.slug, publisher=self.user).exists()
 
     @database_sync_to_async
     def _get_live_stats(self) -> dict:
-        from ..models import SmartLink
+        from api.smartlink.models import SmartLink
         from django.utils import timezone
         import datetime
 
@@ -97,7 +97,7 @@ class SmartLinkLiveConsumer(AsyncWebsocketConsumer):
             today = timezone.now().date()
             cutoff = timezone.now() - datetime.timedelta(hours=1)
 
-            from ..models import Click
+            from api.smartlink.models import Click
             from django.db.models import Count, Sum, Q
             last_hour = Click.objects.filter(
                 smartlink=sl,

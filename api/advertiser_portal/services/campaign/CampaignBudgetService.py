@@ -4,6 +4,7 @@ Campaign Budget Service
 Service for managing campaign budgets,
 including budget enforcement and auto-pause functionality.
 """
+from django.db import models
 
 import logging
 from typing import Dict, List, Optional, Any

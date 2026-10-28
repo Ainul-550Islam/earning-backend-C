@@ -1,6 +1,7 @@
 """
 Signals for automatic audit logging on model changes and user actions
 """
+import threading
 
 from django.db.models.signals import post_save, post_delete, pre_save, m2m_changed
 from django.dispatch import receiver
@@ -14,6 +15,9 @@ import uuid
 
 from .models import AuditLog, AuditLogAction, AuditLogLevel
 from .services.LogService import LogService
+import logging
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 log_service = LogService()

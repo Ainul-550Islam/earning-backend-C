@@ -47,6 +47,7 @@ from ..tasks.onboarding import (
     schedule_trial_extensions, send_progress_tips,
     cleanup_old_onboarding_data, generate_onboarding_analytics
 )
+from api.tenants.models.onboarding import TenantOnboarding
 
 User = get_user_model()
 

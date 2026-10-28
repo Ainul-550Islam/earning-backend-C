@@ -10,10 +10,14 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from ..services.core import DispatchService
+import logging
+
+from ..services.core.DispatchService import DispatchService
 from ..models import WebhookSubscription
 
 User = get_user_model()
+
+logger = logging.getLogger("ainul.webhooks.signals")
 
 
 # Signal definitions
@@ -24,6 +28,9 @@ fraud_investigation_started = Signal()
 fraud_investigation_completed = Signal()
 
 
+from ._isolation import isolated_receiver
+
+@isolated_receiver
 def on_fraud_detected(sender, instance, created, **kwargs):
     """
     Signal handler for fraud detection.
@@ -62,11 +69,11 @@ def on_fraud_detected(sender, instance, created, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -80,9 +87,10 @@ def on_fraud_detected(sender, instance, created, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending fraud detected webhook: {e}")
+            logger.error("sending fraud detected webhook: %s", e)
 
 
+@isolated_receiver
 def on_fraud_flagged(sender, instance, **kwargs):
     """
     Signal handler for fraud flagging.
@@ -124,11 +132,11 @@ def on_fraud_flagged(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -142,9 +150,10 @@ def on_fraud_flagged(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending fraud flagged webhook: {e}")
+            logger.error("sending fraud flagged webhook: %s", e)
 
 
+@isolated_receiver
 def on_fraud_cleared(sender, instance, **kwargs):
     """
     Signal handler for fraud clearance.
@@ -186,11 +195,11 @@ def on_fraud_cleared(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -204,9 +213,10 @@ def on_fraud_cleared(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending fraud cleared webhook: {e}")
+            logger.error("sending fraud cleared webhook: %s", e)
 
 
+@isolated_receiver
 def on_fraud_investigation_started(sender, instance, **kwargs):
     """
     Signal handler for fraud investigation start.
@@ -248,11 +258,11 @@ def on_fraud_investigation_started(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -266,9 +276,10 @@ def on_fraud_investigation_started(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending fraud investigation started webhook: {e}")
+            logger.error("sending fraud investigation started webhook: %s", e)
 
 
+@isolated_receiver
 def on_fraud_investigation_completed(sender, instance, **kwargs):
     """
     Signal handler for fraud investigation completion.
@@ -312,11 +323,11 @@ def on_fraud_investigation_completed(sender, instance, **kwargs):
     for subscription in subscriptions:
         try:
             # Apply filters if configured
-            if subscription.filter_config:
+            if subscription.filters:
                 from ..services.filtering import FilterService
                 filter_service = FilterService()
                 if not filter_service.evaluate_filter(
-                    subscription.filter_config,
+                    subscription.filters,
                     payload
                 ):
                     continue
@@ -330,13 +341,13 @@ def on_fraud_investigation_completed(sender, instance, **kwargs):
             
         except Exception as e:
             # Log error but continue with other subscriptions
-            print(f"Error sending fraud investigation completed webhook: {e}")
+            logger.error("sending fraud investigation completed webhook: %s", e)
 
 
 # Connect signal handlers
 def connect_fraud_signals():
     """Connect fraud-related signals to their handlers."""
-    from apps.fraud.models import FraudCase, FraudDetection
+    from api.fraud_detection.models import FraudCase, FraudDetection
     
     try:
         post_save.connect(on_fraud_detected, sender=FraudDetection)
@@ -345,17 +356,17 @@ def connect_fraud_signals():
         post_save.connect(on_fraud_investigation_started, sender=FraudCase)
         post_save.connect(on_fraud_investigation_completed, sender=FraudCase)
         
-        print("Fraud signals connected successfully")
+        logger.info("[Webhooks] %s", "Fraud signals connected successfully")
     except ImportError:
         # Fraud app not available
-        print("Fraud app not available, skipping signal connections")
+        logger.warning("Fraud app not available, skipping signal connections")
     except Exception as e:
-        print(f"Error connecting fraud signals: {e}")
+        logger.error("connecting fraud signals: %s", e)
 
 
 def disconnect_fraud_signals():
     """Disconnect fraud-related signals."""
-    from apps.fraud.models import FraudCase, FraudDetection
+    from api.fraud_detection.models import FraudCase, FraudDetection
     
     try:
         post_save.disconnect(on_fraud_detected, sender=FraudDetection)
@@ -364,9 +375,9 @@ def disconnect_fraud_signals():
         post_save.disconnect(on_fraud_investigation_started, sender=FraudCase)
         post_save.disconnect(on_fraud_investigation_completed, sender=FraudCase)
         
-        print("Fraud signals disconnected successfully")
+        logger.info("[Webhooks] %s", "Fraud signals disconnected successfully")
     except ImportError:
         # Fraud app not available
-        print("Fraud app not available, skipping signal disconnection")
+        logger.warning("Fraud app not available, skipping signal disconnection")
     except Exception as e:
-        print(f"Error disconnecting fraud signals: {e}")
+        logger.error("disconnecting fraud signals: %s", e)

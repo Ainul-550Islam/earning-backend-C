@@ -430,7 +430,7 @@ class AlertNoiseAdmin(ModelAdmin):
     """Admin interface for Alert Noise"""
     list_display = [
         'name', 'noise_type', 'action', 'is_active', 'target_rules_count',
-        'total_processed', 'total_suppressed', 'effectiveness_score', 'created_at'
+        'total_processed', 'total_suppressed', 'effectiveness_display', 'created_at'
     ]
     
     list_filter = [
@@ -444,7 +444,7 @@ class AlertNoiseAdmin(ModelAdmin):
     
     readonly_fields = [
         'total_processed', 'total_suppressed', 'total_grouped', 'total_delayed',
-        'effectiveness_score', 'created_at', 'updated_at'
+        'effectiveness_display', 'created_at', 'updated_at'
     ]
     
     fieldsets = (
@@ -460,7 +460,7 @@ class AlertNoiseAdmin(ModelAdmin):
         }),
         ('Statistics', {
             'fields': ('total_processed', 'total_suppressed', 'total_grouped',
-                      'total_delayed', 'effectiveness_score')
+                      'total_delayed', 'effectiveness_display')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')
@@ -478,8 +478,8 @@ class AlertNoiseAdmin(ModelAdmin):
         return obj.target_rules.count()
     target_rules_count.short_description = 'Target Rules'
     
-    def effectiveness_score(self, obj):
-        """Display effectiveness score"""
+    def effectiveness_display(self, obj):
+        """Display effectiveness score (live suppressed/processed percentage)"""
         score = obj.get_effectiveness_score()
         if score is not None:
             color = '#10b981' if score > 80 else '#f59e0b' if score > 60 else '#ef4444'
@@ -488,7 +488,7 @@ class AlertNoiseAdmin(ModelAdmin):
                 color, f"{score:.1f}%"
             )
         return "N/A"
-    effectiveness_score.short_description = 'Effectiveness'
+    effectiveness_display.short_description = 'Effectiveness'
     
     # Custom actions
     def activate_filters(self, request, queryset):
@@ -516,7 +516,7 @@ class AlertNoiseAdmin(ModelAdmin):
     
     def optimize_filters(self, request, queryset):
         """Optimize selected filters"""
-        from ..tasks.intelligence import evaluate_noise_filters
+        from ..tasks.intelligence import optimize_noise_filters
         optimize_noise_filters.delay()
         messages.success(request, f"Optimization initiated for {queryset.count()} filter(s).")
     optimize_filters.short_description = "Optimize selected filters"
@@ -554,7 +554,7 @@ class RootCauseAnalysisAdmin(ModelAdmin):
     ]
     
     search_fields = [
-        'title', 'description', 'incident__title', 'root_causes', 'lessons_learned'
+        'title', 'description', 'root_causes', 'lessons_learned'
     ]
     
     readonly_fields = [
@@ -568,13 +568,20 @@ class RootCauseAnalysisAdmin(ModelAdmin):
     
     # Custom display methods
     def incident_link(self, obj):
-        """Clickable incident title"""
-        if obj.incident:
-            url = reverse('alerts_admin:alerts_incident_change', args=[obj.incident.id])
-            return format_html('<a href="{}" style="font-weight: 500;">{}</a>', url, obj.incident.title)
-        return 'N/A'
-    incident_link.short_description = 'Incident'
-    incident_link.admin_order_field = 'incident__title'
+        """Links to the incidents this RCA covers.
+
+        RootCauseAnalysis has no `incident` FK (obj.incident raised AttributeError for every row
+        of the changelist); it keeps incident ids in the `related_incidents` JSON list.
+        """
+        from django.utils.html import format_html_join
+        ids = [i for i in (obj.related_incidents or []) if str(i).isdigit()][:5]
+        if not ids:
+            return 'N/A'
+        return format_html_join(
+            ', ', '<a href="{}" style="font-weight: 500;">#{}</a>',
+            ((reverse('alerts_admin:alerts_incident_change', args=[i]), i) for i in ids),
+        )
+    incident_link.short_description = 'Incidents'
     
     def confidence_level_badge(self, obj):
         """Display confidence level as colored badge"""

@@ -4,6 +4,8 @@ Advertiser Report Service
 Service for generating advertiser reports,
 including performance, financial, and custom reports.
 """
+from django.db import models
+from django.db.models import When
 
 import logging
 from typing import Dict, List, Optional, Any

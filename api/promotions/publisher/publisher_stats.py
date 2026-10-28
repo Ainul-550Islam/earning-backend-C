@@ -63,14 +63,12 @@ class PublisherStats:
 
 
 @api_view(['GET'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def publisher_epc_view(request):
     stats = PublisherStats(user_id=request.user.id)
     days = int(request.query_params.get('days', 7))
     return Response({'epc_data': stats.get_epc_by_campaign(days=days)})
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def publisher_referral_stats_view(request):
     stats = PublisherStats(user_id=request.user.id)

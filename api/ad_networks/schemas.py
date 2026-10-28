@@ -540,7 +540,7 @@ class RewardCreateRequestSchema(BaseModel):
 class RewardPayoutRequestSchema(BaseModel):
     """Reward payout request schema"""
     
-    reward_ids: conlist(int, min_items=1, max_items=50) = Field(..., description="Reward IDs")
+    reward_ids: conlist(int, min_length=1, max_length=50) = Field(..., description="Reward IDs")
     payment_method: str = Field(..., description="Payment method")
     payout_address: str = Field(..., description="Payout address")
     notes: Optional[str] = Field(None, description="Payout notes")

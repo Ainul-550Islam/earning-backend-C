@@ -9,7 +9,7 @@ from django.utils import timezone
 
 def get_mediation_performance(group, days: int = 30) -> Dict:
     """Mediation group performance report।"""
-    from api.publisher_tools.models import WaterfallItem, PublisherEarning
+    from publisher_tools.models import WaterfallItem, PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     items = group.waterfall_items.filter(status="active").order_by("priority")
     agg = PublisherEarning.objects.filter(ad_unit=group.ad_unit, date__gte=start).aggregate(
@@ -34,7 +34,7 @@ def get_mediation_performance(group, days: int = 30) -> Dict:
 
 
 def get_network_comparison(publisher, days: int = 30) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     return list(
         PublisherEarning.objects.filter(publisher=publisher, date__gte=start, network__isnull=False)

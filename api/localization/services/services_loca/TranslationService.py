@@ -7,7 +7,7 @@ import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from .LanguageDetector import LanguageDetector
-from ..models import Language, Translation
+from api.localization.models import Language, Translation
 
 logger = logging.getLogger(__name__)
 
@@ -249,7 +249,7 @@ class TranslationService:
             
             # FIXED: Real statistics collection from LocalizationAnalytics model
             try:
-                from ..models.analytics import LocalizationAnalytics
+                from api.localization.models.analytics import LocalizationAnalytics
                 from django.utils import timezone as dj_tz
                 from datetime import timedelta
                 from django.db.models import Count, Avg
@@ -375,7 +375,7 @@ class TranslationService:
         # Store in database for analytics if enabled
         if hasattr(settings, 'LOG_TRANSLATIONS') and settings.LOG_TRANSLATIONS:
             try:
-                from ..models import TranslationLog
+                from api.localization.models import TranslationLog
                 
                 TranslationLog.objects.create(
                     source_language=source_lang,

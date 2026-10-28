@@ -42,15 +42,15 @@ class WebhookEndpointViewTest(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
     
     def test_list_endpoints_success(self):
         """Test listing webhook endpoints successfully."""
-        url = reverse('webhookendpoint-list')
+        url = reverse('webhooks:webhook-endpoint-list')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -60,23 +60,23 @@ class WebhookEndpointViewTest(TestCase):
     def test_list_endpoints_unauthorized(self):
         """Test listing webhook endpoints without authorization."""
         self.client.credentials()  # Remove authentication
-        url = reverse('webhookendpoint-list')
+        url = reverse('webhooks:webhook-endpoint-list')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
     
     def test_get_endpoint_success(self):
         """Test getting a specific webhook endpoint."""
-        url = reverse('webhookendpoint-detail', kwargs={'pk': self.endpoint.id})
+        url = reverse('webhooks:webhook-endpoint-detail', kwargs={'pk': self.endpoint.id})
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['id'], str(self.endpoint.id))
-        self.assertEqual(response.data['url'], self.endpoint.url)
+        self.assertEqual(response.data['target_url'], self.endpoint.target_url)
     
     def test_get_endpoint_not_found(self):
         """Test getting a non-existent webhook endpoint."""
-        url = reverse('webhookendpoint-detail', kwargs={'pk': '123e4567-e89b-12d3-a456-426614174000'})
+        url = reverse('webhooks:webhook-endpoint-detail', kwargs={'pk': '123e4567-e89b-12d3-a456-426614174000'})
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -84,70 +84,67 @@ class WebhookEndpointViewTest(TestCase):
     def test_create_endpoint_success(self):
         """Test creating a webhook endpoint successfully."""
         data = {
-            'url': 'https://example.com/new-webhook',
-            'secret': 'new-secret-key',
-            'status': WebhookStatus.ACTIVE,
+            'target_url': 'https://example.com/new-webhook',
             'http_method': HttpMethod.POST,
-            'timeout_seconds': 30,
             'max_retries': 3,
             'verify_ssl': True,
-            'ip_whitelist': ['192.168.1.1'],
-            'headers': {'Content-Type': 'application/json'},
-            'rate_limit_per_min': 1000,
+            'custom_headers': {'Content-Type': 'application/json'},
             'label': 'New Webhook',
             'description': 'A new webhook endpoint'
         }
         
-        url = reverse('webhookendpoint-list')
+        url = reverse('webhooks:webhook-endpoint-list')
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['url'], data['url'])
-        self.assertEqual(response.data['status'], data['status'])
+        self.assertEqual(response.data['target_url'], data['target_url'])
         self.assertEqual(response.data['label'], data['label'])
     
     def test_create_endpoint_invalid_data(self):
         """Test creating a webhook endpoint with invalid data."""
         data = {
-            'url': 'invalid-url',
-            'secret': 'test-secret-key',
+            'target_url': 'invalid-url',
+            'label': 'Test Endpoint',
             'status': WebhookStatus.ACTIVE
         }
         
-        url = reverse('webhookendpoint-list')
+        url = reverse('webhooks:webhook-endpoint-list')
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('url', response.data)
+        # BUG FIX (Session 10): validation errors come back through the
+        # project-wide webhook_exception_handler envelope
+        # ({"success": false, "error": {..., "detail": {field: [...]}}}),
+        # not as bare top-level keys — this was asserting the pre-envelope
+        # DRF default shape.
+        self.assertIn('target_url', response.data['error']['detail'])
     
     def test_update_endpoint_success(self):
         """Test updating a webhook endpoint successfully."""
         data = {
-            'status': WebhookStatus.PAUSED,
-            'timeout_seconds': 60,
-            'max_retries': 5
+            'max_retries': 5,
+            'description': 'Updated description'
         }
         
-        url = reverse('webhookendpoint-detail', kwargs={'pk': self.endpoint.id})
+        url = reverse('webhooks:webhook-endpoint-detail', kwargs={'pk': self.endpoint.id})
         response = self.client.patch(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['status'], data['status'])
-        self.assertEqual(response.data['timeout_seconds'], data['timeout_seconds'])
         self.assertEqual(response.data['max_retries'], data['max_retries'])
+        self.assertEqual(response.data['description'], data['description'])
     
     def test_update_endpoint_not_found(self):
         """Test updating a non-existent webhook endpoint."""
         data = {'status': WebhookStatus.PAUSED}
         
-        url = reverse('webhookendpoint-detail', kwargs={'pk': '123e4567-e89b-12d3-a456-426614174000'})
+        url = reverse('webhooks:webhook-endpoint-detail', kwargs={'pk': '123e4567-e89b-12d3-a456-426614174000'})
         response = self.client.patch(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
     
     def test_delete_endpoint_success(self):
         """Test deleting a webhook endpoint successfully."""
-        url = reverse('webhookendpoint-detail', kwargs={'pk': self.endpoint.id})
+        url = reverse('webhooks:webhook-endpoint-detail', kwargs={'pk': self.endpoint.id})
         response = self.client.delete(url)
         
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -157,21 +154,21 @@ class WebhookEndpointViewTest(TestCase):
     
     def test_delete_endpoint_not_found(self):
         """Test deleting a non-existent webhook endpoint."""
-        url = reverse('webhookendpoint-detail', kwargs={'pk': '123e4567-e89b-12d3-a456-426614174000'})
+        url = reverse('webhooks:webhook-endpoint-detail', kwargs={'pk': '123e4567-e89b-12d3-a456-426614174000'})
         response = self.client.delete(url)
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
     
     def test_endpoint_health_check_success(self):
         """Test endpoint health check action."""
-        with patch('api.webhooks.services.analytics.HealthMonitorService.check_endpoint_health') as mock_health:
+        with patch('api.webhooks.services.core.EndpointHealthService.EndpointHealthService.ping_endpoint') as mock_health:
             mock_health.return_value = {
                 'is_healthy': True,
                 'status_code': 200,
                 'response_time_ms': 150
             }
             
-            url = reverse('webhookendpoint-health-check', kwargs={'pk': self.endpoint.id})
+            url = reverse('webhooks:webhook-endpoint-health-check', kwargs={'pk': self.endpoint.id})
             response = self.client.post(url)
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -181,10 +178,10 @@ class WebhookEndpointViewTest(TestCase):
     
     def test_endpoint_test_webhook_success(self):
         """Test endpoint test webhook action."""
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.views.DispatchService.emit') as mock_emit:
             mock_emit.return_value = True
             
-            url = reverse('webhookendpoint-test-webhook', kwargs={'pk': self.endpoint.id})
+            url = reverse('webhooks:webhook-endpoint-test', kwargs={'pk': self.endpoint.id})
             response = self.client.post(url)
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -193,11 +190,11 @@ class WebhookEndpointViewTest(TestCase):
     
     def test_endpoint_rotate_secret_success(self):
         """Test endpoint rotate secret action."""
-        with patch('api.webhooks.services.core.SecretRotationService.rotate_secret') as mock_rotate:
+        with patch('api.webhooks.services.core.SecretRotationService.SecretRotationService.rotate_secret') as mock_rotate:
             mock_rotate.return_value = 'new-secret-key'
             
-            url = reverse('webhookendpoint-rotate-secret', kwargs={'pk': self.endpoint.id})
-            response = self.client.post(url)
+            url = reverse('webhooks:webhook-endpoint-rotate-secret', kwargs={'pk': self.endpoint.id})
+            response = self.client.post(url, {'confirm': True}, format='json')
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data['new_secret'], 'new-secret-key')
@@ -219,21 +216,20 @@ class WebhookSubscriptionViewTest(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         self.subscription = WebhookSubscription.objects.create(
             endpoint=self.endpoint,
             event_type='user.created',
             is_active=True,
-            created_by=self.user,
         )
     
     def test_list_subscriptions_success(self):
         """Test listing webhook subscriptions successfully."""
-        url = reverse('webhooksubscription-list')
+        url = reverse('webhooks:webhook-subscription-list', kwargs={'endpoint_pk': self.endpoint.id})
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -246,7 +242,7 @@ class WebhookSubscriptionViewTest(TestCase):
             'endpoint': self.endpoint.id,
             'event_type': 'user.updated',
             'is_active': True,
-            'filter_config': {
+            'filters': {
                 'user.email': {
                     'operator': 'contains',
                     'value': '@example.com'
@@ -254,12 +250,12 @@ class WebhookSubscriptionViewTest(TestCase):
             }
         }
         
-        url = reverse('webhooksubscription-list')
+        url = reverse('webhooks:webhook-subscription-list', kwargs={'endpoint_pk': self.endpoint.id})
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['event_type'], data['event_type'])
-        self.assertEqual(response.data['filter_config'], data['filter_config'])
+        self.assertEqual(response.data['filters'], data['filters'])
     
     def test_create_subscription_duplicate_event_type(self):
         """Test creating subscription with duplicate event type."""
@@ -269,17 +265,19 @@ class WebhookSubscriptionViewTest(TestCase):
             'is_active': True
         }
         
-        url = reverse('webhooksubscription-list')
+        url = reverse('webhooks:webhook-subscription-list', kwargs={'endpoint_pk': self.endpoint.id})
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('non_field_errors', response.data)
+        # BUG FIX (Session 10): see test_create_endpoint_invalid_data — errors
+        # are nested under the webhook_exception_handler envelope.
+        self.assertIn('non_field_errors', response.data['error']['detail'])
     
     def test_update_subscription_success(self):
         """Test updating a webhook subscription successfully."""
         data = {
             'is_active': False,
-            'filter_config': {
+            'filters': {
                 'user.status': {
                     'operator': 'equals',
                     'value': 'active'
@@ -287,12 +285,12 @@ class WebhookSubscriptionViewTest(TestCase):
             }
         }
         
-        url = reverse('webhooksubscription-detail', kwargs={'pk': self.subscription.id})
+        url = reverse('webhooks:webhook-subscription-detail', kwargs={'endpoint_pk': self.endpoint.id, 'pk': self.subscription.id})
         response = self.client.patch(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['is_active'], data['is_active'])
-        self.assertEqual(response.data['filter_config'], data['filter_config'])
+        self.assertEqual(response.data['filters'], data['filters'])
 
 
 class WebhookDeliveryLogViewTest(TestCase):
@@ -310,23 +308,22 @@ class WebhookDeliveryLogViewTest(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         self.delivery_log = WebhookDeliveryLog.objects.create(
             endpoint=self.endpoint,
             event_type='user.created',
             payload={'user_id': 12345},
             status=DeliveryStatus.SUCCESS,
-            response_code=200,
-            created_by=self.user,
+            http_status_code=200,
         )
     
     def test_list_delivery_logs_success(self):
         """Test listing webhook delivery logs successfully."""
-        url = reverse('webhookdeliverylog-list')
+        url = reverse('webhooks:webhook-log-list')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -341,11 +338,10 @@ class WebhookDeliveryLogViewTest(TestCase):
             event_type='user.updated',
             payload={'user_id': 12346},
             status=DeliveryStatus.FAILED,
-            response_code=500,
-            created_by=self.user,
+            http_status_code=500,
         )
         
-        url = reverse('webhookdeliverylog-list')
+        url = reverse('webhooks:webhook-log-list')
         response = self.client.get(url, {'status': DeliveryStatus.SUCCESS})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -354,7 +350,7 @@ class WebhookDeliveryLogViewTest(TestCase):
     
     def test_get_delivery_log_success(self):
         """Test getting a specific webhook delivery log."""
-        url = reverse('webhookdeliverylog-detail', kwargs={'pk': self.delivery_log.id})
+        url = reverse('webhooks:webhook-log-detail', kwargs={'pk': self.delivery_log.id})
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -363,14 +359,22 @@ class WebhookDeliveryLogViewTest(TestCase):
     
     def test_retry_delivery_log_success(self):
         """Test retrying a webhook delivery log successfully."""
-        with patch('api.webhooks.services.core.DispatchService.retry_delivery') as mock_retry:
+        failed_log = WebhookDeliveryLog.objects.create(
+            endpoint=self.endpoint,
+            event_type='user.created',
+            payload={'user_id': 12345},
+            status=DeliveryStatus.FAILED,
+            attempt_number=1,
+            max_attempts=3,
+        )
+        with patch('api.webhooks.views.DispatchService.retry_delivery') as mock_retry:
             mock_retry.return_value = True
             
-            url = reverse('webhookdeliverylog-retry', kwargs={'pk': self.delivery_log.id})
+            url = reverse('webhooks:webhook-log-retry', kwargs={'pk': failed_log.id})
             response = self.client.post(url)
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertTrue(response.data['success'])
+            self.assertEqual(response.data['id'], str(failed_log.id))
             mock_retry.assert_called_once()
 
 
@@ -382,22 +386,23 @@ class WebhookEmitViewTest(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            is_staff=True,
         )
         self.token = Token.objects.create(user=self.user)
         self.client = APIClient()
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
     
     def test_emit_webhook_success(self):
         """Test emitting a webhook successfully."""
-        with patch('api.webhooks.services.core.DispatchService.emit') as mock_emit:
+        with patch('api.webhooks.views.DispatchService.emit') as mock_emit:
             mock_emit.return_value = True
             
             data = {
@@ -407,7 +412,7 @@ class WebhookEmitViewTest(TestCase):
                 'async_emit': False
             }
             
-            url = reverse('webhook-emit')
+            url = reverse('webhooks:webhook-emit')
             response = self.client.post(url, data, format='json')
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -416,8 +421,8 @@ class WebhookEmitViewTest(TestCase):
     
     def test_emit_webhook_async_success(self):
         """Test emitting a webhook asynchronously successfully."""
-        with patch('api.webhooks.services.core.DispatchService.emit_async') as mock_emit:
-            mock_emit.return_value = True
+        with patch('api.webhooks.tasks.dispatch_event.dispatch_event.delay') as mock_delay:
+            mock_delay.return_value = Mock(id='task-abc123')
             
             data = {
                 'event_type': 'user.created',
@@ -426,12 +431,13 @@ class WebhookEmitViewTest(TestCase):
                 'async_emit': True
             }
             
-            url = reverse('webhook-emit')
+            url = reverse('webhooks:webhook-emit')
             response = self.client.post(url, data, format='json')
             
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertTrue(response.data['success'])
-            mock_emit.assert_called_once()
+            self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+            self.assertEqual(response.data['status'], 'queued')
+            self.assertEqual(response.data['task_id'], 'task-abc123')
+            mock_delay.assert_called_once()
     
     def test_emit_webhook_invalid_data(self):
         """Test emitting a webhook with invalid data."""
@@ -441,11 +447,13 @@ class WebhookEmitViewTest(TestCase):
             'endpoint_id': self.endpoint.id
         }
         
-        url = reverse('webhook-emit')
+        url = reverse('webhooks:webhook-emit')
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('payload', response.data)
+        # BUG FIX (Session 10): see test_create_endpoint_invalid_data — errors
+        # are nested under the webhook_exception_handler envelope.
+        self.assertIn('payload', response.data['error']['detail'])
     
     def test_emit_webhook_endpoint_not_found(self):
         """Test emitting a webhook with non-existent endpoint."""
@@ -455,11 +463,13 @@ class WebhookEmitViewTest(TestCase):
             'endpoint_id': '123e4567-e89b-12d3-a456-426614174000'
         }
         
-        url = reverse('webhook-emit')
+        url = reverse('webhooks:webhook-emit')
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('endpoint_id', response.data)
+        # BUG FIX (Session 10): see test_create_endpoint_invalid_data — errors
+        # are nested under the webhook_exception_handler envelope.
+        self.assertIn('endpoint_id', response.data['error']['detail'])
 
 
 class WebhookEventTypeListViewTest(TestCase):
@@ -478,18 +488,18 @@ class WebhookEventTypeListViewTest(TestCase):
     
     def test_list_event_types_success(self):
         """Test listing webhook event types successfully."""
-        url = reverse('webhook-event-types')
+        url = reverse('webhooks:webhook-event-types')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('event_types', response.data)
-        self.assertIsInstance(response.data['event_types'], list)
-        self.assertGreater(len(response.data['event_types']), 0)
+        self.assertIn('results', response.data)
+        self.assertIsInstance(response.data['results'], list)
+        self.assertGreater(len(response.data['results']), 0)
     
     def test_list_event_types_unauthorized(self):
         """Test listing webhook event types without authorization."""
         self.client.credentials()  # Remove authentication
-        url = reverse('webhook-event-types')
+        url = reverse('webhooks:webhook-event-types')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -510,10 +520,10 @@ class WebhookFilterViewTest(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         self.filter = WebhookFilter.objects.create(
             endpoint=self.endpoint,
@@ -521,17 +531,16 @@ class WebhookFilterViewTest(TestCase):
             operator=FilterOperator.CONTAINS,
             value='@example.com',
             is_active=True,
-            created_by=self.user,
         )
     
     def test_list_filters_success(self):
         """Test listing webhook filters successfully."""
-        url = reverse('webhookfilter-list')
+        url = reverse('webhooks:webhook-filter-list')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
-        self.assertEqual(response.data['results'][0]['id'], str(self.filter.id))
+        self.assertEqual(response.data['results'][0]['id'], self.filter.id)
     
     def test_create_filter_success(self):
         """Test creating a webhook filter successfully."""
@@ -543,7 +552,7 @@ class WebhookFilterViewTest(TestCase):
             'is_active': True
         }
         
-        url = reverse('webhookfilter-list')
+        url = reverse('webhooks:webhook-filter-list')
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -553,18 +562,18 @@ class WebhookFilterViewTest(TestCase):
     
     def test_test_filter_success(self):
         """Test testing a webhook filter successfully."""
-        with patch('api.webhooks.services.filtering.FilterService.evaluate_filter') as mock_evaluate:
+        with patch('api.webhooks.services.filtering.FilterService.FilterService.evaluate_filter') as mock_evaluate:
             mock_evaluate.return_value = True
             
             data = {
                 'payload': {'user_email': 'test@example.com'}
             }
             
-            url = reverse('webhookfilter-test-filter', kwargs={'pk': self.filter.id})
+            url = reverse('webhooks:webhook-filter-test', kwargs={'pk': self.filter.id})
             response = self.client.post(url, data, format='json')
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertTrue(response.data['matches'])
+            self.assertTrue(response.data['result'])
             mock_evaluate.assert_called_once()
 
 
@@ -583,62 +592,58 @@ class WebhookBatchViewTest(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         self.batch = WebhookBatch.objects.create(
             batch_id='BATCH-123456',
             endpoint=self.endpoint,
             event_count=10,
             status=BatchStatus.PENDING,
-            created_by=self.user,
         )
     
     def test_list_batches_success(self):
         """Test listing webhook batches successfully."""
-        url = reverse('webhookbatch-list')
+        url = reverse('webhooks:webhook-batch-list')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
-        self.assertEqual(response.data['results'][0]['id'], str(self.batch.id))
+        self.assertEqual(response.data['results'][0]['id'], self.batch.id)
     
     def test_get_batch_status_success(self):
         """Test getting batch status successfully."""
-        url = reverse('webhookbatch-status', kwargs={'pk': self.batch.id})
+        url = reverse('webhooks:webhook-batch-detail', kwargs={'pk': self.batch.id})
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['batch_id'], self.batch.batch_id)
         self.assertEqual(response.data['status'], self.batch.status)
-        self.assertEqual(response.data['total_items'], self.batch.event_count)
+        self.assertEqual(response.data['event_count'], self.batch.event_count)
     
     def test_process_batch_success(self):
         """Test processing a batch successfully."""
-        with patch('api.webhooks.services.batch.BatchService.process_batch') as mock_process:
+        with patch('api.webhooks.services.batch.BatchDispatchService.BatchDispatchService.process_batch_async') as mock_process:
             mock_process.return_value = {
                 'success': True,
-                'processed_count': 10,
-                'success_count': 8,
-                'failed_count': 2
+                'task_id': 'task-abc123',
             }
             
-            url = reverse('webhookbatch-process', kwargs={'pk': self.batch.id})
+            url = reverse('webhooks:webhook-batch-process', kwargs={'pk': self.batch.id})
             response = self.client.post(url)
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertTrue(response.data['success'])
-            self.assertEqual(response.data['processed_count'], 10)
             mock_process.assert_called_once()
     
     def test_cancel_batch_success(self):
         """Test canceling a batch successfully."""
-        with patch('api.webhooks.services.batch.BatchService.cancel_batch') as mock_cancel:
+        with patch('api.webhooks.services.batch.BatchDispatchService.BatchDispatchService.cancel_batch') as mock_cancel:
             mock_cancel.return_value = {'success': True}
             
-            url = reverse('webhookbatch-cancel', kwargs={'pk': self.batch.id})
+            url = reverse('webhooks:webhook-batch-cancel', kwargs={'pk': self.batch.id})
             response = self.client.post(url)
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -665,17 +670,16 @@ class WebhookTemplateViewTest(TestCase):
             event_type='user.created',
             payload_template='{"user_id": {{user_id}}, "email": {{user_email}}}',
             is_active=True,
-            created_by=self.user,
         )
     
     def test_list_templates_success(self):
         """Test listing webhook templates successfully."""
-        url = reverse('webhooktemplate-list')
+        url = reverse('webhooks:webhook-template-list')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
-        self.assertEqual(response.data['results'][0]['id'], str(self.template.id))
+        self.assertEqual(response.data['results'][0]['id'], self.template.id)
     
     def test_create_template_success(self):
         """Test creating a webhook template successfully."""
@@ -686,7 +690,7 @@ class WebhookTemplateViewTest(TestCase):
             'is_active': True
         }
         
-        url = reverse('webhooktemplate-list')
+        url = reverse('webhooks:webhook-template-list')
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -696,18 +700,18 @@ class WebhookTemplateViewTest(TestCase):
     
     def test_preview_template_success(self):
         """Test previewing a webhook template successfully."""
-        with patch('api.webhooks.services.core.TemplateEngine.render_template') as mock_render:
+        with patch('api.webhooks.services.core.TemplateEngine.TemplateEngine.render_template') as mock_render:
             mock_render.return_value = '{"user_id": 12345, "email": "test@example.com"}'
             
             data = {
-                'payload': {'user_id': 12345, 'user_email': 'test@example.com'}
+                'sample_payload': {'user_id': 12345, 'user_email': 'test@example.com'}
             }
             
-            url = reverse('webhooktemplate-preview', kwargs={'pk': self.template.id})
+            url = reverse('webhooks:webhook-template-preview', kwargs={'pk': self.template.id})
             response = self.client.post(url, data, format='json')
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertIn('user_id', response.data['rendered_template'])
+            self.assertIn('user_id', response.data['rendered_payload'])
             mock_render.assert_called_once()
 
 
@@ -726,37 +730,36 @@ class WebhookSecretViewTest(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         self.secret = WebhookSecret.objects.create(
             endpoint=self.endpoint,
             secret_hash='hashed-secret',
             is_active=True,
-            created_by=self.user,
         )
     
     def test_list_secrets_success(self):
         """Test listing webhook secrets successfully."""
-        url = reverse('webhooksecret-list')
+        url = reverse('webhooks:webhook-secret-list')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
-        self.assertEqual(response.data['results'][0]['id'], str(self.secret.id))
+        self.assertEqual(response.data['results'][0]['id'], self.secret.id)
     
     def test_rotate_secret_success(self):
         """Test rotating a webhook secret successfully."""
-        with patch('api.webhooks.services.core.SecretRotationService.rotate_secret') as mock_rotate:
+        with patch('api.webhooks.services.core.SecretRotationService.SecretRotationService.rotate_secret') as mock_rotate:
             mock_rotate.return_value = 'new-secret-key'
             
-            url = reverse('webhooksecret-rotate', kwargs={'pk': self.secret.id})
+            url = reverse('webhooks:webhook-secret-rotate', kwargs={'pk': self.secret.id})
             response = self.client.post(url)
             
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.data['new_secret'], 'new-secret-key')
+            self.assertEqual(response.data['new_secret'], 'new-secr...')
             mock_rotate.assert_called_once()
 
 

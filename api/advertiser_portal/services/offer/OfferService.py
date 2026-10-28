@@ -4,6 +4,7 @@ Offer Service
 Comprehensive service for managing advertising offers,
 including CRUD operations, approval workflows, and publishing.
 """
+from django.db import models
 
 import logging
 from typing import Dict, List, Optional, Any

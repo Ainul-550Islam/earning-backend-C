@@ -437,7 +437,7 @@ class SLABreachAdmin(ModelAdmin):
         }),
         ('Resolution', {
             'fields': ('acknowledged_at', 'acknowledged_by', 'resolved_at',
-                      'resolved_by', 'resolution_time_minutes', 'duration_minutes')
+                      'resolved_by', 'resolution_time_minutes')
         }),
         ('Impact Assessment', {
             'fields': ('business_impact', 'financial_impact', 'customer_impact')
@@ -447,7 +447,7 @@ class SLABreachAdmin(ModelAdmin):
                       'stakeholder_notified', 'communication_sent')
         }),
         ('Resolution', {
-            'fields': ('root_cause', 'preventive_actions', 'notes')
+            'fields': ('root_cause', 'preventive_actions', 'resolution_note')
         }),
     )
     

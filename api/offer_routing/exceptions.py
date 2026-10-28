@@ -309,3 +309,199 @@ def custom_exception_handler(exc, context):
         'code': 'internal_server_error',
         'status_code': status.HTTP_500_INTERNAL_SERVER_ERROR
     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RouteEvaluationError(OfferRoutingException):
+    """Raised for routeevaluation errors."""
+    pass
+
+class OptimizationError(OfferRoutingException):
+    """Raised for optimization errors."""
+    pass
+
+class PluginError(OfferRoutingException):
+    """Raised for plugin errors."""
+    pass
+
+class IntegrationConfigurationError(OfferRoutingException):
+    """Raised for integrationconfiguration errors."""
+    pass
+
+class IntegrationConnectionError(OfferRoutingException):
+    """Raised for integrationconnection errors."""
+    pass
+
+class IntegrationTimeoutError(OfferRoutingException):
+    """Raised for integrationtimeout errors."""
+    pass
+
+class IntegrationAuthenticationError(OfferRoutingException):
+    """Raised for integrationauthentication errors."""
+    pass
+
+class IntegrationAuthorizationError(OfferRoutingException):
+    """Raised for integrationauthorization errors."""
+    pass
+
+class IntegrationValidationError(OfferRoutingException):
+    """Raised for integrationvalidation errors."""
+    pass
+
+class IntegrationDataError(OfferRoutingException):
+    """Raised for integrationdata errors."""
+    pass
+
+class IntegrationSyncError(OfferRoutingException):
+    """Raised for integrationsync errors."""
+    pass
+
+class IntegrationRateLimitError(OfferRoutingException):
+    """Raised for integrationratelimit errors."""
+    pass
+
+class IntegrationNotFoundError(OfferRoutingException):
+    """Raised for integrationnotfound errors."""
+    pass
+
+class IntegrationDisabledError(OfferRoutingException):
+    """Raised for integrationdisabled errors."""
+    pass
+
+class IntegrationError(OfferRoutingException):
+    """Base integration error."""
+    pass
+
+
+class ABTestAssignmentError(OfferRoutingException):
+    """Auto-generated: ABTestAssignmentError."""
+    pass
+
+class ActionExecutionError(OfferRoutingException):
+    """Auto-generated: ActionExecutionError."""
+    pass
+
+class AttachmentUploadError(OfferRoutingException):
+    """Auto-generated: AttachmentUploadError."""
+    pass
+
+class AuthenticationError(OfferRoutingException):
+    """Auto-generated: AuthenticationError."""
+    pass
+
+class AuthorizationError(OfferRoutingException):
+    """Auto-generated: AuthorizationError."""
+    pass
+
+class BehaviorParsingError(OfferRoutingException):
+    """Auto-generated: BehaviorParsingError."""
+    pass
+
+class CapError(OfferRoutingException):
+    """Auto-generated: CapError."""
+    pass
+
+class CapResetError(OfferRoutingException):
+    """Auto-generated: CapResetError."""
+    pass
+
+class CollaborativeFilterError(OfferRoutingException):
+    """Auto-generated: CollaborativeFilterError."""
+    pass
+
+class ConnectionError(OfferRoutingException):
+    """Auto-generated: ConnectionError."""
+    pass
+
+class ContentBasedError(OfferRoutingException):
+    """Auto-generated: ContentBasedError."""
+    pass
+
+class ContextSignalError(OfferRoutingException):
+    """Auto-generated: ContextSignalError."""
+    pass
+
+class DataValidationError(OfferRoutingException):
+    """Auto-generated: DataValidationError."""
+    pass
+
+class DeviceParsingError(OfferRoutingException):
+    """Auto-generated: DeviceParsingError."""
+    pass
+
+class EvaluationError(OfferRoutingException):
+    """Auto-generated: EvaluationError."""
+    pass
+
+class GeoLocationError(OfferRoutingException):
+    """Auto-generated: GeoLocationError."""
+    pass
+
+class HybridRoutingError(OfferRoutingException):
+    """Auto-generated: HybridRoutingError."""
+    pass
+
+class InsightGenerationError(OfferRoutingException):
+    """Auto-generated: InsightGenerationError."""
+    pass
+
+class InvalidFileTypeError(OfferRoutingException):
+    """Auto-generated: InvalidFileTypeError."""
+    pass
+
+class MonitoringError(OfferRoutingException):
+    """Auto-generated: MonitoringError."""
+    pass
+
+class RankingError(OfferRoutingException):
+    """Auto-generated: RankingError."""
+    pass
+
+class RoutingError(OfferRoutingException):
+    """Auto-generated: RoutingError."""
+    pass
+
+class SegmentationError(OfferRoutingException):
+    """Auto-generated: SegmentationError."""
+    pass
+
+class TimeParsingError(OfferRoutingException):
+    """Auto-generated: TimeParsingError."""
+    pass
+
+class UtilityError(OfferRoutingException):
+    """Auto-generated: UtilityError."""
+    pass
+
+
+class GeoTargetingError(OfferRoutingException):
+    """Raised when geo-targeting lookup or rule evaluation fails."""
+    status_code = 503
+    default_detail = "Geo targeting service error."
+    default_code = "geo_targeting_error"
+
+
+class TenantIsolationError(OfferRoutingException):
+    """Raised when a cross-tenant data access is attempted."""
+    status_code = 403
+    default_detail = "Cross-tenant access is not permitted."
+    default_code = "tenant_isolation_error"
+
+
+class WebSocketError(OfferRoutingException):
+    """Raised when a WebSocket channel operation fails."""
+    status_code = 503
+    default_detail = "WebSocket communication error."
+    default_code = "websocket_error"
+
+
+class BillingError(OfferRoutingException):
+    """Raised when a billing or invoice operation fails."""
+    status_code = 402
+    default_detail = "Billing service error."
+    default_code = "billing_error"
+
+
+class FraudDetectionError(OfferRoutingException):
+    """Raised when the fraud detection pipeline encounters an error."""
+    status_code = 503
+    default_detail = "Fraud detection service error."
+    default_code = "fraud_detection_error"

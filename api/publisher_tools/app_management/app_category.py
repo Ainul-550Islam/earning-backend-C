@@ -21,6 +21,7 @@ class AppCategory(TimeStampedModel):
     best_ad_formats  = models.JSONField(default=list, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_app_categories"
         verbose_name = _("App Category")
         verbose_name_plural = _("App Categories")

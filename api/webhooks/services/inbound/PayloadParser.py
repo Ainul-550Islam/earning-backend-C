@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional, List
 from django.utils import timezone
 
 from ...constants import InboundSource
+from ...exceptions import WebhookValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -20,17 +21,32 @@ class PayloadParser:
         """Initialize the payload parser service."""
         self.logger = logger
     
-    def parse_payload(self, source: str, raw_payload: Dict[str, Any]) -> Dict[str, Any]:
+    def parse_payload(self, source: str = None, raw_payload: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        Parse and normalize webhook payload based on source.
-        
+        Two calling conventions:
+          - parse_payload(json_string) — parse a raw JSON string, raise
+            ValueError on empty/None/invalid JSON. New, test-driven.
+          - parse_payload(source, raw_payload) / parse_payload(source=,
+            raw_payload=) — existing source-specific normalization. Used by
+            inbound_receiver.py.
+
         Args:
-            source: The webhook source (bKash, Nagad, Stripe, etc.)
-            raw_payload: The raw webhook payload
-            
+            source: The webhook source (bKash, Nagad, Stripe, etc.) in the
+                old convention, OR a raw JSON string in the new convention.
+            raw_payload: The raw webhook payload (old convention only)
+
         Returns:
             Normalized payload dictionary
         """
+        if raw_payload is None:
+            payload_str = source
+            if not payload_str:
+                raise ValueError("payload is required")
+            try:
+                return json.loads(payload_str)
+            except (json.JSONDecodeError, TypeError) as e:
+                raise ValueError(f"Invalid JSON payload: {e}")
+
         try:
             if source == InboundSource.BKASH:
                 return self._parse_bkash_payload(raw_payload)
@@ -47,6 +63,57 @@ class PayloadParser:
         except Exception as e:
             logger.error(f"Error parsing payload for {source}: {str(e)}")
             return raw_payload
+
+    # ── Simple envelope helpers ──────────────────────────────────────────
+    # extract_event_type/normalize_payload/validate_payload_structure(dict,
+    # source) work against this codebase's own generic inbound envelope
+    # ({'event': {'type':, 'data':}} for Stripe-like sources, {'event_type',
+    # 'resource'} for PayPal, {'eventType', 'data'} for bKash/Nagad) — the
+    # same envelope test_signature_verifier.py's payloads use. This is
+    # distinct from _parse_stripe_payload() etc. above, which map *real*
+    # Stripe/PayPal API shapes to a richer normalized dict.
+
+    def extract_event_type(self, payload: Dict[str, Any], source: str) -> str:
+        """Extract the event type string from a payload's envelope. Raises
+        ValueError if the field is missing or the source is unrecognized."""
+        if source == InboundSource.STRIPE:
+            event_type = (payload or {}).get('event', {}).get('type')
+        elif source == InboundSource.PAYPAL:
+            event_type = (payload or {}).get('event_type')
+        elif source in (InboundSource.BKASH, InboundSource.NAGAD):
+            event_type = (payload or {}).get('eventType')
+        else:
+            raise ValueError(f"Unknown source: {source}")
+
+        if not event_type:
+            raise ValueError(f"Missing event type in payload for source: {source}")
+        return event_type
+
+    def normalize_payload(self, payload: Dict[str, Any], source: str) -> Dict[str, Any]:
+        """Normalize a payload's envelope down to {'event_type', 'data'}."""
+        if source == InboundSource.STRIPE:
+            event = (payload or {}).get('event', {})
+            return {'source': source, 'event_type': event.get('type'), 'data': event.get('data')}
+        elif source == InboundSource.PAYPAL:
+            return {'source': source, 'event_type': (payload or {}).get('event_type'), 'data': (payload or {}).get('resource')}
+        elif source in (InboundSource.BKASH, InboundSource.NAGAD):
+            return {'source': source, 'event_type': (payload or {}).get('eventType'), 'data': (payload or {}).get('data')}
+        else:
+            raise ValueError(f"Unknown source: {source}")
+
+    def _validate_payload_structure_simple(self, payload: Dict[str, Any], source: str) -> bool:
+        """bool-returning structural check against the simple envelope."""
+        try:
+            self.extract_event_type(payload, source)
+        except ValueError:
+            return False
+        if source == InboundSource.STRIPE:
+            return 'data' in (payload or {}).get('event', {})
+        elif source == InboundSource.PAYPAL:
+            return 'resource' in (payload or {})
+        elif source in (InboundSource.BKASH, InboundSource.NAGAD):
+            return True
+        return False
     
     def _parse_bkash_payload(self, raw_payload: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -462,17 +529,25 @@ class PayloadParser:
                 'error': str(e)
             }
     
-    def validate_payload_structure(self, source: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_payload_structure(self, source, payload=None) -> Dict[str, Any]:
         """
-        Validate payload structure for a source.
-        
+        Two calling conventions, disambiguated by the type of the first arg:
+          - validate_payload_structure(source, payload) -> dict — original,
+            detailed errors/warnings report. No production callers.
+          - validate_payload_structure(payload, source) -> bool — newer,
+            simple pass/fail check against the generic envelope used by
+            extract_event_type()/normalize_payload() above.
+
         Args:
-            source: The webhook source
-            payload: The payload to validate
-            
+            source: The webhook source, OR the payload dict (new convention)
+            payload: The payload to validate, OR the source string (new convention)
+
         Returns:
-            Dictionary with validation results
+            Dictionary with validation results (old convention), or bool (new)
         """
+        if isinstance(source, dict):
+            return self._validate_payload_structure_simple(payload=source, source=payload)
+
         try:
             validation_result = {
                 'source': source,

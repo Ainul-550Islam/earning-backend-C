@@ -131,9 +131,6 @@ class TrafficQualityScorer:
 def my_quality_score_view(request):
     scorer = TrafficQualityScorer()
     return Response(scorer.get_cached_score(request.user.id))
-
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def publisher_quality_score_view(request, publisher_id):
     scorer = TrafficQualityScorer()

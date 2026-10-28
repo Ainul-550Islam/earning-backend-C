@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def calculate_publisher_ivt_rates(days: int = 7):
     """সব publishers-এর IVT rate calculate করে।"""
-    from api.publisher_tools.models import Publisher, TrafficSafetyLog, PublisherEarning
+    from publisher_tools.models import Publisher, TrafficSafetyLog, PublisherEarning
     start = timezone.now().date() - timedelta(days=days)
     publishers = Publisher.objects.filter(status="active")
     results = []
@@ -49,9 +49,9 @@ def calculate_publisher_ivt_rates(days: int = 7):
 
 def flag_suspicious_publishers(threshold_pct: float = 20.0, auto_suspend: bool = False):
     """High IVT rate publishers flag ও optionally suspend করে।"""
-    from api.publisher_tools.models import Publisher
-    from api.publisher_tools.services import PublisherService
-    from api.publisher_tools.fraud_prevention.fraud_alert import create_fraud_alert
+    from publisher_tools.models import Publisher
+    from publisher_tools.services import PublisherService
+    from publisher_tools.fraud_prevention.fraud_alert import create_fraud_alert
     ivt_data = calculate_publisher_ivt_rates(days=7)
     warned    = 0
     suspended = 0
@@ -80,8 +80,8 @@ def flag_suspicious_publishers(threshold_pct: float = 20.0, auto_suspend: bool =
 
 def validate_ads_txt_all_sites():
     """সব active sites-এর ads.txt validate করে।"""
-    from api.publisher_tools.models import Site
-    from api.publisher_tools.services import SiteService
+    from publisher_tools.models import Site
+    from publisher_tools.services import SiteService
     sites = Site.objects.filter(status="active")
     verified = 0
     failed   = 0

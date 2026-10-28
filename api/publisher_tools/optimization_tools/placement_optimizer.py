@@ -5,7 +5,7 @@ from typing import Dict, List
 
 def run_placement_optimization(publisher) -> Dict:
     """Publisher-এর সব placements optimize করে।"""
-    from api.publisher_tools.models import AdPlacement
+    from publisher_tools.models import AdPlacement
     placements = AdPlacement.objects.filter(ad_unit__publisher=publisher).select_related("ad_unit")
     results = []
     for p in placements:
@@ -19,7 +19,7 @@ def _optimize_single_placement(placement) -> Dict:
     changes = {}
     # Auto-set floor price if 0
     if float(placement.effective_floor_price) == 0:
-        from .yield_optimizer import suggest_floor_price
+        from ..ad_placements.placement_floor_price import suggest_floor_price
         suggestion = suggest_floor_price(placement)
         if suggestion.get("suggested_floor", 0) > 0:
             from decimal import Decimal
@@ -39,8 +39,8 @@ def _optimize_single_placement(placement) -> Dict:
 
 
 def score_all_placements(publisher) -> List[Dict]:
-    from api.publisher_tools.models import AdPlacement
-    from api.publisher_tools.ad_placements.placement_reporting import get_placement_efficiency_score
+    from publisher_tools.models import AdPlacement
+    from publisher_tools.ad_placements.placement_reporting import get_placement_efficiency_score
     placements = AdPlacement.objects.filter(ad_unit__publisher=publisher).select_related("ad_unit")
     return sorted(
         [get_placement_efficiency_score(p) for p in placements],

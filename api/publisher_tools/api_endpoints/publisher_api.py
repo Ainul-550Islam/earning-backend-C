@@ -28,8 +28,8 @@ class PublisherDashboardView(APIView):
             return Response({"success": False, "message": "No publisher profile found."}, status=404)
 
         period = request.query_params.get("period", "last_30_days")
-        from api.publisher_tools.performance_analytics.publisher_dashboard import get_dashboard_summary, get_performance_alerts
-        from api.publisher_tools.performance_analytics.real_time_analytics import get_live_stats
+        from publisher_tools.performance_analytics.publisher_dashboard import get_dashboard_summary, get_performance_alerts
+        from publisher_tools.performance_analytics.real_time_analytics import get_live_stats
 
         try:
             dashboard = get_dashboard_summary(publisher, period)
@@ -62,7 +62,7 @@ class PublisherStatsAPIView(APIView):
     def get(self, request, pub_id=None):
         # Admin can view any, publisher only self
         if request.user.is_staff and pub_id:
-            from api.publisher_tools.models import Publisher
+            from publisher_tools.models import Publisher
             try:
                 publisher = Publisher.objects.get(publisher_id=pub_id)
             except Publisher.DoesNotExist:
@@ -74,10 +74,10 @@ class PublisherStatsAPIView(APIView):
                 return Response({"success": False, "message": "No publisher profile found."}, status=404)
 
         period = request.query_params.get("period", "last_30_days")
-        from api.publisher_tools.publisher_management.publisher_analytics import (
+        from publisher_tools.publisher_management.publisher_analytics import (
             get_publisher_overview, get_revenue_breakdown, get_performance_metrics, get_top_earning_content,
         )
-        from api.publisher_tools.utils import get_date_range
+        from publisher_tools.utils import get_date_range
         start_date, end_date = get_date_range(period)
 
         return Response({
@@ -98,7 +98,7 @@ class PublisherLeaderboardView(APIView):
     def get(self, request):
         period = request.query_params.get("period", "last_30_days")
         limit  = int(request.query_params.get("limit", 10))
-        from api.publisher_tools.repository import PublisherRepository
+        from publisher_tools.repository import PublisherRepository
         top = PublisherRepository.get_top_publishers_by_revenue(limit=limit, days=30)
         return Response({"success": True, "data": top})
 
@@ -113,7 +113,7 @@ class PublisherHealthCheckView(APIView):
         except Exception:
             return Response({"success": False, "message": "No publisher profile found."}, status=404)
 
-        from api.publisher_tools.publisher_management.publisher_profile import (
+        from publisher_tools.publisher_management.publisher_profile import (
             get_publisher_profile_completion, calculate_publisher_health_score,
         )
         return Response({
@@ -141,7 +141,7 @@ class PublisherOnboardingView(APIView):
         except Exception:
             return Response({"success": False, "message": "No publisher profile found."}, status=404)
 
-        from api.publisher_tools.models import AdUnit, Site, App
+        from publisher_tools.models import AdUnit, Site, App
         has_site      = Site.objects.filter(publisher=publisher, status="active").exists()
         has_app       = App.objects.filter(publisher=publisher, status="active").exists()
         has_ad_unit   = AdUnit.objects.filter(publisher=publisher, status="active").exists()

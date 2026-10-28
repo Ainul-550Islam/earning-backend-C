@@ -5,6 +5,7 @@ Publisher-এর নিজস্ব brand identity ও public store page।
 """
 from decimal import Decimal
 from django.db import models
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
 from core.models import TimeStampedModel
@@ -153,6 +154,7 @@ class PublisherBrand(TimeStampedModel):
     metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_brands'
         verbose_name = _('Publisher Brand')
         verbose_name_plural = _('Publisher Brands')
@@ -272,6 +274,7 @@ class PublisherRating(TimeStampedModel):
     response_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_ratings'
         verbose_name = _('Publisher Rating')
         verbose_name_plural = _('Publisher Ratings')
@@ -309,7 +312,7 @@ class PublisherBlacklist(TimeStampedModel):
     publisher   = models.ForeignKey(
         'publisher_tools.Publisher',
         on_delete=models.CASCADE,
-        related_name='blacklist_entries',
+        related_name='blacklist_records',
         verbose_name=_("Publisher"),
     )
     list_type   = models.CharField(max_length=30, choices=LIST_TYPE_CHOICES, verbose_name=_("List Type"), db_index=True)
@@ -318,11 +321,12 @@ class PublisherBlacklist(TimeStampedModel):
     is_active   = models.BooleanField(default=True, db_index=True)
     expires_at  = models.DateTimeField(null=True, blank=True, verbose_name=_("Expires At"))
     created_by  = models.ForeignKey(
-        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='publisher_tools_blacklist_created',
     )
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_blacklists'
         verbose_name = _('Publisher Blacklist Entry')
         verbose_name_plural = _('Publisher Blacklist Entries')

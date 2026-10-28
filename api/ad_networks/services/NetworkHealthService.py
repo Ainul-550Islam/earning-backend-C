@@ -3,6 +3,8 @@ api/ad_networks/services/NetworkHealthService.py
 Service for pinging networks and updating health status
 SaaS-ready with tenant support
 """
+from django.db.models import Avg
+from django.db.models import Q
 
 import logging
 import json

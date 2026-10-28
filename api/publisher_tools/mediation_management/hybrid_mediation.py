@@ -21,7 +21,7 @@ def get_hybrid_ad_response(group, request_context: Dict) -> Dict:
 
 
 def _run_header_bidding(group, context: Dict) -> List[Dict]:
-    from api.publisher_tools.models import HeaderBiddingConfig
+    from publisher_tools.models import HeaderBiddingConfig
     configs = HeaderBiddingConfig.objects.filter(mediation_group=group, status="active")
     bids = []
     for config in configs:
@@ -31,14 +31,14 @@ def _run_header_bidding(group, context: Dict) -> List[Dict]:
 
 
 def _get_waterfall_floor(group, context: Dict) -> Decimal:
-    from api.publisher_tools.models import WaterfallItem
+    from publisher_tools.models import WaterfallItem
     first_item = group.waterfall_items.filter(status="active").order_by("priority").first()
     return first_item.floor_ecpm if first_item else Decimal("0")
 
 
 def compare_strategies(group, days: int = 30) -> Dict:
     """Waterfall vs header bidding revenue compare করে।"""
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.db.models import Sum
     from datetime import timedelta
     start = timezone.now().date() - timedelta(days=days)

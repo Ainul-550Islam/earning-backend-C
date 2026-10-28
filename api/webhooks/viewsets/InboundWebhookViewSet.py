@@ -3,11 +3,13 @@
 This module contains the ViewSet for inbound webhook management.
 """
 
+from datetime import timedelta
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db import models
 from django.utils import timezone
 
 from ..models import InboundWebhook, InboundWebhookLog, InboundWebhookRoute, InboundWebhookError
@@ -107,7 +109,7 @@ class InboundWebhookViewSet(viewsets.ModelViewSet):
                 'message': 'Webhook processing failed'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='validate-signature')
     def validate_signature(self, request, pk=None):
         """Validate signature for an inbound webhook."""
         inbound_webhook = self.get_object()
@@ -138,13 +140,13 @@ class InboundWebhookViewSet(viewsets.ModelViewSet):
                 'message': 'Signature validation failed'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='rotate-secret')
     def rotate_secret(self, request, pk=None):
         """Rotate secret for an inbound webhook."""
         inbound_webhook = self.get_object()
         
         try:
-            from ..services.core import SecretRotationService
+            from ..services.core.SecretRotationService import SecretRotationService
             rotation_service = SecretRotationService()
             
             new_secret = rotation_service.rotate_inbound_secret(inbound_webhook)
@@ -251,7 +253,7 @@ class InboundWebhookViewSet(viewsets.ModelViewSet):
         serializer = InboundWebhookRouteSerializer(routes, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-source')
     def by_source(self, request):
         """Get inbound webhooks by source."""
         source = request.query_params.get('source')
@@ -270,7 +272,7 @@ class InboundWebhookViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(inbound_webhooks, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-activate')
     def bulk_activate(self, request):
         """Activate multiple inbound webhooks."""
         inbound_webhook_ids = request.data.get('inbound_webhook_ids', [])
@@ -287,7 +289,7 @@ class InboundWebhookViewSet(viewsets.ModelViewSet):
             'updated_count': updated_count
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-deactivate')
     def bulk_deactivate(self, request):
         """Deactivate multiple inbound webhooks."""
         inbound_webhook_ids = request.data.get('inbound_webhook_ids', [])
@@ -339,13 +341,13 @@ class InboundWebhookViewSet(viewsets.ModelViewSet):
             'source_statistics': list(source_stats)
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='recent-activity')
     def recent_activity(self, request):
         """Get recent inbound webhook activity."""
         from ..models import InboundWebhookLog
         
         hours = int(request.query_params.get('hours', 24))
-        since = timezone.now() - timezone.timedelta(hours=hours)
+        since = timezone.now() - timedelta(hours=hours)
         
         recent_logs = InboundWebhookLog.objects.filter(
             inbound__in=self.queryset,
@@ -362,7 +364,7 @@ class InboundWebhookViewSet(viewsets.ModelViewSet):
         serializer = InboundWebhookLogListSerializer(recent_logs, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='test-endpoint')
     def test_endpoint(self, request):
         """Test inbound webhook endpoint."""
         url_token = request.data.get('url_token')

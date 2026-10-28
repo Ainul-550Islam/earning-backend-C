@@ -68,7 +68,7 @@ class Command(BaseCommand):
         parser.add_argument('--force', action='store_true', help='Existing records overwrite করে')
 
     def handle(self, *args, **options):
-        from localization.models.core import Language
+        from api.localization.models.core import Language
         force = options.get('force', False)
         created = updated = skipped = 0
         with transaction.atomic():

@@ -6,8 +6,15 @@ import hmac
 import logging
 from decimal import Decimal
 from .OfferProcessor import OfferProcessor
-from ..constants import *
-from ..exceptions import *
+from ..constants import (
+    PROVIDER_TAPJOY,
+    STATUS_ACTIVE,
+    STATUS_PAUSED,
+    TAPJOY_API_BASE,
+)
+from api.offerwall.exceptions import ProviderAPIException
+from api.offerwall.exceptions import InvalidWebhookSignatureException
+# no exceptions used
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ from django.db.models import Sum, Avg
 
 
 def generate_hourly_report(publisher, report_date: date) -> Dict:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     data = list(
         PublisherEarning.objects.filter(
             publisher=publisher, date=report_date, granularity="hourly",
@@ -30,7 +30,7 @@ def generate_hourly_report(publisher, report_date: date) -> Dict:
 
 
 def get_best_hours(publisher, days: int = 30) -> List[Dict]:
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.utils import timezone
     from datetime import timedelta
     start = timezone.now().date() - timedelta(days=days)

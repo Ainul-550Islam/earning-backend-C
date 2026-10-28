@@ -42,7 +42,7 @@ def sync_partners_task(self):
 @shared_task(name='djoyalty.check_partner_webhooks', bind=True, max_retries=3)
 def check_partner_webhooks_task(self):
     """
-    Partner এর webhook URLs check করো — alive কিনা।
+    Partner এর webhook URLs check করো -- alive কিনা।
     Returns: dict with active/failed counts
     """
     try:

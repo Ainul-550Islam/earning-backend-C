@@ -149,6 +149,8 @@ class LinkLocker:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_locked_link(request):
     """API: Publisher creates a new locked link."""
@@ -166,8 +168,6 @@ def create_locked_link(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def check_lock_status(request, lock_token):
     """API: Check if visitor has unlocked content."""
@@ -175,9 +175,6 @@ def check_lock_status(request, lock_token):
     locker = LinkLocker(publisher_id=0)
     result = locker.check_unlock_status(lock_token, visitor_id)
     return Response(result)
-
-
-@api_view(['POST'])
 @permission_classes([AllowAny])
 def record_unlock(request, lock_token):
     """API: S2S callback — offer completed, unlock content."""

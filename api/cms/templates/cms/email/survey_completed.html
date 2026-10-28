@@ -1,0 +1,56 @@
+{% extends "cms/email/base_email.html" %}
+{% load i18n %}
+
+{% block content %}
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #2c3e50; margin: 0;">🎯 Survey Completed!</h1>
+    </div>
+    
+    <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 25px;">
+        <h2 style="color: #495057; margin-top: 0;">Great job, {{ user.username }}!</h2>
+        <p style="color: #6c757d; font-size: 16px; line-height: 1.5;">
+            You've successfully completed the survey "<strong>{{ survey_title }}</strong>" 
+            and earned <strong>{{ reward_amount }} {{ currency_symbol }}</strong>!
+        </p>
+        
+        {% if quality_score %}
+        <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 15px 0;">
+            <p style="margin: 0; color: #004085;">
+                <strong>Quality Score:</strong> {{ quality_score }}/1.0
+            </p>
+        </div>
+        {% endif %}
+        
+        {% if time_spent %}
+        <p style="color: #6c757d; font-size: 14px; margin: 10px 0;">
+            <small>Time spent: {{ time_spent }} minutes</small>
+        </p>
+        {% endif %}
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{{ site_url }}/surveys/" 
+           style="background: #28a745; color: white; padding: 12px 30px; text-decoration: none; 
+                  border-radius: 6px; font-weight: bold; display: inline-block;">
+            Take More Surveys
+        </a>
+    </div>
+    
+    {% if next_survey_available %}
+    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin-top: 20px;">
+        <p style="margin: 0; color: #856404;">
+            <strong>📋 New Survey Available!</strong><br>
+            We have a new survey that matches your profile. Check your dashboard to participate!
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+{% block footer %}
+<div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+    <p style="color: #6c757d; font-size: 12px; margin: 0;">
+        Keep completing surveys to earn more rewards and improve your profile score!
+    </p>
+</div>
+{% endblock %}

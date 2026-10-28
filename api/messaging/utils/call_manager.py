@@ -4,6 +4,7 @@ WebRTC Call Manager — ICE server config, room management helpers.
 from __future__ import annotations
 import logging
 import uuid
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +21,10 @@ def get_ice_servers(user_id=None) -> list:
     """
     from django.conf import settings
 
-    stun_servers = getattr(settings, "WEBRTC_STUN_SERVERS", [
+    stun_servers = getattr(settings, "WEBRTC_STUN_SERVERS", None) or [
         {"urls": "stun:stun.l.google.com:19302"},
         {"urls": "stun:stun1.l.google.com:19302"},
-    ])
+    ]
 
     turn_config = getattr(settings, "WEBRTC_TURN_CONFIG", None)
     if turn_config:

@@ -12,15 +12,25 @@ from django.utils.safestring import mark_safe
 from django.contrib import messages
 from django.utils import timezone
 
+from .models import (
+    Tenant, TenantSettings, TenantBilling, TenantInvoice,
+    Plan, PlanFeature, PlanUpgrade, PlanUsage, PlanQuota,
+    TenantBranding, TenantDomain, TenantEmail, TenantSocialLink,
+    TenantAPIKey, TenantWebhookConfig, TenantIPWhitelist, TenantAuditLog,
+    TenantOnboarding, TenantOnboardingStep, TenantTrialExtension,
+    TenantMetric, TenantHealthScore, TenantFeatureFlag, TenantNotification,
+    ResellerConfig, ResellerInvoice,
+)
+
 # Import all admin classes from admin directory
-from .admin.core import (
+from .admin_packages.core import (
     TenantAdmin,
     TenantSettingsAdmin,
     TenantBillingAdmin,
     TenantInvoiceAdmin,
 )
 
-from .admin.plan import (
+from .admin_packages.plan import (
     PlanAdmin,
     PlanFeatureAdmin,
     PlanUpgradeAdmin,
@@ -28,34 +38,34 @@ from .admin.plan import (
     PlanQuotaAdmin,
 )
 
-from .admin.branding import (
+from .admin_packages.branding import (
     TenantBrandingAdmin,
     TenantDomainAdmin,
     TenantEmailAdmin,
     TenantSocialLinkAdmin,
 )
 
-from .admin.security import (
+from .admin_packages.security import (
     TenantAPIKeyAdmin,
     TenantWebhookConfigAdmin,
     TenantIPWhitelistAdmin,
     TenantAuditLogAdmin,
 )
 
-from .admin.onboarding import (
+from .admin_packages.onboarding import (
     TenantOnboardingAdmin,
     TenantOnboardingStepAdmin,
     TenantTrialExtensionAdmin,
 )
 
-from .admin.analytics import (
+from .admin_packages.analytics import (
     TenantMetricAdmin,
     TenantHealthScoreAdmin,
     TenantFeatureFlagAdmin,
     TenantNotificationAdmin,
 )
 
-from .admin.reseller import (
+from .admin_packages.reseller import (
     ResellerConfigAdmin,
     ResellerInvoiceAdmin,
 )

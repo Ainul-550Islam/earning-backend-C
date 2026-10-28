@@ -5,6 +5,7 @@ Used by services.translate_message().
 from __future__ import annotations
 import logging
 from typing import Optional
+import requests  # noqa: F401  (module-level so tests can patch it)
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,6 @@ logger = logging.getLogger(__name__)
 def detect_language(text: str) -> str:
     """Detect the language of a text string. Returns ISO 639-1 code."""
     from django.conf import settings
-    import requests
 
     google_key = getattr(settings, "GOOGLE_TRANSLATE_API_KEY", None)
     if not google_key:
@@ -41,7 +41,6 @@ def translate_text(text: str, target_lang: str, source_lang: Optional[str] = Non
     """
     from . import notifier as _n  # noqa — just to ensure module loaded
     from django.conf import settings
-    import requests
 
     # Google
     google_key = getattr(settings, "GOOGLE_TRANSLATE_API_KEY", None)

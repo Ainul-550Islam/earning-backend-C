@@ -31,7 +31,7 @@ class WebhookService:
         """Registered webhooks-এ event deliver করে"""
         results = []
         try:
-            from ..models.settings import WebhookRegistration
+            from api.localization.models.settings import WebhookRegistration
             webhooks = WebhookRegistration.objects.filter(
                 is_active=True
             ).filter(
@@ -118,7 +118,7 @@ class WebhookService:
     def _log_delivery(self, webhook, event: str, payload: Dict, result: Dict):
         """Delivery attempt DB-তে log করে"""
         try:
-            from ..models.settings import WebhookDeliveryLog
+            from api.localization.models.settings import WebhookDeliveryLog
             WebhookDeliveryLog.objects.create(
                 webhook=webhook,
                 event=event,
@@ -164,7 +164,7 @@ class WebhookService:
     def test_webhook(self, webhook_id: int) -> Dict:
         """Webhook test করে — ping event পাঠায়"""
         try:
-            from ..models.settings import WebhookRegistration
+            from api.localization.models.settings import WebhookRegistration
             webhook = WebhookRegistration.objects.filter(pk=webhook_id).first()
             if not webhook:
                 return {'success': False, 'error': 'Webhook not found'}

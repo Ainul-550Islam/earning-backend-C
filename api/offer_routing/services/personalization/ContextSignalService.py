@@ -13,18 +13,18 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q, Count, Avg, Sum
 from django.core.cache import cache
-from ....models import (
+from offer_routing.models import (
     OfferRoute, UserOfferHistory, OfferScore, OfferAffinityScore,
     UserPreferenceVector, RoutingDecisionLog, ContextualSignal
 )
-from ....choices import SignalType
-from ....constants import (
+from offer_routing.choices import SignalType
+from offer_routing.constants import (
     CONTEXT_SIGNAL_CACHE_TIMEOUT, SIGNAL_EXPIRY_HOURS,
     MAX_SIGNALS_PER_USER, SIGNAL_CONFIDENCE_THRESHOLD,
     CONTEXT_WEIGHTS, SIGNAL_PROCESSING_BATCH_SIZE
 )
-from ....exceptions import PersonalizationError, ContextSignalError
-from ....utils import extract_context_features, calculate_signal_strength
+from offer_routing.exceptions import PersonalizationError, ContextSignalError
+from offer_routing.utils import extract_context_features, calculate_signal_strength
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

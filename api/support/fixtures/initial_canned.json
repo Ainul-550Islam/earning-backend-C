@@ -1,0 +1,72 @@
+[
+  {
+    "model": "support.cannedresponse",
+    "pk": 1,
+    "fields": {
+      "shortcut": "greet",
+      "title": "Greeting",
+      "category": "general",
+      "content": "Hello! Thank you for contacting support. How can I assist you today?",
+      "is_active": true,
+      "usage_count": 0,
+      "created_by": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.cannedresponse",
+    "pk": 2,
+    "fields": {
+      "shortcut": "ack",
+      "title": "Acknowledgement",
+      "category": "general",
+      "content": "Thank you for reaching out. I have received your request and will investigate. Please allow up to 24 hours for a response.",
+      "is_active": true,
+      "usage_count": 0,
+      "created_by": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.cannedresponse",
+    "pk": 3,
+    "fields": {
+      "shortcut": "resolve",
+      "title": "Issue Resolved",
+      "category": "general",
+      "content": "I am glad to inform you that your issue has been resolved. If you experience any further problems, please do not hesitate to contact us again. Have a great day!",
+      "is_active": true,
+      "usage_count": 0,
+      "created_by": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.cannedresponse",
+    "pk": 4,
+    "fields": {
+      "shortcut": "verify_offer",
+      "title": "Offer Verification Request",
+      "category": "coins",
+      "content": "To verify your offer completion, please provide:\n1. Offer name\n2. Click ID (if available)\n3. Screenshot of completion\n4. Date/time when you completed the offer",
+      "is_active": true,
+      "usage_count": 0,
+      "created_by": null,
+      "tenant": null
+    }
+  },
+  {
+    "model": "support.cannedresponse",
+    "pk": 5,
+    "fields": {
+      "shortcut": "withdraw_info",
+      "title": "Withdrawal Information Request",
+      "category": "payment",
+      "content": "To investigate your withdrawal, please provide:\n1. Transaction ID\n2. Amount requested\n3. Payment method (bKash/Nagad/Bank)\n4. Account number used\n5. Date of request",
+      "is_active": true,
+      "usage_count": 0,
+      "created_by": null,
+      "tenant": null
+    }
+  }
+]

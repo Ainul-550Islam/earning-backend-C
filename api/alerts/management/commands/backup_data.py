@@ -3,6 +3,7 @@ Django Management Command: Backup Alert Data
 """
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+from django.db import connection
 from django.conf import settings
 import json
 import os
@@ -247,7 +248,7 @@ class Command(BaseCommand):
         table_name = model_class._meta.db_table
         
         # Build SQL
-        sql = f"SELECT * FROM {table_name}"
+        sql = f"SELECT * FROM {connection.ops.quote_name(table_name)}"  # nosec B608 - identifiers validated via sql_utils; values are bound parameters
         
         if days > 0:
             cutoff_date = timezone.now() - timezone.timedelta(days=days)
@@ -265,10 +266,10 @@ class Command(BaseCommand):
     
     def _get_model_class(self, model):
         """Get model class by name"""
-        from alerts.models.core import AlertRule, AlertLog, Notification
-        from alerts.models.channel import AlertChannel
-        from alerts.models.incident import Incident
-        from alerts.models.reporting import AlertReport
+        from api.alerts.models.core import AlertRule, AlertLog, Notification
+        from api.alerts.models.channel import AlertChannel
+        from api.alerts.models.incident import Incident
+        from api.alerts.models.reporting import AlertReport
         
         model_map = {
             'rules': AlertRule,

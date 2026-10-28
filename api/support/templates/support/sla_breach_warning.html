@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0}
+.container{max-width:600px;margin:40px auto;background:#fff;border-radius:8px;overflow:hidden}
+.header{background:#dc2626;color:#fff;padding:30px;text-align:center}
+.header h1{margin:0}.body{padding:30px}
+.alert-box{background:#fef2f2;border:2px solid #dc2626;border-radius:8px;padding:20px;margin:20px 0;text-align:center}
+.alert-box .time{font-size:36px;font-weight:bold;color:#dc2626}
+.btn{display:inline-block;background:#dc2626;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin:20px 0}
+.footer{background:#f9fafb;padding:20px;text-align:center;color:#6b7280;font-size:13px}
+</style></head><body>
+<div class="container">
+  <div class="header"><h1>🚨 SLA {{ breach_type }} Alert</h1></div>
+  <div class="body">
+    <p>Hello <strong>{{ agent_name }}</strong>,</p>
+    <p>Ticket <strong>#{{ ticket_id }}</strong> requires immediate attention.</p>
+    <div class="alert-box">
+      {% if minutes_remaining %}<p>Time Remaining</p><div class="time">{{ minutes_remaining }} min</div>
+      {% else %}<p>OVERDUE BY</p><div class="time">{{ overdue_hours }} hours</div>{% endif %}
+    </div>
+    <p><strong>Subject:</strong> {{ subject }}</p>
+    <p><strong>Breach Type:</strong> {{ breach_type }}</p>
+    <a href="{{ ticket_url }}" class="btn">Open Ticket NOW →</a>
+  </div>
+  <div class="footer">© {{ year }} {{ site_name }}</div>
+</div></body></html>

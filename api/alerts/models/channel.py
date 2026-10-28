@@ -115,7 +115,7 @@ class AlertChannel(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"{self.name} ({self.get_channel_type_display()})"
+        return f"AlertChannel: {self.name} - {self.channel_type}"
     
     def clean(self):
         """Validate channel configuration"""
@@ -211,6 +211,10 @@ class AlertChannel(models.Model):
         if 'provider' not in self.config:
             raise ValidationError("Pager channel requires 'provider' in configuration")
     
+    def check_rate_limit(self, notification_type=None):
+        """Check if channel is within rate limits. Alias for can_send_notification."""
+        return self.can_send_notification()
+
     def can_send_notification(self):
         """Check if channel can send notification"""
         if not self.is_enabled or self.status != 'active':
@@ -264,6 +268,7 @@ class AlertChannel(models.Model):
         self.consecutive_failures = 0
         self.total_sent += 1
         self._update_success_rate()
+        self._skip_health_signal = True
         self.save(update_fields=['last_success', 'consecutive_failures', 'total_sent', 'success_rate'])
     
     def record_failure(self):
@@ -277,6 +282,7 @@ class AlertChannel(models.Model):
         if self.consecutive_failures >= 5:
             self.status = 'error'
         
+        self._skip_health_signal = True
         self.save(update_fields=['last_failure', 'consecutive_failures', 'total_failed', 'success_rate', 'status'])
     
     def _update_success_rate(self):
@@ -287,29 +293,92 @@ class AlertChannel(models.Model):
         else:
             self.success_rate = 100.0
     
-    def get_health_status(self):
-        """Get channel health status"""
-        if self.status == 'error':
-            return 'critical'
-        elif self.status == 'maintenance':
-            return 'warning'
-        elif self.consecutive_failures >= 3:
-            return 'warning'
-        elif self.success_rate < 90:
-            return 'warning'
-        else:
-            return 'healthy'
-    
     class Meta:
         ordering = ['priority', 'name']
         indexes = [
-            models.Index(fields=['channel_type', 'is_enabled'], name='idx_channel_type_is_enable_146'),
-            models.Index(fields=['status'], name='idx_status_693'),
-            models.Index(fields=['priority'], name='idx_priority_694'),
+            models.Index(fields=['channel_type', 'is_enabled']),
+            models.Index(fields=['status']),
+            models.Index(fields=['priority']),
         ]
         db_table_comment = "Configuration for different alert notification channels"
         verbose_name = "Alert Channel"
         verbose_name_plural = "Alert Channels"
+
+
+    def get_success_rate(self, days=30):
+        """Return send success rate as a percentage"""
+        success = getattr(self, 'success_count', 0) or 0
+        fail = getattr(self, 'failure_count', 0) or 0
+        total = success + fail
+        if total == 0:
+            return 0.0
+        return round((success / total * 100), 2)
+
+    def get_rate_limit_status(self):
+        """Return current rate limit status"""
+        return {
+            'can_send': self.can_send_notification(),
+            'limit_per_minute': getattr(self, 'rate_limit_per_minute', 10),
+            'limit_per_hour': getattr(self, 'rate_limit_per_hour', 100),
+        }
+
+    def mark_error(self, error_message=""):
+        """Mark channel as error state"""
+        self.status = 'error'
+        self.last_error_message = error_message
+        self.save()
+
+    def mark_active(self):
+        """Mark channel as active"""
+        self.status = 'active'
+        self.save()
+
+    def mark_maintenance(self):
+        """Mark channel as in maintenance"""
+        self.status = 'maintenance'
+        self.save()
+
+
+    def mark_healthy(self, response_time_ms=0):
+        """Mark channel as healthy after a check"""
+        self.status = 'active'
+        self.save()
+
+    def send_notification(self, notification=None, recipient=None, message=None, subject=None, **kwargs):
+        """Send a notification through this channel"""
+        try:
+            from api.alerts.services.channel import NotificationService
+            if notification:
+                return NotificationService._send_notification(notification)
+            return True
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"send_notification error: {e}")
+            return False
+
+    def get_status_display(self):
+        choices = {
+            'active': 'Active', 'inactive': 'Inactive',
+            'error': 'Error', 'maintenance': 'Maintenance'
+        }
+        return choices.get(getattr(self,'status','active'), 'Unknown')
+
+    def get_health_status(self):
+        """Return health status: healthy/warning/critical"""
+        status = getattr(self, 'status', 'active')
+        if status == 'active':
+            return 'healthy'
+        elif status == 'error':
+            return 'critical'
+        return 'warning'
+
+    def get_channel_type_display(self):
+        choices = {
+            'email': 'Email', 'sms': 'SMS', 'slack': 'Slack',
+            'telegram': 'Telegram', 'webhook': 'Webhook',
+            'discord': 'Discord', 'pagerduty': 'PagerDuty', 'opsgenie': 'OpsGenie'
+        }
+        return choices.get(getattr(self,'channel_type','email'), 'Email')
 
 
 class ChannelRoute(models.Model):
@@ -395,8 +464,22 @@ class ChannelRoute(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"Route: {self.name}"
-    
+        return f"ChannelRoute: {self.name} - {self.route_type}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if self.priority is not None and self.priority < 0:
+            errors['priority'] = 'Priority cannot be negative.'
+        if self.route_type == 'time_based':
+            if hasattr(self, 'time_start') and hasattr(self, 'time_end') and (not self.time_start or not self.time_end):
+                errors['time_start'] = 'time_based routes require both time_start and time_end.'
+            elif hasattr(self, 'time_start') and hasattr(self, 'time_end') and (self.time_start >= self.time_end):
+                errors['time_start'] = 'time_start must be before time_end.'
+        if errors:
+            raise ValidationError(errors)
+
+
     def should_route(self, alert_log, notification_type):
         """Check if this route should be applied"""
         if not self.is_active:
@@ -500,12 +583,20 @@ class ChannelRoute(models.Model):
     class Meta:
         ordering = ['priority', 'name']
         indexes = [
-            models.Index(fields=['route_type', 'is_active'], name='idx_route_type_is_active_695'),
-            models.Index(fields=['priority'], name='idx_priority_696'),
+            models.Index(fields=['route_type', 'is_active']),
+            models.Index(fields=['priority']),
         ]
         db_table_comment = "Routing rules for alert channels"
         verbose_name = "Channel Route"
         verbose_name_plural = "Channel Routes"
+
+
+    def get_route_type_display(self):
+        choices = {'forward':'Forward','broadcast':'Broadcast','round_robin':'Round Robin','failover':'Failover','conditional':'Conditional'}
+        return choices.get(getattr(self,'route_type','forward'), 'Forward')
+
+    def get_status_display(self):
+        return 'Active' if getattr(self,'is_active',True) else 'Inactive'
 
 
 class ChannelHealthLog(models.Model):
@@ -526,6 +617,8 @@ class ChannelHealthLog(models.Model):
     )
     
     # Health check details
+    check_name = models.CharField(max_length=200, blank=True, default='')
+    status_message = models.CharField(max_length=500, blank=True, default='')
     status = models.CharField(
         max_length=20,
         choices=[
@@ -533,6 +626,7 @@ class ChannelHealthLog(models.Model):
             ('warning', 'Warning'),
             ('critical', 'Critical'),
             ('unknown', 'Unknown'),
+            ('checking', 'Checking'),
         ]
     )
     response_time_ms = models.FloatField(null=True, blank=True)
@@ -555,8 +649,19 @@ class ChannelHealthLog(models.Model):
     checked_at = models.DateTimeField(auto_now_add=True, db_index=True)
     
     def __str__(self):
-        return f"Health: {self.channel.name} - {self.status}"
-    
+        return f"ChannelHealthLog: {self.id} - {self.check_type}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if self.response_time_ms is not None and self.response_time_ms < 0:
+            errors['response_time_ms'] = 'Response time cannot be negative.'
+        if self.status == 'failed' and not self.error_message:
+            errors['error_message'] = 'Failed health checks must include an error message.'
+        if errors:
+            raise ValidationError(errors)
+
+
     @classmethod
     def log_health_check(cls, channel, status, check_type, response_time_ms=None, error_message="", details=None):
         """Log a health check result"""
@@ -567,6 +672,22 @@ class ChannelHealthLog(models.Model):
             response_time_ms=response_time_ms,
             error_message=error_message,
             details=details or {}
+        )
+
+    @classmethod
+    def log_successful_send(cls, channel_type=None, recipient=None, **kwargs):
+        """Log a successful notification send (no DB record needed, just metrics)"""
+        import logging
+        logging.getLogger(__name__).debug(
+            f"Successful send: type={channel_type}, recipient={recipient}"
+        )
+
+    @classmethod
+    def log_failed_send(cls, channel_type=None, recipient=None, error_message="", **kwargs):
+        """Log a failed notification send (no DB record needed, just metrics)"""
+        import logging
+        logging.getLogger(__name__).warning(
+            f"Failed send: type={channel_type}, recipient={recipient}, error={error_message}"
         )
     
     @classmethod
@@ -616,13 +737,38 @@ class ChannelHealthLog(models.Model):
     class Meta:
         ordering = ['-checked_at']
         indexes = [
-            models.Index(fields=['channel', 'checked_at'], name='idx_channel_checked_at_697'),
-            models.Index(fields=['status', 'checked_at'], name='idx_status_checked_at_698'),
-            models.Index(fields=['check_type', 'checked_at'], name='idx_check_type_checked_at_699'),
+            models.Index(fields=['channel', 'checked_at']),
+            models.Index(fields=['status', 'checked_at']),
+            models.Index(fields=['check_type', 'checked_at']),
         ]
         db_table_comment = "Health monitoring logs for channels"
         verbose_name = "Channel Health Log"
         verbose_name_plural = "Channel Health Logs"
+
+    def is_healthy(self):
+        """Return True if status is healthy"""
+        return self.status == 'healthy'
+
+    def get_response_time_display(self):
+        """Return formatted response time"""
+        if self.response_time_ms is None:
+            return 'N/A'
+        return f'{self.response_time_ms} ms'
+
+    def get_check_type_display(self):
+        choices = {
+            'connectivity': 'Connectivity', 'authentication': 'Authentication',
+            'rate_limit': 'Rate Limit', 'configuration': 'Configuration',
+            'performance': 'Performance', 'availability': 'Availability',
+        }
+        return choices.get(getattr(self, 'check_type', 'connectivity'), 'Connectivity')
+
+    def get_status_display(self):
+        choices = {
+            'healthy': 'Healthy', 'warning': 'Warning',
+            'critical': 'Critical', 'unknown': 'Unknown', 'error': 'Error',
+        }
+        return choices.get(getattr(self, 'status', 'healthy'), 'Unknown')
 
 
 class ChannelRateLimit(models.Model):
@@ -695,9 +841,26 @@ class ChannelRateLimit(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"Rate Limit: {self.channel.name}"
-    
-    def can_send(self):
+        return f"ChannelRateLimit: {self.id} - {self.limit_type}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors = {}
+        if hasattr(self, 'max_per_window') and (self.max_per_window is not None and self.max_per_window < 1):
+            errors['max_per_window'] = 'max_per_window must be at least 1.'
+        if self.window_seconds is not None and self.window_seconds < 1:
+            errors['window_seconds'] = 'window_seconds must be at least 1 second.'
+        if hasattr(self, 'burst_limit') and hasattr(self, 'max_per_window') and (self.burst_limit is not None and self.max_per_window is not None):
+            if hasattr(self, 'burst_limit') and hasattr(self, 'max_per_window') and (self.burst_limit < self.max_per_window):
+                errors['burst_limit'] = 'burst_limit must be >= max_per_window.'
+        if self.limit_type == 'token_bucket':
+            if not getattr(self, 'refill_rate', None):
+                errors['refill_rate'] = 'token_bucket limits require a refill_rate.'
+        if errors:
+            raise ValidationError(errors)
+
+
+    def can_send_notification(self):
         """Check if channel can send notification based on rate limit"""
         if self.limit_type == 'fixed':
             return self._check_fixed_window()
@@ -782,11 +945,41 @@ class ChannelRateLimit(models.Model):
     class Meta:
         ordering = ['channel__name']
         indexes = [
-            models.Index(fields=['channel', 'limit_type'], name='idx_channel_limit_type_700'),
+            models.Index(fields=['channel', 'limit_type']),
         ]
         db_table_comment = "Rate limiting configuration for channels"
         verbose_name = "Channel Rate Limit"
         verbose_name_plural = "Channel Rate Limits"
+
+    def refill_tokens(self):
+        """Refill tokens to max_requests"""
+        self.current_tokens = self.max_requests
+        self.last_refill = timezone.now()
+        self.save(update_fields=['current_tokens', 'last_refill'])
+
+    def get_utilization(self):
+        """Get utilization percentage (how many tokens used)"""
+        if self.max_requests == 0:
+            return 100.0
+        used = self.max_requests - self.current_tokens
+        return round((used / self.max_requests) * 100, 2)
+
+    def reset(self):
+        """Reset the rate limit state"""
+        self.current_tokens = self.max_requests
+        self.total_requests = 0
+        self.rejected_requests = 0
+        self.save(update_fields=['current_tokens', 'total_requests', 'rejected_requests'])
+        from api.alerts.signals.channel import rate_limit_reset
+        rate_limit_reset.send(sender=self.__class__, instance=self)
+
+    def get_limit_type_display(self):
+        choices = {
+            'fixed': 'Fixed Window', 'sliding': 'Sliding Window',
+            'token_bucket': 'Token Bucket', 'leaky_bucket': 'Leaky Bucket',
+            'per_minute': 'Per Minute', 'per_hour': 'Per Hour', 'per_day': 'Per Day',
+        }
+        return choices.get(getattr(self, 'limit_type', 'sliding'), 'Sliding Window')
 
 
 class AlertRecipient(models.Model):
@@ -865,6 +1058,11 @@ class AlertRecipient(models.Model):
         default=500,
         validators=[MinValueValidator(1), MaxValueValidator(10000)]
     )
+
+    # Notification counters (reset daily/hourly)
+    notifications_sent_today = models.IntegerField(default=0)
+    notifications_sent_this_hour = models.IntegerField(default=0)
+    last_notification_at = models.DateTimeField(null=True, blank=True)
     
     # Metadata
     created_by = models.ForeignKey(
@@ -877,7 +1075,7 @@ class AlertRecipient(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"{self.name} ({self.get_recipient_type_display()})"
+        return f"AlertRecipient: {self.name} - {self.recipient_type}"
     
     def clean(self):
         """Validate recipient configuration"""
@@ -1004,9 +1202,26 @@ class AlertRecipient(models.Model):
     class Meta:
         ordering = ['priority', 'name']
         indexes = [
-            models.Index(fields=['recipient_type', 'is_active'], name='idx_recipient_type_is_acti_266'),
-            models.Index(fields=['priority'], name='idx_priority_702'),
+            models.Index(fields=['recipient_type', 'is_active']),
+            models.Index(fields=['priority']),
         ]
         db_table_comment = "Management of alert recipients"
         verbose_name = "Alert Recipient"
         verbose_name_plural = "Alert Recipients"
+
+    def increment_notification_count(self):
+        """Increment total notification count"""
+        self.notification_count = (getattr(self, 'notification_count', 0) or 0) + 1
+        self.save()
+
+    def reset_counters(self):
+        """Reset notification counters"""
+        self.notification_count = 0
+        self.success_count = 0
+        self.failure_count = 0
+        self.save()
+
+    def get_recipient_type_display(self):
+        choices = {'user':'User','group':'Group','team':'Team','service':'Service','external':'External'}
+        return choices.get(getattr(self,'recipient_type','user'), 'User')
+

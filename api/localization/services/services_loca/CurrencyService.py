@@ -26,7 +26,7 @@ class CurrencyService:
         if cached is not None:
             return cached
         try:
-            from ..models.core import Currency
+            from api.localization.models.core import Currency
             obj = Currency.objects.filter(code=currency_code.upper(), is_active=True).first()
             if obj:
                 cache.set(cache_key, obj, CACHE_TTL)
@@ -38,7 +38,7 @@ class CurrencyService:
     def get_default_currency(self):
         """Default currency return করে"""
         try:
-            from ..models.core import Currency
+            from api.localization.models.core import Currency
             return Currency.objects.filter(is_default=True, is_active=True).first()
         except Exception as e:
             logger.error(f"get_default_currency failed: {e}")
@@ -51,7 +51,7 @@ class CurrencyService:
         if cached:
             return cached
         try:
-            from ..models.core import Currency
+            from api.localization.models.core import Currency
             currencies = list(Currency.objects.filter(is_active=True).order_by('code').values(
                 'code', 'name', 'symbol', 'symbol_native', 'exchange_rate',
                 'decimal_digits', 'symbol_position', 'is_default', 'is_crypto'
@@ -117,13 +117,13 @@ class CurrencyService:
         if cached:
             return cached
         try:
-            from ..models.geo import CountryCurrency
+            from api.localization.models.geo import CountryCurrency
             cc = CountryCurrency.objects.filter(
                 country__code=country_code.upper(), is_primary=True
             ).select_related('currency').first()
             code = cc.currency.code if cc else None
             if not code:
-                from ..models.core import Country
+                from api.localization.models.core import Country
                 country = Country.objects.filter(code=country_code.upper()).first()
                 code = country.currency_code if country else 'USD'
             if code:
@@ -137,8 +137,8 @@ class CurrencyService:
         """External API থেকে rates update করে"""
         try:
             from ..services.currency.CurrencyRateProvider import CurrencyRateProvider
-            from ..models.core import Currency
-            from ..models.currency import ExchangeRate
+            from api.localization.models.core import Currency
+            from api.localization.models.currency import ExchangeRate
             from django.utils import timezone
             provider_obj = CurrencyRateProvider()
             result = provider_obj.fetch_rates('USD', provider)

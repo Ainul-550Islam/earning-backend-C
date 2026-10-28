@@ -7,6 +7,10 @@ from django.contrib.auth import get_user_model
 from ..models.incident import (
     Incident, IncidentTimeline, IncidentResponder, IncidentPostMortem, OnCallSchedule
 )
+from ..validators import (
+    validate_alert_severity,
+    validate_time_window,
+)
 
 User = get_user_model()
 
@@ -46,6 +50,50 @@ class IncidentSerializer(serializers.ModelSerializer):
     
     def get_severity_score(self, obj):
         return obj.get_severity_score()
+
+    def validate_severity(self, value):
+        """Wire validate_alert_severity() from validators.py."""
+        result = validate_alert_severity(value)
+        if not result['valid']:
+            raise serializers.ValidationError(result['errors'])
+        return result.get('normalized_severity', value)
+
+    def validate(self, attrs):
+        """
+        Cross-field validation:
+        - total_downtime_minutes >= response_time_minutes >= 0
+        - affected_users_count cannot be negative
+        """
+        response_time = attrs.get('response_time_minutes')
+        resolution_time = attrs.get('resolution_time_minutes')
+        downtime = attrs.get('total_downtime_minutes')
+
+        if response_time is not None and response_time < 0:
+            raise serializers.ValidationError(
+                {'response_time_minutes': 'response_time_minutes cannot be negative.'}
+            )
+        if resolution_time is not None and response_time is not None:
+            if resolution_time < response_time:
+                raise serializers.ValidationError({
+                    'resolution_time_minutes': (
+                        'resolution_time_minutes cannot be less than response_time_minutes.'
+                    )
+                })
+        if downtime is not None and resolution_time is not None:
+            if downtime < resolution_time:
+                raise serializers.ValidationError({
+                    'total_downtime_minutes': (
+                        'total_downtime_minutes cannot be less than resolution_time_minutes.'
+                    )
+                })
+
+        affected_users = attrs.get('affected_users_count')
+        if affected_users is not None and affected_users < 0:
+            raise serializers.ValidationError(
+                {'affected_users_count': 'affected_users_count cannot be negative.'}
+            )
+
+        return attrs
 
 
 class IncidentTimelineSerializer(serializers.ModelSerializer):
@@ -102,9 +150,9 @@ class IncidentPostMortemSerializer(serializers.ModelSerializer):
             'status', 'reviewed_by', 'reviewed_by_name', 'approved_by',
             'approved_by_name', 'published_at', 'internal_only',
             'external_summary', 'created_by', 'created_by_name',
-            'created_at', 'updated_at', 'completed_at', 'completion_score'
+            'created_at', 'updated_at', 'completion_score'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'created_by', 'completed_at']
+        read_only_fields = ['created_at', 'updated_at', 'created_by']
     
     def get_completion_score(self, obj):
         return obj.get_completion_score()
@@ -292,7 +340,11 @@ class IncidentCreateFromAlertSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
     
     def validate_severity(self, value):
-        valid_severities = ['low', 'medium', 'high', 'critical']
-        if value and value not in valid_severities:
-            raise serializers.ValidationError(f"Severity must be one of: {valid_severities}")
-        return value
+        """Wire validate_alert_severity() from validators.py."""
+        if not value:
+            return value
+        result = validate_alert_severity(value)
+        if not result['valid']:
+            raise serializers.ValidationError(result['errors'])
+        return result.get('normalized_severity', value)
+

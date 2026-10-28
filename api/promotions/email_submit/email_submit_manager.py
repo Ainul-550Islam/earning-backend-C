@@ -252,6 +252,7 @@ async function submitEmail(e, cid) {{
 # ── Views ────────────────────────────────────────────────────────────────────
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
 def email_submit_view(request, campaign_id):
     """POST /api/promotions/email-submit/<campaign_id>/submit/"""
@@ -269,17 +270,12 @@ def email_submit_view(request, campaign_id):
     )
     return Response(result)
 
-
-@api_view(['GET'])
 @permission_classes([AllowAny])
 def doi_confirm_view(request, token):
     """GET /api/promotions/email-submit/confirm/<token>/"""
     manager = EmailSubmitManager()
     result = manager.confirm_doi(token)
     return Response(result)
-
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def create_email_submit_campaign_view(request):
     """POST /api/promotions/email-submit/create/"""

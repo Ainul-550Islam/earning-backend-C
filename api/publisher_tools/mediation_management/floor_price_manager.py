@@ -9,7 +9,7 @@ from django.utils import timezone
 
 def get_floor_price_recommendations(publisher) -> List[Dict]:
     """Publisher-এর সব ad units-এর floor price recommendations।"""
-    from api.publisher_tools.models import AdUnit, PublisherEarning
+    from publisher_tools.models import AdUnit, PublisherEarning
     units = AdUnit.objects.filter(publisher=publisher, status="active")
     recommendations = []
     for unit in units:
@@ -21,7 +21,7 @@ def get_floor_price_recommendations(publisher) -> List[Dict]:
 
 def calculate_optimal_floor(ad_unit, days: int = 30) -> Dict:
     """eCPM data থেকে optimal floor price calculate করে।"""
-    from api.publisher_tools.models import PublisherEarning
+    from publisher_tools.models import PublisherEarning
     from django.db.models import Avg, Sum
     start = timezone.now().date() - timedelta(days=days)
     agg = PublisherEarning.objects.filter(
@@ -46,14 +46,14 @@ def apply_floor_price_update(ad_unit, new_floor: Decimal) -> bool:
     ad_unit.floor_price = new_floor
     ad_unit.save(update_fields=["floor_price", "updated_at"])
     # Invalidate cache
-    from api.publisher_tools.cache import AdUnitCache
+    from publisher_tools.cache import AdUnitCache
     AdUnitCache.invalidate_unit(ad_unit.unit_id)
     return True
 
 
 def bulk_update_floor_prices(publisher, strategy: str = "conservative") -> Dict:
     """Bulk floor price update। strategy: conservative(70%), moderate(75%), aggressive(80%)"""
-    from api.publisher_tools.models import AdUnit
+    from publisher_tools.models import AdUnit
     multipliers = {"conservative": 0.70, "moderate": 0.75, "aggressive": 0.80}
     multiplier = multipliers.get(strategy, 0.75)
     units = AdUnit.objects.filter(publisher=publisher, status="active")

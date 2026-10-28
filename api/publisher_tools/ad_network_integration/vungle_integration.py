@@ -36,6 +36,7 @@ class VungleConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_vungle_configs"
         verbose_name = _("Vungle Config")
         unique_together = [["publisher"]]

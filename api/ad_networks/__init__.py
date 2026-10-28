@@ -24,3 +24,6 @@ __author__ = "Ad Networks Team"
 default_app_config = 'api.ad_networks.apps.AdNetworksConfig'
 
 # Export key classes for easy import
+# Note: Task imports are deferred to apps.py to avoid circular imports during Django startup
+from .events import EventBus as EventSystem, EventBus
+from .hooks import HookRegistry as HookSystem

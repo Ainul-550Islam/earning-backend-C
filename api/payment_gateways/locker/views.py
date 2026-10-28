@@ -26,7 +26,7 @@ class ContentLockerViewSet(BaseViewSet):
         serializer.save(publisher=self.request.user)
 
     @action(detail=False, methods=['get'], permission_classes=[AllowAny],
-            url_path='show/(?P<locker_key>[A-Z0-9]+)')
+        url_path='show/(?P<locker_key>[A-Z0-9]+)')
     def show(self, request, locker_key=None):
         """Public: show locker to visitor."""
         engine = LockerEngine()
@@ -41,7 +41,7 @@ class ContentLockerViewSet(BaseViewSet):
         return Response(result)
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny],
-            url_path='unlock')
+        url_path='unlock')
     def unlock(self, request):
         """Public: unlock content after offer completion."""
         engine      = LockerEngine()
@@ -66,7 +66,7 @@ class OfferWallViewSet(BaseViewSet):
         serializer.save(publisher=self.request.user)
 
     @action(detail=False, methods=['get'], permission_classes=[AllowAny],
-            url_path='offers/(?P<wall_key>[A-Z0-9]+)')
+        url_path='offers/(?P<wall_key>[A-Z0-9]+)')
     def get_offers(self, request, wall_key=None):
         """Public API: get offers for an offerwall (called by publisher's app)."""
         engine  = OfferWallEngine()
@@ -86,9 +86,6 @@ def my_virtual_balances(request):
     balances = UserVirtualBalance.objects.filter(user=request.user).select_related('offer_wall')
     from .serializers import UserVirtualBalanceSerializer
     return Response({'success': True, 'data': UserVirtualBalanceSerializer(balances, many=True).data})
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_rewards_history(request):
     """Get user's virtual reward history."""

@@ -99,10 +99,61 @@ class SmartLink(models.Model):
     enable_fraud_filter = models.BooleanField(default=True)
     enable_bot_filter = models.BooleanField(default=True)
     enable_unique_click = models.BooleanField(default=True)
+
+    # ── Expiry / lifetime cap ─────────────────────────────────────────────────
+    expires_at = models.DateTimeField(
+        _('Expiry datetime'), null=True, blank=True,
+        help_text=_('Auto-deactivate at this UTC datetime. Null = never expires.')
+    )
+    lifetime_click_cap = models.PositiveBigIntegerField(
+        _('Lifetime click cap'), null=True, blank=True,
+        help_text=_('Auto-deactivate after this many total clicks. Null = unlimited.')
+    )
+    lifetime_conversion_cap = models.PositiveIntegerField(
+        _('Lifetime conversion cap'), null=True, blank=True,
+        help_text=_('Auto-deactivate after this many total conversions.')
+    )
+
+    # ── Password protection ───────────────────────────────────────────────────
+    is_password_protected = models.BooleanField(
+        _('Password protected'), default=False,
+    )
+    access_password_hash = models.CharField(
+        _('Hashed access password'), max_length=128, blank=True,
+        help_text=_('bcrypt/argon2 hash. Set via set_password(), never store plaintext.')
+    )
+
+    # ── Revenue share ─────────────────────────────────────────────────────────
+    default_payout_model = models.CharField(
+        _('Default payout model'), max_length=10,
+        choices=[
+            ('cpa', 'CPA — Cost per action'),
+            ('cpc', 'CPC — Cost per click'),
+            ('cpm', 'CPM — Cost per mille'),
+            ('revshare', 'RevShare — Revenue share %'),
+        ],
+        default='cpa',
+    )
+    revshare_percent = models.DecimalField(
+        _('RevShare %'), max_digits=5, decimal_places=2, default=0,
+        help_text=_('Only used when default_payout_model=revshare. e.g. 30.00 = 30%')
+    )
     notes = models.TextField(blank=True, verbose_name=_('Internal Notes'))
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_click_at = models.DateTimeField(null=True, blank=True)
+
+    # Ad-network integration configs (TikTok, Snapchat, Facebook, Google Ads, Push)
+    # Structure: {"tiktok": {...}, "snapchat": {...}, "facebook": {...}, ...}
+    # Written by IntegrationViewSet.update(); read by the redirect pipeline.
+    # BUG FIX (Bug 5): IntegrationViewSet called SmartLink.objects.update(integrations=...)
+    # but the field did not exist, raising FieldError on every integration save.
+    integrations = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_('Ad-network Integrations'),
+        help_text=_('Per-network integration config (TikTok, Snapchat, Facebook, etc.)'),
+    )
 
     # Counters (denormalized for speed)
     total_clicks = models.PositiveBigIntegerField(default=0)
@@ -125,10 +176,61 @@ class SmartLink(models.Model):
         return f"[{self.slug}] {self.name}"
 
     @property
-    def full_url(self):
+    def is_expired(self) -> bool:
+        """
+        True if the link has exceeded any lifetime cap or passed its expiry datetime.
+        Used by the redirect engine before routing to decide whether to return 410.
+        """
+        from django.utils import timezone
+        if self.expires_at and timezone.now() >= self.expires_at:
+            return True
+        if self.lifetime_click_cap and self.total_clicks >= self.lifetime_click_cap:
+            return True
+        if self.lifetime_conversion_cap and self.total_conversions >= self.lifetime_conversion_cap:
+            return True
+        return False
+
+    def set_access_password(self, raw_password: str):
+        """Hash and store an access password using Django's password hasher."""
+        from django.contrib.auth.hashers import make_password
+        self.access_password_hash = make_password(raw_password)
+        self.is_password_protected = bool(raw_password)
+
+    def check_access_password(self, raw_password: str) -> bool:
+        """Verify a submitted password against the stored hash."""
+        from django.contrib.auth.hashers import check_password
+        if not self.access_password_hash:
+            return True
+        return check_password(raw_password, self.access_password_hash)
+
+    @property
+    def full_url(self) -> str:
+        """
+        The canonical public redirect URL for this SmartLink.
+
+        Resolution order:
+        1. Publisher's verified primary custom domain  → https://custom.domain/go/slug/
+        2. SMARTLINK_BASE_URL setting                  → https://go.example.com/go/slug/
+        3. Hard fallback                               → https://go.example.com/go/slug/
+
+        BUG FIX (Bug 3): Previously returned ``{base}/{slug}/`` which omitted
+        the ``/go/`` prefix required by the URL pattern ``go/<slug:slug>/``.
+
+        BUG FIX (Bug 8): Previously ignored the publisher's verified custom domain.
+        Now calls DomainService to resolve the correct base per publisher.
+        """
         from django.conf import settings
-        base = getattr(settings, 'SMARTLINK_BASE_URL', 'https://go.example.com')
-        return f"{base}/{self.slug}/"
+        redirect_prefix = getattr(settings, 'SMARTLINK_REDIRECT_PREFIX', 'go').strip('/')
+        default_base = getattr(settings, 'SMARTLINK_BASE_URL', 'https://go.example.com').rstrip('/')
+
+        # Attempt to resolve publisher's custom domain (cached in DomainService)
+        try:
+            from ..services.core.DomainService import DomainService
+            base = DomainService().get_redirect_base_url(self.publisher)
+        except Exception:
+            base = default_base
+
+        return f"{base}/{redirect_prefix}/{self.slug}/"
 
     def increment_clicks(self, unique: bool = False):
         """Thread-safe click counter increment."""

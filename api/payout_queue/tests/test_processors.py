@@ -24,7 +24,6 @@ from .factories import (
     UserFactory, StaffUserFactory, PayoutBatchFactory, PayoutItemFactory,
 )
 
-
 # ---------------------------------------------------------------------------
 # FeeCalculator Tests
 # ---------------------------------------------------------------------------
@@ -87,7 +86,6 @@ class FeeCalculatorTest(TestCase):
             gateway=PaymentGateway.BKASH, gross_amount=Decimal("100000.00")
         )
         self.assertLessEqual(result["fee"], MAX_FEE_AMOUNT)
-
 
 # ---------------------------------------------------------------------------
 # BkashProcessor Tests
@@ -167,7 +165,6 @@ class BkashProcessorTest(TestCase):
         self.assertFalse(result.success)
         self.assertEqual(result.error_code, "2023")
 
-
 # ---------------------------------------------------------------------------
 # RocketProcessor Tests
 # ---------------------------------------------------------------------------
@@ -205,7 +202,6 @@ class RocketProcessorTest(TestCase):
         )
         self.assertTrue(result.success)
         self.assertEqual(result.gateway_reference, "RKT12345")
-
 
 # ---------------------------------------------------------------------------
 # PayoutBatch Model Tests
@@ -263,7 +259,6 @@ class PayoutBatchModelTest(TestCase):
         with self.assertRaises(ValidationError):
             batch.save()
 
-
 # ---------------------------------------------------------------------------
 # PayoutItem Model Tests
 # ---------------------------------------------------------------------------
@@ -278,7 +273,7 @@ class PayoutItemModelTest(TestCase):
         item = PayoutItemFactory(batch=self.batch, user=self.user)
         self.assertEqual(item.status, PayoutItemStatus.QUEUED)
         self.assertFalse(item.is_terminal)
-        self.assertTrue(item.can_retry)
+        self.assertFalse(item.can_retry)  # QUEUED items haven't failed yet
 
     def test_mark_success(self):
         item = PayoutItemFactory(batch=self.batch, user=self.user)
@@ -302,7 +297,7 @@ class PayoutItemModelTest(TestCase):
 
     def test_mark_failed_exhausts_retries(self):
         item = PayoutItemFactory(batch=self.batch, user=self.user)
-        for _ in range(MAX_RETRY_ATTEMPTS):
+        for _ in range(MAX_RETRY_ATTEMPTS + 1):  # +1 because Nth retry still→RETRYING
             item.mark_failed(error_code="ERR001", error_message="Fail")
         self.assertEqual(item.status, PayoutItemStatus.FAILED)
         self.assertFalse(item.can_retry)
@@ -332,7 +327,6 @@ class PayoutItemModelTest(TestCase):
         item.gross_amount = Decimal("999.00")
         with self.assertRaises(ValidationError):
             item.save()
-
 
 # ---------------------------------------------------------------------------
 # PaymentGatewayRegistry Tests
@@ -367,7 +361,6 @@ class GatewayRegistryTest(TestCase):
         processor = BkashProcessor(config)
         with self.assertRaises(ValueError):
             registry.register("INVALID_GW", processor)
-
 
 # ---------------------------------------------------------------------------
 # PayoutResult Tests

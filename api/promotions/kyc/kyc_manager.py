@@ -92,6 +92,7 @@ class KYCManager:
 
 
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def submit_kyc_view(request):
     mgr = KYCManager()
@@ -109,15 +110,10 @@ def submit_kyc_view(request):
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     return Response(result, status=status.HTTP_201_CREATED)
 
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def kyc_status_view(request):
     mgr = KYCManager()
     return Response(mgr.get_kyc_status(request.user.id))
-
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def approve_kyc_view(request, user_id):
     mgr = KYCManager()

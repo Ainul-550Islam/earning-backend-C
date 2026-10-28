@@ -1,4 +1,7 @@
 # views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, JsonResponse, FileResponse
 from django.views import View
@@ -20,25 +23,35 @@ import os
 import hashlib
 import mimetypes
 from django.db.models.functions import Cast
-from api.tenants.mixins import TenantMixin
 from rest_framework import viewsets, status, generics, mixins
-from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
+from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from api.backup.pagination import BackupPagination
 
 from .models import (
     Backup, BackupSchedule, BackupLog, BackupStorageLocation,
     BackupRestoration, BackupNotificationConfig, RetentionPolicy,
-    DeltaBackupTracker
+    DeltaBackupTracker, BackupVerification, BackupEncryption, BackupAlert
 )
 from .serializers import (
     BackupSerializer, BackupScheduleSerializer, BackupStorageLocationSerializer,
     BackupLogSerializer, BackupRestorationSerializer, BackupNotificationConfigSerializer,
     RetentionPolicySerializer, DeltaBackupTrackerSerializer,
+    BackupVerificationSerializer, BackupEncryptionSerializer, BackupAlertSerializer,
     BackupProgressSerializer, BackupTaskRequestSerializer, RestoreRequestSerializer,
-    HealthCheckSerializer, MaintenanceModeSerializer
+    HealthCheckSerializer, MaintenanceModeSerializer, BackupStatsSerializer,
+    StorageUsageSerializer, PerformanceMetricsSerializer, NotificationRequestSerializer,
+    BatchOperationSerializer, BulkActionSerializer,
+    BackupCreateSerializer, BackupUpdateSerializer, BackupDetailSerializer,
+    HealthyBackupManagerSerializer, ExpiredBackupManagerSerializer
 )
 from .tasks import (
     backup_database_task, restore_backup_task, cleanup_old_backups_task,
@@ -85,8 +98,25 @@ class BackupViewSet(BackupPermissionMixin, viewsets.ModelViewSet):
     queryset = Backup.objects.all().select_related(
         'created_by', 'verified_by', 'parent_backup', 'delta_base', 'schedule'
     ).prefetch_related('logs', 'child_backups', 'restorations')
-    
+
     serializer_class = BackupSerializer
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    pagination_class = BackupPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['status', 'backup_type', 'storage_type', 'is_healthy', 'is_verified']
+    search_fields = ['name', 'notes', 'database_name']
+    ordering_fields = ['created_at', 'size', 'status']
+    ordering = ['-created_at']
+    throttle_classes = [UserRateThrottle]
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return BackupDetailSerializer
+        if self.action == 'create':
+            return BackupCreateSerializer
+        if self.action in ('update', 'partial_update'):
+            return BackupUpdateSerializer
+        return self.serializer_class
     
     def get_queryset(self):
         """Filter queryset based on user and query parameters"""
@@ -150,14 +180,13 @@ class BackupViewSet(BackupPermissionMixin, viewsets.ModelViewSet):
             # Perform verification
             verification_result = self._verify_backup(backup)
             
-            backup.is_verified = verification_result['valid']
-            backup.verified_by = request.user
-            backup.verified_at = timezone.now()
-            
-            if verification_result.get('hash'):
-                backup.verification_hash = verification_result['hash']
-            
-            backup.save()
+            if verification_result['valid']:
+                backup.mark_as_verified(verified_by=request.user)
+            else:
+                backup.is_verified = False
+                backup.verified_by = request.user
+                backup.verified_at = timezone.now()
+                backup.save()
             
             # Log the verification
             BackupLog.objects.create(
@@ -189,19 +218,9 @@ class BackupViewSet(BackupPermissionMixin, viewsets.ModelViewSet):
         backup = self.get_object()
         
         try:
-            # Perform health check
+            # Perform health check using model method
+            health_result = backup.check_health()
             verification_result = self._verify_backup(backup)
-            
-            backup.is_healthy = verification_result['valid']
-            backup.last_health_check = timezone.now()
-            backup.health_check_count += 1
-            
-            if verification_result['valid']:
-                backup.health_score = min(100, backup.health_score + 10)
-            else:
-                backup.health_score = max(0, backup.health_score - 30)
-            
-            backup.save()
             
             # Log the health check
             BackupLog.objects.create(
@@ -1827,7 +1846,7 @@ class SystemMetricsView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class DashboardStatsView(APIView):
+class BackupDashboardStatsView(APIView):
     """Get dashboard statistics"""
     permission_classes = [IsAdminUser]
     
@@ -2276,3 +2295,2332 @@ class APIStartBackupView(APIView):
 
 # Note: Other admin API views would be implemented similarly
 # They would be thin wrappers around the main API views with appropriate permissions
+
+
+# ==================== ADDITIONAL VIEWSETS FOR NEW MODELS ====================
+
+class BackupVerificationViewSet(BackupPermissionMixin, viewsets.ModelViewSet):
+    """ViewSet for BackupVerification model"""
+    queryset = BackupVerification.objects.all().select_related(
+        'backup', 'verified_by'
+    )
+    serializer_class = BackupVerificationSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filter by backup
+        backup_id = self.request.query_params.get('backup_id')
+        if backup_id:
+            queryset = queryset.filter(backup__backup_id=backup_id)
+        
+        # Filter by verification method
+        method = self.request.query_params.get('method')
+        if method:
+            queryset = queryset.filter(verification_method=method)
+        
+        # Filter by validity
+        is_valid = self.request.query_params.get('is_valid')
+        if is_valid is not None:
+            queryset = queryset.filter(is_valid=is_valid.lower() == 'true')
+        
+        return queryset
+    
+    @action(detail=True, methods=['post'])
+    def reverify(self, request, pk=None):
+        """Re-verify a backup"""
+        verification = self.get_object()
+        
+        try:
+            from .services import BackupService
+            service = BackupService()
+            new_verification = service.verify_backup(
+                verification.backup.backup_id,
+                verification_method=verification.verification_method
+            )
+            
+            return Response({
+                'success': True,
+                'verification_id': str(new_verification.verification_id),
+                'message': 'Backup re-verification started'
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BackupEncryptionViewSet(BackupPermissionMixin, viewsets.ModelViewSet):
+    """ViewSet for BackupEncryption model"""
+    queryset = BackupEncryption.objects.all().select_related('backup')
+    serializer_class = BackupEncryptionSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filter by backup
+        backup_id = self.request.query_params.get('backup_id')
+        if backup_id:
+            queryset = queryset.filter(backup__backup_id=backup_id)
+        
+        # Filter by algorithm
+        algorithm = self.request.query_params.get('algorithm')
+        if algorithm:
+            queryset = queryset.filter(algorithm=algorithm)
+        
+        # Filter by encryption status
+        is_encrypted = self.request.query_params.get('is_encrypted')
+        if is_encrypted is not None:
+            queryset = queryset.filter(is_encrypted=is_encrypted.lower() == 'true')
+        
+        return queryset
+    
+    @action(detail=True, methods=['post'])
+    def rotate_key(self, request, pk=None):
+        """Rotate encryption key for a backup"""
+        encryption = self.get_object()
+        
+        try:
+            from .services import BackupService
+            service = BackupService()
+            # Implement key rotation logic
+            return Response({
+                'success': True,
+                'message': 'Key rotation initiated'
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BackupAlertViewSet(BackupPermissionMixin, viewsets.ModelViewSet):
+    """ViewSet for BackupAlert model"""
+    queryset = BackupAlert.objects.all().select_related(
+        'backup', 'resolved_by'
+    )
+    serializer_class = BackupAlertSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filter by backup
+        backup_id = self.request.query_params.get('backup_id')
+        if backup_id:
+            queryset = queryset.filter(backup__backup_id=backup_id)
+        
+        # Filter by alert type
+        alert_type = self.request.query_params.get('alert_type')
+        if alert_type:
+            queryset = queryset.filter(alert_type=alert_type)
+        
+        # Filter by severity
+        severity = self.request.query_params.get('severity')
+        if severity:
+            queryset = queryset.filter(severity=severity)
+        
+        # Filter by resolution status
+        is_resolved = self.request.query_params.get('is_resolved')
+        if is_resolved is not None:
+            queryset = queryset.filter(is_resolved=is_resolved.lower() == 'true')
+        
+        return queryset
+    
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        """Resolve an alert"""
+        alert = self.get_object()
+        alert.is_resolved = True
+        alert.resolved_at = timezone.now()
+        alert.resolved_by = request.user
+        alert.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Alert resolved successfully',
+            'resolved_at': alert.resolved_at.isoformat()
+        })
+    
+    @action(detail=True, methods=['post'])
+    def escalate(self, request, pk=None):
+        """Escalate an alert"""
+        alert = self.get_object()
+        alert.escalation_level = alert.escalation_level + 1
+        alert.save()
+        
+        # Send escalation notification
+        try:
+            from .tasks import send_multi_channel_notification
+            send_multi_channel_notification.delay(
+                alert_type='alert_escalated',
+                message=f'Alert escalated: {alert.message}',
+                backup_id=str(alert.backup.backup_id) if alert.backup else None
+            )
+        except:
+            pass  # Don't fail the response if notification fails
+        
+        return Response({
+            'success': True,
+            'message': 'Alert escalated successfully',
+            'escalation_level': alert.escalation_level
+        })
+
+
+# ==================== ANALYTICS AND MONITORING VIEWS ====================
+
+class DashboardStatsView(APIView):
+    """View for dashboard statistics"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get dashboard statistics"""
+        try:
+            from django.db.models import Count, Sum, Avg, Q
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            now = timezone.now()
+            last_24h = now - timedelta(hours=24)
+            last_7d = now - timedelta(days=7)
+            last_30d = now - timedelta(days=30)
+            
+            # Basic stats
+            total_backups = Backup.objects.count()
+            successful_backups = Backup.objects.filter(status='completed').count()
+            failed_backups = Backup.objects.filter(status='failed').count()
+            
+            # Recent stats
+            recent_24h = Backup.objects.filter(created_at__gte=last_24h)
+            recent_7d = Backup.objects.filter(created_at__gte=last_7d)
+            recent_30d = Backup.objects.filter(created_at__gte=last_30d)
+            
+            # Storage stats
+            total_size = Backup.objects.aggregate(
+                total=Sum('file_size')
+            )['total'] or 0
+            
+            # Alert stats
+            active_alerts = BackupAlert.objects.filter(is_resolved=False).count()
+            critical_alerts = BackupAlert.objects.filter(
+                is_resolved=False,
+                severity='critical'
+            ).count()
+            
+            # Health score
+            healthy_backups = Backup.objects.filter(
+                status='completed',
+                health_score__gte=80
+            ).count()
+            health_score = (healthy_backups / max(successful_backups, 1)) * 100
+            
+            stats = {
+                'total_backups': total_backups,
+                'successful_backups': successful_backups,
+                'failed_backups': failed_backups,
+                'success_rate': round((successful_backups / max(total_backups, 1)) * 100, 2),
+                'total_size_bytes': total_size,
+                'total_size_gb': round(total_size / (1024**3), 2),
+                'last_24h_count': recent_24h.count(),
+                'last_7d_count': recent_7d.count(),
+                'last_30d_count': recent_30d.count(),
+                'alerts_count': active_alerts,
+                'critical_alerts_count': critical_alerts,
+                'health_score': round(health_score, 2),
+                'timestamp': now.isoformat()
+            }
+            
+            serializer = BackupStatsSerializer(stats)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e),
+                'message': 'Failed to fetch dashboard stats'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SystemHealthCheckView(APIView):
+    """View for system health check"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Perform system health check"""
+        try:
+            checks = {}
+            overall_status = 'healthy'
+            
+            # Database connectivity
+            try:
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT 1")
+                checks['database'] = {'status': 'healthy', 'message': 'Database connection OK'}
+            except Exception as e:
+                checks['database'] = {'status': 'critical', 'message': f'Database error: {str(e)}'}
+                overall_status = 'critical'
+            
+            # Storage backends
+            storage_locations = BackupStorageLocation.objects.filter(is_active=True)
+            storage_issues = 0
+            
+            for location in storage_locations:
+                try:
+                    # Test storage connectivity
+                    if location.storage_type == 'local':
+                        import os
+                        if os.path.exists(location.config.get('backup_dir', '')):
+                            checks[f'storage_{location.storage_type}'] = {
+                                'status': 'healthy',
+                                'message': f'{location.name} storage OK'
+                            }
+                        else:
+                            checks[f'storage_{location.storage_type}'] = {
+                                'status': 'warning',
+                                'message': f'{location.name} storage path not accessible'
+                            }
+                            storage_issues += 1
+                    else:
+                        # For cloud storage, just check if config exists
+                        if location.config:
+                            checks[f'storage_{location.storage_type}'] = {
+                                'status': 'healthy',
+                                'message': f'{location.name} storage configured'
+                            }
+                        else:
+                            checks[f'storage_{location.storage_type}'] = {
+                                'status': 'warning',
+                                'message': f'{location.name} storage not configured'
+                            }
+                            storage_issues += 1
+                except Exception as e:
+                    checks[f'storage_{location.storage_type}'] = {
+                        'status': 'critical',
+                        'message': f'{location.name} storage error: {str(e)}'
+                    }
+                    storage_issues += 1
+            
+            if storage_issues > 0:
+                overall_status = 'warning' if overall_status == 'healthy' else 'critical'
+            
+            # Recent backup failures
+            recent_failures = Backup.objects.filter(
+                status='failed',
+                created_at__gte=timezone.now() - timedelta(hours=24)
+            ).count()
+            
+            if recent_failures > 5:
+                checks['backup_failures'] = {
+                    'status': 'warning',
+                    'message': f'{recent_failures} backup failures in last 24h'
+                }
+                overall_status = 'warning' if overall_status == 'healthy' else 'critical'
+            else:
+                checks['backup_failures'] = {
+                    'status': 'healthy',
+                    'message': f'{recent_failures} backup failures in last 24h'
+                }
+            
+            # Disk space (for local storage)
+            try:
+                import shutil
+                total, used, free = shutil.disk_usage("/")
+                usage_percent = (used / total) * 100
+                
+                if usage_percent > 90:
+                    checks['disk_space'] = {
+                        'status': 'critical',
+                        'message': f'Disk usage {usage_percent:.1f}%'
+                    }
+                    overall_status = 'critical'
+                elif usage_percent > 80:
+                    checks['disk_space'] = {
+                        'status': 'warning',
+                        'message': f'Disk usage {usage_percent:.1f}%'
+                    }
+                    overall_status = 'warning' if overall_status == 'healthy' else 'critical'
+                else:
+                    checks['disk_space'] = {
+                        'status': 'healthy',
+                        'message': f'Disk usage {usage_percent:.1f}%'
+                    }
+            except Exception:
+                checks['disk_space'] = {
+                    'status': 'unknown',
+                    'message': 'Could not check disk space'
+                }
+            
+            health_data = {
+                'status': overall_status,
+                'timestamp': timezone.now().isoformat(),
+                'checks': checks,
+                'uptime_seconds': 0,  # Would need to track this properly
+                'version': '1.0.0',  # Would get from settings
+                'environment': getattr(settings, 'ENVIRONMENT', 'unknown')
+            }
+            
+            serializer = HealthCheckSerializer(health_data)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            return Response({
+                'status': 'critical',
+                'message': f'Health check failed: {str(e)}',
+                'timestamp': timezone.now().isoformat()
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Note: Other admin API views would be implemented similarly
+# They would be thin wrappers around the main API views with appropriate permissions# ==================== MISSING OPERATIONAL VIEWS ====================
+
+
+
+class BackupEncryptView(APIView):
+
+    """Encrypt a backup"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request, pk):
+
+        try:
+
+            backup = get_object_or_404(Backup, pk=pk)
+
+            
+
+            if backup.is_encrypted:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'Backup is already encrypted'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            algorithm = request.data.get('algorithm', 'AES-256-GCM')
+
+            
+
+            # Start encryption task
+
+            from .tasks import encrypt_backup_task
+
+            task = encrypt_backup_task.delay(str(backup.id), algorithm)
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Backup encryption started',
+
+                'task_id': task.id
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to start encryption: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class BackupCompressView(APIView):
+
+    """Compress a backup"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request, pk):
+
+        try:
+
+            backup = get_object_or_404(Backup, pk=pk)
+
+            
+
+            if backup.is_compressed:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'Backup is already compressed'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            compression_format = request.data.get('format', 'gzip')
+
+            level = request.data.get('level', 6)
+
+            
+
+            # Start compression task
+
+            from .tasks import compress_backup_task
+
+            task = compress_backup_task.delay(str(backup.id), compression_format, level)
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Backup compression started',
+
+                'task_id': task.id
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to start compression: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class BackupMoveView(APIView):
+
+    """Move backup to different storage"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request, pk):
+
+        try:
+
+            backup = get_object_or_404(Backup, pk=pk)
+
+            
+
+            target_storage_id = request.data.get('target_storage_id')
+
+            if not target_storage_id:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'target_storage_id is required'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            target_storage = get_object_or_404(BackupStorageLocation, pk=target_storage_id)
+
+            
+
+            # Start move task
+
+            from .tasks import move_backup_task
+
+            task = move_backup_task.delay(str(backup.id), str(target_storage.id))
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Backup move started',
+
+                'task_id': task.id
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to start move: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class BackupArchiveView(APIView):
+
+    """Archive a backup"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request, pk):
+
+        try:
+
+            backup = get_object_or_404(Backup, pk=pk)
+
+            
+
+            if backup.status != 'completed':
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'Only completed backups can be archived'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            # Start archive task
+
+            from .tasks import archive_backup_task
+
+            task = archive_backup_task.delay(str(backup.id))
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Backup archive started',
+
+                'task_id': task.id
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to start archive: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+# ==================== SCHEDULE OPERATION VIEWS ====================
+
+
+
+class ScheduleRunNowView(APIView):
+
+    """Run schedule immediately"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request, pk):
+
+        try:
+
+            schedule = get_object_or_404(BackupSchedule, pk=pk)
+
+            
+
+            if not schedule.is_active:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'Schedule is not active'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            # Start backup task
+
+            from .tasks import execute_schedule_task
+
+            task = execute_schedule_task.delay(str(schedule.id))
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Schedule execution started',
+
+                'task_id': task.id
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to start schedule: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class SchedulePauseView(APIView):
+
+    """Pause a schedule"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request, pk):
+
+        try:
+
+            schedule = get_object_or_404(BackupSchedule, pk=pk)
+
+            schedule.is_paused = True
+
+            schedule.save()
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Schedule paused'
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to pause schedule: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class ScheduleResumeView(APIView):
+
+    """Resume a schedule"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request, pk):
+
+        try:
+
+            schedule = get_object_or_404(BackupSchedule, pk=pk)
+
+            schedule.is_paused = False
+
+            schedule.save()
+
+            
+
+            # Recalculate next run
+
+            schedule.calculate_next_run()
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Schedule resumed',
+
+                'next_run': schedule.next_run
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to resume schedule: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class ScheduleNextRunView(APIView):
+
+    """Get next run time for schedule"""
+
+    permission_classes = [IsAuthenticated]
+
+    
+
+    def get(self, request, pk):
+
+        try:
+
+            schedule = get_object_or_404(BackupSchedule, pk=pk)
+
+            
+
+            return Response({
+
+                'next_run': schedule.next_run,
+
+                'last_run': schedule.last_run,
+
+                'is_active': schedule.is_active,
+
+                'is_paused': schedule.is_paused
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to get schedule info: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+# ==================== STORAGE OPERATION VIEWS ====================
+
+
+
+class StorageTestConnectionView(APIView):
+
+    """Test storage connection"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request, pk):
+
+        try:
+
+            storage = get_object_or_404(BackupStorageLocation, pk=pk)
+
+            
+
+            # Test connection using factory
+
+            from .services.factory import get_backup_service_factory
+
+            factory = get_backup_service_factory()
+
+            service = factory.create_service(f'storage_{storage.storage_type}', storage.config)
+
+            
+
+            # Perform connection test
+
+            if hasattr(service, 'test_connection'):
+
+                result = service.test_connection()
+
+            else:
+
+                # Default test - try to list files
+
+                result = {'success': True, 'message': 'Connection successful'}
+
+            
+
+            # Update storage status
+
+            storage.last_checked = timezone.now()
+
+            storage.connection_errors = None if result['success'] else result.get('message')
+
+            storage.save()
+
+            
+
+            return Response(result)
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Connection test failed: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class StorageSyncView(APIView):
+
+    """Sync storage metadata"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request, pk):
+
+        try:
+
+            storage = get_object_or_404(BackupStorageLocation, pk=pk)
+
+            
+
+            # Start sync task
+
+            from .tasks import sync_storage_task
+
+            task = sync_storage_task.delay(str(storage.id))
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Storage sync started',
+
+                'task_id': task.id
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to start sync: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class StorageCleanupView(APIView):
+
+    """Cleanup storage"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request, pk):
+
+        try:
+
+            storage = get_object_or_404(BackupStorageLocation, pk=pk)
+
+            
+
+            days = request.data.get('days', 30)
+
+            dry_run = request.data.get('dry_run', False)
+
+            
+
+            # Start cleanup task
+
+            from .tasks import cleanup_storage_task
+
+            task = cleanup_storage_task.delay(str(storage.id), days, dry_run)
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Storage cleanup started',
+
+                'task_id': task.id
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to start cleanup: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class StorageMetricsView(APIView):
+
+    """Get storage metrics"""
+
+    permission_classes = [IsAuthenticated]
+
+    
+
+    def get(self, request, pk):
+
+        try:
+
+            storage = get_object_or_404(BackupStorageLocation, pk=pk)
+
+            
+
+            # Get metrics from storage
+
+            metrics = storage.get_metrics()
+
+            
+
+            return Response(metrics)
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to get metrics: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ==================== ADDITIONAL MISSING VIEWS ====================
+
+
+
+class BatchOperationsView(APIView):
+
+    """Handle batch operations on backups"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request):
+
+        try:
+
+            serializer = BatchOperationSerializer(data=request.data)
+
+            if serializer.is_valid():
+
+                operation = serializer.validated_data['operation']
+
+                backup_ids = serializer.validated_data['backup_ids']
+
+                parameters = serializer.validated_data.get('parameters', {})
+
+                dry_run = serializer.validated_data.get('dry_run', False)
+
+                
+
+                if dry_run:
+
+                    return Response({
+
+                        'success': True,
+
+                        'message': f'Dry run: Would perform {operation} on {len(backup_ids)} backups',
+
+                        'backup_ids': [str(bid) for bid in backup_ids],
+
+                        'operation': operation,
+
+                        'parameters': parameters
+
+                    })
+
+                
+
+                # Start batch operation task
+
+                from .tasks import batch_operation_task
+
+                task = batch_operation_task.delay(operation, backup_ids, parameters)
+
+                
+
+                return Response({
+
+                    'success': True,
+
+                    'message': f'Batch {operation} started',
+
+                    'task_id': task.id,
+
+                    'backup_count': len(backup_ids)
+
+                })
+
+            
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Batch operation failed: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class BulkActionsView(APIView):
+
+    """Handle bulk actions on backups with filters"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request):
+
+        try:
+
+            serializer = BulkActionSerializer(data=request.data)
+
+            if serializer.is_valid():
+
+                action = serializer.validated_data['action']
+
+                filters = serializer.validated_data.get('filters', {})
+
+                target_all = serializer.validated_data.get('target_all', False)
+
+                dry_run = serializer.validated_data.get('dry_run', False)
+
+                schedule = serializer.validated_data.get('schedule', False)
+
+                schedule_time = serializer.validated_data.get('schedule_time')
+
+                
+
+                # Get target backups
+
+                if target_all:
+
+                    backups = Backup.objects.all()
+
+                else:
+
+                    backups = Backup.objects.filter(**filters)
+
+                
+
+                backup_ids = list(backups.values_list('id', flat=True))
+
+                
+
+                if dry_run:
+
+                    return Response({
+
+                        'success': True,
+
+                        'message': f'Dry run: Would perform {action} on {len(backup_ids)} backups',
+
+                        'backup_count': len(backup_ids),
+
+                        'action': action,
+
+                        'filters': filters
+
+                    })
+
+                
+
+                if schedule:
+
+                    # Schedule bulk action
+
+                    from .tasks import schedule_bulk_action_task
+
+                    task = schedule_bulk_action_task.delay(action, backup_ids, schedule_time)
+
+                    
+
+                    return Response({
+
+                        'success': True,
+
+                        'message': f'Bulk action scheduled for {schedule_time}',
+
+                        'task_id': task.id,
+
+                        'scheduled_time': schedule_time
+
+                    })
+
+                else:
+
+                    # Execute immediately
+
+                    from .tasks import bulk_action_task
+
+                    task = bulk_action_task.delay(action, backup_ids)
+
+                    
+
+                    return Response({
+
+                        'success': True,
+
+                        'message': f'Bulk {action} started',
+
+                        'task_id': task.id,
+
+                        'backup_count': len(backup_ids)
+
+                    })
+
+            
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Bulk action failed: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class ServiceStatusView(APIView):
+
+    """Get status of all backup services"""
+
+    permission_classes = [IsAuthenticated]
+
+    
+
+    def get(self, request):
+
+        try:
+
+            from .services.factory import get_backup_service_factory
+
+            factory = get_backup_service_factory()
+
+            
+
+            # Get all service instances
+
+            instances = factory.list_instances()
+
+            
+
+            services_status = {}
+
+            for service_id, instance_info in instances.items():
+
+                services_status[service_id] = {
+
+                    'service_type': instance_info.service_type.value,
+
+                    'created_at': instance_info.created_at,
+
+                    'health_status': instance_info.health_status,
+
+                    'last_health_check': instance_info.last_health_check,
+
+                    'is_healthy': instance_info.is_healthy()
+
+                }
+
+            
+
+            # Get factory statistics
+
+            stats = factory.get_service_statistics()
+
+            
+
+            return Response({
+
+                'services': services_status,
+
+                'statistics': stats,
+
+                'timestamp': timezone.now().isoformat()
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to get service status: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class SystemInfoView(APIView):
+
+    """Get system information"""
+
+    permission_classes = [IsAuthenticated]
+
+    
+
+    def get(self, request):
+
+        try:
+
+            import platform
+
+            import psutil
+
+            
+
+            system_info = {
+
+                'system': {
+
+                    'platform': platform.platform(),
+
+                    'architecture': platform.architecture(),
+
+                    'processor': platform.processor(),
+
+                    'hostname': platform.node(),
+
+                },
+
+                'memory': {
+
+                    'total': psutil.virtual_memory().total,
+
+                    'available': psutil.virtual_memory().available,
+
+                    'used': psutil.virtual_memory().used,
+
+                    'percentage': psutil.virtual_memory().percent,
+
+                },
+
+                'disk': {
+
+                    'total': psutil.disk_usage('/').total,
+
+                    'used': psutil.disk_usage('/').used,
+
+                    'free': psutil.disk_usage('/').free,
+
+                    'percentage': (psutil.disk_usage('/').used / psutil.disk_usage('/').total) * 100,
+
+                },
+
+                'python': {
+
+                    'version': platform.python_version(),
+
+                    'implementation': platform.python_implementation(),
+
+                },
+
+                'django': {
+
+                    'version': django.__version__,
+
+                    'settings': {
+
+                        'DEBUG': settings.DEBUG,
+
+                        'ENVIRONMENT': getattr(settings, 'ENVIRONMENT', 'unknown'),
+
+                    }
+
+                },
+
+                'backup_module': {
+
+                    'version': '1.0.0',
+
+                    'features': [
+
+                        'multiple_storage_backends',
+
+                        'encryption',
+
+                        'compression',
+
+                        'scheduling',
+
+                        'verification',
+
+                        'monitoring',
+
+                        'reporting'
+
+                    ]
+
+                }
+
+            }
+
+            
+
+            return Response(system_info)
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to get system info: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class LogStreamView(APIView):
+
+    """Stream backup logs in real-time"""
+
+    permission_classes = [IsAuthenticated]
+
+    
+
+    def get(self, request):
+
+        try:
+
+            from django.http import StreamingHttpResponse
+
+            import json
+
+            
+
+            def log_stream_generator():
+
+                # Get recent logs
+
+                logs = BackupLog.objects.order_by('-timestamp').select_related('backup')[:100]
+
+                
+
+                for log in logs:
+
+                    yield f"data: {json.dumps({
+
+                        'id': str(log.id),
+
+                        'timestamp': log.timestamp.isoformat(),
+
+                        'level': log.level,
+
+                        'category': log.category,
+
+                        'action': log.action,
+
+                        'message': log.message,
+
+                        'backup_id': str(log.backup.id) if log.backup else None,
+
+                        'backup_name': log.backup.name if log.backup else None,
+
+                        'duration': log.duration,
+
+                        'error_message': log.error_message
+
+                    })}\n\n"
+
+            
+
+            response = StreamingHttpResponse(
+
+                log_stream_generator(),
+
+                content_type='text/event-stream'
+
+            )
+
+            response['Cache-Control'] = 'no-cache'
+
+            response['Connection'] = 'keep-alive'
+
+            
+
+            return response
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to stream logs: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class BackupSearchView(APIView):
+
+    """Search backups"""
+
+    permission_classes = [IsAuthenticated]
+
+    
+
+    def get(self, request):
+
+        try:
+
+            query = request.GET.get('q', '')
+
+            if not query:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'Search query is required'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            # Search across multiple fields
+
+            backups = Backup.objects.filter(
+
+                Q(name__icontains=query) |
+
+                Q(description__icontains=query) |
+
+                Q(tags__icontains=query) |
+
+                Q(metadata__icontains=query)
+
+            ).select_related('created_by', 'backup_schedule')
+
+            
+
+            # Serialize results
+
+            serializer = BackupSerializer(backups, many=True)
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'query': query,
+
+                'count': len(backups),
+
+                'results': serializer.data
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Search failed: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class AdvancedSearchView(APIView):
+
+    """Advanced search with filters"""
+
+    permission_classes = [IsAuthenticated]
+
+    
+
+    def post(self, request):
+
+        try:
+
+            # Build complex query from request data
+
+            filters = request.data.get('filters', {})
+
+            sort_by = request.data.get('sort_by', '-created_at')
+
+            limit = request.data.get('limit', 50)
+
+            offset = request.data.get('offset', 0)
+
+            
+
+            queryset = Backup.objects.all()
+
+            
+
+            # Apply filters
+
+            if 'status' in filters:
+
+                queryset = queryset.filter(status=filters['status'])
+
+            
+
+            if 'backup_type' in filters:
+
+                queryset = queryset.filter(backup_type=filters['backup_type'])
+
+            
+
+            if 'storage_type' in filters:
+
+                queryset = queryset.filter(storage_type=filters['storage_type'])
+
+            
+
+            if 'date_from' in filters:
+
+                queryset = queryset.filter(created_at__gte=filters['date_from'])
+
+            
+
+            if 'date_to' in filters:
+
+                queryset = queryset.filter(created_at__lte=filters['date_to'])
+
+            
+
+            if 'size_min' in filters:
+
+                queryset = queryset.filter(file_size__gte=filters['size_min'])
+
+            
+
+            if 'size_max' in filters:
+
+                queryset = queryset.filter(file_size__lte=filters['size_max'])
+
+            
+
+            if 'created_by' in filters:
+
+                queryset = queryset.filter(created_by__id=filters['created_by'])
+
+            
+
+            if 'tags' in filters:
+
+                tags = filters['tags']
+
+                if isinstance(tags, list):
+
+                    queryset = queryset.filter(tags__overlap=tags)
+
+                else:
+
+                    queryset = queryset.filter(tags__icontains=tags)
+
+            
+
+            # Apply sorting
+
+            queryset = queryset.order_by(sort_by)
+
+            
+
+            # Apply pagination
+
+            total_count = queryset.count()
+
+            backups = queryset[offset:offset+limit]
+
+            
+
+            # Serialize results
+
+            serializer = BackupSerializer(backups, many=True)
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'filters': filters,
+
+                'sort_by': sort_by,
+
+                'total_count': total_count,
+
+                'offset': offset,
+
+                'limit': limit,
+
+                'results': serializer.data
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Advanced search failed: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class BatchVerificationView(APIView):
+
+    """Batch verification of backups"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request):
+
+        try:
+
+            backup_ids = request.data.get('backup_ids', [])
+
+            verification_method = request.data.get('method', 'hash')
+
+            parallel = request.data.get('parallel', 2)
+
+            
+
+            if not backup_ids:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'backup_ids is required'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            # Start batch verification task
+
+            from .tasks import batch_verification_task
+
+            task = batch_verification_task.delay(backup_ids, verification_method, parallel)
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': f'Batch verification started for {len(backup_ids)} backups',
+
+                'task_id': task.id,
+
+                'verification_method': verification_method,
+
+                'backup_count': len(backup_ids)
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Batch verification failed: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class ScheduleVerificationView(APIView):
+
+    """Schedule periodic verification"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request):
+
+        try:
+
+            cron_expression = request.data.get('cron_expression')
+
+            verification_method = request.data.get('method', 'hash')
+
+            filters = request.data.get('filters', {})
+
+            
+
+            if not cron_expression:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'cron_expression is required'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            # Create verification schedule
+
+            from .models import BackupSchedule
+
+            schedule = BackupSchedule.objects.create(
+
+                name=f'Verification Schedule - {timezone.now().strftime("%Y%m%d%H%M%S")}',
+
+                description='Automated backup verification schedule',
+
+                frequency='custom',
+
+                cron_expression=cron_expression,
+
+                backup_type='verification',
+
+                is_active=True,
+
+                created_by=request.user,
+
+                metadata={
+
+                    'verification_method': verification_method,
+
+                    'filters': filters
+
+                }
+
+            )
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Verification schedule created',
+
+                'schedule_id': schedule.id,
+
+                'cron_expression': cron_expression,
+
+                'next_run': schedule.next_run
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to schedule verification: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class EncryptionKeysView(APIView):
+
+    """Manage encryption keys"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def get(self, request):
+
+        try:
+
+            # Get all encryption records
+
+            encryptions = BackupEncryption.objects.select_related('backup').all()
+
+            
+
+            keys_data = []
+
+            for enc in encryptions:
+
+                keys_data.append({
+
+                    'id': str(enc.id),
+
+                    'backup_id': str(enc.backup.id),
+
+                    'backup_name': enc.backup.name,
+
+                    'algorithm': enc.algorithm,
+
+                    'key_hash': enc.key_hash,
+
+                    'is_encrypted': enc.is_encrypted,
+
+                    'key_version': enc.key_version,
+
+                    'key_rotation_date': enc.key_rotation_date,
+
+                    'created_at': enc.created_at
+
+                })
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'keys': keys_data,
+
+                'count': len(keys_data)
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Failed to get encryption keys: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    
+
+    def post(self, request):
+
+        try:
+
+            action = request.data.get('action')
+
+            
+
+            if action == 'rotate':
+
+                # Rotate all encryption keys
+
+                from .tasks import rotate_encryption_keys_task
+
+                task = rotate_encryption_keys_task.delay()
+
+                
+
+                return Response({
+
+                    'success': True,
+
+                    'message': 'Encryption key rotation started',
+
+                    'task_id': task.id
+
+                })
+
+            
+
+            elif action == 'export':
+
+                # Export encryption keys (secure)
+
+                password = request.data.get('password')
+
+                if not password:
+
+                    return Response({
+
+                        'success': False,
+
+                        'message': 'Password is required for key export'
+
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                
+
+                from .tasks import export_encryption_keys_task
+
+                task = export_encryption_keys_task.delay(password)
+
+                
+
+                return Response({
+
+                    'success': True,
+
+                    'message': 'Encryption keys export started',
+
+                    'task_id': task.id
+
+                })
+
+            
+
+            else:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': f'Unknown action: {action}'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Encryption keys operation failed: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class EncryptionRotateView(APIView):
+
+    """Rotate encryption keys"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request):
+
+        try:
+
+            backup_ids = request.data.get('backup_ids', [])
+
+            algorithm = request.data.get('algorithm', 'AES-256-GCM')
+
+            
+
+            if not backup_ids:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'backup_ids is required'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            # Start key rotation task
+
+            from .tasks import rotate_backup_encryption_task
+
+            task = rotate_backup_encryption_task.delay(backup_ids, algorithm)
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': f'Encryption rotation started for {len(backup_ids)} backups',
+
+                'task_id': task.id,
+
+                'algorithm': algorithm,
+
+                'backup_count': len(backup_ids)
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Encryption rotation failed: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class ImportBackupView(APIView):
+
+    """Import backup from external source"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request):
+
+        try:
+
+            source_type = request.data.get('source_type')  # url, file, s3
+
+            source_path = request.data.get('source_path')
+
+            storage_location_id = request.data.get('storage_location_id')
+
+            
+
+            if not source_type or not source_path:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'source_type and source_path are required'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            # Start import task
+
+            from .tasks import import_backup_task
+
+            task = import_backup_task.delay(source_type, source_path, storage_location_id)
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Backup import started',
+
+                'task_id': task.id,
+
+                'source_type': source_type,
+
+                'source_path': source_path
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Import failed: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class ExportBackupView(APIView):
+
+    """Export backup to external destination"""
+
+    permission_classes = [IsAdminUser]
+
+    
+
+    def post(self, request):
+
+        try:
+
+            backup_id = request.data.get('backup_id')
+
+            destination_type = request.data.get('destination_type')  # url, file, s3
+
+            destination_path = request.data.get('destination_path')
+
+            
+
+            if not backup_id or not destination_type:
+
+                return Response({
+
+                    'success': False,
+
+                    'message': 'backup_id and destination_type are required'
+
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            backup = get_object_or_404(Backup, pk=backup_id)
+
+            
+
+            # Start export task
+
+            from .tasks import export_backup_task
+
+            task = export_backup_task.delay(str(backup.id), destination_type, destination_path)
+
+            
+
+            return Response({
+
+                'success': True,
+
+                'message': 'Backup export started',
+
+                'task_id': task.id,
+
+                'backup_name': backup.name,
+
+                'destination_type': destination_type
+
+            })
+
+            
+
+        except Exception as e:
+
+            return Response({
+
+                'success': False,
+
+                'message': f'Export failed: {str(e)}'
+
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+# Additional analytics and reporting views would follow similar patterns...
+

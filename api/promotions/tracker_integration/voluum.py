@@ -45,9 +45,6 @@ class VoluumIntegration:
 def tracker_setup_view(request, campaign_id):
     integration = VoluumIntegration()
     return Response(integration.get_tracking_url_template(campaign_id, request.user.id))
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def supported_trackers_view(request):
     integration = VoluumIntegration()

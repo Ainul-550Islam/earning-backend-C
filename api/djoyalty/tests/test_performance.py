@@ -1,5 +1,5 @@
 # api/djoyalty/tests/test_performance.py
-"""Performance tests — query count checks।"""
+"""Performance tests -- query count checks।"""
 from decimal import Decimal
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -19,7 +19,8 @@ class QueryCountTest(TestCase):
         from djoyalty.services.points.PointsEngine import PointsEngine
         customer = make_customer(code='PERF_EARN01')
         make_loyalty_points(customer, balance=Decimal('0'))
-        with self.assertNumQueries(7):
+        # 8 queries: SAVEPOINT, fraud-check, rate, tier, LP-select, LP-update, ledger-insert, RELEASE
+        with self.assertNumQueries(8):
             PointsEngine.process_earn(customer, Decimal('100'))
 
     def test_customer_list_no_n_plus_1(self):

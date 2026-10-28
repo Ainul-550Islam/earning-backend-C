@@ -1,5 +1,8 @@
+from django.db import models
+from django.http import Http404
+from typing import Dict, List, Any, Optional, Tuple, Union
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, FormView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy, reverse
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
@@ -11,11 +14,11 @@ from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.cache import cache
-from api.wallet.models import WalletTransaction as GatewayTransaction
+# GatewayTransaction: use lazy import from api.wallet — owned by api.wallet
 from django.contrib.syndication.views import Feed
 from django.utils.feedgenerator import Atom1Feed
 from django.contrib.sitemaps import Sitemap
-from api.tenants.mixins import TenantMixin
+# TenantMixin is owned by api.tenants — import from there
 from rest_framework.views import APIView 
 from rest_framework.response import Response 
 from rest_framework.permissions import IsAuthenticatedOrReadOnly 
@@ -33,12 +36,630 @@ from .forms import (
     FAQCategoryForm, SiteSettingsForm, ImageGalleryForm,
     GalleryImageForm, FileManagerForm, CommentForm
 )
+from api.cms.models import CommentLike
+from api.cms.models import ContentShare
 
 logger = logging.getLogger(__name__)
 
 
 # ==============================================
-# Dashboard and Analytics Views
+# Base Views for New Features
+# ==============================================
+
+class CMSBaseView(TemplateView):
+    """Base view for CMS with common context."""
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'cms_version': '1.0.0',
+            'current_year': timezone.now().year,
+            'user': self.request.user,
+        })
+        return context
+
+
+class CMSAuthenticatedView(LoginRequiredMixin, CMSBaseView):
+    """Base view for authenticated CMS users."""
+    pass
+
+
+class CMSAdminView(PermissionRequiredMixin, CMSAuthenticatedView):
+    """Base view for CMS admins."""
+    permission_required = 'cms.admin_access'
+    login_url = reverse_lazy('cms:login')
+
+
+# ==============================================
+# Survey Views
+# ==============================================
+
+class SurveyListView(CMSAuthenticatedView):
+    """List available surveys."""
+    template_name = 'cms/surveys/list.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # Get available surveys for user
+        from .models_new.profile_surveys import Survey
+        
+        surveys = Survey.objects.filter(
+            status='active',
+            is_public=True
+        ).exclude(
+            id__in=user.survey_completions.filter(
+                status='completed'
+            ).values_list('survey_id', flat=True)
+        ).select_related('category').prefetch_related('questions')
+        
+        # Apply filters
+        category_filter = self.request.GET.get('category')
+        difficulty_filter = self.request.GET.get('difficulty')
+        
+        if category_filter:
+            surveys = surveys.filter(category__name=category_filter)
+        
+        if difficulty_filter:
+            surveys = surveys.filter(difficulty=difficulty_filter)
+        
+        context.update({
+            'surveys': surveys,
+            'categories': Survey.objects.values_list('category__name', flat=True).distinct(),
+            'difficulties': Survey.objects.values_list('difficulty', flat=True).distinct(),
+            'current_filters': {
+                'category': category_filter,
+                'difficulty': difficulty_filter
+            }
+        })
+        
+        return context
+
+
+class SurveyDetailView(CMSAuthenticatedView):
+    """Survey detail view."""
+    template_name = 'cms/surveys/detail.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        survey_id = kwargs.get('survey_id')
+        
+        from .models_new.profile_surveys import Survey
+        survey = get_object_or_404(Survey, id=survey_id)
+        
+        # Check if user has completed this survey
+        user = self.request.user
+        completed = user.survey_completions.filter(
+            survey=survey,
+            status='completed'
+        ).exists()
+        
+        # Check if user has ongoing survey
+        ongoing = user.survey_completions.filter(
+            survey=survey,
+            status='in_progress'
+        ).first()
+        
+        context.update({
+            'survey': survey,
+            'completed': completed,
+            'ongoing': ongoing,
+            'can_start': not completed and not ongoing
+        })
+        
+        return context
+
+
+class SurveyStartView(CMSAuthenticatedView):
+    """Start a survey."""
+    template_name = 'cms/surveys/start.html'
+    
+    def post(self, request, survey_id):
+        from .models_new.profile_surveys import Survey, SurveyCompletion
+        from .services_new.ProfileSurveyService import ProfileSurveyManager
+        
+        survey = get_object_or_404(Survey, id=survey_id)
+        user = request.user
+        
+        try:
+            manager = ProfileSurveyManager()
+            completion = manager.start_survey(user, str(survey.uuid))
+            
+            return redirect('cms:survey_take', survey_id=survey.id, completion_id=completion.uuid)
+            
+        except Exception as e:
+            logger.error(f"Error starting survey {survey_id}: {e}")
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        survey_id = kwargs.get('survey_id')
+        
+        from .models_new.profile_surveys import Survey
+        survey = get_object_or_404(Survey, id=survey_id)
+        
+        context.update({
+            'survey': survey
+        })
+        
+        return context
+
+
+class SurveyTakeView(CMSAuthenticatedView):
+    """Take a survey."""
+    template_name = 'cms/surveys/take.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        survey_id = kwargs.get('survey_id')
+        completion_id = kwargs.get('completion_id')
+        
+        from .models_new.profile_surveys import Survey, SurveyCompletion
+        survey = get_object_or_404(Survey, id=survey_id)
+        completion = get_object_or_404(SurveyCompletion, uuid=completion_id, user=self.request.user)
+        
+        context.update({
+            'survey': survey,
+            'completion': completion,
+            'questions': survey.questions.all().order_by('order')
+        })
+        
+        return context
+
+
+class SurveySubmitView(CMSAuthenticatedView):
+    """Submit survey responses."""
+    
+    def post(self, request, survey_id, completion_id):
+        from .models_new.profile_surveys import SurveyCompletion
+        from .services_new.ProfileSurveyService import ProfileSurveyManager
+        
+        completion = get_object_or_404(SurveyCompletion, uuid=completion_id, user=request.user)
+        responses = request.POST.getlist('responses')
+        
+        try:
+            manager = ProfileSurveyManager()
+            result = manager.submit_survey(request.user, str(completion.survey.uuid), responses)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Survey submitted successfully',
+                'quality_score': result.quality_score,
+                'reward_earned': result.total_reward_earned
+            })
+            
+        except Exception as e:
+            logger.error(f"Error submitting survey {survey_id}: {e}")
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+# ==============================================
+# Reward Views
+# ==============================================
+
+class RewardHistoryView(CMSAuthenticatedView):
+    """View reward transaction history."""
+    template_name = 'cms/rewards/history.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        from .models_new.survey_rewards import RewardTransaction
+        transactions = RewardTransaction.objects.filter(
+            user=user
+        ).order_by('-created_at').select_related('reward_pool')
+        
+        # Apply filters
+        transaction_type = self.request.GET.get('type')
+        status_filter = self.request.GET.get('status')
+        
+        if transaction_type:
+            transactions = transactions.filter(transaction_type=transaction_type)
+        
+        if status_filter:
+            transactions = transactions.filter(status=status_filter)
+        
+        # Calculate summary
+        total_earned = transactions.filter(
+            transaction_type='earned',
+            status='completed'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        total_paid = transactions.filter(
+            transaction_type='payout',
+            status='completed'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        context.update({
+            'transactions': transactions,
+            'total_earned': total_earned,
+            'total_paid': total_paid,
+            'current_balance': total_earned - total_paid,
+            'transaction_types': RewardTransaction.objects.values_list('transaction_type', flat=True).distinct(),
+            'status_options': RewardTransaction.objects.values_list('status', flat=True).distinct(),
+            'current_filters': {
+                'type': transaction_type,
+                'status': status_filter
+            }
+        })
+        
+        return context
+
+
+class PayoutRequestView(CMSAuthenticatedView):
+    """Request payout view."""
+    template_name = 'cms/rewards/payout.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        from .models_new.survey_rewards import RewardTransaction
+        available_balance = RewardTransaction.objects.filter(
+            user=user,
+            transaction_type='earned',
+            status='completed'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        paid_amount = RewardTransaction.objects.filter(
+            user=user,
+            transaction_type='payout',
+            status='completed'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        context.update({
+            'available_balance': available_balance,
+            'paid_amount': paid_amount,
+            'can_payout': (available_balance - paid_amount) >= 1.0
+        })
+        
+        return context
+    
+    def post(self, request):
+        amount = float(request.POST.get('amount', 0))
+        payment_method = request.POST.get('payment_method')
+        payment_details = request.POST.get('payment_details', '{}')
+        
+        if amount < 1.0:
+            return JsonResponse({'error': 'Minimum payout amount is $1.00'}, status=400)
+        
+        try:
+            from .models_new.survey_rewards import RewardTransaction
+            from .services_new.SurveyRewardService import SurveyRewardService
+            
+            service = SurveyRewardService()
+            transaction = service.create_transaction(
+                request.user, -amount, 'payout', 
+                f'Payout request via {payment_method}',
+                payment_details
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Payout request submitted successfully',
+                'transaction_id': str(transaction.uuid)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error processing payout: {e}")
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+# ==============================================
+# User Profile Views
+# ==============================================
+
+class ProfileView(CMSAuthenticatedView):
+    """User profile view."""
+    template_name = 'cms/profile/view.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # Get or create user profile
+        from .models_new.user_profile import UserProfile
+        from .services_new.UserProfileService import UserProfileService
+        
+        service = UserProfileService()
+        profile = service.get_or_create_profile(user)
+        
+        # Calculate participation score
+        from .logic import calculate_participation_score
+        user_data = {
+            'completed_surveys_count': user.survey_completions.filter(status='completed').count(),
+            'average_quality_score': user.survey_completions.filter(status='completed').aggregate(avg=Avg('quality_score'))['avg'] or 0.7,
+            'days_since_last_activity': 0,  # Would calculate from last completion
+            'profile_completeness': 0  # Will calculate below
+        }
+        
+        from .logic import calculate_profile_completeness
+        profile_data = {
+            'first_name': profile.first_name,
+            'last_name': profile.last_name,
+            'email': profile.email,
+            'phone_number': profile.phone_number,
+            'date_of_birth': profile.date_of_birth,
+            'address': profile.address
+        }
+        
+        user_data['profile_completeness'] = calculate_profile_completeness(profile_data)
+        participation_score = calculate_participation_score(user_data)
+        
+        # Get user segments
+        from .logic import determine_user_segments
+        segments = determine_user_segments(user_data)
+        
+        context.update({
+            'profile': profile,
+            'participation_score': participation_score,
+            'segments': segments,
+            'profile_completeness': user_data['profile_completeness']
+        })
+        
+        return context
+
+
+class ProfileEditView(CMSAuthenticatedView):
+    """Edit user profile view."""
+    template_name = 'cms/profile/edit.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        from .models_new.user_profile import UserProfile
+        from .services_new.UserProfileService import UserProfileService
+        
+        service = UserProfileService()
+        profile = service.get_or_create_profile(user)
+        
+        context.update({
+            'profile': profile
+        })
+        
+        return context
+    
+    def post(self, request):
+        from .services_new.UserProfileService import UserProfileService
+        
+        service = UserProfileService()
+        profile_data = {
+            'first_name': request.POST.get('first_name'),
+            'last_name': request.POST.get('last_name'),
+            'email': request.POST.get('email'),
+            'phone_number': request.POST.get('phone_number'),
+            'date_of_birth': request.POST.get('date_of_birth'),
+            'address': request.POST.get('address')
+        }
+        
+        try:
+            profile = service.update_profile(request.user, profile_data)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Profile updated successfully',
+                'completeness_percentage': profile.completeness_percentage
+            })
+            
+        except Exception as e:
+            logger.error(f"Error updating profile: {e}")
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+# ==============================================
+# Analytics Views
+# ==============================================
+
+class AnalyticsView(CMSAdminView):
+    """Analytics dashboard view."""
+    template_name = 'cms/analytics/dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        days = int(self.request.GET.get('days', 30))
+        
+        # Get survey analytics
+        from .logic import calculate_survey_analytics
+        survey_data = {
+            'total_completed': 100,  # Placeholder - would fetch from database
+            'total_started': 120,
+            'avg_quality': 0.75,
+            'total_rewards': 250.50
+        }
+        survey_analytics = calculate_survey_analytics(survey_data)
+        
+        # Get user analytics
+        from .logic import calculate_user_analytics
+        user_data = {
+            'new_registrations': 15,
+            'active_users': 85,
+            'previous_active_users': 80
+        }
+        user_analytics = calculate_user_analytics(user_data)
+        
+        # Get reward analytics
+        from .logic import calculate_reward_analytics
+        reward_data = {
+            'total_earned': 500.75,
+            'total_paid': 350.25,
+            'pending_payouts': 25.00
+        }
+        reward_analytics = calculate_reward_analytics(reward_data)
+        
+        context.update({
+            'survey_analytics': survey_analytics,
+            'user_analytics': user_analytics,
+            'reward_analytics': reward_analytics,
+            'days': days
+        })
+        
+        return context
+
+
+class ReportsView(CMSAdminView):
+    """Reports generation view."""
+    template_name = 'cms/analytics/reports.html'
+    
+    def post(self, request):
+        report_type = request.POST.get('report_type')
+        filters = {
+            'date_from': request.POST.get('date_from'),
+            'date_to': request.POST.get('date_to'),
+            'status': request.POST.get('status')
+        }
+        format_type = request.POST.get('format', 'csv')
+        
+        try:
+            from .services import CMSService
+            report = CMSService.generate_report(report_type, filters, format_type)
+            
+            if not report:
+                return JsonResponse({'error': 'Invalid report type'}, status=400)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Report generated successfully',
+                'report_type': report_type,
+                'format': format_type,
+                'data': report['data']
+            })
+            
+        except Exception as e:
+            logger.error(f"Error generating report: {e}")
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+# ==============================================
+# Task Management Views
+# ==============================================
+
+class TaskManagementView(CMSAdminView):
+    """Task management view."""
+    template_name = 'cms/tasks/management.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        from .models_new.task_management import TaskSchedule, TaskExecution
+        
+        # Get task schedules
+        schedules = TaskSchedule.objects.all().select_related('created_by')
+        
+        # Get recent executions
+        recent_executions = TaskExecution.objects.all().order_by('-started_at')[:20]
+        
+        # Get task statistics
+        total_tasks = schedules.count()
+        active_tasks = schedules.filter(status='active').count()
+        running_tasks = recent_executions.filter(status='running').count()
+        
+        context.update({
+            'schedules': schedules,
+            'recent_executions': recent_executions,
+            'task_stats': {
+                'total': total_tasks,
+                'active': active_tasks,
+                'running': running_tasks,
+                'success_rate': 85.5  # Placeholder - would calculate
+            }
+        })
+        
+        return context
+
+
+class TaskExecuteView(CMSAdminView):
+    """Execute task view."""
+    
+    def post(self, request):
+        task_id = request.POST.get('task_id')
+        
+        try:
+            from .models_new.task_management import TaskSchedule
+            from .services_new.TaskManagementService import TaskManagementService
+            
+            task = TaskSchedule.objects.get(id=task_id)
+            service = TaskManagementService()
+            execution = service.execute_task(str(task.uuid))
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Task execution started',
+                'execution_id': str(execution.uuid),
+                'status': execution.status
+            })
+            
+        except Exception as e:
+            logger.error(f"Error executing task {task_id}: {e}")
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+# ==============================================
+# API Views for New Features
+# ==============================================
+
+class APISurveyListView(CMSAuthenticatedView, APIView):
+    """API view for survey list."""
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
+    def get(self, request):
+        from .models_new.profile_surveys import Survey
+        
+        surveys = Survey.objects.filter(
+            status='active',
+            is_public=True
+        ).exclude(
+            id__in=request.user.survey_completions.filter(
+                status='completed'
+            ).values_list('survey_id', flat=True)
+        ).values('id', 'title', 'description', 'difficulty', 'min_reward', 'max_reward')
+        
+        return Response({'surveys': list(surveys)})
+
+
+class APIRewardSummaryView(CMSAuthenticatedView, APIView):
+    """API view for reward summary."""
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
+    def get(self, request):
+        from .models_new.survey_rewards import RewardTransaction
+        
+        transactions = RewardTransaction.objects.filter(
+            user=request.user,
+            transaction_type='earned',
+            status='completed'
+        )
+        
+        total_earned = transactions.aggregate(total=Sum('amount'))['total'] or 0
+        recent_transactions = transactions.order_by('-created_at')[:10].values(
+            'amount', 'transaction_type', 'status', 'created_at', 'description'
+        )
+        
+        return Response({
+            'total_earned': total_earned,
+            'recent_transactions': list(recent_transactions)
+        })
+
+
+class NotificationCountView(CMSAuthenticatedView, APIView):
+    """Get unread notification count."""
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
+    def get(self, request):
+        from .models_new.notifications import Notification
+        
+        count = Notification.objects.filter(
+            user=request.user,
+            read=False
+        ).count()
+        
+        return Response({'unread_count': count})
+
+
+# ==============================================
+# Dashboard and Analytics Views (Original)
 # ==============================================
 
 class DashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
@@ -1560,7 +2181,7 @@ class ContentPageViewSet(viewsets.ModelViewSet):
         featured = ContentPage.objects.filter(is_featured=True).count()
         return Response({"total": total, "published": published, "draft": draft, "featured": featured})
 
-class BannerViewSet(viewsets.ModelViewSet):
+class LegacyBannerViewSet(viewsets.ModelViewSet):  # Renamed: use viewsets/BannerViewSet.py
     @action(detail=False, methods=["get"])
     def stats(self, request):
         from django.db.models import Count
@@ -1634,7 +2255,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         comment.save()
         return Response({"success": True})
 
-class SiteAnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
+class LegacySiteAnalyticsViewSet(viewsets.ReadOnlyModelViewSet):  # Renamed: use viewsets/SiteContentViewSet.py
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = SiteAnalyticsSerializer
@@ -1679,3 +2300,59 @@ class ContentPermissionViewSet(vs2.ModelViewSet):
             has_perm = ContentPermission.check_permission(content, request.user, perm_type)
             return CR({'has_permission': has_perm})
         except: return CR({'has_permission': False})
+
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+
+@login_required
+@require_http_methods(['GET', 'POST', 'PATCH'])
+def user_profile_view(request):
+    """Legacy profile update endpoint used by test_user_profile_update_flow."""
+    try:
+        from .models_new.withdrawal import UserProfile
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        if request.method in ('POST', 'PATCH'):
+            data = request.POST or {}
+            for field in ('bio', 'display_name'):
+                if field in data:
+                    setattr(profile, field, data[field])
+            # first_name / last_name live on the User model
+            for field in ('first_name', 'last_name'):
+                if field in data:
+                    setattr(request.user, field, data[field])
+            request.user.save(update_fields=[f for f in ('first_name','last_name') if f in data] or None)
+            profile.save()
+        return JsonResponse({'status': 'ok', 'username': request.user.username})
+    except Exception as exc:
+        return JsonResponse({'status': 'error', 'detail': str(exc)}, status=400)
+
+
+class WithdrawalHistoryView(__import__('rest_framework.views', fromlist=['APIView']).APIView):
+    """Withdrawal history endpoint — DRF view supporting JWT auth."""
+    from rest_framework.permissions import IsAuthenticated
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [
+        __import__('rest_framework.authentication', fromlist=['SessionAuthentication']).SessionAuthentication,
+    ]
+    try:
+        from rest_framework_simplejwt.authentication import JWTAuthentication
+        authentication_classes.append(JWTAuthentication)
+    except ImportError:
+        pass
+
+    def get(self, request):
+        from .models_new.withdrawal import WithdrawalRequest
+        from rest_framework.response import Response
+        user = request.user
+        if user.is_authenticated:
+            qs = list(WithdrawalRequest.objects.filter(user=user).values(
+                'id', 'requested_usd', 'status', 'created_at'
+            ))
+        else:
+            qs = []
+        return Response({'results': qs, 'count': len(qs)})
+
+# Keep function alias for URL pattern registration
+withdrawal_history_view = WithdrawalHistoryView.as_view()

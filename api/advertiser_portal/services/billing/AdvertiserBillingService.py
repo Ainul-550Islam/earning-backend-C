@@ -4,6 +4,8 @@ Advertiser Billing Service
 Service for managing advertiser billing operations,
 including deposits, charges, and invoice management.
 """
+from django.db import models
+from django.db.models import When
 
 import logging
 from typing import Dict, List, Optional, Any

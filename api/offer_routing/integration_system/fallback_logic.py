@@ -4,6 +4,7 @@ Fallback Logic
 Fallback logic service for integration system
 to provide graceful degradation and error handling.
 """
+import re
 
 import logging
 from typing import Dict, List, Any, Optional, Union

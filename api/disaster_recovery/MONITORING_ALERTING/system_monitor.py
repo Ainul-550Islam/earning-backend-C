@@ -142,4 +142,3 @@ class SystemMonitor:
                 metrics["memory_percent"] = round((1-avail/total)*100,2)
                 metrics["memory_total_gb"] = round(total/1e6,2)
         except Exception: pass
-

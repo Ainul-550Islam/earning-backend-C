@@ -11,6 +11,7 @@ Rules enforced:
   4. Geo rule violations → score = 0 (hard exclude)
   5. All math uses Decimal — no float precision errors
 """
+import hashlib
 import logging
 import random
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation

@@ -34,6 +34,7 @@ from .forms import (
     OfferRouteForm, RoutingABTestForm, BulkAssignmentForm,
     PerformanceReportForm, SystemConfigForm
 )
+from api.offer_routing.models.analytics import RoutingInsight
 
 logger = logging.getLogger(__name__)
 

@@ -120,7 +120,8 @@ class StripeWebhookHandler:
 
 def _verify_stripe_signature(payload: bytes, sig_header: str) -> bool:
     if not STRIPE_WEBHOOK_SECRET:
-        return True   # Dev mode — skip verification
+        from django.conf import settings as _dj_settings
+        return bool(_dj_settings.DEBUG)  # no secret: only allowed in DEBUG
     try:
         import stripe
         stripe.WebhookSignature.verify_header(payload, sig_header, STRIPE_WEBHOOK_SECRET)

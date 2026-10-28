@@ -15,7 +15,7 @@ class PluralEngine:
     def get_plural_form(self, count: float, language_code: str) -> str:
         """CLDR plural category for count in language"""
         try:
-            from ...utils.plural import get_plural_form
+            from api.localization.utils.plural import get_plural_form
             return get_plural_form(count, language_code)
         except Exception as e:
             logger.error(f"get_plural_form failed: {e}")
@@ -24,7 +24,7 @@ class PluralEngine:
     def get_forms_for_language(self, language_code: str) -> List[str]:
         """Language-এর সব plural forms"""
         try:
-            from ...utils.plural import get_plural_forms_for_locale
+            from api.localization.utils.plural import get_plural_forms_for_locale
             return get_plural_forms_for_locale(language_code)
         except Exception:
             return ['one', 'other']
@@ -32,7 +32,7 @@ class PluralEngine:
     def get_cldr_examples(self, language_code: str) -> Dict:
         """Plural forms with example numbers"""
         try:
-            from ...utils.plural import get_cldr_info
+            from api.localization.utils.plural import get_cldr_info
             return get_cldr_info(language_code)
         except Exception:
             return {'forms': ['one', 'other'], 'examples': {'one': [1], 'other': [2, 5]}}
@@ -69,8 +69,8 @@ class PluralEngine:
     def update_language_plural_rules(self, language_code: str) -> bool:
         """Language model-এ plural rule save করে CLDR data থেকে"""
         try:
-            from ..models.core import Language
-            from ...utils.plural import get_plural_forms_for_locale, get_cldr_info
+            from api.localization.models.core import Language
+            from api.localization.utils.plural import get_plural_forms_for_locale, get_cldr_info
             lang = Language.objects.filter(code=language_code).first()
             if not lang:
                 return False

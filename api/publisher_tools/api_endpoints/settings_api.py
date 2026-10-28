@@ -132,7 +132,7 @@ class APIKeySettingsView(APIView):
             publisher = request.user.publisher_profile
         except Exception:
             return Response({"success": False, "message": "No publisher profile."}, status=404)
-        from api.publisher_tools.services import PublisherService
+        from publisher_tools.services import PublisherService
         publisher = PublisherService.regenerate_api_key(publisher)
         return Response({"success": True, "message": "API key regenerated. Store your new secret securely.", "data": {
             "api_key":    publisher.api_key,

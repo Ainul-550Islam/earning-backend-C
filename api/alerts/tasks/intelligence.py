@@ -110,10 +110,15 @@ def update_correlation_insights():
 
 
 @shared_task
-def evaluate_model_accuracy():
-    """Evaluate accuracy of prediction models"""
+def evaluate_model_accuracy(prediction_id=None):
+    """Evaluate accuracy of prediction models (all of them, or only `prediction_id`)"""
     try:
-        evaluations = AlertPredictionService.evaluate_prediction_accuracy()
+        if prediction_id is None:
+            evaluations = AlertPredictionService.evaluate_prediction_accuracy()
+        else:
+            evaluations = AlertPredictionService.evaluate_prediction_accuracy(
+                prediction_id=prediction_id
+            )
         logger.info(f"Evaluated {len(evaluations)} prediction models")
         return evaluations
         
@@ -150,7 +155,8 @@ def update_noise_effectiveness():
         updated_count = 0
         for filter_data in effectiveness_data:
             filter_id = filter_data['filter_id']
-            effectiveness_score = filter_data['effectiveness_score']
+            # get_effectiveness_score() is a 0-100 percentage; the stored field is a 0.0-1.0 fraction
+            effectiveness_score = max(0.0, min(1.0, float(filter_data['effectiveness_score'] or 0) / 100.0))
             
             AlertNoise.objects.filter(id=filter_id).update(
                 effectiveness_score=effectiveness_score
@@ -171,12 +177,22 @@ def create_rca_for_incidents():
     try:
         from ..models.incident import Incident
         
+        from ..models.intelligence import RootCauseAnalysis
+
+        # RootCauseAnalysis has no FK to Incident (the old `rca__isnull` filter raised
+        # FieldError on every run); it lists the incidents it covers in the
+        # `related_incidents` JSON list.
+        covered_ids = set()
+        for ids in RootCauseAnalysis.objects.values_list('related_incidents', flat=True):
+            if isinstance(ids, (list, tuple)):
+                covered_ids.update(int(i) for i in ids if str(i).isdigit())
+
         # Get recent high-severity incidents without RCA
         incidents = Incident.objects.filter(
             severity__in=['high', 'critical'],
             detected_at__gte=timezone.now() - timedelta(days=7)
         ).exclude(
-            rca__isnull=False
+            id__in=covered_ids
         )
         
         created_count = 0
@@ -234,7 +250,7 @@ def cleanup_old_intelligence_data():
         cutoff_date = timezone.now() - timedelta(days=days_to_keep)
         
         # Clean up old correlation history
-        from ..models.intelligence import ThresholdHistory
+        from ..models.threshold import ThresholdHistory
         deleted_history = ThresholdHistory.objects.filter(
             created_at__lt=cutoff_date
         ).delete()[0]

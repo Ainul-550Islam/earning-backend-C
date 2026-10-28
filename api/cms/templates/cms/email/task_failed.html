@@ -1,0 +1,69 @@
+{% extends "cms/email/base_email.html" %}
+{% load i18n %}
+
+{% block content %}
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #dc3545; margin: 0;">⚠️ Task Failed</h1>
+    </div>
+    
+    <div style="background: #f8d7da; padding: 25px; border-radius: 8px; margin-bottom: 25px;">
+        <h2 style="color: #721c24; margin-top: 0;">Task "{{ task_name }}" has failed</h2>
+        <p style="color: #721c24; font-size: 16px; line-height: 1.5;">
+            The scheduled task <strong>"{{ task_name }}"</strong> failed to execute 
+            at {{ failed_at }}.
+        </p>
+        
+        {% if error_message %}
+        <div style="background: #f5c6cb; border: 1px solid #f0b429; padding: 15px; border-radius: 6px; margin: 15px 0;">
+            <p style="margin: 0; color: #856404;">
+                <strong>Error Details:</strong><br>
+                {{ error_message }}
+            </p>
+        </div>
+        {% endif %}
+        
+        {% if retry_count > 0 %}
+        <div style="background: #e2e3e5; padding: 15px; border-radius: 6px; margin: 15px 0;">
+            <p style="margin: 0; color: #495057;">
+                <strong>Retry Information:</strong><br>
+                This is retry #{{ retry_count }} of {{ max_retries }} maximum retries.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if next_retry_at %}
+    <div style="background: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 6px; margin-bottom: 25px;">
+        <p style="margin: 0; color: #0c5460;">
+            <strong>🔄 Next Retry Scheduled:</strong><br>
+            {{ next_retry_at }}
+        </p>
+    </div>
+    {% endif %}
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{{ site_url }}/admin/cms/taskschedule/" 
+           style="background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; 
+                  border-radius: 6px; font-weight: bold; display: inline-block;">
+            View Task Details
+        </a>
+    </div>
+    
+    {% if requires_attention %}
+    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin-top: 20px;">
+        <p style="margin: 0; color: #856404;">
+            <strong>⚠️ Attention Required:</strong><br>
+            This task requires manual intervention. Please check the task configuration and error logs.
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+{% block footer %}
+<div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+    <p style="color: #6c757d; font-size: 12px; margin: 0;">
+        Task monitoring and error reporting are essential for maintaining system reliability.
+    </p>
+</div>
+{% endblock %}

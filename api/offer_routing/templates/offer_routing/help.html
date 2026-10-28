@@ -1,0 +1,13 @@
+{% extends "offer_routing/_base.html" %}
+{% block title %}Help{% endblock %}
+{% block content %}
+<h1>Offer Routing Help</h1>
+<div class="accordion" id="helpAccordion">
+    <div class="accordion-item">
+        <h2 class="accordion-header"><button class="accordion-button" data-bs-toggle="collapse" data-bs-target="#help1">What is offer routing?</button></h2>
+        <div id="help1" class="accordion-collapse collapse show" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">Offer routing determines which offers to show users based on targeting rules, scoring, and A/B tests.</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

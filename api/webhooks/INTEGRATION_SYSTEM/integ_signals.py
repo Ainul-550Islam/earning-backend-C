@@ -282,7 +282,7 @@ class IntegrationSignals:
             try:
                 return listener(sender, signal_type, **kwargs)
             except Exception as e:
-                self.logger.error(f"Error in signal listener for {signal_type}: {str(e)")
+                self.logger.error(f"Error in signal listener for {signal_type}: {str(e)}")
                 return None
         
         return receiver_func

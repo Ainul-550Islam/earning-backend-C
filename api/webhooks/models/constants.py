@@ -1,83 +1,57 @@
-"""Webhook Model Constants
+"""
+Model-layer constants — thin re-export shim.
 
-This module contains constants and choices used by webhook models.
+CONSOLIDATION (this audit): this file used to independently define
+WebhookStatus, DeliveryStatus, BatchStatus, FilterOperator, InboundSource,
+ReplayStatus, and ErrorType, each also defined separately in ../choices.py
+(and DeliveryStatus a third time in ../constants.py). Several of these had
+genuinely diverged in value, not just duplicated:
+  - FilterOperator.GREATER_THAN/LESS_THAN were 'gt'/'lt' in choices.py vs
+    'greater_than'/'less_than' here (and in the real migrated DB schema) -
+    services/filtering/FilterService.py imported choices.py's version,
+    so gt/lt filter evaluation was silently always False.
+  - ReplayStatus here had CANCELLED; choices.py's didn't. WebhookReplayViewSet
+    imports choices.py's version (via ../constants.py's re-export) and sets
+    status=ReplayStatus.CANCELLED on cancel — confirmed AttributeError on
+    every real call.
+  - WebhookStatus here had INACTIVE instead of choices.py's DISABLED, which
+    actually governs the real WebhookEndpoint.status field (models/core.py
+    imports from ../choices.py directly) — admin/subscription_admin.py's
+    color-map used this file's INACTIVE and silently never matched.
+  - ErrorType here (SIGNATURE_ERROR/SYSTEM_ERROR, for InboundWebhookError)
+    and choices.py's (AUTHENTICATION_ERROR/AUTHORIZATION_ERROR/
+    RATE_LIMIT_ERROR/SERVER_ERROR, dispatch-oriented) were disjoint sets.
+
+../choices.py is now the single owner, merged to the union of values found
+in real use across both. This file re-exports so every existing `from
+.constants import X` within models/ keeps working unchanged.
 """
 
-from django.db import models
-from django.utils.translation import gettext_lazy as _
+from ..choices import (
+    WebhookStatus,
+    DeliveryStatus,
+    BatchStatus,
+    FilterOperator,
+    InboundSource,
+    ReplayStatus,
+    ErrorType,
+)
 
+__all__ = [
+    "WebhookStatus",
+    "DeliveryStatus",
+    "BatchStatus",
+    "FilterOperator",
+    "InboundSource",
+    "ReplayStatus",
+    "ErrorType",
+    "HTTP_METHOD_CHOICES",
+    "DEFAULT_TIMEOUT_SECONDS",
+    "DEFAULT_MAX_RETRIES",
+    "DEFAULT_RATE_LIMIT_PER_MIN",
+    "DEFAULT_BATCH_SIZE",
+]
 
-class WebhookStatus(models.TextChoices):
-    """Webhook endpoint status choices."""
-    ACTIVE = 'active', _('Active')
-    PAUSED = 'paused', _('Paused')
-    INACTIVE = 'inactive', _('Inactive')
-    SUSPENDED = 'suspended', _('Suspended')
-
-
-class DeliveryStatus(models.TextChoices):
-    """Webhook delivery status choices."""
-    PENDING = 'pending', _('Pending')
-    SUCCESS = 'success', _('Success')
-    FAILED = 'failed', _('Failed')
-    RETRYING = 'retrying', _('Retrying')
-    EXHAUSTED = 'exhausted', _('Exhausted')
-
-
-class BatchStatus(models.TextChoices):
-    """Webhook batch status choices."""
-    PENDING = 'pending', _('Pending')
-    PROCESSING = 'processing', _('Processing')
-    COMPLETED = 'completed', _('Completed')
-    FAILED = 'failed', _('Failed')
-    CANCELLED = 'cancelled', _('Cancelled')
-
-
-class FilterOperator(models.TextChoices):
-    """Webhook filter operator choices."""
-    EQUALS = 'equals', _('Equals')
-    NOT_EQUALS = 'not_equals', _('Not Equals')
-    CONTAINS = 'contains', _('Contains')
-    NOT_CONTAINS = 'not_contains', _('Not Contains')
-    GREATER_THAN = 'greater_than', _('Greater Than')
-    LESS_THAN = 'less_than', _('Less Than')
-    GREATER_THAN_OR_EQUAL = 'gte', _('Greater Than or Equal')
-    LESS_THAN_OR_EQUAL = 'lte', _('Less Than or Equal')
-    IN = 'in', _('In')
-    NOT_IN = 'not_in', _('Not In')
-    EXISTS = 'exists', _('Exists')
-    NOT_EXISTS = 'not_exists', _('Not Exists')
-
-
-class InboundSource(models.TextChoices):
-    """Inbound webhook source choices."""
-    BKASH = 'bkash', _('bKash')
-    NAGAD = 'nagad', _('Nagad')
-    STRIPE = 'stripe', _('Stripe')
-    PAYPAL = 'paypal', _('PayPal')
-    CUSTOM = 'custom', _('Custom')
-
-
-class ReplayStatus(models.TextChoices):
-    """Webhook replay status choices."""
-    PENDING = 'pending', _('Pending')
-    PROCESSING = 'processing', _('Processing')
-    COMPLETED = 'completed', _('Completed')
-    FAILED = 'failed', _('Failed')
-    CANCELLED = 'cancelled', _('Cancelled')
-
-
-class ErrorType(models.TextChoices):
-    """Inbound webhook error type choices."""
-    VALIDATION_ERROR = 'validation_error', _('Validation Error')
-    SIGNATURE_ERROR = 'signature_error', _('Signature Error')
-    TIMEOUT_ERROR = 'timeout_error', _('Timeout Error')
-    NETWORK_ERROR = 'network_error', _('Network Error')
-    SYSTEM_ERROR = 'system_error', _('System Error')
-    UNKNOWN_ERROR = 'unknown_error', _('Unknown Error')
-
-
-# HTTP Method Choices
 HTTP_METHOD_CHOICES = [
     ('POST', 'POST'),
     ('PUT', 'PUT'),
@@ -89,4 +63,3 @@ DEFAULT_TIMEOUT_SECONDS = 30
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_RATE_LIMIT_PER_MIN = 60
 DEFAULT_BATCH_SIZE = 100
-DEFAULT_MAX_BATCH_SIZE = 1000

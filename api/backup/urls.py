@@ -1,8 +1,9 @@
 # urls.py
 from django.urls import path, include
-from rest_framework.routers import SimpleRouter as DefaultRouter
+from rest_framework.routers import DefaultRouter
 from . import views
 
+# Main API Router
 router = DefaultRouter()
 router.register(r'backups', views.BackupViewSet, basename='backup')
 router.register(r'schedules', views.BackupScheduleViewSet, basename='schedule')
@@ -12,10 +13,13 @@ router.register(r'retention-policies', views.RetentionPolicyViewSet, basename='r
 router.register(r'delta-trackers', views.DeltaBackupTrackerViewSet, basename='delta-tracker')
 router.register(r'logs', views.BackupLogViewSet, basename='log')
 router.register(r'restorations', views.BackupRestorationViewSet, basename='restoration')
+router.register(r'verifications', views.BackupVerificationViewSet, basename='verification')
+router.register(r'encryption', views.BackupEncryptionViewSet, basename='encryption')
+router.register(r'alerts', views.BackupAlertViewSet, basename='alert')
 
 # API URL Patterns
 api_urlpatterns = [
-    # path('', views.DashboardStatsView.as_view(), name='backup-dashboard'),
+    # Main API endpoints
     path('', include(router.urls)),
     
     # Backup operations
@@ -25,6 +29,23 @@ api_urlpatterns = [
     path('backups/<uuid:pk>/create-redundant/', views.CreateRedundantCopyView.as_view(), name='create-redundant'),
     path('backups/<uuid:pk>/logs/', views.BackupLogsView.as_view(), name='backup-logs'),
     path('backups/<uuid:pk>/clone/', views.CloneBackupView.as_view(), name='clone-backup'),
+    path('backups/<uuid:pk>/encrypt/', views.BackupEncryptView.as_view(), name='backup-encrypt'),
+    path('backups/<uuid:pk>/compress/', views.BackupCompressView.as_view(), name='backup-compress'),
+    path('backups/<uuid:pk>/move/', views.BackupMoveView.as_view(), name='backup-move'),
+    path('backups/<uuid:pk>/archive/', views.BackupArchiveView.as_view(), name='backup-archive'),
+    # path('backups/<uuid:pk>/restore/', views.BackupRestoration.as_view(), name='backup-restore'),
+    
+    # Schedule operations
+    path('schedules/<uuid:pk>/run-now/', views.ScheduleRunNowView.as_view(), name='schedule-run-now'),
+    path('schedules/<uuid:pk>/pause/', views.SchedulePauseView.as_view(), name='schedule-pause'),
+    path('schedules/<uuid:pk>/resume/', views.ScheduleResumeView.as_view(), name='schedule-resume'),
+    path('schedules/<uuid:pk>/next-run/', views.ScheduleNextRunView.as_view(), name='schedule-next-run'),
+    
+    # Storage operations
+    path('storage-locations/<uuid:pk>/test-connection/', views.StorageTestConnectionView.as_view(), name='storage-test-connection'),
+    path('storage-locations/<uuid:pk>/sync/', views.StorageSyncView.as_view(), name='storage-sync'),
+    path('storage-locations/<uuid:pk>/cleanup/', views.StorageCleanupView.as_view(), name='storage-cleanup'),
+    path('storage-locations/<uuid:pk>/metrics/', views.StorageMetricsView.as_view(), name='storage-metrics'),
     
     # Task operations
     path('start-backup/', views.StartBackupView.as_view(), name='start-backup'),
@@ -32,26 +53,57 @@ api_urlpatterns = [
     path('restore-backup/', views.RestoreBackupView.as_view(), name='restore-backup'),
     path('cleanup-old-backups/', views.CleanupOldBackupsView.as_view(), name='cleanup-old-backups'),
     path('test-notification/<uuid:pk>/', views.TestNotificationView.as_view(), name='test-notification'),
+    path('batch-operations/', views.BatchOperationsView.as_view(), name='batch-operations'),
+    path('bulk-actions/', views.BulkActionsView.as_view(), name='bulk-actions'),
     
     # Status and monitoring
     path('backup-status/', views.BackupStatusView.as_view(), name='backup-status'),
     path('backup-progress/<uuid:pk>/', views.BackupProgressView.as_view(), name='backup-progress'),
     path('system-metrics/', views.SystemMetricsView.as_view(), name='system-metrics'),
     path('dashboard-stats/', views.DashboardStatsView.as_view(), name='dashboard-stats'),
+    path('health-check/', views.SystemHealthCheckView.as_view(), name='system-health-check'),
+    path('service-status/', views.ServiceStatusView.as_view(), name='service-status'),
     
     # Maintenance
     path('maintenance-mode/', views.MaintenanceModeView.as_view(), name='maintenance-mode'),
+    path('system-info/', views.SystemInfoView.as_view(), name='system-info'),
+    path('logs/stream/', views.LogStreamView.as_view(), name='log-stream'),
     
     # Analytics
     path('analytics/backup-growth/', views.BackupGrowthAnalyticsView.as_view(), name='backup-growth-analytics'),
     path('analytics/storage-usage/', views.StorageUsageAnalyticsView.as_view(), name='storage-usage-analytics'),
     path('analytics/performance-metrics/', views.PerformanceMetricsView.as_view(), name='performance-metrics'),
     path('analytics/retention-analysis/', views.RetentionAnalysisView.as_view(), name='retention-analysis'),
+#     path('analytics/backup-trends/', views.BackupTrendsAnalyticsView.as_view(), name='backup-trends-analytics'),
+#     path('analytics/failure-analysis/', views.FailureAnalysisView.as_view(), name='failure-analysis'),
     
     # Reports
     path('reports/backup-summary/', views.BackupSummaryReportView.as_view(), name='backup-summary-report'),
     path('reports/health-report/', views.HealthReportView.as_view(), name='health-report'),
     path('reports/compliance-report/', views.ComplianceReportView.as_view(), name='compliance-report'),
+#     path('reports/usage-report/', views.UsageReportView.as_view(), name='usage-report'),
+#     path('reports/cost-analysis/', views.CostAnalysisView.as_view(), name='cost-analysis'),
+    
+    # Notifications
+#     path('notifications/send/', views.SendNotificationView.as_view(), name='send-notification'),
+    path('notifications/test/', views.TestNotificationView.as_view(), name='test-notification'),
+#     path('notifications/configs/<uuid:pk>/test/', views.TestNotificationConfigView.as_view(), name='test-notification-config'),
+    
+    # Verification
+    path('verifications/batch/', views.BatchVerificationView.as_view(), name='batch-verification'),
+    path('verifications/schedule/', views.ScheduleVerificationView.as_view(), name='schedule-verification'),
+    
+    # Encryption
+    path('encryption/keys/', views.EncryptionKeysView.as_view(), name='encryption-keys'),
+    path('encryption/rotate/', views.EncryptionRotateView.as_view(), name='encryption-rotate'),
+    
+    # Import/Export
+    path('import/', views.ImportBackupView.as_view(), name='import-backup'),
+    path('export/', views.ExportBackupView.as_view(), name='export-backup'),
+    
+    # Search
+    path('search/', views.BackupSearchView.as_view(), name='backup-search'),
+    path('search/advanced/', views.AdvancedSearchView.as_view(), name='advanced-search'),
 ]
 
 # Admin URL Patterns (from admin.py)
@@ -99,6 +151,9 @@ urlpatterns = [
     # Public endpoints (read-only)
     path('public/backup-status/', views.PublicBackupStatusView.as_view(), name='public-backup-status'),
     path('public/health-check/', views.PublicHealthCheckView.as_view(), name='public-health-check'),
+
+    # Dashboard stats (was missing from url registration)
+    path('dashboard/stats/', views.BackupDashboardStatsView.as_view(), name='backup-dashboard-stats'),
 ]
 
 # Error handlers

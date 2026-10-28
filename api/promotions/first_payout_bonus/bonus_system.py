@@ -93,13 +93,11 @@ class FirstPayoutBonus:
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bonus_eligibility_view(request):
     bonus = FirstPayoutBonus()
     return Response(bonus.get_bonus_eligibility(request.user.id))
-
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def claim_welcome_bonus_view(request):
     bonus = FirstPayoutBonus()

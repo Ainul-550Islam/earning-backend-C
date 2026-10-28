@@ -1,79 +1,111 @@
 """
 Models Module for Offer Routing System
 
-This module imports all models for the offer routing system.
+This module imports all models for the offer routing system and ensures
+Django discovers every model for migrations. Synced with models/__init__.py.
 """
 
-from .core import (
+from .models.core import (
     OfferRoute, RouteCondition, RouteAction,
+    TenantSettings, TenantBilling, TenantInvoice,
+    RoutingConfig, RoutingTemplate,
+)
+
+from .models.targeting import (
     GeoRouteRule, DeviceRouteRule, UserSegmentRule,
     TimeRouteRule, BehaviorRouteRule,
+)
+
+from .models.scoring import (
     OfferScore, OfferScoreConfig, GlobalOfferRank,
     UserOfferHistory, OfferAffinityScore,
-    RoutingABTest, ABTestAssignment, ABTestResult,
-    OfferRoutingCap, UserOfferCap, CapOverride,
-    FallbackRule, DefaultOfferPool, EmptyResultHandler,
+)
+
+from .models.personalization import (
     UserPreferenceVector, ContextualSignal, PersonalizationConfig,
-    RoutingDecisionLog, RoutingInsight, RoutePerformanceStat,
-    OfferExposureStat
 )
 
-from .targeting import (
-    GeoRouteRule, DeviceRouteRule, UserSegmentRule,
-    TimeRouteRule, BehaviorRouteRule
+from .models.cap import (
+    OfferRoutingCap, UserOfferCap, CapOverride,
 )
 
-from .scoring import (
-    OfferScore, OfferScoreConfig, GlobalOfferRank,
-    UserOfferHistory, OfferAffinityScore
+from .models.fallback import (
+    FallbackRule, DefaultOfferPool, EmptyResultHandler,
 )
 
-from .ab_test import (
-    RoutingABTest, ABTestAssignment, ABTestResult
+from .models.ab_test import (
+    RoutingABTest, ABTestAssignment, ABTestResult,
 )
 
-from .cap import (
-    OfferRoutingCap, UserOfferCap, CapOverride
+from .models.analytics import (
+    RoutingDecisionLog, RoutingInsight, RoutePerformanceStat, OfferExposureStat,
 )
 
-from .fallback import (
-    FallbackRule, DefaultOfferPool, EmptyResultHandler
-)
-
-from .personalization import (
-    UserPreferenceVector, ContextualSignal, PersonalizationConfig
-)
-
-from .analytics import (
-    RoutingDecisionLog, RoutingInsight, RoutePerformanceStat,
-    OfferExposureStat
-)
+from .models.routing_blacklist import RoutingBlacklist, BlacklistHit
+from .models.offer_quality import OfferQualityScore
+from .models.network_cache import NetworkPerformanceCache
+from .models.click_fraud import ClickFraudSignal, FraudPattern
+from .models.user_journey import UserJourneyStep
 
 __all__ = [
     # Core Models
-    'OfferRoute', 'RouteCondition', 'RouteAction',
-    
+    'OfferRoute',
+    'RouteCondition',
+    'RouteAction',
+    'TenantSettings',
+    'TenantBilling',
+    'TenantInvoice',
+    'RoutingConfig',
+    'RoutingTemplate',
+
     # Targeting Models
-    'GeoRouteRule', 'DeviceRouteRule', 'UserSegmentRule',
-    'TimeRouteRule', 'BehaviorRouteRule',
-    
+    'GeoRouteRule',
+    'DeviceRouteRule',
+    'UserSegmentRule',
+    'TimeRouteRule',
+    'BehaviorRouteRule',
+
     # Scoring Models
-    'OfferScore', 'OfferScoreConfig', 'GlobalOfferRank',
-    'UserOfferHistory', 'OfferAffinityScore',
-    
-    # A/B Test Models
-    'RoutingABTest', 'ABTestAssignment', 'ABTestResult',
-    
-    # Cap Models
-    'OfferRoutingCap', 'UserOfferCap', 'CapOverride',
-    
-    # Fallback Models
-    'FallbackRule', 'DefaultOfferPool', 'EmptyResultHandler',
-    
+    'OfferScore',
+    'OfferScoreConfig',
+    'GlobalOfferRank',
+    'UserOfferHistory',
+    'OfferAffinityScore',
+
     # Personalization Models
-    'UserPreferenceVector', 'ContextualSignal', 'PersonalizationConfig',
-    
+    'UserPreferenceVector',
+    'ContextualSignal',
+    'PersonalizationConfig',
+
+    # Cap Models
+    'OfferRoutingCap',
+    'UserOfferCap',
+    'CapOverride',
+
+    # Fallback Models
+    'FallbackRule',
+    'DefaultOfferPool',
+    'EmptyResultHandler',
+
+    # A/B Test Models
+    'RoutingABTest',
+    'ABTestAssignment',
+    'ABTestResult',
+
     # Analytics Models
-    'RoutingDecisionLog', 'RoutingInsight', 'RoutePerformanceStat',
+    'RoutingDecisionLog',
+    'RoutingInsight',
+    'RoutePerformanceStat',
     'OfferExposureStat',
+
+    # Additional Models
+    'RoutingBlacklist',
+    'BlacklistHit',
+    'OfferQualityScore',
+    'NetworkPerformanceCache',
+    'ClickFraudSignal',
+    'FraudPattern',
+    'UserJourneyStep',
 ]
+
+from .models.security import SecurityEvent

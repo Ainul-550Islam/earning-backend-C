@@ -455,4 +455,3 @@ class CustomNetwork4WebhookView(BaseWebhookView):
 class CustomNetwork5WebhookView(BaseWebhookView):
     network_type = 'custom5'
 
-

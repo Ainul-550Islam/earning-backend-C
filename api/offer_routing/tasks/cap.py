@@ -4,6 +4,7 @@ Cap Tasks for Offer Routing System
 This module contains background tasks for cap management,
 including daily resets, cap enforcement, and analytics.
 """
+from django.db.models import F
 
 import logging
 from celery import shared_task

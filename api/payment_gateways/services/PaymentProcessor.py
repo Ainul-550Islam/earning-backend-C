@@ -5,6 +5,7 @@ from django.db import transaction as db_txn
 # Models imported inside methods to prevent circular imports
 from django.utils import timezone
 from decimal import Decimal
+from api.payment_gateways.models.core import PaymentGateway
 
 
 class PaymentProcessor(ABC):

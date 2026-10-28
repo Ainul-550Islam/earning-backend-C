@@ -4,6 +4,7 @@ Scoring Service for Offer Routing System
 This module provides scoring functionality to calculate
 offer scores based on various metrics and factors.
 """
+from django.db import models
 
 import logging
 import math
@@ -592,3 +593,12 @@ class OfferRankerService:
 # Singleton instances
 scoring_service = OfferScoringService()
 ranker_service = OfferRankerService()
+# Single owner: canonical implementations live in subpackage
+try:
+    from offer_routing.services.core import OfferScorer as OfferScoringService
+except ImportError:
+    pass
+try:
+    from offer_routing.services.core import OfferRanker as OfferRankerService
+except ImportError:
+    pass

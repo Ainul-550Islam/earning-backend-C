@@ -4,6 +4,7 @@ This module provides data bridge functionality for integration system
 with comprehensive data transformation and synchronization capabilities.
 """
 
+from datetime import timedelta
 import logging
 from typing import Dict, Any, Optional, List, Callable
 from abc import ABC, abstractmethod
@@ -446,11 +447,11 @@ class DatabaseBridge(BaseDataBridge):
         try:
             # This would integrate with your sync tracking system
             # For now, return a default timestamp
-            return timezone.now() - timezone.timedelta(days=1)
+            return timezone.now() - timedelta(days=1)
             
         except Exception as e:
             self.logger.error(f"Error getting last sync timestamp: {str(e)}")
-            return timezone.now() - timezone.timedelta(days=1)
+            return timezone.now() - timedelta(days=1)
     
     def _get_record_key(self, record: Dict[str, Any]) -> str:
         """Get unique key for record."""

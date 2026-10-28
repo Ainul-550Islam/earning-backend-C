@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 # api/djoyalty/viewsets/core/EventViewSet.py
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
@@ -7,8 +11,9 @@ from django.db.models import Count
 from ...models.core import Event
 from ...serializers.EventSerializer import EventSerializer
 from ...pagination import DjoyaltyPagePagination
+from ...mixins import DjoyaltyBaseViewSet
 
-class EventViewSet(viewsets.ModelViewSet):
+class EventViewSet(DjoyaltyBaseViewSet, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Event.objects.all().order_by('-timestamp')
     serializer_class = EventSerializer
@@ -32,5 +37,10 @@ class EventViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def by_action(self, request):
-        data = Event.objects.values('action').annotate(count=Count('id')).order_by('-count')
-        return Response(list(data))
+        """Events grouped and counted by action type।"""
+        try:
+            data = Event.objects.values('action').annotate(count=Count('id')).order_by('-count')
+            return Response(list(data))
+        except Exception as e:
+            logger.error('EventViewSet.by_action error: %s', e)
+            return Response({'error': str(e)}, status=500)

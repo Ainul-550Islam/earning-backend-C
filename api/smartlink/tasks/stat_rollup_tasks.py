@@ -13,7 +13,7 @@ def hourly_stat_rollup():
     SmartLinkDailyStat (daily rollup).
     Runs every 60 minutes via Celery beat.
     """
-    from ..models import SmartLink
+    from api.smartlink.models import SmartLink
     from ..services.analytics.SmartLinkAnalyticsService import SmartLinkAnalyticsService
 
     svc = SmartLinkAnalyticsService()
@@ -43,7 +43,7 @@ def daily_stat_rollup():
     Daily task: Aggregate hourly stats into SmartLinkDailyStat.
     Runs at 00:05 UTC daily.
     """
-    from ..models import SmartLink, SmartLinkStat, SmartLinkDailyStat
+    from api.smartlink.models import SmartLink, SmartLinkStat, SmartLinkDailyStat
     from django.db.models import Sum, Max
 
     yesterday = timezone.now().date() - datetime.timedelta(days=1)

@@ -26,6 +26,7 @@ class AdSource(TimeStampedModel):
     total_revenue    = models.DecimalField(max_digits=14, decimal_places=4, default=Decimal("0.0000"))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_ad_sources"
         verbose_name = _("Ad Source")
         ordering = ["priority"]

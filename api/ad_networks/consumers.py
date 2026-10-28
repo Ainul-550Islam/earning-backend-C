@@ -3,6 +3,7 @@ api/ad_networks/consumers.py
 WebSocket consumers for real-time ad networks updates
 SaaS-ready with tenant support
 """
+from django.urls import re_path
 
 import json
 import logging

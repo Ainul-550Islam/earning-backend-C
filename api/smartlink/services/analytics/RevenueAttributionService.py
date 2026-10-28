@@ -2,7 +2,7 @@ import logging
 import datetime
 from django.db.models import Sum, Count
 from django.utils import timezone
-from ...models import Click, SmartLink
+from api.smartlink.models import Click, SmartLink
 
 logger = logging.getLogger('smartlink.revenue_attribution')
 

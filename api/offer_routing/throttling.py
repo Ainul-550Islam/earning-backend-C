@@ -8,7 +8,7 @@ including request rate limiting, user-based limits, and tenant-based quotas.
 import time
 import logging
 from django.core.cache import cache
-from django.core.exceptions import Throttled
+from rest_framework.exceptions import Throttled
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from rest_framework.throttling import SimpleRateThrottle
@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework import status
 import redis
 
-from .models import RoutingAuditLog, SecurityEvent
+from .models import SecurityEvent
 from .utils import get_client_ip, validate_ip_address
 
 User = get_user_model()
@@ -134,7 +134,7 @@ class RoutingEngineThrottle(SimpleRateThrottle):
                 )
             
             # Log to database
-            RoutingAuditLog.objects.create(
+            SecurityEvent.objects.create(
                 user=request.user if request.user.is_authenticated else None,
                 ip_address=client_ip,
                 event_type='throttled',
@@ -320,8 +320,8 @@ class WebSocketThrottle:
                 1 for conn in self.connections.values()
                     if conn.get('ip_address') == ip_address
                 )
-                
-                if ip_connections >= self.connections_per_ip:
+            
+            if ip_connections >= self.connections_per_ip:
                     logger.warning(f"WebSocket IP connection limit exceeded for {ip_address}")
                     return False
             

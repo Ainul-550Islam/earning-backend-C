@@ -34,6 +34,7 @@ class BannerAdConfig(TimeStampedModel):
     animation_type   = models.CharField(max_length=20, blank=True, choices=[("fade","Fade"),("slide","Slide"),("bounce","Bounce")])
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_banner_ad_configs"
         verbose_name = _("Banner Ad Config")
 

@@ -11,23 +11,8 @@ from .EarningSummarySerializer import EarningSummarySerializer
 from .WalletInsightSerializer import WalletInsightSerializer
 from .LiabilityReportSerializer import LiabilityReportSerializer
 from .AdminWalletSerializer import AdminWalletSerializer
-
-from rest_framework import serializers
-from ..models import Withdrawal
-
-class WithdrawalSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Withdrawal
-        fields = '__all__'
-from ..models import UserPaymentMethod
-from ..models_webhook import WalletWebhookLog
-
-class UserPaymentMethodSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserPaymentMethod
-        fields = '__all__'
-
-class WalletWebhookLogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WalletWebhookLog
-        fields = '__all__'
+from .ReportSerializer import DailySummarySerializer, TopEarnerSerializer
+from .StatementSerializer import AccountStatementSerializer
+from .NotificationSerializer import WalletNotificationSerializer
+from .BulkWalletUpdateSerializer import BulkWalletUpdateSerializer
+from .WalletBalanceUpdateSerializer import WalletBalanceUpdateSerializer

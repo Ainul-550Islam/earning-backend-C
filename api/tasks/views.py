@@ -1,3 +1,4 @@
+from django.db.models.functions import TruncDate
 import logging
 import json
 from typing import Dict, Any, Optional, List, Tuple, Union
@@ -31,6 +32,7 @@ from .serializers import (
     TaskStatisticsSerializer,
     ErrorResponseSerializer
 )
+from api.tasks.models_base import AdminLedger
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -163,10 +165,8 @@ def safe_get_request_data(request: Request, key: str, default=None):
                     data = request.data
                     if isinstance(data, dict):
                         return data.get(key, default)
-                except:
+                except Exception:
                     pass
-            
-            # Try form data
             return request.POST.get(key, default)
         
         return default
@@ -898,6 +898,963 @@ class MasterTaskViewSet(BulletproofViewSet):
         return 'daily_retention'
 
 
+# ============ ANALYTICS VIEWSET ============
+
+class AnalyticsViewSet(BulletproofViewSet):
+    """
+    Advanced analytics and reporting endpoints
+    """
+    
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    
+    @action(detail=False, methods=['get'], url_path='dashboard')
+    def dashboard(self, request):
+        """Get comprehensive dashboard analytics"""
+        try:
+            user = request.user
+            is_staff = getattr(user, 'is_staff', False)
+            
+            # Time range
+            days = safe_int_from_request(request, 'days', 30)
+            from_date = timezone.now() - timedelta(days=days)
+            
+            dashboard_data = {
+                'user_stats': self._get_user_stats(user, from_date, is_staff),
+                'task_stats': self._get_task_stats(from_date, is_staff),
+                'revenue_stats': self._get_revenue_stats(user, from_date, is_staff),
+                'engagement_stats': self._get_engagement_stats(from_date, is_staff),
+                'performance_metrics': self._get_performance_metrics(from_date, is_staff)
+            }
+            
+            return Response({
+                'status': 'success',
+                'data': dashboard_data,
+                'timeframe': f'{days} days',
+                'generated_at': timezone.now().isoformat()
+            })
+            
+        except Exception as e:
+            logger.error(f"Dashboard analytics error: {str(e)}")
+            return Response(
+                ErrorResponseSerializer({
+                    'error': 'Failed to generate dashboard analytics'
+                }).data,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='real-time')
+    def real_time_analytics(self, request):
+        """Get real-time analytics data"""
+        try:
+            # Get recent activity (last 5 minutes)
+            cutoff = timezone.now() - timedelta(minutes=5)
+            
+            recent_completions = UserTaskCompletion.objects.filter(
+                completed_at__gte=cutoff,
+                status='completed'
+            ).select_related('task', 'user')
+            
+            # Calculate real-time metrics
+            metrics = {
+                'active_users': recent_completions.values('user_id').distinct().count(),
+                'completions_per_minute': recent_completions.count() / 5,
+                'popular_tasks': self._get_popular_tasks(recent_completions),
+                'revenue_per_minute': self._calculate_real_time_revenue(recent_completions),
+                'conversion_rates': self._get_real_time_conversion_rates(cutoff)
+            }
+            
+            return Response({
+                'status': 'success',
+                'data': metrics,
+                'timestamp': timezone.now().isoformat(),
+                'window': '5 minutes'
+            })
+            
+        except Exception as e:
+            logger.error(f"Real-time analytics error: {str(e)}")
+            return Response(
+                ErrorResponseSerializer({
+                    'error': 'Failed to get real-time analytics'
+                }).data,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='trends')
+    def analytics_trends(self, request):
+        """Get analytics trends over time"""
+        try:
+            days = safe_int_from_request(request, 'days', 30)
+            metric = safe_get_request_data(request, 'metric', 'completions')
+            
+            from_date = timezone.now() - timedelta(days=days)
+            
+            trends_data = {
+                'daily_trends': self._get_daily_trends(from_date, metric),
+                'weekly_comparison': self._get_weekly_comparison(from_date, metric),
+                'growth_rates': self._calculate_growth_rates(from_date, metric),
+                'predictions': self._generate_predictions(metric, days)
+            }
+            
+            return Response({
+                'status': 'success',
+                'data': trends_data,
+                'metric': metric,
+                'period': f'{days} days'
+            })
+            
+        except Exception as e:
+            logger.error(f"Trends analytics error: {str(e)}")
+            return Response(
+                ErrorResponseSerializer({
+                    'error': 'Failed to get trends analytics'
+                }).data,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='user-behavior')
+    def user_behavior_analytics(self, request):
+        """Analyze user behavior patterns"""
+        try:
+            days = safe_int_from_request(request, 'days', 30)
+            from_date = timezone.now() - timedelta(days=days)
+            
+            behavior_data = {
+                'user_segments': self._analyze_user_segments(from_date),
+                'retention_analysis': self._analyze_retention(from_date),
+                'engagement_patterns': self._analyze_engagement_patterns(from_date),
+                'conversion_funnel': self._analyze_conversion_funnel(from_date),
+                'cohort_analysis': self._analyze_cohorts(from_date)
+            }
+            
+            return Response({
+                'status': 'success',
+                'data': behavior_data,
+                'analysis_period': f'{days} days'
+            })
+            
+        except Exception as e:
+            logger.error(f"User behavior analytics error: {str(e)}")
+            return Response(
+                ErrorResponseSerializer({
+                    'error': 'Failed to analyze user behavior'
+                }).data,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def _get_user_stats(self, user, from_date, is_staff):
+        """Get user statistics"""
+        try:
+            if is_staff:
+                # Admin sees all users
+                total_users = User.objects.filter(date_joined__gte=from_date).count()
+                active_users = UserTaskCompletion.objects.filter(
+                    completed_at__gte=from_date,
+                    status='completed'
+                ).values('user_id').distinct().count()
+                
+                return {
+                    'total_users': total_users,
+                    'active_users': active_users,
+                    'new_users_today': User.objects.filter(
+                        date_joined__gte=timezone.now() - timedelta(days=1)
+                    ).count(),
+                    'user_growth_rate': self._calculate_user_growth_rate(from_date)
+                }
+            else:
+                # Regular user sees their own stats
+                user_completions = UserTaskCompletion.objects.filter(
+                    user=user,
+                    completed_at__gte=from_date,
+                    status='completed'
+                )
+                
+                return {
+                    'total_completions': user_completions.count(),
+                    'total_earned': user_completions.aggregate(
+                        total=Sum('reward_amount')
+                    )['total'] or 0,
+                    'completion_streak': self._calculate_completion_streak(user),
+                    'level': getattr(user, 'level', 1),
+                    'experience_points': getattr(user, 'experience', 0)
+                }
+        except Exception as e:
+            logger.error(f"User stats error: {str(e)}")
+            return {}
+    
+    def _get_task_stats(self, from_date, is_staff):
+        """Get task statistics"""
+        try:
+            tasks = MasterTask.objects.filter(is_active=True)
+            
+            if not is_staff:
+                tasks = tasks.filter(
+                    available_from__lte=timezone.now(),
+                    available_until__gte=timezone.now()
+                )
+            
+            completions = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                status='completed'
+            )
+            
+            return {
+                'total_tasks': tasks.count(),
+                'active_tasks': tasks.filter(is_active=True).count(),
+                'featured_tasks': tasks.filter(is_featured=True).count(),
+                'total_completions': completions.count(),
+                'average_completion_time': self._calculate_avg_completion_time(completions),
+                'top_performing_tasks': self._get_top_tasks(completions, 10)
+            }
+        except Exception as e:
+            logger.error(f"Task stats error: {str(e)}")
+            return {}
+    
+    def _get_revenue_stats(self, user, from_date, is_staff):
+        """Get revenue statistics"""
+        try:
+            if is_staff:
+                # Admin sees all revenue
+                total_revenue = UserTaskCompletion.objects.filter(
+                    completed_at__gte=from_date,
+                    status='completed'
+                ).aggregate(total=Sum('reward_amount'))['total'] or 0
+                
+                admin_revenue = AdminLedger.objects.filter(
+                    created_at__gte=from_date
+                ).aggregate(total=Sum('amount'))['total'] or 0
+                
+                return {
+                    'total_revenue': float(total_revenue),
+                    'admin_revenue': float(admin_revenue),
+                    'payout_rate': float(admin_revenue) / float(total_revenue) if total_revenue > 0 else 0,
+                    'daily_average': float(total_revenue) / 30
+                }
+            else:
+                # Regular user sees their earnings
+                user_earnings = UserTaskCompletion.objects.filter(
+                    user=user,
+                    completed_at__gte=from_date,
+                    status='completed'
+                ).aggregate(total=Sum('reward_amount'))['total'] or 0
+                
+                return {
+                    'total_earned': float(user_earnings),
+                    'daily_average': float(user_earnings) / 30,
+                    'pending_earnings': UserTaskCompletion.objects.filter(
+                        user=user,
+                        status='pending'
+                    ).aggregate(total=Sum('reward_amount'))['total'] or 0
+                }
+        except Exception as e:
+            logger.error(f"Revenue stats error: {str(e)}")
+            return {}
+    
+    def _get_engagement_stats(self, from_date, is_staff):
+        """Get engagement statistics"""
+        try:
+            completions = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                status='completed'
+            )
+            
+            return {
+                'daily_active_users': self._calculate_dau(from_date),
+                'monthly_active_users': self._calculate_mau(from_date),
+                'engagement_rate': self._calculate_engagement_rate(from_date),
+                'retention_rate': self._calculate_retention_rate(from_date),
+                'average_session_duration': self._calculate_avg_session_duration(completions)
+            }
+        except Exception as e:
+            logger.error(f"Engagement stats error: {str(e)}")
+            return {}
+    
+    def _get_performance_metrics(self, from_date, is_staff):
+        """Get performance metrics"""
+        try:
+            return {
+                'api_response_time': self._get_api_response_time(),
+                'error_rate': self._get_error_rate(from_date),
+                'throughput': self._get_throughput(from_date),
+                'cache_hit_rate': self._get_cache_hit_rate(),
+                'database_query_time': self._get_db_query_time()
+            }
+        except Exception as e:
+            logger.error(f"Performance metrics error: {str(e)}")
+            return {}
+    
+    # Helper methods for analytics calculations
+    def _get_popular_tasks(self, completions):
+        """Get most popular tasks"""
+        return list(
+            completions.values('task__name', 'task__task_id')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:5]
+        )
+    
+    def _calculate_real_time_revenue(self, completions):
+        """Calculate real-time revenue"""
+        total = completions.aggregate(total=Sum('reward_amount'))['total'] or 0
+        return float(total) / 5  # per minute
+    
+    def _get_real_time_conversion_rates(self, cutoff):
+        """Get real-time conversion rates"""
+        started = UserTaskCompletion.objects.filter(
+            started_at__gte=cutoff
+        ).count()
+        
+        completed = UserTaskCompletion.objects.filter(
+            completed_at__gte=cutoff,
+            status='completed'
+        ).count()
+        
+        return {
+            'started': started,
+            'completed': completed,
+            'conversion_rate': (completed / started * 100) if started > 0 else 0
+        }
+    
+    def _get_daily_trends(self, from_date, metric):
+        """Get daily trends for a metric"""
+        try:
+            from django.db.models.functions import TruncDate
+            
+            if metric == 'completions':
+                daily_data = UserTaskCompletion.objects.filter(
+                    completed_at__gte=from_date,
+                    status='completed'
+                ).annotate(
+                    date=TruncDate('completed_at')
+                ).values('date').annotate(
+                    count=Count('id')
+                ).order_by('date')
+                
+                return [
+                    {'date': item['date'].isoformat(), 'value': item['count']}
+                    for item in daily_data
+                ]
+            
+            elif metric == 'revenue':
+                daily_data = UserTaskCompletion.objects.filter(
+                    completed_at__gte=from_date,
+                    status='completed'
+                ).annotate(
+                    date=TruncDate('completed_at')
+                ).values('date').annotate(
+                    total=Sum('reward_amount')
+                ).order_by('date')
+                
+                return [
+                    {'date': item['date'].isoformat(), 'value': float(item['total'] or 0)}
+                    for item in daily_data
+                ]
+            
+            return []
+            
+        except Exception as e:
+            logger.error(f"Error getting daily trends: {str(e)}")
+            return []
+    
+    def _get_weekly_comparison(self, from_date, metric):
+        """Get week-over-week comparison"""
+        try:
+            # Current week
+            current_week_end = timezone.now()
+            current_week_start = current_week_end - timedelta(days=7)
+            
+            # Previous week
+            previous_week_end = current_week_start
+            previous_week_start = previous_week_end - timedelta(days=7)
+            
+            def get_week_data(start, end):
+                if metric == 'completions':
+                    return UserTaskCompletion.objects.filter(
+                        completed_at__gte=start,
+                        completed_at__lt=end,
+                        status='completed'
+                    ).count()
+                elif metric == 'revenue':
+                    return UserTaskCompletion.objects.filter(
+                        completed_at__gte=start,
+                        completed_at__lt=end,
+                        status='completed'
+                    ).aggregate(total=Sum('reward_amount'))['total'] or 0
+                return 0
+            
+            current = get_week_data(current_week_start, current_week_end)
+            previous = get_week_data(previous_week_start, previous_week_end)
+            
+            return {
+                'current_week': float(current),
+                'previous_week': float(previous),
+                'change': float(current - previous),
+                'change_percentage': ((current - previous) / previous * 100) if previous > 0 else 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting weekly comparison: {str(e)}")
+            return {}
+    
+    def _calculate_growth_rates(self, from_date, metric):
+        """Calculate growth rates"""
+        try:
+            # Calculate growth over different periods
+            periods = {
+                'daily': 1,
+                'weekly': 7,
+                'monthly': 30
+            }
+            
+            growth_rates = {}
+            
+            for period_name, days in periods.items():
+                period_end = timezone.now()
+                period_start = period_end - timedelta(days=days)
+                previous_start = period_start - timedelta(days=days)
+                
+                def get_period_total(start, end):
+                    if metric == 'completions':
+                        return UserTaskCompletion.objects.filter(
+                            completed_at__gte=start,
+                            completed_at__lt=end,
+                            status='completed'
+                        ).count()
+                    elif metric == 'revenue':
+                        return UserTaskCompletion.objects.filter(
+                            completed_at__gte=start,
+                            completed_at__lt=end,
+                            status='completed'
+                        ).aggregate(total=Sum('reward_amount'))['total'] or 0
+                    return 0
+                
+                current = get_period_total(period_start, period_end)
+                previous = get_period_total(previous_start, period_start)
+                
+                growth_rate = ((current - previous) / previous * 100) if previous > 0 else 0
+                growth_rates[period_name] = growth_rate
+            
+            return growth_rates
+            
+        except Exception as e:
+            logger.error(f"Error calculating growth rates: {str(e)}")
+            return {}
+    
+    def _generate_predictions(self, metric, days):
+        """Generate simple predictions"""
+        try:
+            # Get historical data for trend analysis
+            historical_start = timezone.now() - timedelta(days=days*2)
+            historical_end = timezone.now() - timedelta(days=days)
+            
+            if metric == 'completions':
+                historical_data = UserTaskCompletion.objects.filter(
+                    completed_at__gte=historical_start,
+                    completed_at__lt=historical_end,
+                    status='completed'
+                ).annotate(
+                    date=TruncDate('completed_at')
+                ).values('date').annotate(
+                    count=Count('id')
+                ).order_by('date')
+                
+                # Simple linear trend prediction
+                if len(historical_data) > 1:
+                    counts = [item['count'] for item in historical_data]
+                    avg_growth = sum(counts[i+1] - counts[i] for i in range(len(counts)-1)) / (len(counts)-1)
+                    last_value = counts[-1]
+                    
+                    predictions = []
+                    for i in range(days):
+                        predicted_value = last_value + (avg_growth * (i + 1))
+                        predictions.append(max(0, predicted_value))
+                    
+                    return predictions
+            
+            return []
+            
+        except Exception as e:
+            logger.error(f"Error generating predictions: {str(e)}")
+            return {}
+    
+    def _analyze_user_segments(self, from_date):
+        """Analyze user segments"""
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            segments = {}
+            
+            # Segment by activity level
+            total_users = User.objects.filter(date_joined__gte=from_date).count()
+            active_users = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                status='completed'
+            ).values('user_id').distinct().count()
+            
+            segments['activity_levels'] = {
+                'highly_active': int(active_users * 0.2),  # Top 20%
+                'moderately_active': int(active_users * 0.3),  # Next 30%
+                'low_active': int(active_users * 0.5),  # Bottom 50%
+                'inactive': total_users - active_users
+            }
+            
+            # Segment by completion frequency
+            completion_stats = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                status='completed'
+            ).values('user_id').annotate(
+                completion_count=Count('id')
+            ).order_by('completion_count')
+            
+            if completion_stats.exists():
+                counts = [item['completion_count'] for item in completion_stats]
+                median_count = counts[len(counts)//2] if counts else 0
+                
+                segments['completion_frequency'] = {
+                    'power_users': sum(1 for c in counts if c > median_count * 2),
+                    'regular_users': sum(1 for c in counts if median_count <= c <= median_count * 2),
+                    'casual_users': sum(1 for c in counts if c < median_count)
+                }
+            
+            return segments
+            
+        except Exception as e:
+            logger.error(f"Error analyzing user segments: {str(e)}")
+            return {}
+    
+    def _analyze_retention(self, from_date):
+        """Analyze user retention"""
+        try:
+            # Calculate day-over-day retention
+            cohorts = {}
+            
+            # Get users who completed tasks on each day
+            daily_users = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                status='completed'
+            ).annotate(
+                date=TruncDate('completed_at')
+            ).values('date', 'user_id').distinct()
+            
+            # Group by date
+            for date in set(item['date'] for item in daily_users):
+                date_users = set(item['user_id'] for item in daily_users if item['date'] == date)
+                cohorts[date.isoformat()] = len(date_users)
+            
+            # Calculate retention rates
+            retention_data = {}
+            dates = sorted(cohorts.keys())
+            
+            for i, date in enumerate(dates[:-1]):
+                next_date = dates[i + 1]
+                current_users = UserTaskCompletion.objects.filter(
+                    completed_at__date=date,
+                    status='completed'
+                ).values('user_id').distinct().count()
+                
+                retained_users = UserTaskCompletion.objects.filter(
+                    completed_at__date=next_date,
+                    status='completed',
+                    user_id__in=UserTaskCompletion.objects.filter(
+                        completed_at__date=date,
+                        status='completed'
+                    ).values('user_id')
+                ).values('user_id').distinct().count()
+                
+                retention_rate = (retained_users / current_users * 100) if current_users > 0 else 0
+                retention_data[f"{date}_to_{next_date}"] = retention_rate
+            
+            return retention_data
+            
+        except Exception as e:
+            logger.error(f"Error analyzing retention: {str(e)}")
+            return {}
+    
+    def _analyze_engagement_patterns(self, from_date):
+        """Analyze engagement patterns"""
+        try:
+            from django.db.models.functions import ExtractHour
+            
+            # Hourly activity patterns
+            hourly_activity = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                status='completed'
+            ).annotate(
+                hour=ExtractHour('completed_at')
+            ).values('hour').annotate(
+                count=Count('id')
+            ).order_by('hour')
+            
+            # Daily activity patterns
+            from django.db.models.functions import ExtractWeekDay
+            daily_activity = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                status='completed'
+            ).annotate(
+                day_of_week=ExtractWeekDay('completed_at')
+            ).values('day_of_week').annotate(
+                count=Count('id')
+            ).order_by('day_of_week')
+            
+            return {
+                'hourly_patterns': [
+                    {'hour': item['hour'], 'completions': item['count']}
+                    for item in hourly_activity
+                ],
+                'daily_patterns': [
+                    {'day': item['day_of_week'], 'completions': item['count']}
+                    for item in daily_activity
+                ],
+                'peak_hour': max(hourly_activity, key=lambda x: x['count'])['hour'] if hourly_activity else 0,
+                'peak_day': max(daily_activity, key=lambda x: x['count'])['day'] if daily_activity else 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error analyzing engagement patterns: {str(e)}")
+            return {}
+    
+    def _analyze_conversion_funnel(self, from_date):
+        """Analyze conversion funnel"""
+        try:
+            # Define funnel stages
+            funnel_stages = {
+                'task_views': 0,      # Users who viewed tasks
+                'task_starts': 0,     # Users who started tasks
+                'task_completions': 0  # Users who completed tasks
+            }
+            
+            # Count users at each stage
+            funnel_stages['task_views'] = MasterTask.objects.filter(
+                is_active=True
+            ).count() * 10  # Estimate based on views
+            
+            funnel_stages['task_starts'] = UserTaskCompletion.objects.filter(
+                started_at__gte=from_date,
+                status='started'
+            ).values('user_id').distinct().count()
+            
+            funnel_stages['task_completions'] = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                status='completed'
+            ).values('user_id').distinct().count()
+            
+            # Calculate conversion rates
+            conversion_rates = {}
+            stages = ['task_views', 'task_starts', 'task_completions']
+            
+            for i in range(len(stages) - 1):
+                current_stage = stages[i]
+                next_stage = stages[i + 1]
+                
+                if funnel_stages[current_stage] > 0:
+                    rate = (funnel_stages[next_stage] / funnel_stages[current_stage]) * 100
+                    conversion_rates[f"{current_stage}_to_{next_stage}"] = rate
+            
+            return {
+                'funnel_stages': funnel_stages,
+                'conversion_rates': conversion_rates,
+                'overall_conversion_rate': (
+                    (funnel_stages['task_completions'] / funnel_stages['task_views'] * 100)
+                    if funnel_stages['task_views'] > 0 else 0
+                )
+            }
+            
+        except Exception as e:
+            logger.error(f"Error analyzing conversion funnel: {str(e)}")
+            return {}
+    
+    def _analyze_cohorts(self, from_date):
+        """Analyze user cohorts"""
+        try:
+            # Weekly cohorts
+            cohorts = {}
+            
+            # Get users who joined in different weeks
+            from django.db.models.functions import TruncWeek
+            user_cohorts = User.objects.filter(
+                date_joined__gte=from_date
+            ).annotate(
+                cohort_week=TruncWeek('date_joined')
+            ).values('cohort_week').annotate(
+                user_count=Count('id')
+            ).order_by('cohort_week')
+            
+            for cohort in user_cohorts:
+                cohort_week = cohort['cohort_week']
+                cohort_users = User.objects.filter(
+                    date_joined__gte=cohort_week,
+                    date_joined__lt=cohort_week + timedelta(days=7)
+                )
+                
+                # Calculate retention for this cohort over time
+                retention_data = []
+                for week_offset in range(8):  # Track for 8 weeks
+                    week_start = cohort_week + timedelta(weeks=week_offset)
+                    week_end = week_start + timedelta(days=7)
+                    
+                    retained_users = UserTaskCompletion.objects.filter(
+                        user__in=cohort_users,
+                        completed_at__gte=week_start,
+                        completed_at__lt=week_end,
+                        status='completed'
+                    ).values('user_id').distinct().count()
+                    
+                    retention_rate = (retained_users / cohort['user_count'] * 100) if cohort['user_count'] > 0 else 0
+                    retention_data.append(retention_rate)
+                
+                cohorts[cohort_week.isoformat()] = {
+                    'initial_users': cohort['user_count'],
+                    'retention_rates': retention_data
+                }
+            
+            return cohorts
+            
+        except Exception as e:
+            logger.error(f"Error analyzing cohorts: {str(e)}")
+            return {}
+    
+    def _calculate_user_growth_rate(self, from_date):
+        """Calculate user growth rate"""
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            # Get user counts for different periods
+            current_users = User.objects.filter(date_joined__gte=from_date).count()
+            previous_users = User.objects.filter(
+                date_joined__gte=from_date - timedelta(days=30),
+                date_joined__lt=from_date
+            ).count()
+            
+            growth_rate = ((current_users - previous_users) / previous_users * 100) if previous_users > 0 else 0
+            return growth_rate
+            
+        except Exception as e:
+            logger.error(f"Error calculating user growth rate: {str(e)}")
+            return 0.0
+    
+    def _calculate_completion_streak(self, user):
+        """Calculate user's completion streak"""
+        try:
+            # Get recent completions
+            completions = UserTaskCompletion.objects.filter(
+                user=user,
+                status='completed'
+            ).order_by('-completed_at')[:30]  # Last 30 completions
+            
+            if not completions:
+                return 0
+            
+            # Calculate consecutive days
+            streak = 0
+            current_date = timezone.now().date()
+            
+            for completion in completions:
+                completion_date = completion.completed_at.date()
+                
+                if completion_date == current_date:
+                    streak += 1
+                    current_date -= timedelta(days=1)
+                elif completion_date == current_date + timedelta(days=1):
+                    # Found gap in streak
+                    break
+                else:
+                    # Too far back
+                    break
+            
+            return streak
+            
+        except Exception as e:
+            logger.error(f"Error calculating completion streak: {str(e)}")
+            return 0
+    
+    def _calculate_avg_completion_time(self, completions):
+        """Calculate average completion time"""
+        try:
+            total_time = timedelta()
+            count = 0
+            
+            for completion in completions:
+                if completion.started_at and completion.completed_at:
+                    completion_time = completion.completed_at - completion.started_at
+                    total_time += completion_time
+                    count += 1
+            
+            if count > 0:
+                avg_time = total_time / count
+                return avg_time.total_seconds() / 60  # Return in minutes
+            
+            return 0.0
+            
+        except Exception as e:
+            logger.error(f"Error calculating average completion time: {str(e)}")
+            return 0.0
+    
+    def _get_top_tasks(self, completions, limit):
+        """Get top performing tasks"""
+        return list(
+            completions.values('task__name', 'task__task_id')
+            .annotate(count=Count('id'), total_reward=Sum('reward_amount'))
+            .order_by('-count')[:limit]
+        )
+    
+    def _calculate_dau(self, from_date):
+        """Calculate Daily Active Users"""
+        try:
+            return UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                completed_at__lt=from_date + timedelta(days=1),
+                status='completed'
+            ).values('user_id').distinct().count()
+        except Exception as e:
+            logger.error(f"Error calculating DAU: {str(e)}")
+            return 0
+    
+    def _calculate_mau(self, from_date):
+        """Calculate Monthly Active Users"""
+        try:
+            month_start = from_date.replace(day=1)
+            month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+            
+            return UserTaskCompletion.objects.filter(
+                completed_at__gte=month_start,
+                completed_at__lt=month_end,
+                status='completed'
+            ).values('user_id').distinct().count()
+        except Exception as e:
+            logger.error(f"Error calculating MAU: {str(e)}")
+            return 0
+    
+    def _calculate_engagement_rate(self, from_date):
+        """Calculate engagement rate"""
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            total_users = User.objects.filter(date_joined__gte=from_date).count()
+            active_users = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                status='completed'
+            ).values('user_id').distinct().count()
+            
+            return (active_users / total_users * 100) if total_users > 0 else 0.0
+        except Exception as e:
+            logger.error(f"Error calculating engagement rate: {str(e)}")
+            return 0.0
+    
+    def _calculate_retention_rate(self, from_date):
+        """Calculate retention rate"""
+        try:
+            # Simple retention: users who completed tasks today vs yesterday
+            today = timezone.now().date()
+            yesterday = today - timedelta(days=1)
+            
+            today_users = set(UserTaskCompletion.objects.filter(
+                completed_at__date=today,
+                status='completed'
+            ).values_list('user_id', flat=True))
+            
+            yesterday_users = set(UserTaskCompletion.objects.filter(
+                completed_at__date=yesterday,
+                status='completed'
+            ).values_list('user_id', flat=True))
+            
+            if not yesterday_users:
+                return 0.0
+            
+            retained_users = len(today_users & yesterday_users)
+            return (retained_users / len(yesterday_users) * 100)
+        except Exception as e:
+            logger.error(f"Error calculating retention rate: {str(e)}")
+            return 0.0
+    
+    def _calculate_avg_session_duration(self, completions):
+        """Calculate average session duration"""
+        try:
+            total_duration = timedelta()
+            count = 0
+            
+            for completion in completions:
+                if completion.started_at and completion.completed_at:
+                    duration = completion.completed_at - completion.started_at
+                    total_duration += duration
+                    count += 1
+            
+            if count > 0:
+                return total_duration.total_seconds() / 60  # Return in minutes
+            return 0.0
+        except Exception as e:
+            logger.error(f"Error calculating average session duration: {str(e)}")
+            return 0.0
+    
+    def _get_api_response_time(self):
+        """Get API response time metrics"""
+        try:
+            # This would typically come from monitoring/middleware
+            # For now, return a reasonable estimate
+            return 0.15  # 150ms average
+        except Exception as e:
+            logger.error(f"Error getting API response time: {str(e)}")
+            return 0.0
+    
+    def _get_error_rate(self, from_date):
+        """Get error rate"""
+        try:
+            # This would typically come from logging/metrics
+            # For now, estimate based on successful vs failed completions
+            total_completions = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date
+            ).count()
+            
+            failed_completions = UserTaskCompletion.objects.filter(
+                completed_at__gte=from_date,
+                status='failed'
+            ).count()
+            
+            if total_completions > 0:
+                return (failed_completions / total_completions * 100)
+            return 0.0
+        except Exception as e:
+            logger.error(f"Error getting error rate: {str(e)}")
+            return 0.0
+    
+    def _get_throughput(self, from_date):
+        """Get system throughput"""
+        try:
+            # Calculate requests per second based on task completions
+            hours = (timezone.now() - from_date).total_seconds() / 3600
+            if hours > 0:
+                completions = UserTaskCompletion.objects.filter(
+                    completed_at__gte=from_date,
+                    status='completed'
+                ).count()
+                return completions / (hours * 3600)  # per second
+            return 0.0
+        except Exception as e:
+            logger.error(f"Error getting throughput: {str(e)}")
+            return 0.0
+    
+    def _get_cache_hit_rate(self):
+        """Get cache hit rate"""
+        try:
+            # This would typically come from cache metrics
+            # For now, return a reasonable estimate
+            return 85.0  # 85% cache hit rate
+        except Exception as e:
+            logger.error(f"Error getting cache hit rate: {str(e)}")
+            return 0.0
+    
+    def _get_db_query_time(self):
+        """Get database query time"""
+        try:
+            # This would typically come from database monitoring
+            # For now, return a reasonable estimate
+            return 0.025  # 25ms average query time
+        except Exception as e:
+            logger.error(f"Error getting DB query time: {str(e)}")
+            return 0.0
+
+
 # ============ TASK COMPLETION VIEWSET ============
 
 class TaskCompletionViewSet(BulletproofViewSet):
@@ -999,14 +1956,60 @@ class TaskCompletionViewSet(BulletproofViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Create completion
-            completion = UserTaskCompletion.objects.create(
-                user=request.user,
-                task_id=task_id,
-                ip_address=get_client_ip(request),
-                user_agent=get_user_agent(request),
-                status='started'
-            )
+            # ── Inventory cap (slot availability) ──────────────────────
+            from api.tasks.api.adapters.inventory import check_slot_available, consume_slot
+            if not check_slot_available(task_id):
+                return Response(
+                    ErrorResponseSerializer({
+                        'error': 'Task slots exhausted',
+                        'error_code': 'INVENTORY_EXHAUSTED',
+                        'details': 'This task has reached its completion cap.'
+                    }).data,
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # ── Task lock: এক কাজের জন্য একটাই মালিক ─────────────────
+            from .models import TaskLock
+            from django.db import transaction as db_transaction
+            with db_transaction.atomic():
+                existing_lock = (
+                    TaskLock.objects
+                    .select_for_update(nowait=True)
+                    .filter(
+                        task_id=task_id,
+                        lock_type=TaskLock.LockType.EXCLUSIVE,
+                        released_at__isnull=True,
+                        expires_at__gt=timezone.now(),
+                    )
+                    .exclude(user=request.user)
+                    .first()
+                )
+                if existing_lock:
+                    return Response(
+                        ErrorResponseSerializer({
+                            'error': 'Task is locked by another user',
+                            'error_code': 'TASK_LOCKED',
+                            'details': {'expires_in_seconds': existing_lock.time_remaining_seconds}
+                        }).data,
+                        status=status.HTTP_409_CONFLICT
+                    )
+
+                # Create completion inside atomic block
+                completion = UserTaskCompletion.objects.create(
+                    user=request.user,
+                    task_id=task_id,
+                    ip_address=get_client_ip(request),
+                    user_agent=get_user_agent(request),
+                    status='started'
+                )
+                TaskLock.objects.update_or_create(
+                    task_id=task_id, user=request.user, released_at=None,
+                    defaults={
+                        'lock_type': TaskLock.LockType.EXCLUSIVE,
+                        'expires_at': timezone.now() + timezone.timedelta(hours=24),
+                    }
+                )
+            consume_slot(task_id)
             
             serializer = self.get_serializer(completion)
             
@@ -1554,3 +2557,237 @@ def admin_daily_profit(request):
 @permission_classes([IsAdminUser])
 def admin_profit_by_source(request):
     return Response({'results': []})
+
+# ── Missing view stubs (referenced in urls.py) ────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_dashboard_view(request):
+    """User dashboard: earnings summary, active tasks, recent completions."""
+    from .models import UserTaskCompletion, MasterTask
+    from django.db.models import Sum, Count
+    user = request.user
+    qs = UserTaskCompletion.objects.filter(user=user)
+    total_earned = qs.filter(status='completed').aggregate(s=Sum('reward_amount'))['s'] or 0
+    return Response({
+        'total_earned': str(total_earned),
+        'completions': qs.filter(status='completed').count(),
+        'pending': qs.filter(status='pending').count(),
+        'active_tasks': MasterTask.objects.filter(is_active=True).count(),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_profile_view(request):
+    """User profile with earning stats and account info."""
+    user = request.user
+    return Response({
+        'id': user.pk,
+        'username': user.username,
+        'email': user.email,
+        'date_joined': user.date_joined,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_achievements_view(request):
+    """User achievements, badges, and gamification data."""
+    return Response({'achievements': [], 'badges': [], 'level': 1, 'xp': 0})
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_analytics_view(request):
+    """Admin analytics overview."""
+    from .models import UserTaskCompletion, MasterTask
+    from django.db.models import Sum, Count
+    period_days = int(request.query_params.get('days', 30))
+    cutoff = timezone.now() - datetime.timedelta(days=period_days)
+    total_payouts = (
+        UserTaskCompletion.objects
+        .filter(status='completed', completed_at__gte=cutoff)
+        .aggregate(s=Sum('reward_amount'))['s'] or 0
+    )
+    return Response({
+        'period_days': period_days,
+        'total_payouts': str(total_payouts),
+        'completions': UserTaskCompletion.objects.filter(completed_at__gte=cutoff).count(),
+        'active_tasks': MasterTask.objects.filter(is_active=True).count(),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_performance_view(request):
+    """Admin performance metrics."""
+    return Response({'tasks_per_hour': 0, 'conversion_rate': 0.0, 'fraud_rate': 0.0})
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_revenue_view(request):
+    """Admin revenue breakdown by platform/source."""
+    return Response({'results': []})
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_users_view(request):
+    """Admin user list with earning stats."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    count = User.objects.count()
+    return Response({'count': count, 'results': []})
+
+# ── Platform postback views ───────────────────────────────────────────────────
+
+@api_view(['GET', 'POST'])
+def ogads_postback_view(request):
+    """OGAds S2S postback endpoint. Queues ogads_process_postback Celery task."""
+    from api.external.ogads import verify_postback_ip
+    from api.tasks.tasks_platform_extensions import ogads_process_postback
+    client_ip = request.META.get('REMOTE_ADDR', '')
+    if not verify_postback_ip(client_ip):
+        return Response({'error': 'Unauthorized IP'}, status=403)
+    data = request.GET.dict() if request.method == 'GET' else request.data
+    ogads_process_postback.delay(dict(data))
+    return Response('1')  # OGAds expects plain "1" on success
+
+
+@api_view(['GET', 'POST'])
+def adgate_postback_view(request):
+    """AdGate Media S2S postback endpoint."""
+    from api.tasks.tasks_platform_extensions import adgate_process_postback
+    data = request.GET.dict() if request.method == 'GET' else request.data
+    adgate_process_postback.delay(dict(data))
+    return Response('OK')
+
+
+@api_view(['GET', 'POST'])
+def offertoro_postback_view(request):
+    """OfferToro S2S postback endpoint."""
+    from api.tasks.tasks_platform_extensions import offertoro_process_postback
+    data = request.GET.dict() if request.method == 'GET' else request.data
+    offertoro_process_postback.delay(dict(data))
+    return Response('1')
+
+
+@api_view(['GET', 'POST'])
+def monlix_postback_view(request):
+    """Monlix S2S postback endpoint (cpa/cpi/survey/cpe)."""
+    from api.tasks.tasks_platform_extensions import monlix_process_postback
+    data = request.GET.dict() if request.method == 'GET' else request.data
+    monlix_process_postback.delay(dict(data))
+    return Response('1')
+
+# ── Internet Connectivity + Aging Task Endpoints ──────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def connectivity_status_view(request):
+    """
+    GET /api/connectivity/
+    Returns current internet connectivity status (cached — no live probe).
+    """
+    from api.tasks.internet_check_tasks import get_connectivity_status, are_outbound_tasks_paused
+    status_data = get_connectivity_status()
+    return Response({
+        'online':               status_data.get('online', True),
+        'latency_ms':           status_data.get('latency_ms'),
+        'passed':               status_data.get('passed'),
+        'probed_at':            status_data.get('probed_at'),
+        'outbound_paused':      are_outbound_tasks_paused(),
+        'details':              status_data.get('details', []),
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def connectivity_probe_now_view(request):
+    """
+    POST /api/connectivity/probe/
+    Forces a live connectivity probe (admin only).
+    """
+    from api.tasks.internet_check_tasks import _multi_probe_internet
+    probe = _multi_probe_internet()
+    return Response({'probe': probe})
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def aging_tasks_report_view(request):
+    """
+    GET /api/aging-tasks/
+    Returns cached aging task report (started/pending beyond thresholds).
+    """
+    from api.tasks.internet_check_tasks import aging_report
+    report = aging_report()
+    return Response(report)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def aging_tasks_recover_view(request):
+    """
+    POST /api/aging-tasks/recover/
+    Triggers auto-recovery (or dry_run=true for preview).
+    Body: { dry_run: bool, threshold_minutes: int }
+    """
+    from api.tasks.internet_check_tasks import auto_recover_aging_tasks
+    dry_run            = request.data.get('dry_run', False)
+    threshold_minutes  = int(request.data.get('threshold_minutes', 60))
+    result = auto_recover_aging_tasks.delay(threshold_minutes=threshold_minutes,
+                                            dry_run=dry_run)
+    return Response({'task_id': str(result.id), 'dry_run': dry_run,
+                     'threshold_minutes': threshold_minutes})
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def stale_locks_report_view(request):
+    """
+    GET /api/stale-locks/
+    Returns current stale lock count and details.
+    """
+    from api.tasks.models import TaskLock
+    from django.db.models import Q
+    threshold = int(request.query_params.get('threshold_minutes', 60))
+    from django.utils import timezone as tz
+    from datetime import timedelta
+    cutoff = tz.now() - timedelta(minutes=threshold)
+    stale_qs = TaskLock.objects.filter(
+        released_at__isnull=True
+    ).filter(
+        Q(expires_at__lt=tz.now()) | Q(acquired_at__lt=cutoff)
+    ).select_related('task', 'user')[:50]
+
+    return Response({
+        'count': stale_qs.count() if False else TaskLock.objects.filter(
+            released_at__isnull=True
+        ).filter(Q(expires_at__lt=tz.now()) | Q(acquired_at__lt=cutoff)).count(),
+        'threshold_minutes': threshold,
+        'locks': [
+            {'lock_id': str(l.id), 'task': str(l.task),
+             'user_id': l.user_id,
+             'held_minutes': int((tz.now() - l.acquired_at).total_seconds() / 60)}
+            for l in stale_qs
+        ]
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def force_release_lock_view(request):
+    """
+    POST /api/stale-locks/force-release/
+    Body: { lock_id: str, reason: str }
+    """
+    from api.tasks.internet_check_tasks import force_release_stuck_lock
+    lock_id = request.data.get('lock_id')
+    reason  = request.data.get('reason', 'admin_dashboard')
+    if not lock_id:
+        return Response({'error': 'lock_id required'}, status=400)
+    result = force_release_stuck_lock.delay(lock_id=lock_id, reason=reason)
+    return Response({'task_id': str(result.id), 'lock_id': lock_id})

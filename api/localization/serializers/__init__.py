@@ -30,3 +30,14 @@ from .extra import (
     ExchangeRateSerializer, AutoTranslateSerializer,
     ImportExportSerializer, AdminSerializer, PublicTranslationSerializer,
 )
+
+# Previously missing serializers (added)
+from .user_preference import UserLanguagePreferenceSerializer
+from .country_currency import CountryCurrencySerializer
+from .glossary_entry import TranslationGlossaryEntrySerializer
+from .translation_version import TranslationVersionSerializer
+
+# ── New serializers (previously missing models) ───────────────────────────────
+from .webhook import WebhookRegistrationSerializer, WebhookDeliveryLogSerializer
+from .screenshot import TranslationScreenshotSerializer
+from .glossary_full import TranslationGlossarySerializer

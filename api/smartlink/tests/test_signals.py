@@ -4,7 +4,7 @@ from .factories import SmartLinkFactory, UserFactory
 
 
 class SmartLinkSignalsTest(TestCase):
-    @patch('smartlink.tasks.cache_warmup_tasks.invalidate_smartlink_cache')
+    @patch('api.smartlink.tasks.cache_warmup_tasks.invalidate_smartlink_cache')
     def test_save_triggers_cache_invalidation(self, mock_task):
         mock_task.delay = MagicMock()
         sl = SmartLinkFactory()
@@ -15,7 +15,9 @@ class SmartLinkSignalsTest(TestCase):
     def test_delete_invalidates_cache(self):
         sl = SmartLinkFactory()
         slug = sl.slug
-        with patch('smartlink.services.core.SmartLinkCacheService.SmartLinkCacheService.invalidate_smartlink') as mock_inv:
+        with patch(
+            'api.smartlink.services.core.SmartLinkCacheService.SmartLinkCacheService.invalidate_smartlink'
+        ) as mock_inv:
             sl.delete()
             mock_inv.assert_called_with(slug)
 

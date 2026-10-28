@@ -59,7 +59,7 @@ class APIKeyAuthentication(BaseAuthentication):
 
         # DB lookup
         try:
-            from ..models.publisher import PublisherAPIKey
+            from api.smartlink.models.publisher import PublisherAPIKey
             key_obj = PublisherAPIKey.objects.select_related('publisher').get(
                 key=api_key,
                 is_active=True,

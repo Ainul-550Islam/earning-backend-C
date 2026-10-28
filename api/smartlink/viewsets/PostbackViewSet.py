@@ -5,8 +5,8 @@ from rest_framework import viewsets, serializers
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from ..models.postback_log import PostbackLog
-from ..permissions import IsPublisher
+from api.smartlink.models.postback_log import PostbackLog
+from api.smartlink.permissions import IsPublisher
 
 
 class PostbackLogSerializer(serializers.ModelSerializer):

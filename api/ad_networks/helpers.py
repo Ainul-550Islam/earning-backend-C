@@ -3,6 +3,7 @@ api/ad_networks/helpers.py
 Helper functions for ad networks module
 SaaS-ready with tenant support
 """
+import hmac
 
 import logging
 import json

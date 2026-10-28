@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 class LocalizationInsight(models.Model):
     """Daily localization usage stats — aggregated per day"""
+    tenant_id = models.CharField(
+        max_length=100, db_index=True, blank=True, default='',
+        help_text='Tenant identifier — empty means global/shared'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     date = models.DateField(db_index=True, help_text=_("Stat date"))

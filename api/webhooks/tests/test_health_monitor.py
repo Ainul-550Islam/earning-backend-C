@@ -4,6 +4,7 @@ This module contains tests for the webhook health monitor
 including endpoint health checks, monitoring, and alerting.
 """
 
+from datetime import timedelta
 import pytest
 from unittest.mock import Mock, patch
 from django.test import TestCase
@@ -33,10 +34,10 @@ class HealthMonitorServiceTest(TestCase):
             password='testpass123'
         )
         self.endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         self.health_monitor = HealthMonitorService()
     
@@ -97,7 +98,7 @@ class HealthMonitorServiceTest(TestCase):
             
             self.assertTrue(health_status['is_healthy'])
             mock_get.assert_called_once_with(
-                self.endpoint.url,
+                self.endpoint.target_url,
                 timeout=10,
                 headers={'User-Agent': 'Webhooks-Health-Check/1.0'},
                 verify=self.endpoint.verify_ssl
@@ -127,11 +128,11 @@ class HealthMonitorServiceTest(TestCase):
     def test_check_endpoint_health_with_ssl_verification_disabled(self):
         """Test endpoint health check with SSL verification disabled."""
         endpoint = WebhookEndpoint.objects.create(
-            url='https://example.com/webhook',
-            secret='test-secret-key',
+            target_url='https://example.com/webhook',
+            secret_key='test-secret-key',
             status=WebhookStatus.ACTIVE,
             verify_ssl=False,
-            created_by=self.user,
+            owner=self.user,
         )
         
         with patch('requests.get') as mock_get:
@@ -185,30 +186,27 @@ class HealthMonitorServiceTest(TestCase):
         # Create health logs
         WebhookHealthLog.objects.create(
             endpoint=self.endpoint,
-            checked_at=timezone.now() - timezone.timedelta(minutes=10),
+            checked_at=timezone.now() - timedelta(minutes=10),
             is_healthy=True,
             response_time_ms=100,
             status_code=200,
-            created_by=self.user
         )
         
         WebhookHealthLog.objects.create(
             endpoint=self.endpoint,
-            checked_at=timezone.now() - timezone.timedelta(minutes=5),
+            checked_at=timezone.now() - timedelta(minutes=5),
             is_healthy=True,
             response_time_ms=150,
             status_code=200,
-            created_by=self.user
         )
         
         WebhookHealthLog.objects.create(
             endpoint=self.endpoint,
-            checked_at=timezone.now() - timezone.timedelta(minutes=2),
+            checked_at=timezone.now() - timedelta(minutes=2),
             is_healthy=False,
             response_time_ms=5000,
             status_code=500,
             error='Server error',
-            created_by=self.user
         )
         
         summary = self.health_monitor.get_endpoint_health_summary(
@@ -243,11 +241,10 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(5):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 10),
+                checked_at=timezone.now() - timedelta(minutes=i * 10),
                 is_healthy=True,
                 response_time_ms=100 + i * 10,
                 status_code=200,
-                created_by=self.user
             )
         
         summary = self.health_monitor.get_endpoint_health_summary(
@@ -268,12 +265,11 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(5):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 10),
+                checked_at=timezone.now() - timedelta(minutes=i * 10),
                 is_healthy=False,
                 response_time_ms=5000,
                 status_code=500,
                 error='Server error',
-                created_by=self.user
             )
         
         summary = self.health_monitor.get_endpoint_health_summary(
@@ -292,10 +288,10 @@ class HealthMonitorServiceTest(TestCase):
         """Test checking health of all endpoints."""
         # Create additional endpoint
         endpoint2 = WebhookEndpoint.objects.create(
-            url='https://example2.com/webhook',
-            secret='test-secret-key-2',
+            target_url='https://example2.com/webhook',
+            secret_key='test-secret-key-2',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         
         with patch('requests.get') as mock_get:
@@ -304,7 +300,7 @@ class HealthMonitorServiceTest(TestCase):
             mock_response.elapsed.total_seconds.return_value = 0.1
             mock_get.return_value = mock_response
             
-            results = self.health_monitor.check_all_endpoints_health()
+            results = self.health_monitor.check_all_endpoints()
             
             self.assertEqual(len(results), 2)
             self.assertTrue(all(result['is_healthy'] for result in results))
@@ -314,10 +310,10 @@ class HealthMonitorServiceTest(TestCase):
         """Test checking health of all endpoints with failures."""
         # Create additional endpoint
         endpoint2 = WebhookEndpoint.objects.create(
-            url='https://example2.com/webhook',
-            secret='test-secret-key-2',
+            target_url='https://example2.com/webhook',
+            secret_key='test-secret-key-2',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         
         with patch('requests.get') as mock_get:
@@ -332,7 +328,7 @@ class HealthMonitorServiceTest(TestCase):
             
             mock_get.side_effect = [mock_response_success, mock_response_failure]
             
-            results = self.health_monitor.check_all_endpoints_health()
+            results = self.health_monitor.check_all_endpoints()
             
             self.assertEqual(len(results), 2)
             self.assertTrue(results[0]['is_healthy'])
@@ -343,37 +339,35 @@ class HealthMonitorServiceTest(TestCase):
         """Test getting system health overview."""
         # Create multiple endpoints
         endpoint2 = WebhookEndpoint.objects.create(
-            url='https://example2.com/webhook',
-            secret='test-secret-key-2',
+            target_url='https://example2.com/webhook',
+            secret_key='test-secret-key-2',
             status=WebhookStatus.ACTIVE,
-            created_by=self.user,
+            owner=self.user,
         )
         
         endpoint3 = WebhookEndpoint.objects.create(
-            url='https://example3.com/webhook',
-            secret='test-secret-key-3',
+            target_url='https://example3.com/webhook',
+            secret_key='test-secret-key-3',
             status=WebhookStatus.DISABLED,
-            created_by=self.user,
+            owner=self.user,
         )
         
         # Create health logs
         WebhookHealthLog.objects.create(
             endpoint=self.endpoint,
-            checked_at=timezone.now() - timezone.timedelta(minutes=10),
+            checked_at=timezone.now() - timedelta(minutes=10),
             is_healthy=True,
             response_time_ms=100,
             status_code=200,
-            created_by=self.user
         )
         
         WebhookHealthLog.objects.create(
             endpoint=endpoint2,
-            checked_at=timezone.now() - timezone.timedelta(minutes=5),
+            checked_at=timezone.now() - timedelta(minutes=5),
             is_healthy=False,
             response_time_ms=5000,
             status_code=500,
             error='Server error',
-            created_by=self.user
         )
         
         overview = self.health_monitor.get_system_health_overview()
@@ -391,11 +385,10 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(24):  # 24 hours of data
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(hours=i),
+                checked_at=timezone.now() - timedelta(hours=i),
                 is_healthy=i % 3 != 0,  # 2 out of 3 are healthy
                 response_time_ms=100 + i * 10,
                 status_code=200 if i % 3 != 0 else 500,
-                created_by=self.user
             )
         
         trends = self.health_monitor.get_endpoint_health_trends(
@@ -414,12 +407,11 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(5):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 5),
+                checked_at=timezone.now() - timedelta(minutes=i * 5),
                 is_healthy=False,
                 response_time_ms=5000,
                 status_code=500,
                 error='Server error',
-                created_by=self.user
             )
         
         result = self.health_monitor.auto_suspend_unhealthy_endpoint(
@@ -439,12 +431,11 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(2):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 5),
+                checked_at=timezone.now() - timedelta(minutes=i * 5),
                 is_healthy=False,
                 response_time_ms=5000,
                 status_code=500,
                 error='Server error',
-                created_by=self.user
             )
         
         result = self.health_monitor.auto_suspend_unhealthy_endpoint(
@@ -476,22 +467,20 @@ class HealthMonitorServiceTest(TestCase):
         # Create health logs with issues
         WebhookHealthLog.objects.create(
             endpoint=self.endpoint,
-            checked_at=timezone.now() - timezone.timedelta(minutes=10),
+            checked_at=timezone.now() - timedelta(minutes=10),
             is_healthy=False,
             response_time_ms=5000,
             status_code=500,
             error='Server error',
-            created_by=self.user
         )
         
         WebhookHealthLog.objects.create(
             endpoint=self.endpoint,
-            checked_at=timezone.now() - timezone.timedelta(minutes=5),
+            checked_at=timezone.now() - timedelta(minutes=5),
             is_healthy=False,
             response_time_ms=10000,
             status_code=503,
             error='Service unavailable',
-            created_by=self.user
         )
         
         alerts = self.health_monitor.get_endpoint_health_alerts(
@@ -509,11 +498,10 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(5):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 10),
+                checked_at=timezone.now() - timedelta(minutes=i * 10),
                 is_healthy=True,
                 response_time_ms=100,
                 status_code=200,
-                created_by=self.user
             )
         
         alerts = self.health_monitor.get_endpoint_health_alerts(
@@ -558,11 +546,10 @@ class HealthMonitorServiceTest(TestCase):
         for i, response_time in enumerate(response_times):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 5),
+                checked_at=timezone.now() - timedelta(minutes=i * 5),
                 is_healthy=True,
                 response_time_ms=response_time,
                 status_code=200,
-                created_by=self.user
             )
         
         metrics = self.health_monitor.get_endpoint_health_metrics(
@@ -597,11 +584,10 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(10):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 5),
+                checked_at=timezone.now() - timedelta(minutes=i * 5),
                 is_healthy=i < 8,  # 8 out of 10 are healthy
                 response_time_ms=100 + i * 50,
                 status_code=200 if i < 8 else 500,
-                created_by=self.user
             )
         
         score = self.health_monitor.get_endpoint_health_score(
@@ -620,11 +606,10 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(10):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 5),
+                checked_at=timezone.now() - timedelta(minutes=i * 5),
                 is_healthy=True,
                 response_time_ms=100,
                 status_code=200,
-                created_by=self.user
             )
         
         score = self.health_monitor.get_endpoint_health_score(
@@ -640,12 +625,11 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(10):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 5),
+                checked_at=timezone.now() - timedelta(minutes=i * 5),
                 is_healthy=False,
                 response_time_ms=5000,
                 status_code=500,
                 error='Server error',
-                created_by=self.user
             )
         
         score = self.health_monitor.get_endpoint_health_score(
@@ -669,21 +653,19 @@ class HealthMonitorServiceTest(TestCase):
         # Create health logs
         WebhookHealthLog.objects.create(
             endpoint=self.endpoint,
-            checked_at=timezone.now() - timezone.timedelta(minutes=10),
+            checked_at=timezone.now() - timedelta(minutes=10),
             is_healthy=True,
             response_time_ms=100,
             status_code=200,
-            created_by=self.user
         )
         
         WebhookHealthLog.objects.create(
             endpoint=self.endpoint,
-            checked_at=timezone.now() - timezone.timedelta(minutes=5),
+            checked_at=timezone.now() - timedelta(minutes=5),
             is_healthy=False,
             response_time_ms=5000,
             status_code=500,
             error='Server error',
-            created_by=self.user
         )
         
         self.health_monitor.update_endpoint_health_status(self.endpoint)
@@ -698,11 +680,10 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(5):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 5),
+                checked_at=timezone.now() - timedelta(minutes=i * 5),
                 is_healthy=True,
                 response_time_ms=100,
                 status_code=200,
-                created_by=self.user
             )
         
         # Start with suspended status
@@ -720,20 +701,18 @@ class HealthMonitorServiceTest(TestCase):
         # Create health logs at different times
         WebhookHealthLog.objects.create(
             endpoint=self.endpoint,
-            checked_at=timezone.now() - timezone.timedelta(days=10),
+            checked_at=timezone.now() - timedelta(days=10),
             is_healthy=True,
             response_time_ms=100,
             status_code=200,
-            created_by=self.user
         )
         
         WebhookHealthLog.objects.create(
             endpoint=self.endpoint,
-            checked_at=timezone.now() - timezone.timedelta(days=1),
+            checked_at=timezone.now() - timedelta(days=1),
             is_healthy=True,
             response_time_ms=100,
             status_code=200,
-            created_by=self.user
         )
         
         result = self.health_monitor.cleanup_old_health_logs(days=7)
@@ -750,12 +729,11 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(5):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 5),
+                checked_at=timezone.now() - timedelta(minutes=i * 5),
                 is_healthy=False,
                 response_time_ms=5000,
                 status_code=500,
                 error='Server error',
-                created_by=self.user
             )
         
         recommendations = self.health_monitor.get_health_check_recommendations(
@@ -773,11 +751,10 @@ class HealthMonitorServiceTest(TestCase):
         for i in range(5):
             WebhookHealthLog.objects.create(
                 endpoint=self.endpoint,
-                checked_at=timezone.now() - timezone.timedelta(minutes=i * 5),
+                checked_at=timezone.now() - timedelta(minutes=i * 5),
                 is_healthy=True,
                 response_time_ms=100,
                 status_code=200,
-                created_by=self.user
             )
         
         recommendations = self.health_monitor.get_health_check_recommendations(
@@ -791,14 +768,18 @@ class HealthMonitorServiceTest(TestCase):
         """Test health check performance."""
         import time
         
+        # setUp's self.endpoint is also ACTIVE and would be included in
+        # check_all_endpoints() otherwise, throwing off the count below.
+        self.endpoint.delete()
+        
         # Create multiple endpoints
         endpoints = []
         for i in range(10):
             endpoint = WebhookEndpoint.objects.create(
-                url=f'https://example{i}.com/webhook',
-                secret=f'test-secret-key-{i}',
+                target_url=f'https://example{i}.com/webhook',
+                secret_key=f'test-secret-key-{i}',
                 status=WebhookStatus.ACTIVE,
-                created_by=self.user,
+                owner=self.user,
             )
             endpoints.append(endpoint)
         
@@ -810,7 +791,7 @@ class HealthMonitorServiceTest(TestCase):
             
             start_time = time.time()
             
-            results = self.health_monitor.check_all_endpoints_health()
+            results = self.health_monitor.check_all_endpoints()
             
             end_time = time.time()
             

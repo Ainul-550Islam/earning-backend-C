@@ -24,6 +24,7 @@ class AppRatingSnapshot(TimeStampedModel):
     rating_change    = models.DecimalField(max_digits=3, decimal_places=2, default=Decimal("0.00"))
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_app_rating_snapshots"
         verbose_name = _("App Rating Snapshot")
         unique_together = [["app", "date", "platform"]]

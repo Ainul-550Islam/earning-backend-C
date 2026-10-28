@@ -12,7 +12,7 @@ def hourly_fraud_scan():
     Hourly: Retroactively scan recent clicks for fraud patterns.
     Catches fraud that wasn't caught at redirect time.
     """
-    from ..models import Click, ClickFraudFlag
+    from api.smartlink.models import Click, ClickFraudFlag
     from ..services.click.ClickFraudService import ClickFraudService
 
     svc = ClickFraudService()
@@ -56,7 +56,7 @@ def scan_high_velocity_ips():
     """
     from django.db.models import Count
     from django.core.cache import cache
-    from ..models import Click
+    from api.smartlink.models import Click
     from ..constants import MAX_CLICKS_PER_IP_PER_HOUR
 
     cutoff = timezone.now() - datetime.timedelta(hours=1)

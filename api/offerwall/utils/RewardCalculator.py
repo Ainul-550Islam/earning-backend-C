@@ -4,7 +4,9 @@ Reward calculation utility
 import logging
 from decimal import Decimal, ROUND_DOWN
 from django.utils import timezone
-from ..constants import *
+from ..constants import (
+    DEFAULT_REVENUE_SHARE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -15,38 +17,37 @@ class RewardCalculator:
     def __init__(self, offer=None, provider=None):
         self.offer = offer
         self.provider = provider or (offer.provider if offer else None)
-    
+
+    def validate_payout_amount(self, amount) -> bool:
+        """
+        Validate that a payout amount is positive.
+        Raises InvalidRewardException if amount <= 0.
+        Returns True if valid.
+        """
+        from decimal import Decimal
+        from ..exceptions import InvalidRewardException
+        if amount is None or amount <= Decimal('0'):
+            raise InvalidRewardException(
+                f'Payout amount must be positive, got: {amount}')
+        return True
+
     def calculate_user_reward(self, payout_amount, currency='USD'):
         """
-        Calculate user reward based on payout and revenue share
-        
-        Args:
-            payout_amount: Payout from provider
-            currency: Currency code
-        
-        Returns:
-            Decimal: User reward amount
+        Calculate user reward from payout using provider revenue share.
+        Returns Decimal reward amount. Handles provider being a User object.
         """
+        from decimal import Decimal, ROUND_HALF_UP
         payout = Decimal(str(payout_amount))
-        
-        # Get revenue share percentage
-        if self.provider:
-            revenue_share = Decimal(str(self.provider.revenue_share)) / Decimal('100')
-        else:
-            revenue_share = Decimal(str(DEFAULT_REVENUE_SHARE)) / Decimal('100')
-        
-        # Calculate user reward
-        user_reward = (payout * revenue_share).quantize(
-            Decimal('0.000001'), 
-            rounding=ROUND_DOWN
-        )
-        
-        logger.info(
-            f"Calculated reward: {payout} * {revenue_share} = {user_reward}"
-        )
-        
-        return user_reward
-    
+        rs = None
+        if self.provider and hasattr(self.provider, 'revenue_share'):
+            try:
+                rs = Decimal(str(self.provider.revenue_share)) / Decimal('100')
+            except Exception:
+                rs = None
+        if rs is None:
+            rs = Decimal('0.70')
+        return (payout * rs).quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
+
     def calculate_platform_fee(self, payout_amount):
         """
         Calculate platform fee
@@ -149,39 +150,27 @@ class RewardCalculator:
             'currency': self.offer.reward_currency if self.offer else 'Points'
         }
     
-    def calculate_tier_multiplier(self, user):
+    def calculate_tier_multiplier(self, user=None):
         """
-        Calculate reward multiplier based on user tier
-        
-        Args:
-            user: User instance
-        
-        Returns:
-            Decimal: Tier multiplier
+        Calculate reward multiplier based on user tier.
+        Returns float multiplier (1.0 = no bonus).
         """
-        # Default multiplier
-        multiplier = Decimal('1.0')
-        
-        # Check if user has premium/VIP status
-        if hasattr(user, 'profile'):
-            profile = user.profile
-            
+        multiplier = 1.0
+        target = user or (self.provider
+                          if self.provider and not hasattr(self.provider, 'revenue_share')
+                          else None)
+        if target is None:
+            return multiplier
+        if hasattr(target, 'profile'):
+            profile = target.profile
             if hasattr(profile, 'tier'):
-                tier_multipliers = {
-                    'bronze': Decimal('1.0'),
-                    'silver': Decimal('1.1'),
-                    'gold': Decimal('1.2'),
-                    'platinum': Decimal('1.3'),
-                    'diamond': Decimal('1.5'),
+                tier_map = {
+                    'bronze': 1.0, 'silver': 1.1, 'gold': 1.2,
+                    'platinum': 1.3, 'diamond': 1.5,
                 }
-                
-                multiplier = tier_multipliers.get(
-                    profile.tier.lower(),
-                    Decimal('1.0')
-                )
-        
+                multiplier = tier_map.get(profile.tier.lower(), 1.0)
         return multiplier
-    
+
     def calculate_time_bonus(self, completion_time_minutes):
         """
         Calculate bonus for fast completion
@@ -247,53 +236,87 @@ class RewardCalculator:
         
         return Decimal('1.0')
     
-    def calculate_special_event_bonus(self):
+    def calculate_special_event_bonus(self, base_reward=None):
         """
-        Calculate bonus for special events (holidays, promotions)
-        
+        Calculate bonus for special events (holidays, promotions).
+        Args:
+            base_reward: Optional base reward (unused, for API compatibility)
         Returns:
             Decimal: Event bonus multiplier
         """
         now = timezone.now()
-        
-        # Example: Double rewards on weekends
-        if now.weekday() >= 5:  # Saturday or Sunday
+        if now.weekday() >= 5:  # Saturday or Sunday — double rewards
             return Decimal('2.0')
-        
-        # Add more special event logic here
-        # - Holidays
-        # - Flash sales
-        # - User birthday
-        # - Platform anniversary
-        
         return Decimal('1.0')
     
     def calculate_all_bonuses(self, user, **kwargs):
         """
-        Calculate all applicable bonuses
-        
+        Calculate all applicable bonuses.
+
+        FIX: Was reading streak/volume/time from kwargs (always 1.0 default)
+        instead of actually calling the calculator methods.
+        Now calls every method and fetches required data from DB.
+
         Args:
             user: User instance
-            **kwargs: Additional parameters
-        
-        Returns:
-            dict: All bonus multipliers and total
+            **kwargs: completion_time_minutes (optional)
         """
+        from api.offerwall.models import OfferConversion
+        from django.utils import timezone
+        from django.db.models import Count
+
+        # 1. Tier multiplier — user subscription/profile tier (returns float, cast to Decimal)
+        tier_mult = Decimal(str(self.calculate_tier_multiplier(user)))
+
+        # 2. Time bonus — only if completion time passed in kwargs
+        completion_time = kwargs.get('completion_time_minutes')
+        time_mult = (self.calculate_time_bonus(completion_time)
+                     if completion_time is not None else Decimal('1.0'))
+
+        # 3. Streak bonus — consecutive days with at least one approved conversion
+        streak_days = 0
+        try:
+            today = timezone.now().date()
+            streak_days = 0
+            for delta in range(30):  # check up to 30 days back
+                check_date = today - __import__('datetime').timedelta(days=delta)
+                had_conv = OfferConversion.objects.filter(
+                    user=user, status='approved',
+                    converted_at__date=check_date
+                ).exists()
+                if had_conv:
+                    streak_days += 1
+                elif delta > 0:   # day 0 (today) can be empty; break after gap
+                    break
+        except Exception:
+            pass
+        streak_mult = self.calculate_streak_bonus(streak_days)
+
+        # 4. Volume bonus — total approved conversions by user
+        total_completions = 0
+        try:
+            total_completions = OfferConversion.objects.filter(
+                user=user, status='approved').count()
+        except Exception:
+            pass
+        volume_mult = self.calculate_volume_bonus(total_completions)
+
+        # 5. Special event (weekend / holiday)
+        event_mult = self.calculate_special_event_bonus()
+
         bonuses = {
-            'tier': self.calculate_tier_multiplier(user),
-            'time': kwargs.get('time_bonus', Decimal('1.0')),
-            'streak': kwargs.get('streak_bonus', Decimal('1.0')),
-            'volume': kwargs.get('volume_bonus', Decimal('1.0')),
-            'event': self.calculate_special_event_bonus(),
+            'tier':   tier_mult,
+            'time':   time_mult,
+            'streak': streak_mult,
+            'volume': volume_mult,
+            'event':  event_mult,
         }
-        
-        # Calculate total multiplier
+
         total_multiplier = Decimal('1.0')
-        for bonus_type, multiplier in bonuses.items():
+        for multiplier in bonuses.values():
             total_multiplier *= multiplier
-        
         bonuses['total'] = total_multiplier
-        
+
         return bonuses
     
     def apply_bonuses_to_reward(self, base_reward, bonuses):
@@ -317,46 +340,41 @@ class RewardCalculator:
         
         return final_reward
     
-    def calculate_conversion_value(self, payout_amount, user=None, **kwargs):
+    def calculate_conversion_value(self, payout_amount=None, user=None, **kwargs):
         """
-        Calculate complete conversion value with all bonuses
-        
-        Args:
-            payout_amount: Payout from provider
-            user: User instance
-            **kwargs: Additional parameters
-        
-        Returns:
-            dict: Complete breakdown of conversion value
+        Calculate complete conversion value with all bonuses.
+        If payout_amount is None, uses offer.payout.
+        Returns Decimal when user is None, dict when user is provided.
         """
+        if payout_amount is None:
+            payout_amount = (
+                self.offer.payout if self.offer and self.offer.payout
+                else Decimal('0')
+            )
+        payout_amount = Decimal(str(payout_amount))
         # Base reward
         base_reward = self.calculate_user_reward(payout_amount)
-        
-        # Calculate bonuses if user provided
-        bonuses = {}
-        if user:
-            bonuses = self.calculate_all_bonuses(user, **kwargs)
-        
-        # Apply bonuses
+        # Quick path: no user → return bare Decimal
+        if user is None:
+            return base_reward
+        # Full path: calculate all bonuses
+        bonuses      = self.calculate_all_bonuses(user, **kwargs)
         final_reward = self.apply_bonuses_to_reward(base_reward, bonuses) if bonuses else base_reward
-        
-        # Platform fee
         platform_fee = self.calculate_platform_fee(payout_amount)
-        
         return {
-            'payout': Decimal(str(payout_amount)),
-            'base_reward': base_reward,
-            'bonuses': bonuses,
-            'final_reward': final_reward,
-            'platform_fee': platform_fee,
-            'currency': self.offer.reward_currency if self.offer else 'Points',
+            'payout':          payout_amount,
+            'base_reward':     base_reward,
+            'bonuses':         bonuses,
+            'final_reward':    final_reward,
+            'platform_fee':    platform_fee,
+            'currency':        self.offer.reward_currency if self.offer else 'Points',
             'bonus_breakdown': {
-                'tier_bonus': bonuses.get('tier', Decimal('1.0')) - Decimal('1.0'),
-                'time_bonus': bonuses.get('time', Decimal('1.0')) - Decimal('1.0'),
+                'tier_bonus':   bonuses.get('tier',   Decimal('1.0')) - Decimal('1.0'),
+                'time_bonus':   bonuses.get('time',   Decimal('1.0')) - Decimal('1.0'),
                 'streak_bonus': bonuses.get('streak', Decimal('1.0')) - Decimal('1.0'),
                 'volume_bonus': bonuses.get('volume', Decimal('1.0')) - Decimal('1.0'),
-                'event_bonus': bonuses.get('event', Decimal('1.0')) - Decimal('1.0'),
-            }
+                'event_bonus':  bonuses.get('event',  Decimal('1.0')) - Decimal('1.0'),
+            },
         }
     
     @staticmethod
@@ -385,6 +403,17 @@ class RewardCalculator:
             # TODO: Implement real exchange rate fetching
             rate = Decimal('1.0')
         
+        _STATIC_RATES = {
+            ('USD', 'BDT'): Decimal('110'),
+            ('BDT', 'USD'): Decimal('0.0091'),
+            ('USD', 'EUR'): Decimal('0.92'),
+            ('EUR', 'USD'): Decimal('1.09'),
+            ('USD', 'GBP'): Decimal('0.79'),
+            ('GBP', 'USD'): Decimal('1.27'),
+        }
+        if not exchange_rate:
+            rate = _STATIC_RATES.get(
+                (from_currency.upper(), to_currency.upper()), Decimal('1.0'))
         converted = (amount * rate).quantize(
             Decimal('0.000001'),
             rounding=ROUND_DOWN

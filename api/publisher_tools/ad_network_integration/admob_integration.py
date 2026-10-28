@@ -37,6 +37,7 @@ class AdMobConfig(TimeStampedModel):
     error_message = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_admob_configs"
         verbose_name = _("AdMob Config")
         unique_together = [["publisher"]]

@@ -136,13 +136,13 @@ class Click(AdvertiserPortalBaseModel):
     # Device Information
     device_type = models.CharField(
         max_length=50,
-        choices=DeviceTypeEnum.choices,
+        choices=DeviceTypeEnum.choices(),
         db_index=True,
         help_text="Device type"
     )
     os_family = models.CharField(
         max_length=50,
-        choices=OSFamilyEnum.choices,
+        choices=OSFamilyEnum.choices(),
         db_index=True,
         help_text="Operating system family"
     )
@@ -153,7 +153,7 @@ class Click(AdvertiserPortalBaseModel):
     )
     browser = models.CharField(
         max_length=50,
-        choices=BrowserEnum.choices,
+        choices=BrowserEnum.choices(),
         db_index=True,
         help_text="Browser"
     )

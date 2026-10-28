@@ -7,6 +7,7 @@ provides filtering capabilities for API endpoints and admin interfaces.
 import django_filters
 from django.utils.translation import gettext_lazy as _
 from django.db import models
+from django.contrib.auth import get_user_model
 
 from .models import (
     WebhookEndpoint, WebhookSubscription, WebhookDeliveryLog,
@@ -29,7 +30,7 @@ class WebhookEndpointFilter(django_filters.FilterSet):
         label=_('Status')
     )
     
-    url = django_filters.CharFilter(
+    target_url = django_filters.CharFilter(
         lookup_expr='icontains',
         label=_('URL')
     )
@@ -51,7 +52,51 @@ class WebhookEndpointFilter(django_filters.FilterSet):
     
     class Meta:
         model = WebhookEndpoint
-        fields = ['status', 'url', 'http_method', 'created_at', 'updated_at']
+        fields = ['status', 'target_url', 'http_method', 'created_at', 'updated_at']
+
+
+class AdminWebhookFilter(django_filters.FilterSet):
+    """Filter for admin-level webhook endpoint management.
+
+    Same as WebhookEndpointFilter but adds an owner filter, since admin
+    views operate across all users' endpoints rather than being scoped to
+    the requesting user.
+    """
+
+    status = django_filters.ChoiceFilter(
+        choices=WebhookStatus.CHOICES,
+        label=_('Status')
+    )
+
+    target_url = django_filters.CharFilter(
+        lookup_expr='icontains',
+        label=_('URL')
+    )
+
+    http_method = django_filters.ChoiceFilter(
+        choices=HttpMethod.CHOICES,
+        label=_('HTTP Method')
+    )
+
+    owner = django_filters.CharFilter(
+        field_name='owner__username',
+        lookup_expr='icontains',
+        label=_('Owner username')
+    )
+
+    created_at = django_filters.DateTimeFromToRangeFilter(
+        field_name='created_at',
+        label=_('Created Date Range')
+    )
+
+    updated_at = django_filters.DateTimeFromToRangeFilter(
+        field_name='updated_at',
+        label=_('Updated Date Range')
+    )
+
+    class Meta:
+        model = WebhookEndpoint
+        fields = ['status', 'target_url', 'http_method', 'owner', 'created_at', 'updated_at']
 
 
 class WebhookSubscriptionFilter(django_filters.FilterSet):
@@ -443,3 +488,47 @@ class WebhookRateLimitFilter(django_filters.FilterSet):
     class Meta:
         model = WebhookRateLimit
         fields = ['endpoint', 'window_seconds', 'max_requests', 'current_count', 'reset_at']
+
+class WebhookSecretFilter(django_filters.FilterSet):
+    """
+    FilterSet for WebhookSecret model.
+
+    FIX: WebhookSecretViewSet imported this class but it was never defined
+    in filters.py — caused ImportError at startup.
+
+    Filters:
+        endpoint    — exact match on endpoint FK
+        is_active   — boolean
+        created_at  — date range (gte / lte)
+        expires_at  — date range (gte / lte)
+    """
+
+    endpoint = django_filters.UUIDFilter(field_name="endpoint__id")
+    endpoint_label = django_filters.CharFilter(
+        field_name="endpoint__label", lookup_expr="icontains"
+    )
+    is_active = django_filters.BooleanFilter(field_name="is_active")
+    created_at_gte = django_filters.DateTimeFilter(
+        field_name="created_at", lookup_expr="gte"
+    )
+    created_at_lte = django_filters.DateTimeFilter(
+        field_name="created_at", lookup_expr="lte"
+    )
+    expires_at_gte = django_filters.DateTimeFilter(
+        field_name="expires_at", lookup_expr="gte"
+    )
+    expires_at_lte = django_filters.DateTimeFilter(
+        field_name="expires_at", lookup_expr="lte"
+    )
+
+    class Meta:
+        model = WebhookSecret
+        fields = [
+            "endpoint",
+            "endpoint_label",
+            "is_active",
+            "created_at_gte",
+            "created_at_lte",
+            "expires_at_gte",
+            "expires_at_lte",
+        ]

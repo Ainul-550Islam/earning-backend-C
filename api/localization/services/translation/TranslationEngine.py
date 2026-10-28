@@ -137,7 +137,7 @@ class TranslationEngine:
     def _check_tm(self, text: str, source_lang: str, target_lang: str, domain: str = ''):
         """Translation Memory-তে exact match খোঁজে"""
         try:
-            from ..models.translation import TranslationMemory
+            from api.localization.models.translation import TranslationMemory
             return TranslationMemory.find_exact_match(text, source_lang, target_lang, domain)
         except Exception as e:
             logger.debug(f"TM check failed: {e}")
@@ -155,7 +155,7 @@ class TranslationEngine:
     def _get_dnt_terms(self, source_lang: str, domain: str = '') -> List[str]:
         """Glossary থেকে Do Not Translate terms পাওয়া"""
         try:
-            from ..models.translation import TranslationGlossary
+            from api.localization.models.translation import TranslationGlossary
             qs = TranslationGlossary.objects.filter(
                 source_language__code=source_lang,
                 is_do_not_translate=True
@@ -202,7 +202,7 @@ class TranslationEngine:
         Real regex replacement with word boundaries.
         """
         try:
-            from ..models.translation import TranslationGlossary, TranslationGlossaryEntry
+            from api.localization.models.translation import TranslationGlossary, TranslationGlossaryEntry
             # Get entries for target language
             entries = TranslationGlossaryEntry.objects.filter(
                 language__code=target_lang,

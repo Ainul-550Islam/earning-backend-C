@@ -12,18 +12,18 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q, Count, Avg, Sum
 from django.core.cache import cache
-from ....models import (
+from offer_routing.models import (
     OfferRoute, BehaviorRouteRule, RoutingDecisionLog,
     UserOfferHistory, RoutingDecisionLog
 )
-from ....choices import EventType
-from ....constants import (
+from offer_routing.choices import EventType
+from offer_routing.constants import (
     BEHAVIOR_CACHE_TIMEOUT, EVENT_CACHE_TIMEOUT,
     MAX_BEHAVIOR_LOOKUPS_PER_SECOND, BEHAVIOR_PARSE_TIMEOUT,
     DEFAULT_BEHAVIOR_WINDOW_DAYS, MIN_BEHAVIOR_SAMPLE_SIZE
 )
-from ....exceptions import TargetingError, BehaviorParsingError
-from ....utils import get_user_behavior_data, calculate_behavior_score
+from offer_routing.exceptions import TargetingError, BehaviorParsingError
+from offer_routing.utils import get_user_behavior_data, calculate_behavior_score
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

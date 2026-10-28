@@ -9,6 +9,7 @@ from django.views.decorators.cache import cache_page
 
 
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def gateway_status_endpoint(request):
     """Public gateway status endpoint."""
@@ -17,8 +18,6 @@ def gateway_status_endpoint(request):
     code   = 200 if status['status'] == 'healthy' else 206
     return Response({'status': status['status'], 'gateways': status['checks'].get('gateways', {})}, status=code)
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def initiate_deposit_endpoint(request):
     """Direct deposit initiation endpoint."""
@@ -44,9 +43,6 @@ def initiate_deposit_endpoint(request):
         return Response({'success': True, 'data': result})
     except Exception as e:
         return Response({'success': False, 'error': str(e)}, status=400)
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_earnings_summary_endpoint(request):
     """Quick earnings summary for publisher."""

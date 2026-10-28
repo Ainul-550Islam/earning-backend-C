@@ -764,3 +764,72 @@ CELERYBEAT_SCHEDULE = {
         'options': {'queue': 'ad_networks'}
     },
 }
+
+
+# ==================== TASK ALIASES FOR APP COMPATIBILITY ====================
+# These aliases match the task names expected by apps.py
+
+@shared_task(bind=True, name='ad_networks.sync_offers_task')
+def sync_offers_task(self, network_types=None, tenant_id=None):
+    """Alias for sync_offers_from_networks"""
+    return sync_offers_from_networks(network_types=network_types, tenant_id=tenant_id)
+
+
+@shared_task(bind=True, name='ad_networks.cleanup_expired_blacklist_task')
+def cleanup_expired_blacklist_task(self, tenant_id=None):
+    """Alias for sync_blacklisted_ips"""
+    return sync_blacklisted_ips(tenant_id=tenant_id)
+
+
+@shared_task(bind=True, name='ad_networks.generate_analytics_task')
+def generate_analytics_task(self, tenant_id=None):
+    """Alias for calculate_network_stats"""
+    return calculate_network_stats(tenant_id=tenant_id)
+
+
+@shared_task(bind=True, name='ad_networks.process_fraud_detection_task')
+def process_fraud_detection_task(self, tenant_id=None):
+    """Alias for detect_fraud_conversions"""
+    return detect_fraud_conversions(tenant_id=tenant_id)
+
+
+@shared_task(bind=True, name='ad_networks.update_network_health_task')
+def update_network_health_task(self, tenant_id=None):
+    """Alias for update_offer_performance (closest equivalent)"""
+    return update_offer_performance(tenant_id=tenant_id)
+
+
+@shared_task(bind=True, name='ad_networks.cleanup_old_logs_task')
+def cleanup_old_logs_task(self, tenant_id=None):
+    """Alias for cleanup_old_webhook_logs"""
+    return cleanup_old_webhook_logs(tenant_id=tenant_id)
+
+
+@shared_task(bind=True, name='ad_networks.dispatch_event_task')
+def dispatch_event_task(self, event_type, event_data, tenant_id=None):
+    """
+    Dispatch an event to the event system
+    """
+    logger.info(f"Dispatching event: {event_type}")
+    try:
+        from .events import EventBus
+        EventBus.dispatch(event_type, event_data)
+        return {'status': 'dispatched', 'event': event_type}
+    except Exception as e:
+        logger.error(f"Failed to dispatch event {event_type}: {str(e)}")
+        raise self.retry(exc=e, countdown=60, max_retries=3)
+
+
+@shared_task(bind=True, name='ad_networks.handle_event_task')
+def handle_event_task(self, event_type, event_data, tenant_id=None):
+    """
+    Handle an event from the event system
+    """
+    logger.info(f"Handling event: {event_type}")
+    try:
+        from .events import EventBus
+        EventBus.handle(event_type, event_data)
+        return {'status': 'handled', 'event': event_type}
+    except Exception as e:
+        logger.error(f"Failed to handle event {event_type}: {str(e)}")
+        raise self.retry(exc=e, countdown=60, max_retries=3)

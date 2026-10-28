@@ -6,10 +6,16 @@ This module contains background tasks for webhook analytics and statistics.
 from celery import shared_task
 from django.utils import timezone
 from datetime import timedelta
-from django.db.models import Count, Avg, Sum
+from django.db import models
+from django.db.models import Count, Avg, Sum, Min, Max
 
 from ..models import WebhookEndpoint, WebhookDeliveryLog, WebhookAnalytics, WebhookEventStat
 from ..services.analytics import WebhookAnalyticsService
+
+import logging
+
+logger = logging.getLogger('ainul.webhooks.tasks.analytics.tasks')
+
 
 
 @shared_task
@@ -24,6 +30,7 @@ def generate_daily_analytics(endpoint_id, days=7):
     Returns:
         dict: Result of analytics generation
     """
+    logger.info('[Task] generate_daily_analytics started')
     try:
         # Get the endpoint
         endpoint = WebhookEndpoint.objects.get(id=endpoint_id)
@@ -68,6 +75,7 @@ def generate_daily_analytics_all_endpoints(days=7):
     Returns:
         dict: Summary of analytics generation
     """
+    logger.info('[Task] generate_daily_analytics_all_endpoints started')
     try:
         # Get all endpoints
         endpoints = WebhookEndpoint.objects.all()
@@ -89,7 +97,7 @@ def generate_daily_analytics_all_endpoints(days=7):
                 
             except Exception as e:
                 error_count += 1
-                print(f"Failed to generate analytics for endpoint {endpoint.id}: {e}")
+                logger.error("Failed to generate analytics for endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -121,6 +129,7 @@ def generate_event_statistics(endpoint_id, days=7):
     Returns:
         dict: Result of statistics generation
     """
+    logger.info('[Task] generate_event_statistics started')
     try:
         # Get the endpoint
         endpoint = WebhookEndpoint.objects.get(id=endpoint_id)
@@ -138,7 +147,7 @@ def generate_event_statistics(endpoint_id, days=7):
             total_count=Count('id'),
             success_count=Count('id', filter=models.Q(status='success')),
             failed_count=Count('id', filter=models.Q(status='failed')),
-            avg_response_time=Avg('duration_ms')
+            avg_response_time=Avg('response_time_ms')
         ).order_by('-total_count')
         
         # Create or update event statistics records
@@ -146,22 +155,24 @@ def generate_event_statistics(endpoint_id, days=7):
         
         for stat in event_stats:
             try:
-                # Create or update event stat record
+                # Create or update event stat record. WebhookEventStat
+                # tracks event types platform-wide (unique_together is
+                # exactly [date, event_type], no endpoint dimension) —
+                # this aggregates each endpoint's counts into the shared
+                # daily total for that event type.
                 WebhookEventStat.objects.update_or_create(
-                    endpoint=endpoint,
                     event_type=stat['event_type'],
                     date=end_date.date(),
                     defaults={
-                        'count': stat['total_count'],
-                        'success_count': stat['success_count'],
-                        'avg_response_time_ms': stat['avg_response_time'] or 0,
-                        'created_by': endpoint.created_by
+                        'fired_count': stat['total_count'],
+                        'delivered_count': stat['success_count'],
+                        'failed_count': stat['failed_count'],
                     }
                 )
                 created_count += 1
                 
             except Exception as e:
-                print(f"Failed to create event stat for {stat['event_type']}: {e}")
+                logger.error("Failed to create event stat for %s: %s", stat['event_type'], e)
         
         return {
             'success': True,
@@ -196,6 +207,7 @@ def generate_event_statistics_all_endpoints(days=7):
     Returns:
         dict: Summary of statistics generation
     """
+    logger.info('[Task] generate_event_statistics_all_endpoints started')
     try:
         # Get all endpoints
         endpoints = WebhookEndpoint.objects.all()
@@ -216,7 +228,7 @@ def generate_event_statistics_all_endpoints(days=7):
                     
             except Exception as e:
                 error_count += 1
-                print(f"Failed to generate event statistics for endpoint {endpoint.id}: {e}")
+                logger.error("Failed to generate event statistics for endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -248,6 +260,7 @@ def calculate_performance_metrics(endpoint_id, days=7):
     Returns:
         dict: Result of performance metrics calculation
     """
+    logger.info('[Task] calculate_performance_metrics started')
     try:
         # Get the endpoint
         endpoint = WebhookEndpoint.objects.get(id=endpoint_id)
@@ -263,9 +276,9 @@ def calculate_performance_metrics(endpoint_id, days=7):
             created_at__lte=end_date,
             status='success'
         ).aggregate(
-            avg_response_time=Avg('duration_ms'),
-            min_response_time=Min('duration_ms'),
-            max_response_time=Max('duration_ms'),
+            avg_response_time=Avg('response_time_ms'),
+            min_response_time=Min('response_time_ms'),
+            max_response_time=Max('response_time_ms'),
             total_requests=Count('id')
         )
         
@@ -276,7 +289,7 @@ def calculate_performance_metrics(endpoint_id, days=7):
                 created_at__gte=start_date,
                 created_at__lte=end_date,
                 status='success'
-            ).values_list('duration_ms', flat=True)
+            ).values_list('response_time_ms', flat=True)
         )
         
         if response_times:
@@ -335,6 +348,7 @@ def calculate_performance_metrics_all_endpoints(days=7):
     Returns:
         dict: Summary of performance metrics calculation
     """
+    logger.info('[Task] calculate_performance_metrics_all_endpoints started')
     try:
         # Get all endpoints
         endpoints = WebhookEndpoint.objects.all()
@@ -353,7 +367,7 @@ def calculate_performance_metrics_all_endpoints(days=7):
                     
             except Exception as e:
                 error_count += 1
-                print(f"Failed to calculate performance metrics for endpoint {endpoint.id}: {e}")
+                logger.error("Failed to calculate performance metrics for endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -381,6 +395,7 @@ def generate_hourly_analytics():
     Returns:
         dict: Summary of hourly analytics generation
     """
+    logger.info('[Task] generate_hourly_analytics started')
     try:
         # Calculate time window (last hour)
         end_time = timezone.now()
@@ -404,7 +419,7 @@ def generate_hourly_analytics():
                     total_count=Count('id'),
                     success_count=Count('id', filter=models.Q(status='success')),
                     failed_count=Count('id', filter=models.Q(status='failed')),
-                    avg_response_time=Avg('duration_ms')
+                    avg_response_time=Avg('response_time_ms')
                 )
                 
                 if hourly_stats['total_count'] > 0:
@@ -428,7 +443,7 @@ def generate_hourly_analytics():
                 
             except Exception as e:
                 error_count += 1
-                print(f"Failed to generate hourly analytics for endpoint {endpoint.id}: {e}")
+                logger.error("Failed to generate hourly analytics for endpoint %s: %s", endpoint.id, e)
         
         return {
             'success': True,
@@ -458,6 +473,7 @@ def cleanup_old_analytics(days=365):
     Returns:
         dict: Summary of cleanup operations
     """
+    logger.info('[Task] cleanup_old_analytics started')
     try:
         # Calculate cutoff date
         cutoff_date = timezone.now() - timedelta(days=days)
@@ -474,7 +490,7 @@ def cleanup_old_analytics(days=365):
                 analytics.delete()
                 deleted_count += 1
             except Exception as e:
-                print(f"Failed to delete analytics record {analytics.id}: {e}")
+                logger.error("Failed to delete analytics record %s: %s", analytics.id, e)
         
         return {
             'success': True,

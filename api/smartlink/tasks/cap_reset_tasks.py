@@ -28,7 +28,7 @@ def reset_monthly_caps():
     """
     from django.utils import timezone
     from django.core.cache import cache
-    from ..models import OfferPoolEntry
+    from api.smartlink.models import OfferPoolEntry
 
     entries = OfferPoolEntry.objects.filter(
         is_active=True, cap_per_month__isnull=False
@@ -45,3 +45,38 @@ def reset_monthly_caps():
 
     logger.info(f"Monthly caps reset: {count} entries for {month_key_part}")
     return {'reset': count}
+
+@shared_task(name='smartlink.alert_cap_nearly_reached', queue='default')
+def alert_cap_nearly_reached(pool_entry_id: int, used: int, limit: int):
+    """
+    Alert publisher that an offer cap is nearly reached (>= 80% used).
+    Fires before the cap is actually hit so the publisher can take action
+    (e.g. request a cap increase, pause traffic to that offer, etc.).
+    """
+    import logging
+    logger = logging.getLogger('smartlink.tasks.cap_reset')
+    try:
+        from api.smartlink.models import OfferPoolEntry
+        from api.smartlink.services.notification.NotificationService import NotificationService
+
+        entry = OfferPoolEntry.objects.select_related(
+            'pool__smartlink__publisher'
+        ).get(pk=pool_entry_id)
+
+        publisher = entry.pool.smartlink.publisher
+        sl        = entry.pool.smartlink
+        pct_used  = round(used / limit * 100, 1) if limit else 0
+
+        NotificationService().notify_cap_reached(
+            publisher=publisher,
+            smartlink=sl,
+            offer=entry.offer,
+            usage={'clicks_used': used, 'cap_limit': limit,
+                   'pct_used': pct_used, 'nearly_reached': True},
+        )
+        logger.info(
+            f"Cap nearly-reached alert sent: pool_entry#{pool_entry_id} "
+            f"used={used}/{limit} ({pct_used}%) sl={sl.slug}"
+        )
+    except Exception as e:
+        logger.error(f"alert_cap_nearly_reached failed: {e}")

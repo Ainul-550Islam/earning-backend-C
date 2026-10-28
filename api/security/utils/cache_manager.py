@@ -24,6 +24,15 @@ class CacheManager:
     Ultimate Bulletproof Cache Manager with All Defensive Patterns
     """
     
+    _instance = None
+
+    @classmethod
+    def get_instance(cls) -> "CacheManager":
+        """Return a shared CacheManager instance for service classes."""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+    
     # Cache key prefix for namespace isolation
     PREFIX = "bulletproof"
     

@@ -23,12 +23,14 @@ from api.users.models import (
 # Import services
 from api.users.services.multi_account_detector import multi_account_detector
 from api.users.services.risk_scoring import risk_scoring_engine
+from api.users.models import User
 
 
 # ==========================================
 # Dashboard Overview
 # ==========================================
 @api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def fraud_dashboard_overview(request):
     """
@@ -129,6 +131,7 @@ def fraud_dashboard_overview(request):
 # ==========================================
 # Recent Fraud Events
 # ==========================================
+
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def recent_fraud_events(request):
@@ -178,6 +181,7 @@ def recent_fraud_events(request):
 # ==========================================
 # High-Risk Users
 # ==========================================
+
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def high_risk_users(request):
@@ -226,7 +230,8 @@ def high_risk_users(request):
 # ==========================================
 # Multi-Account Analysis
 # ==========================================
-@api_view(['GET'])
+
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def multi_account_analysis(request):
     """
@@ -303,7 +308,8 @@ def multi_account_analysis(request):
 # ==========================================
 # User Risk Profile
 # ==========================================
-@api_view(['GET'])
+
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def user_risk_profile(request, user_id):
     """
@@ -393,7 +399,8 @@ def user_risk_profile(request, user_id):
 # ==========================================
 # Block/Unblock Actions
 # ==========================================
-@api_view(['POST'])
+
+@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def block_device(request):
     """
@@ -418,8 +425,6 @@ def block_device(request):
             'error': 'Device not found'
         }, status=404)
 
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def block_ip(request):
     """
@@ -455,9 +460,6 @@ def block_ip(request):
             'success': True,
             'message': f'IP {ip_address} blocked'
         })
-
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def unblock_ip(request):
     """
@@ -488,7 +490,7 @@ def unblock_ip(request):
 # ==========================================
 # Statistics & Charts
 # ==========================================
-@api_view(['GET'])
+
 @permission_classes([IsAdminUser])
 def fraud_statistics(request):
     """

@@ -83,9 +83,11 @@ class CapTrackerServiceTest(TestCase):
         self.assertFalse(self.service.is_capped(entry))
 
     def test_apply_buffer_reduces_effective_cap(self):
+        """CAP_BUFFER_PERCENT=5 means 5% of 1000 = 50 subtracted → effective=950."""
         effective = self.service._apply_buffer(1000)
-        self.assertLess(effective, 1000)
-        self.assertGreater(effective, 990)
+        self.assertLess(effective, 1000)          # buffer was applied
+        self.assertGreaterEqual(effective, 900)   # sanity: not over-aggressive
+        self.assertEqual(effective, 950)          # exact: 1000 - 5% = 950
 
 
 class FallbackServiceTest(TestCase):

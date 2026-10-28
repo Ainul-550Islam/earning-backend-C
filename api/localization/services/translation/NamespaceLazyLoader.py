@@ -28,7 +28,7 @@ class NamespaceLazyLoader:
             return cached
 
         try:
-            from ..models.core import Translation, Language, TranslationKey
+            from api.localization.models.core import Translation, Language, TranslationKey
             lang = Language.objects.filter(code=language_code, is_active=True).first()
             if not lang:
                 return {"error": f"Language {language_code} not found"}
@@ -72,7 +72,7 @@ class NamespaceLazyLoader:
     def get_all_namespaces(self, language_code: str) -> Dict[str, int]:
         """All namespaces-এর key count।"""
         try:
-            from ..models.core import Translation, Language
+            from api.localization.models.core import Translation, Language
             lang = Language.objects.filter(code=language_code, is_active=True).first()
             if not lang:
                 return {}

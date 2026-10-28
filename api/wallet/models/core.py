@@ -3,7 +3,7 @@
 Core wallet models — Wallet and WalletTransaction.
 
 FIXES APPLIED:
-  CRITICAL-1: UUID field unified as txn_id (was walletTransaction_id/WalletTransaction_id mixed)
+  CRITICAL-1: UUID field unified as txn_id (was walletTransaction_id/txn_id mixed)
   CRITICAL-2: __str__ corrected field reference
   CRITICAL-3: related_name collision — all unique
   CRITICAL-7: Withdrawal.save() falsy check — explicit None check
@@ -94,12 +94,36 @@ class Wallet(models.Model):
     version = models.PositiveBigIntegerField(default=0,
                                              help_text="Incremented on every balance mutation — prevents concurrent lost-update")
 
+    # ── Integrity (SHA-256 HMAC tamper detection) ─────────────────────
+    integrity_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="SHA-256 HMAC of financial fields. Verified before every mutation."
+    )
+
     # ── Activity ─────────────────────────────────────────────────────
     last_activity_at = models.DateTimeField(null=True, blank=True)
 
     # ── Timestamps ───────────────────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+    @classmethod
+    def lock_for_update(cls, wallet_id: int):
+        """
+        Get wallet with SELECT FOR UPDATE — prevents race conditions.
+        Use in any method that modifies balance.
+        
+        Usage:
+            wallet = Wallet.lock_for_update(wallet_id)
+            wallet.current_balance += amount
+            wallet.save(update_fields=['current_balance','updated_at'])
+        """
+        from django.db import transaction
+        with transaction.atomic():
+            return cls.objects.select_for_update().get(id=wallet_id)
 
     class Meta:
         app_label = "wallet"
@@ -239,7 +263,7 @@ class WalletTransaction(models.Model):
     )
 
     # ── Identity ─────────────────────────────────────────────────────
-    # FIX CRITICAL-1: unified UUID field (was walletTransaction_id/WalletTransaction_id)
+    # FIX CRITICAL-1: unified UUID field (was walletTransaction_id/txn_id)
     txn_id          = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
     idempotency_key = models.CharField(max_length=255, blank=True, db_index=True,
                                        help_text="Prevents duplicate credits from duplicate API calls")

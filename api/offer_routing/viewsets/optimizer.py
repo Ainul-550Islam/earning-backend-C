@@ -5,6 +5,7 @@ This module contains viewsets for optimization operations,
 including route optimization, scoring optimization, and performance tuning.
 """
 
+from ..throttling import BulkOperationThrottle, RoutingEngineThrottle, AnalyticsThrottle, BulkOperationThrottle, EvaluatorThrottle
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -27,6 +28,7 @@ class RoutingOptimizerViewSet(viewsets.ViewSet):
     """
     
     permission_classes = [IsAuthenticatedOrReadOnly, CanManageOffers]
+    throttle_classes = [BulkOperationThrottle]
     
     @action(detail=False, methods=['post'])
     def optimize_route_priorities(self, request):
@@ -183,80 +185,16 @@ class RoutingOptimizerViewSet(viewsets.ViewSet):
     def optimization_recommendations(self, request):
         """Get optimization recommendations based on current performance."""
         try:
-            # Get performance-based recommendations
-            recommendations = []
-            
-            # Analyze route performance
-            from ..models import RoutePerformanceStat
-            from datetime import timedelta
-            
-            cutoff_date = timezone.now() - timedelta(days=30)
-            route_stats = RoutePerformanceStat.objects.filter(
-                tenant=request.user,
-                date__gte=cutoff_date.date()
-            ).aggregate(
-                avg_conversion_rate=Avg('conversion_rate'),
-                avg_response_time=Avg('avg_response_time_ms')
+            result = routing_optimizer.get_optimization_recommendations(
+                tenant_id=request.user.id
             )
-            
-            avg_cr = route_stats['avg_conversion_rate'] or 0
-            avg_response_time = route_stats['avg_response_time'] or 0
-            
-            # Route optimization recommendations
-            if avg_cr < 2:
-                recommendations.append({
-                    'type': 'route_priorities',
-                    'priority': 'high',
-                    'title': 'Low Conversion Rate Detected',
-                    'description': f'Average conversion rate is {avg_cr:.2f}%',
-                    'action': 'Optimize route priorities to focus on high-converting routes',
-                    'estimated_impact': '15-25% improvement in conversions'
-                })
-            
-            if avg_response_time > 100:
-                recommendations.append({
-                    'type': 'route_priorities',
-                    'priority': 'medium',
-                    'title': 'High Response Time',
-                    'description': f'Average response time is {avg_response_time:.1f}ms',
-                    'action': 'Optimize route order and caching to reduce response time',
-                    'estimated_impact': '20-30% improvement in response time'
-                })
-            
-            # Scoring optimization recommendations
-            from ..models import OfferScoreConfig
-            score_configs = OfferScoreConfig.objects.filter(tenant=request.user)
-            
-            if score_configs.exists():
-                recommendations.append({
-                    'type': 'score_weights',
-                    'priority': 'medium',
-                    'title': 'Score Weight Optimization Available',
-                    'description': 'Multiple scoring configurations found',
-                    'action': 'Optimize scoring weights based on recent performance data',
-                    'estimated_impact': '5-15% improvement in scoring accuracy'
-                })
-            
-            # Personalization optimization recommendations
-            from ..models import PersonalizationConfig
-            personalization_configs = PersonalizationConfig.objects.filter(tenant=request.user)
-            
-            if personalization_configs.exists():
-                recommendations.append({
-                    'type': 'personalization',
-                    'priority': 'low',
-                    'title': 'Personalization Configuration Review',
-                    'description': 'Personalization configurations found',
-                    'action': 'Review and optimize personalization settings',
-                    'estimated_impact': '3-10% improvement in personalization effectiveness'
-                })
-            
             return Response({
                 'success': True,
-                'recommendations': recommendations,
-                'total_recommendations': len(recommendations)
+                'recommendations': result['recommendations'],
+                'total_recommendations': result['total_recommendations'],
+                'metrics_snapshot': result['metrics_snapshot'],
+                'generated_at': result['generated_at'],
             })
-            
         except Exception as e:
             return Response({
                 'success': False,

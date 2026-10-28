@@ -60,7 +60,7 @@ class CountryTargetingService:
         if cached is not None:
             return cached
         try:
-            from ..models.region import ContentRegion
+            from api.localization.models.region import ContentRegion
             region = ContentRegion.get_region_for_country(country_code)
             flags = region.feature_flags if region else {}
             result = offer_id not in (flags.get("blocked_offers", []) if flags else [])
@@ -85,7 +85,7 @@ class CountryTargetingService:
     def get_localized_offer_content(self, offer_id: int, language_code: str) -> Dict:
         """Offer-এর localized content।"""
         try:
-            from ..models.content import LocalizedContent
+            from api.localization.models.content import LocalizedContent
             fields = LocalizedContent.objects.filter(
                 content_type="offer", object_id=str(offer_id),
                 language__code=language_code, is_approved=True,

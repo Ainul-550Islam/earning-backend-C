@@ -42,7 +42,7 @@ class LanguageVariantService:
         'en-US' → check en-US → check en → return None
         """
         try:
-            from ..models.core import Translation, TranslationKey, Language
+            from api.localization.models.core import Translation, TranslationKey, Language
             lang_code_norm = language_code.lower()
 
             # Try exact variant first

@@ -6,15 +6,15 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
-from ..models import SmartLink
-from ..serializers.SmartLinkSerializer import SmartLinkSerializer
-from ..serializers.SmartLinkDetailSerializer import SmartLinkDetailSerializer
-from ..services.core.SmartLinkService import SmartLinkService
-from ..services.core.SmartLinkBuilderService import SmartLinkBuilderService
+from api.smartlink.models import SmartLink
+from api.smartlink.serializers.SmartLinkSerializer import SmartLinkSerializer
+from api.smartlink.serializers.SmartLinkDetailSerializer import SmartLinkDetailSerializer
+from api.smartlink.services.core.SmartLinkService import SmartLinkService
+from api.smartlink.services.core.SmartLinkBuilderService import SmartLinkBuilderService
 from ..services.analytics.SmartLinkAnalyticsService import SmartLinkAnalyticsService
-from ..permissions import IsPublisher, IsOwnerOrAdmin
-from ..filters import SmartLinkFilter
-from ..pagination import StandardResultsPagination
+from api.smartlink.permissions import IsPublisher, IsOwnerOrAdmin
+from api.smartlink.filters import SmartLinkFilter
+from api.smartlink.pagination import StandardResultsPagination
 
 logger = logging.getLogger('smartlink.viewset')
 
@@ -130,10 +130,27 @@ class SmartLinkViewSet(viewsets.ModelViewSet):
         summary = self.analytics_service.get_summary(smartlink, days=days)
         return Response(summary)
 
-    @action(detail=True, methods=['get'], url_path='check-slug')
-    def check_slug(self, request, pk=None):
-        """GET /api/smartlink/smartlinks/check-slug/?slug=myslug — availability check."""
-        from ..services.core.SlugGeneratorService import SlugGeneratorService
-        slug = request.query_params.get('slug', '')
+    @action(detail=False, methods=['get'], url_path='check-slug')
+    def check_slug(self, request):
+        """
+        GET /api/smartlink/smartlinks/check-slug/?slug=myslug — availability check.
+
+        BUG FIX (Bug 7): Was detail=True, which required an existing SmartLink PK
+        in the URL (/smartlinks/{pk}/check-slug/). That defeats the purpose —
+        you can't check availability before creation if you need an existing record.
+        Changed to detail=False so it is available at /smartlinks/check-slug/.
+        """
+        from api.smartlink.services.core.SlugGeneratorService import SlugGeneratorService
+        slug = request.query_params.get('slug', '').strip()
+        if not slug:
+            return Response({'error': 'slug query param is required.'}, status=400)
         svc = SlugGeneratorService()
-        return Response({'slug': slug, 'available': svc.is_available(slug)})
+        available = svc.is_available(slug)
+        reason = None
+        if not available:
+            from ..constants import SLUG_RESERVED_WORDS
+            if slug.lower() in SLUG_RESERVED_WORDS:
+                reason = 'reserved'
+            else:
+                reason = 'taken'
+        return Response({'slug': slug, 'available': available, 'reason': reason})

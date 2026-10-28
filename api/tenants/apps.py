@@ -57,58 +57,58 @@ class TenantsConfig(AppConfig):
             
             # Import signal handlers to ensure they're registered
             from .signals.core import (
-                tenant_created_handler,
-                tenant_updated_handler,
-                tenant_deleted_handler,
-                tenant_settings_updated_handler,
-                tenant_invoice_created_handler,
+                tenant_created,
+                tenant_updated,
+                tenant_deleted,
+                tenant_settings_updated,
+                tenant_invoice_created,
             )
             
             # Import plan signals
             from .signals.plan import (
-                plan_usage_recorded_handler,
-                quota_exceeded_handler,
-                plan_upgrade_created_handler,
-                plan_updated_handler,
+                plan_usage_recorded,
+                check_quota_exceeded,
+                plan_upgrade_created,
+                plan_updated,
             )
             
             # Import security signals
             from .signals.security import (
-                api_key_created_handler,
-                api_key_used_handler,
-                api_key_revoked_handler,
-                webhook_triggered_handler,
-                security_event_detected_handler,
+                api_key_created,
+                api_key_created,
+                api_key_revoked,
+                webhook_triggered,
+                security_event_detected,
             )
             
             # Import onboarding signals
             from .signals.onboarding import (
-                onboarding_started_handler,
-                onboarding_step_completed_handler,
-                onboarding_completed_handler,
-                trial_extension_requested_handler,
+                onboarding_started,
+                onboarding_step_completed,
+                onboarding_completed,
+                trial_extension_requested,
             )
             
             # Import analytics signals
             from .signals.analytics import (
-                metric_recorded_handler,
-                health_score_updated_handler,
-                feature_flag_toggled_handler,
-                notification_created_handler,
+                metric_recorded,
+                health_score_updated,
+                feature_flag_toggled,
+                notification_created,
             )
             
             # Import branding signals
-            from .signals.branding import (
-                branding_updated_handler,
-                domain_verified_handler,
-                ssl_certificate_updated_handler,
+            from .signals import (
+                branding_updated,
+                domain_verified,
+                ssl_certificate_updated,
             )
             
             # Import reseller signals
             from .signals.reseller import (
-                reseller_created_handler,
-                commission_calculated_handler,
-                referral_activity_tracked_handler,
+                reseller_created,
+                commission_calculated,
+                # referral_activity_tracked,  # Not defined
             )
             
         except Exception as e:

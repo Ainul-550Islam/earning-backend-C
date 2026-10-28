@@ -4,6 +4,7 @@ Tenant Billing Service
 This service handles tenant billing operations including
 invoice generation, payment processing, and subscription management.
 """
+from django.db import models
 
 from datetime import timedelta, date
 from django.utils import timezone

@@ -8,6 +8,7 @@ then falls back to Django settings / environment variables.
 IPQS returns: fraud_score, proxy, vpn, tor, bot_status,
               abuse_velocity, connection_type, ISP, country, etc.
 """
+from typing import Optional
 import logging
 import os
 import requests

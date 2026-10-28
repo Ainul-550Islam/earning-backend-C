@@ -24,6 +24,7 @@ class AppSDKConfig(TimeStampedModel):
     last_ping_at     = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = "publisher_tools_app_sdk_configs"
         verbose_name = _("App SDK Config")
 

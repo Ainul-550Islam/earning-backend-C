@@ -90,6 +90,8 @@ def sandbox_status(request):
 
 
 @api_view(['GET'])
+@api_view(['POST'])
+@api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 def sandbox_test_cases(request):
     """List all sandbox test cases with test data."""
@@ -103,8 +105,6 @@ def sandbox_test_cases(request):
         'expected':    c.expected_outcome,
     } for c in cases])
 
-
-@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def sandbox_run_test(request, test_case_id):
     """Run a sandbox test case against the KYC API."""
@@ -119,9 +119,6 @@ def sandbox_run_test(request, test_case_id):
         'simulated_result': tc.expected_outcome,
         'message':         f'Sandbox simulation for: {tc.scenario}',
     })
-
-
-@api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def sandbox_config(request):
     """Get/update sandbox configuration for current tenant."""

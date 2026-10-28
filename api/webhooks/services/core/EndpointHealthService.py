@@ -3,15 +3,16 @@
 This module provides webhook endpoint health monitoring with ping functionality and auto-suspension.
 """
 
+from datetime import timedelta
 import logging
-import time
 from typing import Dict, Any, Optional, List
 from django.utils import timezone
-from django.db import transaction
+from django.db import models, transaction
 from django.conf import settings
 
-from ..models import WebhookEndpoint, WebhookHealthLog
-from ..choices import WebhookStatus
+from ...models import WebhookEndpoint, WebhookHealthLog
+from ...choices import WebhookStatus
+from ...exceptions import WebhookHealthCheckError
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,6 @@ class EndpointHealthService:
             Dictionary with health check results
         """
         try:
-            start_time = time.time()
-            
             # Prepare health check payload
             health_payload = {
                 'type': 'health_check',
@@ -50,8 +49,14 @@ class EndpointHealthService:
             # Make health check request
             response = self._make_health_check_request(endpoint, health_payload)
             
-            end_time = time.time()
-            response_time_ms = int((end_time - start_time) * 1000)
+            # response_time_ms comes from response.elapsed (set in
+            # _make_health_check_request), matching the same convention
+            # DispatchService and HealthMonitorService already use -
+            # accurate network time, not wall-clock time that also
+            # includes this method's own Python-side overhead. Falls back
+            # to 0 for the timeout/connection-error/exception paths, which
+            # have no real response to measure.
+            response_time_ms = response.get('response_time_ms', 0)
             
             # Determine health status
             is_healthy = self._determine_health_status(response)
@@ -64,7 +69,6 @@ class EndpointHealthService:
                 response_time_ms=response_time_ms,
                 error=response.get('error') if not is_healthy else None,
                 checked_at=timezone.now(),
-                created_by=endpoint.owner
             )
             
             # Check for auto-suspension
@@ -96,7 +100,6 @@ class EndpointHealthService:
                     response_time_ms=0,
                     error=str(e),
                     checked_at=timezone.now(),
-                    created_by=endpoint.owner
                 )
                 
                 # Check for auto-suspension
@@ -147,8 +150,8 @@ class EndpointHealthService:
             }
             
             # Add custom headers if configured
-            if endpoint.headers:
-                headers.update(endpoint.headers)
+            if endpoint.custom_headers:
+                headers.update(endpoint.custom_headers)
             
             # Add signature
             from .SignatureEngine import SignatureEngine
@@ -158,7 +161,7 @@ class EndpointHealthService:
             
             # Make request
             response = requests.post(
-                url=endpoint.url,
+                url=endpoint.target_url,
                 headers=headers,
                 data=json.dumps(payload),
                 timeout=self.default_timeout,
@@ -169,6 +172,7 @@ class EndpointHealthService:
                 'status_code': response.status_code,
                 'response_body': response.text,
                 'response_headers': dict(response.headers),
+                'response_time_ms': int(response.elapsed.total_seconds() * 1000),
                 'success': response.status_code < 400
             }
             
@@ -322,7 +326,7 @@ class EndpointHealthService:
                     results['results'].append({
                         'endpoint_id': str(endpoint.id),
                         'endpoint_label': endpoint.label,
-                        'endpoint_url': endpoint.url,
+                        'endpoint_url': endpoint.target_url,
                         'is_healthy': health_result['is_healthy'],
                         'status_code': health_result.get('status_code'),
                         'response_time_ms': health_result.get('response_time_ms'),
@@ -334,7 +338,7 @@ class EndpointHealthService:
                     results['results'].append({
                         'endpoint_id': str(endpoint.id),
                         'endpoint_label': endpoint.label,
-                        'endpoint_url': endpoint.url,
+                        'endpoint_url': endpoint.target_url,
                         'is_healthy': False,
                         'error': str(e)
                     })
@@ -495,7 +499,7 @@ class EndpointHealthService:
             # Check recent health
             recent_health = WebhookHealthLog.objects.filter(
                 endpoint=endpoint,
-                checked_at__gte=timezone.now() - timezone.timedelta(hours=1)
+                checked_at__gte=timezone.now() - timedelta(hours=1)
             ).order_by('-checked_at')
             
             if recent_health.exists():
@@ -558,7 +562,7 @@ class EndpointHealthService:
                         unhealthy_endpoints.append({
                             'endpoint_id': str(endpoint.id),
                             'endpoint_label': endpoint.label,
-                            'endpoint_url': endpoint.url,
+                            'endpoint_url': endpoint.target_url,
                             'consecutive_failures': consecutive_failures,
                             'last_check': last_check.checked_at.isoformat(),
                             'last_status_code': last_check.status_code,
@@ -580,7 +584,11 @@ class EndpointHealthService:
         """
         try:
             # Queue health check task
-            from ..tasks.health_check_tasks import health_check_all_endpoints
+            # BUG FIX: was `from ..tasks...` (2 dots) — this file is at
+            # services/core/, two levels below webhooks/, so it needs 3 dots.
+            # The 2-dot version raised ImportError on every call, silently
+            # caught below, so health checks never actually got queued.
+            from ...tasks.health_check_tasks import health_check_all_endpoints
             health_check_all_endpoints.delay()
             
             logger.info("Scheduled health checks for all active endpoints")

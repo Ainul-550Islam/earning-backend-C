@@ -2,13 +2,13 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..models import SmartLink
-from ..serializers.InsightSerializer import InsightSerializer
+from api.smartlink.models import SmartLink
+from api.smartlink.serializers.InsightSerializer import InsightSerializer
 from ..services.analytics.SmartLinkAnalyticsService import SmartLinkAnalyticsService
 from ..services.analytics.EPCCalculatorService import EPCCalculatorService
 from ..services.analytics.ConversionRateService import ConversionRateService
 from ..services.analytics.RevenueAttributionService import RevenueAttributionService
-from ..permissions import IsPublisher
+from api.smartlink.permissions import IsPublisher
 
 
 class InsightViewSet(viewsets.GenericViewSet):

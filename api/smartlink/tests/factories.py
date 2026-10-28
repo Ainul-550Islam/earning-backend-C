@@ -1,7 +1,7 @@
 import factory
 import factory.fuzzy
 from django.contrib.auth import get_user_model
-from ..models import (
+from api.smartlink.models import (
     SmartLink, SmartLinkGroup, SmartLinkTag, SmartLinkFallback,
     SmartLinkRotation, TargetingRule, GeoTargeting, DeviceTargeting,
     OfferPool, OfferPoolEntry, Click, ClickMetadata, UniqueClick,

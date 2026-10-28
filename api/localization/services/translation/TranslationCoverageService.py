@@ -28,12 +28,12 @@ class TranslationCoverageService:
     def _single_language(self, language_code: str) -> Dict:
         """Single language coverage"""
         try:
-            from ...models.core import Language, Translation, TranslationKey
+            from api.localization.models.core import Language, Translation, TranslationKey
             lang = Language.objects.filter(code=language_code).first()
             if not lang:
                 return {'error': f'Language {language_code} not found', 'language': language_code}
 
-            total_keys = TranslationKey.objects.filter(is_active=True).count()
+            total_keys = TranslationKey.objects.count()
             if total_keys == 0:
                 return {'language': language_code, 'total_keys': 0, 'translated': 0,
                         'approved': 0, 'missing': 0, 'coverage_percent': 0}
@@ -48,7 +48,7 @@ class TranslationCoverageService:
             # Namespace breakdown
             namespaces = {}
             from django.db.models import Count
-            ns_totals = TranslationKey.objects.filter(is_active=True).values('category').annotate(count=Count('id'))
+            ns_totals = TranslationKey.objects.values('category').annotate(count=Count('id'))
             ns_translated = Translation.objects.filter(language=lang).exclude(value='').values('key__category').annotate(count=Count('id'))
             ns_total_map = {r['category'] or 'common': r['count'] for r in ns_totals}
             ns_trans_map = {r['key__category'] or 'common': r['count'] for r in ns_translated}
@@ -81,7 +81,7 @@ class TranslationCoverageService:
     def _all_languages(self) -> Dict:
         """All languages combined report"""
         try:
-            from ...models.core import Language
+            from api.localization.models.core import Language
             results = []
             for lang in Language.objects.filter(is_active=True).order_by('-is_default', 'name'):
                 report = self._single_language(lang.code)
@@ -94,7 +94,7 @@ class TranslationCoverageService:
     def calculate_all(self) -> List[Dict]:
         """All languages list — used by Celery task and admin"""
         try:
-            from ...models.core import Language
+            from api.localization.models.core import Language
             results = []
             for lang in Language.objects.filter(is_active=True):
                 report = self._single_language(lang.code)
@@ -110,7 +110,7 @@ class TranslationCoverageService:
     def _save_coverage(self, lang, report: Dict):
         """Coverage results DB-তে save করে"""
         try:
-            from ...models.analytics import TranslationCoverage
+            from api.localization.models.analytics import TranslationCoverage
             TranslationCoverage.objects.update_or_create(
                 language=lang,
                 defaults={

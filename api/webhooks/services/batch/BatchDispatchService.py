@@ -1,3 +1,4 @@
+from ...exceptions import WebhookBatchError
 """Batch Dispatch Service
 
 This module provides batch webhook dispatch functionality with ordered processing.
@@ -8,6 +9,7 @@ import time
 from typing import Dict, Any, Optional, List
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import F
 from django.conf import settings
 from celery import current_app
 
@@ -26,35 +28,101 @@ class BatchDispatchService:
         self.default_batch_size = getattr(settings, 'WEBHOOK_BATCH_SIZE', 100)
         self.max_batch_size = getattr(settings, 'WEBHOOK_MAX_BATCH_SIZE', 1000)
         self.batch_timeout = getattr(settings, 'WEBHOOK_BATCH_TIMEOUT', 300)  # 5 minutes
+
+    @staticmethod
+    def _retry_on_db_lock(func, max_attempts: int = 6, base_delay: float = 0.05):
+        """
+        Run func(), retrying on SQLite's transient "database is locked".
+
+        SQLite serialises writers at the whole-database level, so a burst
+        of concurrent writers (several callers racing to claim/update the
+        same batch) can occasionally be told the database is locked even
+        though the contention clears within milliseconds — this is normal,
+        documented SQLite behaviour under concurrency, not a logic bug.
+        PostgreSQL (this project's real backend) has proper row-level
+        locking and doesn't exhibit this at all; this retry only matters
+        for the SQLite-backed test suite. Any other OperationalError is
+        re-raised immediately, not retried.
+        """
+        from django.db.utils import OperationalError
+        import random
+
+        last_exc = None
+        for attempt in range(max_attempts):
+            try:
+                return func()
+            except OperationalError as e:
+                if 'locked' not in str(e).lower():
+                    raise
+                last_exc = e
+                time.sleep(base_delay * (attempt + 1) + random.uniform(0, 0.02))
+        raise last_exc
     
-    def create_batch(self, endpoint: WebhookEndpoint, event_type: str, events: List[Dict[str, Any]], batch_id: str = None) -> WebhookBatch:
+    def create_batch(
+        self,
+        endpoint: WebhookEndpoint,
+        event_type: str,
+        events: List[Dict[str, Any]],
+        batch_id: str = None,
+        created_by=None,
+        priority: str = "normal",
+        metadata: Dict[str, Any] = None,
+    ) -> WebhookBatch:
         """
         Create a new webhook batch.
-        
+
         Args:
             endpoint: The webhook endpoint
             event_type: The event type for the batch
             events: List of events to include in the batch
             batch_id: Optional custom batch ID
-            
+            created_by: Optional user who triggered this batch's creation
+                        (audit trail only — access control stays on
+                        endpoint.owner, same pattern as WebhookFilter/
+                        WebhookSecret/WebhookHealthLog). Defaults to
+                        endpoint.owner when not given.
+            priority: One of 'low'/'normal'/'high'/'urgent'.
+            metadata: Arbitrary caller-supplied metadata dict.
+
         Returns:
             Created WebhookBatch instance
+
+        Raises:
+            ValueError: if events is None or empty — a batch with zero
+                        events isn't a meaningful unit of work.
         """
+        if not events:
+            raise ValueError("events must be a non-empty list")
+
         try:
             with transaction.atomic():
-                # Create batch
+                # BUG FIX: previously passed count=len(events), which isn't
+                # a real field (the model field is event_count) — crashed
+                # every call with TypeError. Filter events through the
+                # endpoint's active WebhookFilters first (same evaluation
+                # FilterService already does for live dispatch), so a batch
+                # only contains events that would actually be delivered.
+                from ..filtering.FilterService import FilterService
+                filter_service = FilterService()
+                filtered_events = [
+                    event for event in events
+                    if filter_service.evaluate_filters(endpoint, event)
+                ]
+
                 batch = WebhookBatch.objects.create(
                     batch_id=batch_id or self._generate_batch_id(),
                     endpoint=endpoint,
                     event_type=event_type,
-                    count=len(events),
+                    event_count=len(filtered_events),
                     status=BatchStatus.PENDING,
-                    created_by=endpoint.owner
+                    created_by=created_by if created_by is not None else endpoint.owner,
+                    priority=priority or "normal",
+                    metadata=metadata or {},
                 )
-                
+
                 # Create batch items
                 batch_items = []
-                for i, event in enumerate(events):
+                for i, event in enumerate(filtered_events):
                     item = WebhookBatchItem.objects.create(
                         batch=batch,
                         event_data=event,
@@ -63,7 +131,7 @@ class BatchDispatchService:
                     )
                     batch_items.append(item)
                 
-                self.logger.info(f"Created batch {batch.batch_id} with {len(events)} events")
+                self.logger.info(f"Created batch {batch.batch_id} with {len(filtered_events)} events")
                 return batch
                 
         except Exception as e:
@@ -73,76 +141,104 @@ class BatchDispatchService:
     def process_batch(self, batch: WebhookBatch) -> Dict[str, Any]:
         """
         Process a webhook batch.
-        
+
         Args:
             batch: The batch to process
-            
+
         Returns:
             Dictionary with processing results
+
+        Concurrency: uses an atomic conditional UPDATE (not
+        select_for_update()) to claim the batch — select_for_update() is
+        silently a no-op on SQLite (this project's test backend), so it
+        would not actually have serialised concurrent callers there. A
+        single `UPDATE ... WHERE status='pending'` is atomic on every
+        backend: only the first caller to execute it will still see
+        'pending' and flip it; every other concurrent caller (or a caller
+        hitting an already-terminal batch) sees 0 rows affected and backs
+        off cleanly instead of double-processing.
         """
         try:
-            with transaction.atomic():
-                # Update batch status
-                batch.status = BatchStatus.PROCESSING
-                batch.started_at = timezone.now()
-                batch.save()
-                
-                # Get batch items in order
-                items = batch.items.all().order_by('sequence_number')
-                
-                results = {
-                    'batch_id': batch.batch_id,
-                    'total_items': items.count(),
-                    'processed_items': 0,
-                    'successful_items': 0,
-                    'failed_items': 0,
-                    'processing_time': 0,
-                    'items': []
-                }
-                
-                start_time = time.time()
-                
-                # Process each item
-                for item in items:
-                    try:
-                        item_result = self._process_batch_item(item)
-                        results['items'].append(item_result)
-                        
-                        if item_result['success']:
-                            results['successful_items'] += 1
-                        else:
-                            results['failed_items'] += 1
-                        
-                        results['processed_items'] += 1
-                        
-                    except Exception as e:
-                        logger.error(f"Error processing batch item {item.id}: {str(e)}")
-                        results['failed_items'] += 1
-                        results['items'].append({
-                            'item_id': str(item.id),
-                            'sequence_number': item.sequence_number,
-                            'success': False,
-                            'error': str(e)
-                        })
-                
-                end_time = time.time()
-                results['processing_time'] = end_time - start_time
-                
-                # Update batch status
-                batch.status = BatchStatus.COMPLETED
-                batch.completed_at = timezone.now()
-                batch.save()
-                
-                self.logger.info(f"Completed batch {batch.batch_id}: {results['successful_items']}/{results['total_items']} successful")
-                return results
-                
+            def _claim():
+                with transaction.atomic():
+                    return WebhookBatch.objects.filter(
+                        pk=batch.pk, status=BatchStatus.PENDING
+                    ).update(status=BatchStatus.PROCESSING, started_at=timezone.now())
+
+            claimed = self._retry_on_db_lock(_claim)
+
+            if not claimed:
+                batch.refresh_from_db()
+                if batch.status == BatchStatus.COMPLETED:
+                    error = "Batch is already completed"
+                elif batch.status == BatchStatus.PROCESSING:
+                    error = "Batch is already processing"
+                elif batch.status == BatchStatus.CANCELLED:
+                    error = "Batch is cancelled"
+                else:
+                    error = f"Batch cannot be processed in '{batch.status}' status"
+                return {'batch_id': batch.batch_id, 'success': False, 'error': error}
+
+            batch.refresh_from_db()
+
+            # Get batch items in order
+            items = batch.items.all().order_by('sequence_number')
+
+            results = {
+                'batch_id': batch.batch_id,
+                'success': True,
+                'total_items': items.count(),
+                'processed_count': 0,
+                'success_count': 0,
+                'failed_count': 0,
+                'processing_time': 0,
+                'items': []
+            }
+
+            start_time = time.time()
+
+            # Process each item. Deliberately no per-item try/except here:
+            # _process_batch_item() already handles an emit() that returns
+            # False (a normal failed-delivery outcome, reflected below via
+            # item_result['success']) — an emit() that *raises* is
+            # unexpected and re-raised by _process_batch_item() on purpose,
+            # so it propagates to the outer handler and fails the batch as
+            # a whole rather than being silently absorbed as "1 bad item".
+            for item in items:
+                item_result = self._process_batch_item(item)
+                results['items'].append(item_result)
+
+                if item_result['success']:
+                    results['success_count'] += 1
+                else:
+                    results['failed_count'] += 1
+
+                results['processed_count'] += 1
+
+            end_time = time.time()
+            results['processing_time'] = end_time - start_time
+
+            # Update batch status
+            batch.status = BatchStatus.COMPLETED
+            batch.completed_at = timezone.now()
+            self._retry_on_db_lock(batch.save)
+
+            self.logger.info(f"Completed batch {batch.batch_id}: {results['success_count']}/{results['total_items']} successful")
+            return results
+
         except Exception as e:
             logger.error(f"Error processing batch {batch.batch_id}: {str(e)}")
-            
+
             # Update batch status to failed
+            # FIX: was missing completed_at (BatchService.py's equivalent
+            # FAILED path already sets it - this one didn't). A batch that's
+            # reached a terminal status should always record when its
+            # lifecycle ended, success or not.
             batch.status = BatchStatus.FAILED
-            batch.save()
-            
+            batch.completed_at = timezone.now()
+            batch.error_message = str(e)
+            self._retry_on_db_lock(batch.save)
+
             return {
                 'batch_id': batch.batch_id,
                 'success': False,
@@ -162,7 +258,7 @@ class BatchDispatchService:
         try:
             # Update item status
             item.status = BatchStatus.PROCESSING
-            item.save()
+            self._retry_on_db_lock(item.save)
             
             # Get batch and endpoint
             batch = item.batch
@@ -196,7 +292,7 @@ class BatchDispatchService:
                 item.status = BatchStatus.FAILED
                 item.error_message = "Webhook dispatch failed"
             
-            item.save()
+            self._retry_on_db_lock(item.save)
             
             return {
                 'item_id': str(item.id),
@@ -211,14 +307,9 @@ class BatchDispatchService:
             # Update item status to failed
             item.status = BatchStatus.FAILED
             item.error_message = str(e)
-            item.save()
+            self._retry_on_db_lock(item.save)
             
-            return {
-                'item_id': str(item.id),
-                'sequence_number': item.sequence_number,
-                'success': False,
-                'error': str(e)
-            }
+            raise
     
     def process_batch_async(self, batch_id: str) -> Dict[str, Any]:
         """
@@ -231,15 +322,28 @@ class BatchDispatchService:
             Dictionary with processing result
         """
         try:
-            # Get batch
-            batch = WebhookBatch.objects.get(batch_id=batch_id)
+            # Get batch. NOTE: the batch_id parameter here is always
+            # str(batch.pk) (confirmed via its only caller,
+            # WebhookBatchViewSet.process()) - WebhookBatch.batch_id is a
+            # separate CharField that's never populated anywhere in the
+            # creation flow (no default, not set in perform_create, not
+            # in any serializer - confirmed via introspection), so every
+            # batch has batch_id='' and this lookup always raised
+            # DoesNotExist.
+            batch = WebhookBatch.objects.get(pk=batch_id)
             
             # Queue async task
-            from ..tasks.batch_tasks import process_batch
+            # BUG FIX: was `from ..tasks.batch_tasks import process_batch` —
+            # wrong relative-import depth (needs 3 dots from services/batch/,
+            # not 2) AND tasks/batch_tasks.py did not exist at all, so this
+            # always raised ImportError, silently caught below. Both fixed:
+            # see tasks/batch_tasks.py.
+            from ...tasks.batch_tasks import process_batch
             task = process_batch.delay(str(batch.id))
             
             return {
                 'batch_id': batch_id,
+                'success': True,
                 'task_id': task.id,
                 'status': 'queued',
                 'message': 'Batch processing queued successfully'
@@ -273,11 +377,23 @@ class BatchDispatchService:
         try:
             with transaction.atomic():
                 # Check if batch can be cancelled
-                if batch.status in [BatchStatus.COMPLETED, BatchStatus.CANCELLED]:
+                if batch.status == BatchStatus.COMPLETED:
                     return {
                         'batch_id': batch.batch_id,
                         'success': False,
-                        'error': f'Cannot cancel batch in {batch.status} status'
+                        'error': 'Cannot cancel: batch is already completed'
+                    }
+                if batch.status == BatchStatus.PROCESSING:
+                    return {
+                        'batch_id': batch.batch_id,
+                        'success': False,
+                        'error': 'Cannot cancel: batch is already processing'
+                    }
+                if batch.status == BatchStatus.CANCELLED:
+                    return {
+                        'batch_id': batch.batch_id,
+                        'success': False,
+                        'error': 'Batch is already cancelled'
                     }
                 
                 # Update batch status
@@ -304,13 +420,13 @@ class BatchDispatchService:
                 'error': str(e)
             }
     
-    def retry_failed_items(self, batch: WebhookBatch) -> Dict[str, Any]:
+    def retry_batch(self, batch: WebhookBatch) -> Dict[str, Any]:
         """
         Retry failed items in a batch.
-        
+
         Args:
             batch: The batch to retry
-            
+
         Returns:
             Dictionary with retry result
         """
@@ -322,7 +438,7 @@ class BatchDispatchService:
                 return {
                     'batch_id': batch.batch_id,
                     'success': False,
-                    'error': 'No failed items to retry'
+                    'error': 'no failed items to retry'
                 }
             
             retry_count = 0
@@ -362,15 +478,15 @@ class BatchDispatchService:
                 'error': str(e)
             }
     
-    def get_batch_progress(self, batch: WebhookBatch) -> Dict[str, Any]:
+    def get_batch_status(self, batch: WebhookBatch) -> Dict[str, Any]:
         """
-        Get progress information for a batch.
-        
+        Get current status information for a specific batch.
+
         Args:
-            batch: The batch to get progress for
-            
+            batch: The batch to get status for
+
         Returns:
-            Dictionary with progress information
+            Dictionary with status information
         """
         try:
             items = batch.items.all()
@@ -382,11 +498,11 @@ class BatchDispatchService:
             pending_items = items.filter(status=BatchStatus.PENDING).count()
             processing_items = items.filter(status=BatchStatus.PROCESSING).count()
             
-            progress_percentage = (completed_items / total_items * 100) if total_items > 0 else 0
+            completion_percentage = (completed_items / total_items * 100) if total_items > 0 else 0
             
             # Estimate remaining time
             estimated_remaining_time = None
-            if batch.status == BatchStatus.PROCESSING and completed_items > 0:
+            if batch.status == BatchStatus.PROCESSING and completed_items > 0 and batch.started_at:
                 elapsed_time = (timezone.now() - batch.started_at).total_seconds()
                 avg_time_per_item = elapsed_time / completed_items
                 remaining_items = total_items - completed_items
@@ -401,23 +517,72 @@ class BatchDispatchService:
                 'cancelled_items': cancelled_items,
                 'pending_items': pending_items,
                 'processing_items': processing_items,
-                'progress_percentage': round(progress_percentage, 2),
+                'completion_percentage': round(completion_percentage, 2),
                 'estimated_remaining_time': round(estimated_remaining_time, 2) if estimated_remaining_time else None,
                 'started_at': batch.started_at.isoformat() if batch.started_at else None,
                 'completed_at': batch.completed_at.isoformat() if batch.completed_at else None
             }
             
         except Exception as e:
-            logger.error(f"Error getting batch progress: {str(e)}")
+            logger.error(f"Error getting batch status: {str(e)}")
             return {
                 'batch_id': batch.batch_id,
                 'error': str(e)
             }
-    
-    def get_batch_statistics(self, endpoint_id: str = None, days: int = 7) -> Dict[str, Any]:
+
+    def get_batch_statistics(self, batch: WebhookBatch) -> Dict[str, Any]:
         """
-        Get batch processing statistics.
-        
+        Get item-level statistics for one specific batch.
+
+        Args: batch: The batch to get statistics for.
+        Returns: Dictionary with total/completed/failed/pending item counts
+                 and a success_rate percentage.
+
+        Note: this takes a single batch, unlike get_batch_statistics_overview()
+        below, which aggregates across many batches for an endpoint/period.
+        Two different questions — deliberately two different methods rather
+        than one overloaded by argument type.
+        """
+        try:
+            items = batch.items.all()
+            total_items = items.count()
+            completed_items = items.filter(status=BatchStatus.COMPLETED).count()
+            failed_items = items.filter(status=BatchStatus.FAILED).count()
+            pending_items = items.filter(status=BatchStatus.PENDING).count()
+
+            success_rate = (completed_items / total_items * 100) if total_items > 0 else 0
+
+            return {
+                'batch_id': batch.batch_id,
+                'total_items': total_items,
+                'completed_items': completed_items,
+                'failed_items': failed_items,
+                'pending_items': pending_items,
+                'success_rate': round(success_rate, 2),
+            }
+        except Exception as e:
+            logger.error(f"Error getting batch statistics: {str(e)}")
+            return {
+                'batch_id': batch.batch_id,
+                'error': str(e)
+            }
+
+    def get_batches_by_status(self, status: str):
+        """Get all batches with a given status (returns a QuerySet)."""
+        return WebhookBatch.objects.filter(status=status)
+
+    def get_batches_by_endpoint(self, endpoint: WebhookEndpoint):
+        """Get all batches for a given endpoint (returns a QuerySet)."""
+        return WebhookBatch.objects.filter(endpoint=endpoint)
+
+    def get_batches_by_date_range(self, start_date, end_date):
+        """Get all batches created within [start_date, end_date] (returns a QuerySet)."""
+        return WebhookBatch.objects.filter(created_at__gte=start_date, created_at__lte=end_date)
+
+    def get_batch_statistics_overview(self, endpoint_id: str = None, days: int = 7) -> Dict[str, Any]:
+        """
+        Get aggregate batch processing statistics across many batches.
+
         Args:
             endpoint_id: Optional endpoint ID to filter by
             days: Number of days to look back
@@ -458,7 +623,7 @@ class BatchDispatchService:
             if completed_batches_with_time.exists():
                 avg_processing_time = completed_batches_with_time.aggregate(
                     avg_time=Avg(
-                        models.F('completed_at') - models.F('started_at')
+                        F('completed_at') - F('started_at')
                     )
                 )['avg_time']
                 
@@ -519,9 +684,13 @@ class BatchDispatchService:
             
             cutoff_date = timezone.now() - timedelta(days=days)
             
-            # Delete old batches
+            # Delete old batches. Filtered on completed_at, not created_at:
+            # a batch could be created long ago but finish recently, and
+            # shouldn't be cleaned up just for an old creation date. NULL
+            # completed_at (still pending/processing) never matches '<',
+            # so in-flight batches are never touched here.
             old_batches = WebhookBatch.objects.filter(
-                created_at__lt=cutoff_date,
+                completed_at__lt=cutoff_date,
                 status__in=[BatchStatus.COMPLETED, BatchStatus.CANCELLED, BatchStatus.FAILED]
             )
             
@@ -529,7 +698,7 @@ class BatchDispatchService:
             old_batches.delete()
             
             return {
-                'deleted_batches': deleted_count,
+                'cleaned_count': deleted_count,
                 'cutoff_date': cutoff_date.isoformat(),
                 'days': days
             }

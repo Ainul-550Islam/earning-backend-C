@@ -1,0 +1,14 @@
+{% extends "cms/email/base_email.html" %}
+{% block subject %}Welcome to {{ site_name }}!{% endblock %}
+{% block content %}
+<p>Hi {{ username }},</p>
+<p>Welcome to <strong>{{ site_name }}</strong>! Your account is ready.</p>
+{% if referral_bonus %}
+<div class="highlight">
+  <div class="amount">+{{ referral_bonus }} Coins</div>
+  <p style="margin:4px 0 0;color:#555">Signup bonus added to your account!</p>
+</div>
+{% endif %}
+<p>Start earning by completing offers in the offerwall:</p>
+<a href="{{ site_url }}/offerwall/" class="btn">Start Earning Now</a>
+{% endblock %}

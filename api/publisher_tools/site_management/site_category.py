@@ -24,6 +24,7 @@ class SiteCategory(TimeStampedModel):
     is_adult_content = models.BooleanField(default=False)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_categories'
         verbose_name = _('Site Category')
         verbose_name_plural = _('Site Categories')
@@ -45,6 +46,7 @@ class SiteCategoryMapping(TimeStampedModel):
     source      = models.CharField(max_length=20, choices=[('manual','Manual'),('auto','Automated'),('ml','ML Model')], default='manual')
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_site_category_mappings'
         verbose_name = _('Site Category Mapping')
         unique_together = [['site', 'category']]

@@ -48,8 +48,9 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
         return super().get_queryset().filter(endpoint__owner=self.request.user)
     
     def perform_create(self, serializer):
-        """Set created_by field on creation."""
-        serializer.save(created_by=self.request.user)
+        """No created_by field exists on WebhookSecret — ownership comes
+        from the endpoint the secret is created against."""
+        serializer.save()
     
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
@@ -77,7 +78,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
         secret = self.get_object()
         
         try:
-            from ..services.core import SecretRotationService
+            from ..services.core.SecretRotationService import SecretRotationService
             rotation_service = SecretRotationService()
             
             new_secret = rotation_service.rotate_secret(secret.endpoint)
@@ -101,7 +102,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
         secret = self.get_object()
         
         try:
-            from ..services.core import SecretRotationService
+            from ..services.core.SecretRotationService import SecretRotationService
             rotation_service = SecretRotationService()
             
             # Deactivate the secret
@@ -159,7 +160,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
             'updated_at': secret.updated_at
         })
     
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], url_path='usage-history')
     def usage_history(self, request, pk=None):
         """Get usage history for a secret."""
         secret = self.get_object()
@@ -198,7 +199,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
             'days': days
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='by-endpoint')
     def by_endpoint(self, request):
         """Get secrets by endpoint ID."""
         endpoint_id = request.query_params.get('endpoint_id')
@@ -224,7 +225,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(secrets, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-rotate')
     def bulk_rotate(self, request):
         """Rotate multiple secrets."""
         secret_ids = request.data.get('secret_ids', [])
@@ -236,7 +237,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
         secrets = self.queryset.filter(id__in=secret_ids)
         
         rotated_count = 0
-        from ..services.core import SecretRotationService
+        from ..services.core.SecretRotationService import SecretRotationService
         rotation_service = SecretRotationService()
         
         for secret in secrets:
@@ -251,7 +252,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
             'rotated_count': rotated_count
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-revoke')
     def bulk_revoke(self, request):
         """Revoke multiple secrets."""
         secret_ids = request.data.get('secret_ids', [])
@@ -268,7 +269,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
             'revoked_count': revoked_count
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-activate')
     def bulk_activate(self, request):
         """Activate multiple secrets."""
         secret_ids = request.data.get('secret_ids', [])
@@ -285,7 +286,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
             'activated_count': activated_count
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='bulk-deactivate')
     def bulk_deactivate(self, request):
         """Deactivate multiple secrets."""
         secret_ids = request.data.get('secret_ids', [])
@@ -319,7 +320,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(expired_secrets, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='cleanup-expired')
     def cleanup_expired(self, request):
         """Clean up expired secrets."""
         now = timezone.now()
@@ -361,7 +362,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
             'total_usage': total_usage
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='generate-secret')
     def generate_secret(self, request):
         """Generate a new secret for an endpoint."""
         endpoint_id = request.data.get('endpoint_id')
@@ -378,7 +379,7 @@ class WebhookSecretViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_404_NOT_FOUND)
         
         try:
-            from ..services.core import SecretRotationService
+            from ..services.core.SecretRotationService import SecretRotationService
             rotation_service = SecretRotationService()
             
             new_secret = rotation_service.rotate_secret(endpoint)

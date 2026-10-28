@@ -84,8 +84,8 @@ class AutoRegisterView(APIView):
     """
     permission_classes = [AllowAny]
     
-    @transaction.atomic
-    def post(self, request):
+@transaction.atomic
+def post(self, request):
         device_id = request.data.get('device_id')
         
         # Validation
@@ -1048,6 +1048,7 @@ class DashboardView(APIView):
 # Utility Views
 # ==========================================
 @api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def send_otp_view(request):
     """Send OTP to phone"""
@@ -1093,8 +1094,6 @@ def send_otp_view(request):
             {'error': 'Failed to send OTP'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def check_username_availability(request):
@@ -1212,7 +1211,6 @@ def leaderboard_view(request):
     users = User.objects.order_by('-balance')[:50]
     data = [{'id':u.id,'username':u.username,'balance':str(u.balance),'rank':i+1} for i,u in enumerate(users)]
     return R({'results': data})
-
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def fraud_logs_view(request):
@@ -1222,8 +1220,6 @@ def fraud_logs_view(request):
              'user':l.user.username if l.user else None,'ip_address':l.ip_address,
              'is_resolved':l.is_resolved,'detected_at':l.detected_at} for l in logs]
     return R({'results': data, 'count': len(data)})
-
-@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def resolve_fraud_log(request, pk):
     from .models import FraudDetectionLog
@@ -1235,7 +1231,6 @@ def resolve_fraud_log(request, pk):
     except FraudDetectionLog.DoesNotExist:
         return R({'detail': 'Not found'}, status=404)
 
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def ip_reputations_view(request):
     from .models import IPReputation
@@ -1244,7 +1239,6 @@ def ip_reputations_view(request):
              'failed_login_attempts':ip.failed_login_attempts} for ip in ips]
     return R({'results': data, 'count': len(data)})
 
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def device_fingerprints_view(request):
     from .models import UserDevice
@@ -1252,8 +1246,6 @@ def device_fingerprints_view(request):
     data = [{'id':d.id,'device_id':d.device_id,'device_model':d.device_model,
              'is_blocked':d.is_blocked,'user_id':d.user_id} for d in devices]
     return R({'results': data, 'count': len(data)})
-
-@api_view(['GET'])
 @permission_classes([IsAdminUser])
 def rate_limits_view(request):
     return R({'results': [], 'count': 0})

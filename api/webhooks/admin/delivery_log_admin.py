@@ -19,7 +19,7 @@ from ..models.constants import DeliveryStatus
 class WebhookDeliveryLogAdmin(admin.ModelAdmin):
     """Admin configuration for WebhookDeliveryLog model."""
 
-    list_display = ['endpoint', 'event_type', 'status', 'http_status_code', 'duration_ms', 'attempt_number']
+    list_display = ['endpoint', 'event_type', 'status', 'http_status_code', 'response_time_ms', 'attempt_number']
 
     list_filter = ['status', 'http_status_code', 'event_type', 'attempt_number', 'endpoint__status', 'endpoint__owner']
 
@@ -38,7 +38,7 @@ class WebhookDeliveryLogAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Response Details', {
-            'fields': ('http_status_code', 'response_body_preview', 'duration_ms')
+            'fields': ('http_status_code', 'response_body_preview', 'response_time_ms')
         }),
         ('Retry Information', {
             'fields': ('next_retry_at', 'dispatched_at', 'completed_at'),
@@ -108,9 +108,9 @@ class WebhookDeliveryLogAdmin(admin.ModelAdmin):
     http_status_badge.short_description = 'HTTP Status'
 
     def duration_display(self, obj):
-        if not obj.duration_ms:
+        if not obj.response_time_ms:
             return "N/A"
-        d = obj.duration_ms
+        d = obj.response_time_ms
         color = 'green' if d < 100 else 'orange' if d < 500 else 'red'
         return format_html('<span style="color: {}; font-weight: bold;">{}ms</span>', color, d)
     duration_display.short_description = 'Duration'
@@ -126,7 +126,7 @@ class WebhookDeliveryLogAdmin(admin.ModelAdmin):
         return actions
 
     def retry_delivery(self, request, queryset):
-        from ..services.core import DispatchService
+        from ..services.core.DispatchService import DispatchService
         service = DispatchService()
         results = []
         for log in queryset:

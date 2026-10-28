@@ -61,6 +61,7 @@ class PublisherReview(TimeStampedModel):
     metadata                = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'publisher_tools'
         db_table = 'publisher_tools_publisher_reviews'
         verbose_name = _('Publisher Review')
         verbose_name_plural = _('Publisher Reviews')

@@ -1,0 +1,46 @@
+# Ainul Enterprise Engine — Webhook Dispatch System
+# Production requirements
+
+# ── Django core ───────────────────────────────────────────────────────────────
+Django>=4.2,<5.0
+djangorestframework>=3.14,<4.0
+django-filter>=23.0,<24.0
+drf-nested-routers>=0.93
+django-cors-headers>=4.0
+
+# ── Celery / async ────────────────────────────────────────────────────────────
+celery>=5.3,<6.0
+django-celery-beat>=2.5
+redis>=5.0
+kombu>=5.3
+
+# ── Database ──────────────────────────────────────────────────────────────────
+psycopg2-binary>=2.9
+django-db-geventpool>=4.0
+
+# ── HTTP client (webhook dispatch) ───────────────────────────────────────────
+requests>=2.31
+urllib3>=2.0
+
+# ── Template engine ───────────────────────────────────────────────────────────
+Jinja2>=3.1
+
+# ── Caching ───────────────────────────────────────────────────────────────────
+django-redis>=5.4,<6.0
+
+# ── Utils ─────────────────────────────────────────────────────────────────────
+python-dateutil>=2.8
+pytz>=2023.3
+cryptography>=41.0
+
+# ── Monitoring ────────────────────────────────────────────────────────────────
+sentry-sdk>=1.32
+
+# ── Development & testing ─────────────────────────────────────────────────────
+pytest>=7.4
+pytest-django>=4.7
+pytest-mock>=3.11
+pytest-cov>=4.1
+factory-boy>=3.3
+Faker>=19.0
+responses>=0.24
