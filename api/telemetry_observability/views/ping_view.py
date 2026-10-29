@@ -99,7 +99,7 @@ class ReadinessView(APIView):
         # external latency to every k8s probe tick; the Celery task (runs every
         # 60 s) keeps HealthStatus fresh enough for a readiness decision.
         try:
-            from .models.health_status import HealthStatus
+            from ..models.health_status import HealthStatus
             inet = HealthStatus.objects.filter(
                 service_name='internet', component_name='connectivity'
             ).first()

@@ -1,13 +1,15 @@
-"""Views for Telemetry Observability."""
-from .metric_view    import MetricView
-from .log_view       import LogView
-from .trace_view     import TraceView
-from .alert_view     import AlertView
-from .health_view    import HealthView
-from .dashboard_view import DashboardView
-from .analytics_view import AnalyticsView
+"""
+Views for Telemetry Observability.
 
-__all__ = [
-    'MetricView', 'LogView', 'TraceView', 'AlertView',
-    'HealthView', 'DashboardView', 'AnalyticsView',
-]
+Only ping_view.py lives here now — PingView/ReadinessView have no ViewSet
+equivalent (they're plain liveness/readiness probes, not CRUD resources).
+
+The rest of this package used to hold a full parallel APIView implementation
+(MetricView, LogView, TraceView, AlertView, HealthView, DashboardView,
+AnalyticsView) duplicating everything viewsets/ already does. urls.py
+registered the DRF router for viewsets/ at the same URL prefix FIRST, so
+those 7 views were permanently unreachable — removed as dead code.
+"""
+from .ping_view import PingView, ReadinessView
+
+__all__ = ['PingView', 'ReadinessView']

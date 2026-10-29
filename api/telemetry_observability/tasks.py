@@ -8,10 +8,14 @@ DRY: task logic calls the service/logic layer — never accesses models directly
 """
 import logging
 from datetime import timedelta
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
+
+from .services.internet_check_service import InternetCheckService
 
 logger = logging.getLogger(__name__)
 
@@ -150,8 +154,6 @@ def deliver_webhook(self, url: str, payload: dict, secret: str = ''):
     import json
     import hashlib
     import hmac
-    from urllib.request import Request, urlopen
-    from urllib.error import URLError, HTTPError
 
     try:
         payload_bytes = json.dumps(payload).encode('utf-8')
@@ -230,7 +232,6 @@ def check_internet_connectivity(self):
     Runs every minute via Celery Beat (see celery.py beat_schedule).
     """
     try:
-        from .services.internet_check_service import InternetCheckService
         from .models.health_status import HealthStatus
         from .models.alert import Alert
         from .models.metric_event import MetricEvent
@@ -293,14 +294,6 @@ def check_internet_connectivity(self):
             ):
                 alert.resolve()
                 logger.info('Internet connectivity alert auto-resolved (score=%d).', result.health_score)
-
-        return {
-            'reachable':     result.reachable,
-            'health_score':  result.health_score,
-            'avg_latency_ms': round(result.avg_latency_ms, 2) if result.avg_latency_ms else None,
-            'probes_passed': len(result.probes) - result.error_count,
-            'probes_total':  len(result.probes),
-        }
 
         # ── 4. Emit gauge metrics (queryable in dashboards) ───────────────────
         _env = getattr(settings, 'INTERNET_CHECK_ENVIRONMENT', 'production')

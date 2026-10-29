@@ -52,8 +52,33 @@ class AnalyticsViewSet(TelemetryMixin, ResponseMixin, CacheMixin, viewsets.ViewS
             return None
 
     def list(self, request):
-        """GET /analytics/ — redirect to overview."""
-        return self._overview(request)
+        """
+        GET /analytics/                  → overview (default)
+        GET /analytics/?action=<name>    → dispatch to the named sub-resource,
+                                            same as GET /analytics/<name>/
+        """
+        action_name = request.query_params.get('action')
+        if not action_name or action_name == 'overview':
+            return self._overview(request)
+
+        dispatch = {
+            'metrics': self.metrics,
+            'logs': self.logs,
+            'traces': self.traces,
+            'alerts': self.alerts,
+            'health': self.health,
+            'service': self.service,
+            'trend': self.trend,
+            'compare': self.compare,
+        }
+        handler = dispatch.get(action_name)
+        if handler is None:
+            return Response(
+                {'error': f"Unknown action '{action_name}'.",
+                 'valid_actions': ['overview'] + list(dispatch.keys())},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return handler(request)
 
     @action(detail=False, methods=['get'], url_path='overview')
     def overview(self, request):

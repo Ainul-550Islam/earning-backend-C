@@ -2,9 +2,11 @@
 Dashboard Widget model for Telemetry Observability.
 """
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator
 
 from .base import BaseModel
+from ..choices import WidgetTypeChoices, DataSourceChoices
+from ..validators import GridSizeValidator
 
 
 class DashboardWidgetManager(models.Manager):
@@ -50,38 +52,20 @@ class DashboardWidget(BaseModel):
     name = models.CharField(max_length=255)
     widget_type = models.CharField(
         max_length=50,
-        choices=[
-            ('line_chart', 'Line Chart'),
-            ('bar_chart', 'Bar Chart'),
-            ('pie_chart', 'Pie Chart'),
-            ('gauge', 'Gauge'),
-            ('table', 'Table'),
-            ('metric_card', 'Metric Card'),
-            ('log_view', 'Log View'),
-            ('trace_view', 'Trace View'),
-            ('alert_list', 'Alert List'),
-            ('custom', 'Custom'),
-        ],
-        default='metric_card'
+        choices=WidgetTypeChoices.choices,
+        default=WidgetTypeChoices.METRIC_CARD,
     )
     data_source = models.CharField(
         max_length=50,
-        choices=[
-            ('metric', 'Metric'),
-            ('log', 'Log'),
-            ('trace', 'Trace'),
-            ('alert', 'Alert'),
-            ('health', 'Health'),
-            ('custom', 'Custom'),
-        ],
-        default='metric'
+        choices=DataSourceChoices.choices,
+        default=DataSourceChoices.METRIC,
     )
     query = models.JSONField(default=dict)
     config = models.JSONField(default=dict)
     position_x = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     position_y = models.IntegerField(default=0, validators=[MinValueValidator(0)])
-    width = models.IntegerField(default=4, validators=[MinValueValidator(1), MaxValueValidator(12)])
-    height = models.IntegerField(default=4, validators=[MinValueValidator(1), MaxValueValidator(12)])
+    width = models.IntegerField(default=4, validators=[GridSizeValidator()])
+    height = models.IntegerField(default=4, validators=[GridSizeValidator()])
     refresh_interval = models.IntegerField(default=60, validators=[MinValueValidator(0)])
     is_active = models.BooleanField(default=True)
     dashboard = models.ForeignKey(
@@ -100,10 +84,10 @@ class DashboardWidget(BaseModel):
         verbose_name_plural = 'Dashboard Widgets'
         ordering = ['position_y', 'position_x']
         indexes = [
-            models.Index(fields=['widget_type']),
-            models.Index(fields=['data_source']),
-            models.Index(fields=['dashboard']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['widget_type'], name='widget_type_idx'),
+            models.Index(fields=['data_source'], name='widget_source_idx'),
+            models.Index(fields=['dashboard'], name='widget_dashboard_idx'),
+            models.Index(fields=['is_active'], name='widget_active_idx'),
         ]
 
     def __str__(self):

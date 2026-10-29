@@ -201,7 +201,7 @@ class TestHttpProbe:
 
     def test_successful_http_probe(self):
         svc = InternetCheckService(targets=[_passing_http_target()])
-        with patch('telemetry_observability.services.internet_check_service.urlopen',
+        with patch('api.telemetry_observability.services.internet_check_service.urlopen',
                    return_value=self._mock_urlopen(204)):
             result = svc.check()
 
@@ -211,7 +211,7 @@ class TestHttpProbe:
 
     def test_http_redirect_treated_as_success(self):
         svc = InternetCheckService(targets=[_passing_http_target()])
-        with patch('telemetry_observability.services.internet_check_service.urlopen',
+        with patch('api.telemetry_observability.services.internet_check_service.urlopen',
                    return_value=self._mock_urlopen(301)):
             result = svc.check()
 
@@ -219,7 +219,7 @@ class TestHttpProbe:
 
     def test_http_5xx_treated_as_failure(self):
         svc = InternetCheckService(targets=[_passing_http_target()])
-        with patch('telemetry_observability.services.internet_check_service.urlopen',
+        with patch('api.telemetry_observability.services.internet_check_service.urlopen',
                    return_value=self._mock_urlopen(503)):
             result = svc.check()
 
@@ -228,7 +228,7 @@ class TestHttpProbe:
 
     def test_http_url_error_treated_as_failure(self):
         svc = InternetCheckService(targets=[_passing_http_target()])
-        with patch('telemetry_observability.services.internet_check_service.urlopen',
+        with patch('api.telemetry_observability.services.internet_check_service.urlopen',
                    side_effect=URLError('timed out')):
             result = svc.check()
 
@@ -237,7 +237,7 @@ class TestHttpProbe:
 
     def test_http_unexpected_exception_treated_as_failure(self):
         svc = InternetCheckService(targets=[_passing_http_target()])
-        with patch('telemetry_observability.services.internet_check_service.urlopen',
+        with patch('api.telemetry_observability.services.internet_check_service.urlopen',
                    side_effect=ConnectionResetError('reset')):
             result = svc.check()
 
@@ -251,7 +251,7 @@ class TestHttpProbe:
             captured_requests.append(req)
             return self._mock_urlopen(200)
 
-        with patch('telemetry_observability.services.internet_check_service.urlopen',
+        with patch('api.telemetry_observability.services.internet_check_service.urlopen',
                    side_effect=fake_urlopen):
             svc.check()
 

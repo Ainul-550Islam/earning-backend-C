@@ -16,6 +16,9 @@ DRY: All request-level metric/trace/log recording lives here.
 import logging
 import time
 
+from .metrics import MetricsCollector
+from .tracing import TracingService
+
 logger = logging.getLogger(__name__)
 
 
@@ -66,7 +69,6 @@ class TelemetryMiddleware:
     def _start_span(self, request):
         """Start a distributed trace span for the incoming request."""
         try:
-            from .tracing import TracingService
             return TracingService().start_span(
                 operation_name=f'{request.method} {request.path}',
                 service='django_http',
@@ -84,7 +86,6 @@ class TelemetryMiddleware:
         if span is None:
             return
         try:
-            from .tracing import TracingService
             status = 'error' if response.status_code >= 400 else 'success'
             TracingService().finish_span(
                 span_id=span.span_id,
@@ -98,7 +99,6 @@ class TelemetryMiddleware:
     def _record_request_metric(self, request, response, duration_ms: float) -> None:
         """Record per-request counter and duration gauge."""
         try:
-            from .metrics import MetricsCollector
             collector = MetricsCollector()
             labels = {
                 'method':      request.method,

@@ -39,14 +39,14 @@ class TestTelemetryMiddleware:
 
     def test_middleware_does_not_raise_on_metric_error(self):
         """Middleware should never block a request even if recording fails."""
-        with patch('telemetry_observability.middleware.MetricsCollector',
+        with patch('api.telemetry_observability.middleware.MetricsCollector',
                    side_effect=Exception("DB down")):
             req  = make_request()
             resp = self.middleware(req)
             assert resp is not None
 
     def test_middleware_does_not_raise_on_trace_error(self):
-        with patch('telemetry_observability.middleware.TracingService',
+        with patch('api.telemetry_observability.middleware.TracingService',
                    side_effect=Exception("trace error")):
             req  = make_request()
             resp = self.middleware(req)
@@ -66,7 +66,7 @@ class TestTelemetryMiddleware:
 
     def test_records_http_request_total_metric(self):
         recorded = []
-        with patch('telemetry_observability.middleware.MetricsCollector') as mock_cls:
+        with patch('api.telemetry_observability.middleware.MetricsCollector') as mock_cls:
             mock_instance = MagicMock()
             mock_cls.return_value = mock_instance
             req  = make_request()
@@ -80,7 +80,7 @@ class TestTelemetryMiddleware:
             assert any('http_request_total' in str(c) for c in counter_calls)
 
     def test_records_duration_gauge(self):
-        with patch('telemetry_observability.middleware.MetricsCollector') as mock_cls:
+        with patch('api.telemetry_observability.middleware.MetricsCollector') as mock_cls:
             mock_instance = MagicMock()
             mock_cls.return_value = mock_instance
             req = make_request()

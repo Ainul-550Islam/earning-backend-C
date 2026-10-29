@@ -117,7 +117,7 @@ class TestReadinessView:
 
     def test_503_when_database_down(self, api_client):
         with patch(
-            'django.db.backends.base.base.DatabaseWrapper.ensure_connection',
+            'django.db.backends.base.base.BaseDatabaseWrapper.ensure_connection',
             side_effect=DbOperationalError('DB gone'),
         ):
             response = api_client.get('/readiness/')

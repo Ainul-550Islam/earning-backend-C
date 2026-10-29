@@ -22,7 +22,7 @@ class TestWebhookDispatcher:
         """Dispatcher with no URLs should not make any HTTP calls."""
         dispatcher = WebhookDispatcher(urls=[])
         event      = make_alert_event()
-        with patch('telemetry_observability.webhooks.urlopen') as mock_open:
+        with patch('api.telemetry_observability.webhooks.urlopen') as mock_open:
             dispatcher.on_alert_triggered(event)
             mock_open.assert_not_called()
 
@@ -31,7 +31,7 @@ class TestWebhookDispatcher:
         event      = make_alert_event()
         mock_resp  = MagicMock()
         mock_resp.status = 200
-        with patch('telemetry_observability.webhooks.urlopen',
+        with patch('api.telemetry_observability.webhooks.urlopen',
                    return_value=MagicMock(__enter__=MagicMock(return_value=mock_resp),
                                          __exit__=MagicMock(return_value=False))):
             dispatcher.on_alert_triggered(event)
@@ -49,7 +49,7 @@ class TestWebhookDispatcher:
             m.__exit__  = MagicMock(return_value=False)
             return m
 
-        with patch('telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
+        with patch('api.telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
             dispatcher.on_alert_triggered(event)
 
         assert call_count[0] == 2
@@ -65,7 +65,7 @@ class TestWebhookDispatcher:
             m.__exit__  = MagicMock(return_value=False)
             return m
 
-        with patch('telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
+        with patch('api.telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
             dispatcher.on_alert_triggered(make_alert_event())
 
         assert len(captured) == 1
@@ -82,7 +82,7 @@ class TestWebhookDispatcher:
             m.__exit__  = MagicMock(return_value=False)
             return m
 
-        with patch('telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
+        with patch('api.telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
             dispatcher.on_alert_triggered(make_alert_event())
 
         assert captured[0]['data']['severity'] == 'critical'
@@ -99,12 +99,12 @@ class TestWebhookDispatcher:
             m.__exit__  = MagicMock(return_value=False)
             return m
 
-        with patch('telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
+        with patch('api.telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
             dispatcher.on_alert_triggered(make_alert_event())
 
-        headers = captured_headers[0]
-        assert 'X-Telemetry-Signature' in headers
-        assert headers['X-Telemetry-Signature'].startswith('sha256=')
+        headers = {k.lower(): v for k, v in captured_headers[0].items()}
+        assert 'x-telemetry-signature' in headers
+        assert headers['x-telemetry-signature'].startswith('sha256=')
 
     def test_no_signature_without_secret(self):
         captured_headers = []
@@ -117,11 +117,11 @@ class TestWebhookDispatcher:
             m.__exit__  = MagicMock(return_value=False)
             return m
 
-        with patch('telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
+        with patch('api.telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
             dispatcher.on_alert_triggered(make_alert_event())
 
-        headers = captured_headers[0]
-        assert 'X-Telemetry-Signature' not in headers
+        headers = {k.lower(): v for k, v in captured_headers[0].items()}
+        assert 'x-telemetry-signature' not in headers
 
     def test_retry_on_failure(self):
         from urllib.error import URLError
@@ -132,8 +132,8 @@ class TestWebhookDispatcher:
             call_count[0] += 1
             raise URLError("Connection refused")
 
-        with patch('telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen), \
-             patch('telemetry_observability.webhooks.time.sleep'):
+        with patch('api.telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen), \
+             patch('api.telemetry_observability.webhooks.time.sleep'):
             dispatcher.on_alert_triggered(make_alert_event())
 
         assert call_count[0] == 3  # 1 initial + 2 retries
@@ -172,7 +172,7 @@ class TestWebhookDispatcher:
             m.__exit__  = MagicMock(return_value=False)
             return m
 
-        with patch('telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
+        with patch('api.telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
             dispatcher.on_alert_acknowledged(event)
 
         assert call_count[0] == 1
@@ -189,7 +189,7 @@ class TestWebhookDispatcher:
             m.__exit__  = MagicMock(return_value=False)
             return m
 
-        with patch('telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
+        with patch('api.telemetry_observability.webhooks.urlopen', side_effect=fake_urlopen):
             dispatcher.on_alert_resolved(event)
 
         assert call_count[0] == 1

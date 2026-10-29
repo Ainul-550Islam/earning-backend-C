@@ -3,6 +3,7 @@ Distributed tracing for Telemetry Observability.
 """
 from typing import Dict, Any, Optional, List
 from django.utils import timezone
+from datetime import timedelta
 import uuid
 
 from .models.trace_span import TraceSpan
@@ -107,6 +108,45 @@ class TracingService:
         """
         return list(TraceSpan.objects.filter(trace_id=trace_id).order_by('start_time'))
     
+    def get_trace_tree(self, trace_id: str) -> Dict[str, Any]:
+        """
+        Return every span for a trace organized into a parent/child tree
+        (spans whose parent isn't in this trace are treated as roots).
+
+        Returns:
+            {'trace_id': ..., 'total_spans': int, 'roots': [span-node, ...]}
+            where each span-node has a 'children' list of the same shape.
+        """
+        spans = list(TraceSpan.objects.filter(trace_id=trace_id).order_by('start_time'))
+
+        def _node(span: TraceSpan) -> Dict[str, Any]:
+            return {
+                'span_id': span.span_id,
+                'parent_span_id': span.parent_span_id,
+                'operation_name': span.operation_name,
+                'service': span.service,
+                'status': span.status,
+                'start_time': span.start_time,
+                'end_time': span.end_time,
+                'duration_ms': span.duration_ms,
+                'children': [],
+            }
+
+        nodes = {span.span_id: _node(span) for span in spans}
+        roots = []
+        for span in spans:
+            node = nodes[span.span_id]
+            if span.parent_span_id and span.parent_span_id in nodes:
+                nodes[span.parent_span_id]['children'].append(node)
+            else:
+                roots.append(node)
+
+        return {
+            'trace_id': trace_id,
+            'total_spans': len(spans),
+            'roots': roots,
+        }
+
     def get_span(self, span_id: str) -> Optional[TraceSpan]:
         """
         Get a specific span.
@@ -144,6 +184,13 @@ class TracingService:
         
         return list(queryset.order_by('-start_time'))
     
+    def get_slow_traces(self, threshold_ms: float = 5000, hours: int = 24) -> List[TraceSpan]:
+        """Return spans slower than threshold_ms, started within the last `hours`."""
+        since = timezone.now() - timedelta(hours=hours)
+        return list(
+            TraceSpan.objects.slow(threshold_ms=threshold_ms).filter(start_time__gte=since)
+        )
+
     def get_trace_statistics(self, hours: int = 24) -> Dict[str, Any]:
         """
         Get trace statistics for the last N hours.

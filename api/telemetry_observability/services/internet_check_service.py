@@ -163,7 +163,8 @@ class InternetCheckService:
         """
         self._targets: List[Dict] = (
             targets
-            or getattr(settings, 'INTERNET_CHECK_TARGETS', _DEFAULT_TARGETS)
+            if targets is not None
+            else getattr(settings, 'INTERNET_CHECK_TARGETS', _DEFAULT_TARGETS)
         )
         self._pass_threshold: float = (
             pass_threshold

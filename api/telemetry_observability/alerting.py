@@ -251,6 +251,20 @@ class AlertingService:
         except Alert.DoesNotExist:
             return False
     
+    def get_open_alerts(self, service: Optional[str] = None) -> List[Alert]:
+        """Return all open alerts, optionally filtered by service."""
+        qs = Alert.objects.open()
+        if service:
+            qs = qs.filter(service=service)
+        return list(qs)
+
+    def get_critical_alerts(self, service: Optional[str] = None) -> List[Alert]:
+        """Return all critical-severity alerts, optionally filtered by service."""
+        qs = Alert.objects.critical()
+        if service:
+            qs = qs.filter(service=service)
+        return list(qs)
+
     def get_alert_statistics(self, hours: int = 24) -> Dict[str, Any]:
         """
         Get alert statistics for the last N hours.

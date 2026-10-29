@@ -4,6 +4,8 @@ Log Entry model for Telemetry Observability.
 from django.db import models
 
 from .base import BaseModel
+from ..choices import LogLevelChoices
+from ..validators import LogLevelValidator, LogMessageValidator, ServiceNameValidator
 
 
 class LogEntryManager(models.Manager):
@@ -63,22 +65,17 @@ class LogEntry(BaseModel):
 
     level = models.CharField(
         max_length=20,
-        choices=[
-            ('debug', 'Debug'),
-            ('info', 'Info'),
-            ('warning', 'Warning'),
-            ('error', 'Error'),
-            ('critical', 'Critical'),
-        ],
-        default='info'
+        choices=LogLevelChoices.choices,
+        default=LogLevelChoices.INFO,
+        validators=[LogLevelValidator()],
     )
-    message = models.TextField()
-    logger_name = models.CharField(max_length=255, blank=True)
-    source = models.CharField(max_length=255, blank=True)
-    service = models.CharField(max_length=255, blank=True)
+    message = models.TextField(validators=[LogMessageValidator()])
+    logger_name = models.CharField(max_length=255, blank=True, default='')
+    source = models.CharField(max_length=255, blank=True, default='')
+    service = models.CharField(max_length=255, blank=True, default='', validators=[ServiceNameValidator()])
     environment = models.CharField(max_length=50, default='production')
     timestamp = models.DateTimeField(auto_now_add=True)
-    stack_trace = models.TextField(blank=True)
+    stack_trace = models.TextField(blank=True, default='')
     context = models.JSONField(default=dict)
     tags = models.JSONField(default=list)
 
@@ -90,11 +87,11 @@ class LogEntry(BaseModel):
         verbose_name_plural = 'Log Entries'
         ordering = ['-timestamp']
         indexes = [
-            models.Index(fields=['level']),
-            models.Index(fields=['source']),
-            models.Index(fields=['service']),
-            models.Index(fields=['environment']),
-            models.Index(fields=['timestamp']),
+            models.Index(fields=['level'], name='log_level_idx'),
+            models.Index(fields=['source'], name='log_source_idx'),
+            models.Index(fields=['service'], name='log_service_idx'),
+            models.Index(fields=['environment'], name='log_env_idx'),
+            models.Index(fields=['timestamp'], name='log_timestamp_idx'),
         ]
 
     def __str__(self):

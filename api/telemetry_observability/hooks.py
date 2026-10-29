@@ -16,7 +16,7 @@ Usage inside a service/logic layer:
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
@@ -78,7 +78,7 @@ class Hook:
         try:
             self.callback(context)
             self.execution_count += 1
-            self.last_executed = datetime.utcnow()
+            self.last_executed = datetime.now(timezone.utc)
             self.last_error    = None
         except Exception as exc:
             self.last_error = str(exc)

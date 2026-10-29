@@ -118,7 +118,7 @@ class TestDeliverWebhookTask:
         from ..tasks import deliver_webhook
         mock_resp = MagicMock()
         mock_resp.status = 200
-        with patch('telemetry_observability.tasks.urlopen',
+        with patch('api.telemetry_observability.tasks.urlopen',
                    return_value=MagicMock(__enter__=MagicMock(return_value=mock_resp),
                                          __exit__=MagicMock(return_value=False))):
             result = deliver_webhook('https://example.com/hook', {'event': 'test'})
@@ -135,10 +135,11 @@ class TestDeliverWebhookTask:
             m.__exit__  = MagicMock(return_value=False)
             return m
 
-        with patch('telemetry_observability.tasks.urlopen', side_effect=fake_urlopen):
+        with patch('api.telemetry_observability.tasks.urlopen', side_effect=fake_urlopen):
             deliver_webhook('https://example.com/hook', {'event': 'x'}, secret='my-secret')
 
-        assert 'X-Telemetry-Signature' in captured[0]
+        headers = {k.lower(): v for k, v in captured[0].items()}
+        assert 'x-telemetry-signature' in headers
 
     def test_raises_on_max_retries(self):
         from ..tasks import deliver_webhook
@@ -147,7 +148,7 @@ class TestDeliverWebhookTask:
         task_mock = MagicMock()
         task_mock.retry = MagicMock(side_effect=Exception("max retries exceeded"))
 
-        with patch('telemetry_observability.tasks.urlopen',
+        with patch('api.telemetry_observability.tasks.urlopen',
                    side_effect=URLError("refused")), \
              pytest.raises(Exception):
             deliver_webhook.run('https://example.com/hook', {})
@@ -213,7 +214,7 @@ class TestCheckInternetConnectivityTask:
     def test_returns_dict_when_internet_reachable(self):
         from ..tasks import check_internet_connectivity
         result = self._make_result(reachable=True, score=100)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             out = check_internet_connectivity()
         assert isinstance(out, dict)
@@ -223,7 +224,7 @@ class TestCheckInternetConnectivityTask:
     def test_returns_dict_when_internet_unreachable(self):
         from ..tasks import check_internet_connectivity
         result = self._make_result(reachable=False, score=0, error_count=2)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             out = check_internet_connectivity()
         assert out['reachable'] is False
@@ -231,7 +232,7 @@ class TestCheckInternetConnectivityTask:
     def test_returns_probe_counts(self):
         from ..tasks import check_internet_connectivity
         result = self._make_result(reachable=True, score=100, n_probes=5, error_count=0)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             out = check_internet_connectivity()
         assert out['probes_total'] == 5
@@ -243,7 +244,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.health_status import HealthStatus
         result = self._make_result(reachable=True, score=100)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         assert HealthStatus.objects.filter(
@@ -254,7 +255,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.health_status import HealthStatus
         result = self._make_result(reachable=True, score=80)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         record = HealthStatus.objects.get(service_name='internet', component_name='connectivity')
@@ -264,7 +265,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.health_status import HealthStatus
         result = self._make_result(reachable=True, score=80)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         record = HealthStatus.objects.get(service_name='internet', component_name='connectivity')
@@ -274,7 +275,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.health_status import HealthStatus
         result = self._make_result(reachable=True, score=60)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         record = HealthStatus.objects.get(service_name='internet', component_name='connectivity')
@@ -284,7 +285,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.health_status import HealthStatus
         result = self._make_result(reachable=False, score=0, error_count=2)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         record = HealthStatus.objects.get(service_name='internet', component_name='connectivity')
@@ -294,7 +295,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.health_status import HealthStatus
         result = self._make_result(reachable=True, score=100)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
             check_internet_connectivity()
@@ -309,7 +310,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.alert import Alert
         result = self._make_result(reachable=False, score=0, error_count=2)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         assert Alert.objects.filter(
@@ -320,7 +321,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.alert import Alert
         result = self._make_result(reachable=False, score=0, error_count=2)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
             check_internet_connectivity()
@@ -333,7 +334,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.alert import Alert
         result = self._make_result(reachable=False, score=0, error_count=2)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         alert = Alert.objects.get(name='internet-connectivity-failure')
@@ -343,7 +344,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.alert import Alert
         result = self._make_result(reachable=False, score=30, error_count=1, n_probes=2)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         alert = Alert.objects.get(name='internet-connectivity-failure')
@@ -354,7 +355,7 @@ class TestCheckInternetConnectivityTask:
         from ..models.alert import Alert
         # First: go down
         down = self._make_result(reachable=False, score=0, error_count=2)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = down
             check_internet_connectivity()
         assert Alert.objects.filter(
@@ -362,7 +363,7 @@ class TestCheckInternetConnectivityTask:
         ).exists()
         # Then: recover
         up = self._make_result(reachable=True, score=100)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = up
             check_internet_connectivity()
         assert not Alert.objects.filter(
@@ -373,7 +374,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.alert import Alert
         result = self._make_result(reachable=True, score=100)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         assert not Alert.objects.filter(
@@ -386,7 +387,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.metric_event import MetricEvent
         result = self._make_result(reachable=True, score=100, latency=18.5)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         assert MetricEvent.objects.filter(
@@ -397,7 +398,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.metric_event import MetricEvent
         result = self._make_result(reachable=True, score=100, latency=18.5)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         assert MetricEvent.objects.filter(
@@ -408,7 +409,7 @@ class TestCheckInternetConnectivityTask:
         from ..tasks import check_internet_connectivity
         from ..models.metric_event import MetricEvent
         result = self._make_result(reachable=False, score=0, error_count=2, latency=None)
-        with patch('telemetry_observability.tasks.InternetCheckService') as MockSvc:
+        with patch('api.telemetry_observability.tasks.InternetCheckService') as MockSvc:
             MockSvc.return_value.check.return_value = result
             check_internet_connectivity()
         assert not MetricEvent.objects.filter(

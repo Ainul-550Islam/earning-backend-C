@@ -5,6 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.validators import UniqueTogetherValidator
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Avg
 
@@ -66,6 +67,15 @@ class HealthViewSet(TelemetryMixin, ResponseMixin, viewsets.ModelViewSet):
     def upsert(self, request):
         """POST /health/upsert/ — idempotent create-or-update per (service, component, env)."""
         serializer = HealthStatusCreateSerializer(data=request.data)
+        # This endpoint is explicitly create-OR-update, so the (service_name,
+        # component_name, environment) UniqueTogetherValidator that DRF
+        # auto-attaches for plain creation would wrongly reject every update.
+        # HealthLogic.upsert() already keys update_or_create() on the same
+        # three fields, so the uniqueness is still correctly enforced there.
+        serializer.validators = [
+            v for v in serializer.validators
+            if not isinstance(v, UniqueTogetherValidator)
+        ]
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         obj, created = self._logic.upsert(serializer.validated_data)

@@ -2,9 +2,11 @@
 Health Status model for Telemetry Observability.
 """
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator
 
 from .base import BaseModel
+from ..choices import HealthStatusChoices
+from ..validators import HealthScoreValidator, ErrorRateValidator, ServiceNameValidator
 
 
 class HealthStatusManager(models.Manager):
@@ -66,26 +68,21 @@ class HealthStatus(BaseModel):
     Model representing the health status of a service or component.
     """
 
-    service_name = models.CharField(max_length=255)
-    component_name = models.CharField(max_length=255, blank=True)
+    service_name = models.CharField(max_length=255, validators=[ServiceNameValidator()])
+    component_name = models.CharField(max_length=255, blank=True, default='')
     status = models.CharField(
         max_length=50,
-        choices=[
-            ('healthy', 'Healthy'),
-            ('degraded', 'Degraded'),
-            ('unhealthy', 'Unhealthy'),
-            ('unknown', 'Unknown'),
-        ],
-        default='unknown'
+        choices=HealthStatusChoices.choices,
+        default=HealthStatusChoices.UNKNOWN,
     )
     health_score = models.IntegerField(
         default=100,
-        validators=[MinValueValidator(0), MaxValueValidator(100)]
+        validators=[HealthScoreValidator()]
     )
     last_check = models.DateTimeField(auto_now=True)
     uptime = models.FloatField(default=0.0, validators=[MinValueValidator(0)])
     response_time_ms = models.FloatField(blank=True, null=True, validators=[MinValueValidator(0)])
-    error_rate = models.FloatField(default=0.0, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    error_rate = models.FloatField(default=0.0, validators=[ErrorRateValidator()])
     metadata = models.JSONField(default=dict)
     environment = models.CharField(max_length=50, default='production')
 
@@ -97,11 +94,11 @@ class HealthStatus(BaseModel):
         verbose_name_plural = 'Health Statuses'
         ordering = ['-last_check']
         indexes = [
-            models.Index(fields=['service_name']),
-            models.Index(fields=['component_name']),
-            models.Index(fields=['status']),
-            models.Index(fields=['environment']),
-            models.Index(fields=['last_check']),
+            models.Index(fields=['service_name'], name='health_service_idx'),
+            models.Index(fields=['component_name'], name='health_component_idx'),
+            models.Index(fields=['status'], name='health_status_idx'),
+            models.Index(fields=['environment'], name='health_env_idx'),
+            models.Index(fields=['last_check'], name='health_last_check_idx'),
         ]
         unique_together = [['service_name', 'component_name', 'environment']]
 
@@ -117,7 +114,7 @@ class HealthStatus(BaseModel):
         Returns:
             bool: True if status is 'healthy' AND health_score >= 70
         """
-        return self.status == 'healthy' and self.health_score >= 70
+        return self.status == HealthStatusChoices.HEALTHY and self.health_score >= 70
 
     def is_degraded(self):
         """
@@ -126,7 +123,7 @@ class HealthStatus(BaseModel):
         Returns:
             bool: True if status is 'degraded' OR health_score is in [50, 70)
         """
-        return self.status == 'degraded' or (50 <= self.health_score < 70)
+        return self.status == HealthStatusChoices.DEGRADED or (50 <= self.health_score < 70)
 
     def is_unhealthy(self):
         """
@@ -135,4 +132,4 @@ class HealthStatus(BaseModel):
         Returns:
             bool: True if status is 'unhealthy' OR health_score < 50
         """
-        return self.status == 'unhealthy' or self.health_score < 50
+        return self.status == HealthStatusChoices.UNHEALTHY or self.health_score < 50

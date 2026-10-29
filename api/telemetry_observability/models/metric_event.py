@@ -2,9 +2,10 @@
 Metric Event model for Telemetry Observability.
 """
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
 
 from .base import BaseModel
+from ..choices import MetricTypeChoices
+from ..validators import MetricNameValidator, MetricValueValidator, ServiceNameValidator
 
 
 class MetricEventManager(models.Manager):
@@ -62,22 +63,17 @@ class MetricEvent(BaseModel):
     Model representing a metric event for telemetry.
     """
 
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, validators=[MetricNameValidator()])
     metric_type = models.CharField(
         max_length=50,
-        choices=[
-            ('counter', 'Counter'),
-            ('gauge', 'Gauge'),
-            ('histogram', 'Histogram'),
-            ('summary', 'Summary'),
-        ],
-        default='counter'
+        choices=MetricTypeChoices.choices,
+        default=MetricTypeChoices.COUNTER,
     )
-    value = models.FloatField()
-    unit = models.CharField(max_length=50, blank=True)
+    value = models.FloatField(validators=[MetricValueValidator()])
+    unit = models.CharField(max_length=50, blank=True, default='')
     labels = models.JSONField(default=dict)
-    source = models.CharField(max_length=255, blank=True)
-    service = models.CharField(max_length=255, blank=True)
+    source = models.CharField(max_length=255, blank=True, default='')
+    service = models.CharField(max_length=255, blank=True, default='', validators=[ServiceNameValidator()])
     environment = models.CharField(max_length=50, default='production')
     timestamp = models.DateTimeField(auto_now_add=True)
 
@@ -89,12 +85,12 @@ class MetricEvent(BaseModel):
         verbose_name_plural = 'Metric Events'
         ordering = ['-timestamp']
         indexes = [
-            models.Index(fields=['name']),
-            models.Index(fields=['metric_type']),
-            models.Index(fields=['source']),
-            models.Index(fields=['service']),
-            models.Index(fields=['environment']),
-            models.Index(fields=['timestamp']),
+            models.Index(fields=['name'], name='metric_name_idx'),
+            models.Index(fields=['metric_type'], name='metric_type_idx'),
+            models.Index(fields=['source'], name='metric_source_idx'),
+            models.Index(fields=['service'], name='metric_service_idx'),
+            models.Index(fields=['environment'], name='metric_env_idx'),
+            models.Index(fields=['timestamp'], name='metric_timestamp_idx'),
         ]
 
     def __str__(self):

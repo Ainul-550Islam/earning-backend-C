@@ -217,17 +217,17 @@ class TestTraceViewSet:
 class TestAlertViewSet:
     """Tests for AlertViewSet (/api/v1/telemetry/alerts/)."""
 
-    def test_list_alerts(self, authenticated_api_client):
+    def test_list_alerts(self, admin_api_client):
         """GET /alerts/ returns 200 with list."""
         Alert.objects.create(
             name='test-alert', alert_type='metric', severity='warning',
             status='open', message='Test', source='test', service='svc'
         )
-        response = authenticated_api_client.get('/api/v1/telemetry/alerts/')
+        response = admin_api_client.get('/api/v1/telemetry/alerts/')
         assert response.status_code == 200
         assert len(response.data) >= 1
 
-    def test_create_alert(self, authenticated_api_client):
+    def test_create_alert(self, admin_api_client):
         """POST /alerts/ returns 201 with the created alert."""
         data = {
             'name': 'new-alert',
@@ -237,19 +237,19 @@ class TestAlertViewSet:
             'source': 'test',
             'service': 'test-service'
         }
-        response = authenticated_api_client.post(
+        response = admin_api_client.post(
             '/api/v1/telemetry/alerts/', data, format='json'
         )
         assert response.status_code == 201
         assert response.data['name'] == 'new-alert'
 
-    def test_acknowledge_action(self, authenticated_api_client):
+    def test_acknowledge_action(self, admin_api_client):
         """POST /alerts/<pk>/acknowledge/ acknowledges the alert."""
         alert = Alert.objects.create(
             name='ack-alert', alert_type='metric', severity='warning',
             status='open', message='Ack me', source='test', service='svc'
         )
-        response = authenticated_api_client.post(
+        response = admin_api_client.post(
             f'/api/v1/telemetry/alerts/{alert.id}/acknowledge/',
             {'user': 'ops-team'},
             format='json'
@@ -259,13 +259,13 @@ class TestAlertViewSet:
         assert alert.status == 'acknowledged'
         assert alert.acknowledged_by == 'ops-team'
 
-    def test_resolve_action(self, authenticated_api_client):
+    def test_resolve_action(self, admin_api_client):
         """POST /alerts/<pk>/resolve/ resolves the alert."""
         alert = Alert.objects.create(
             name='res-alert', alert_type='metric', severity='critical',
             status='open', message='Resolve me', source='test', service='svc'
         )
-        response = authenticated_api_client.post(
+        response = admin_api_client.post(
             f'/api/v1/telemetry/alerts/{alert.id}/resolve/',
             format='json'
         )
@@ -274,13 +274,13 @@ class TestAlertViewSet:
         assert alert.status == 'resolved'
         assert alert.resolved_at is not None
 
-    def test_statistics_action(self, authenticated_api_client):
+    def test_statistics_action(self, admin_api_client):
         """GET /alerts/statistics/ returns stats."""
-        response = authenticated_api_client.get('/api/v1/telemetry/alerts/statistics/')
+        response = admin_api_client.get('/api/v1/telemetry/alerts/statistics/')
         assert response.status_code == 200
         assert 'total_alerts' in response.data
 
-    def test_open_action(self, authenticated_api_client):
+    def test_open_action(self, admin_api_client):
         """GET /alerts/open/ returns only open alerts."""
         Alert.objects.create(
             name='open-alert', alert_type='metric', severity='warning',
@@ -290,7 +290,7 @@ class TestAlertViewSet:
             name='resolved-alert', alert_type='metric', severity='info',
             status='resolved', message='Done', source='t', service='s'
         )
-        response = authenticated_api_client.get('/api/v1/telemetry/alerts/open/')
+        response = admin_api_client.get('/api/v1/telemetry/alerts/open/')
         assert response.status_code == 200
         for alert_data in response.data:
             assert alert_data['status'] == 'open'
@@ -354,15 +354,15 @@ class TestHealthViewSet:
 class TestDashboardViewSet:
     """Tests for DashboardViewSet (/api/v1/telemetry/dashboards/)."""
 
-    def test_list_widgets(self, authenticated_api_client):
+    def test_list_widgets(self, admin_api_client):
         """GET /dashboards/ returns 200."""
         DashboardWidget.objects.create(
             name='Widget 1', widget_type='metric_card', data_source='metric'
         )
-        response = authenticated_api_client.get('/api/v1/telemetry/dashboards/')
+        response = admin_api_client.get('/api/v1/telemetry/dashboards/')
         assert response.status_code == 200
 
-    def test_create_widget(self, authenticated_api_client):
+    def test_create_widget(self, admin_api_client):
         """POST /dashboards/ returns 201."""
         data = {
             'name': 'New Widget',
@@ -371,41 +371,41 @@ class TestDashboardViewSet:
             'query': {'metric_name': 'cpu_usage'},
             'config': {}
         }
-        response = authenticated_api_client.post(
+        response = admin_api_client.post(
             '/api/v1/telemetry/dashboards/', data, format='json'
         )
         assert response.status_code == 201
         assert response.data['name'] == 'New Widget'
 
-    def test_retrieve_widget(self, authenticated_api_client):
+    def test_retrieve_widget(self, admin_api_client):
         """GET /dashboards/<pk>/ returns 200."""
         widget = DashboardWidget.objects.create(
             name='My Widget', widget_type='gauge', data_source='metric'
         )
-        response = authenticated_api_client.get(f'/api/v1/telemetry/dashboards/{widget.id}/')
+        response = admin_api_client.get(f'/api/v1/telemetry/dashboards/{widget.id}/')
         assert response.status_code == 200
         assert response.data['name'] == 'My Widget'
 
-    def test_activate_action(self, authenticated_api_client):
+    def test_activate_action(self, admin_api_client):
         """POST /dashboards/<pk>/activate/ sets is_active=True."""
         widget = DashboardWidget.objects.create(
             name='Inactive Widget', widget_type='table',
             data_source='log', is_active=False
         )
-        response = authenticated_api_client.post(
+        response = admin_api_client.post(
             f'/api/v1/telemetry/dashboards/{widget.id}/activate/'
         )
         assert response.status_code == 200
         widget.refresh_from_db()
         assert widget.is_active is True
 
-    def test_deactivate_action(self, authenticated_api_client):
+    def test_deactivate_action(self, admin_api_client):
         """POST /dashboards/<pk>/deactivate/ sets is_active=False."""
         widget = DashboardWidget.objects.create(
             name='Active Widget', widget_type='pie_chart',
             data_source='metric', is_active=True
         )
-        response = authenticated_api_client.post(
+        response = admin_api_client.post(
             f'/api/v1/telemetry/dashboards/{widget.id}/deactivate/'
         )
         assert response.status_code == 200

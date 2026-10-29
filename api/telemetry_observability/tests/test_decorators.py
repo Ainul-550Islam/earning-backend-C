@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock, call
 class TestRecordMetricDecorator:
     def test_counter_recorded_on_success(self):
         from ..decorators import record_metric
-        with patch('telemetry_observability.decorators.MetricsCollector') as mock_cls:
+        with patch('api.telemetry_observability.decorators.MetricsCollector') as mock_cls:
             mock = MagicMock()
             mock_cls.return_value = mock
 
@@ -25,7 +25,7 @@ class TestRecordMetricDecorator:
 
     def test_gauge_records_duration_on_success(self):
         from ..decorators import record_metric
-        with patch('telemetry_observability.decorators.MetricsCollector') as mock_cls:
+        with patch('api.telemetry_observability.decorators.MetricsCollector') as mock_cls:
             mock = MagicMock()
             mock_cls.return_value = mock
 
@@ -38,7 +38,7 @@ class TestRecordMetricDecorator:
 
     def test_error_counter_recorded_on_exception(self):
         from ..decorators import record_metric
-        with patch('telemetry_observability.decorators.MetricsCollector') as mock_cls:
+        with patch('api.telemetry_observability.decorators.MetricsCollector') as mock_cls:
             mock = MagicMock()
             mock_cls.return_value = mock
 
@@ -55,7 +55,7 @@ class TestRecordMetricDecorator:
 
     def test_exception_still_propagates(self):
         from ..decorators import record_metric
-        with patch('telemetry_observability.decorators.MetricsCollector'):
+        with patch('api.telemetry_observability.decorators.MetricsCollector'):
             @record_metric('test')
             def bad():
                 raise RuntimeError("boom")
@@ -67,7 +67,7 @@ class TestRecordMetricDecorator:
 class TestTraceOperationDecorator:
     def test_span_started_and_finished_on_success(self):
         from ..decorators import trace_operation
-        with patch('telemetry_observability.decorators.TracingService') as mock_cls:
+        with patch('api.telemetry_observability.decorators.TracingService') as mock_cls:
             mock_svc = MagicMock()
             mock_span = MagicMock()
             mock_span.span_id = 'span-123'
@@ -85,7 +85,7 @@ class TestTraceOperationDecorator:
 
     def test_span_finished_with_error_on_exception(self):
         from ..decorators import trace_operation
-        with patch('telemetry_observability.decorators.TracingService') as mock_cls:
+        with patch('api.telemetry_observability.decorators.TracingService') as mock_cls:
             mock_svc  = MagicMock()
             mock_span = MagicMock()
             mock_span.span_id = 'span-err'
@@ -104,7 +104,7 @@ class TestTraceOperationDecorator:
 
     def test_operation_name_defaults_to_func_name(self):
         from ..decorators import trace_operation
-        with patch('telemetry_observability.decorators.TracingService') as mock_cls:
+        with patch('api.telemetry_observability.decorators.TracingService') as mock_cls:
             mock_svc  = MagicMock()
             mock_span = MagicMock()
             mock_span.span_id = 's1'
@@ -122,7 +122,7 @@ class TestTraceOperationDecorator:
 
     def test_custom_operation_name(self):
         from ..decorators import trace_operation
-        with patch('telemetry_observability.decorators.TracingService') as mock_cls:
+        with patch('api.telemetry_observability.decorators.TracingService') as mock_cls:
             mock_svc  = MagicMock()
             mock_span = MagicMock()
             mock_span.span_id = 's2'
@@ -176,14 +176,14 @@ class TestLogFunctionCallDecorator:
             return {'key': 'value'}
 
         func_with_result()
-        logs = LogEntry.objects.filter(logger_name='telemetry_observability.decorators')
+        logs = LogEntry.objects.filter(logger_name=func_with_result.__module__)
         assert logs.exists()
 
 
 class TestMeasureTimeDecorator:
     def test_records_duration(self):
         from ..decorators import measure_time
-        with patch('telemetry_observability.decorators.MetricsCollector') as mock_cls:
+        with patch('api.telemetry_observability.decorators.MetricsCollector') as mock_cls:
             mock = MagicMock()
             mock_cls.return_value = mock
 
@@ -201,7 +201,7 @@ class TestMeasureTimeDecorator:
 
     def test_default_metric_name_from_func(self):
         from ..decorators import measure_time
-        with patch('telemetry_observability.decorators.MetricsCollector') as mock_cls:
+        with patch('api.telemetry_observability.decorators.MetricsCollector') as mock_cls:
             mock = MagicMock()
             mock_cls.return_value = mock
 

@@ -30,13 +30,6 @@ NOTE: /admin/, /api/token/, /api/token/refresh/ are NOT included here.
 from django.urls        import path, include
 from rest_framework.routers import DefaultRouter
 
-from .views.metric_view    import MetricView
-from .views.log_view       import LogView
-from .views.trace_view     import TraceView
-from .views.alert_view     import AlertView
-from .views.health_view    import HealthView
-from .views.dashboard_view import DashboardView
-from .views.analytics_view import AnalyticsView
 from .views.ping_view      import PingView, ReadinessView
 
 from .viewsets.metric_viewset    import MetricViewSet
@@ -66,40 +59,4 @@ urlpatterns = [
 
     # ViewSet routes (list/retrieve/create/update/destroy + custom actions)
     path('api/v1/telemetry/', include(router.urls)),
-
-    # Class-Based View routes (direct access)
-    path('api/v1/telemetry/metrics/',
-         MetricView.as_view(), name='telemetry-metric-list'),
-    path('api/v1/telemetry/metrics/<int:metric_id>/',
-         MetricView.as_view(), name='telemetry-metric-detail'),
-
-    path('api/v1/telemetry/logs/',
-         LogView.as_view(), name='telemetry-log-list'),
-    path('api/v1/telemetry/logs/<int:log_id>/',
-         LogView.as_view(), name='telemetry-log-detail'),
-
-    path('api/v1/telemetry/traces/',
-         TraceView.as_view(), name='telemetry-trace-list'),
-    path('api/v1/telemetry/traces/<str:trace_id>/',
-         TraceView.as_view(), name='telemetry-trace-detail'),
-
-    path('api/v1/telemetry/alerts/',
-         AlertView.as_view(), name='telemetry-alert-list'),
-    path('api/v1/telemetry/alerts/<int:alert_id>/',
-         AlertView.as_view(), name='telemetry-alert-detail'),
-
-    path('api/v1/telemetry/health/',
-         HealthView.as_view(), name='telemetry-health-list'),
-    path('api/v1/telemetry/health/<str:service_name>/',
-         HealthView.as_view(), name='telemetry-health-detail'),
-
-    path('api/v1/telemetry/dashboards/',
-         DashboardView.as_view(), name='telemetry-dashboard-list'),
-    path('api/v1/telemetry/dashboards/<int:widget_id>/',
-         DashboardView.as_view(), name='telemetry-dashboard-detail'),
-
-    path('api/v1/telemetry/analytics/',
-         AnalyticsView.as_view(), name='telemetry-analytics-root'),
-    path('api/v1/telemetry/analytics/<str:action>/',
-         AnalyticsView.as_view(), name='telemetry-analytics-action'),
 ]

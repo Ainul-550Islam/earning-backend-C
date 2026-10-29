@@ -5,6 +5,8 @@ from django.db import models
 from django.core.validators import MinValueValidator
 
 from .base import BaseModel
+from ..choices import TraceStatusChoices
+from ..validators import TraceIdValidator, OperationNameValidator, ServiceNameValidator
 
 
 class TraceSpanManager(models.Manager):
@@ -62,22 +64,18 @@ class TraceSpan(BaseModel):
     Model representing a distributed trace span.
     """
 
-    trace_id = models.CharField(max_length=255, db_index=True)
-    span_id = models.CharField(max_length=255, unique=True, db_index=True)
+    trace_id = models.CharField(max_length=255, db_index=True, validators=[TraceIdValidator()])
+    span_id = models.CharField(max_length=255, unique=True, db_index=True, validators=[TraceIdValidator()])
     parent_span_id = models.CharField(max_length=255, blank=True, null=True)
-    operation_name = models.CharField(max_length=255)
-    service = models.CharField(max_length=255, blank=True)
+    operation_name = models.CharField(max_length=255, validators=[OperationNameValidator()])
+    service = models.CharField(max_length=255, blank=True, default='', validators=[ServiceNameValidator()])
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(blank=True, null=True)
     duration_ms = models.FloatField(blank=True, null=True, validators=[MinValueValidator(0)])
     status = models.CharField(
         max_length=50,
-        choices=[
-            ('success', 'Success'),
-            ('error', 'Error'),
-            ('timeout', 'Timeout'),
-        ],
-        default='success'
+        choices=TraceStatusChoices.choices,
+        default=TraceStatusChoices.SUCCESS,
     )
     tags = models.JSONField(default=dict)
     logs = models.JSONField(default=list)
@@ -91,11 +89,11 @@ class TraceSpan(BaseModel):
         verbose_name_plural = 'Trace Spans'
         ordering = ['-start_time']
         indexes = [
-            models.Index(fields=['trace_id']),
-            models.Index(fields=['span_id']),
-            models.Index(fields=['operation_name']),
-            models.Index(fields=['service']),
-            models.Index(fields=['start_time']),
+            models.Index(fields=['trace_id'], name='trace_id_idx'),
+            models.Index(fields=['span_id'], name='span_id_idx'),
+            models.Index(fields=['operation_name'], name='operation_name_idx'),
+            models.Index(fields=['service'], name='trace_service_idx'),
+            models.Index(fields=['start_time'], name='trace_start_time_idx'),
         ]
 
     def __str__(self):

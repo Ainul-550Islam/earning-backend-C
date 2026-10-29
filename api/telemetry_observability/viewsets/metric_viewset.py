@@ -8,7 +8,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 
 from ..filters import MetricEventFilter
-from ..mixins import TelemetryMixin, MetricMixin, ResponseMixin, CacheMixin
+from ..mixins import MetricMixin, ResponseMixin, CacheMixin
 from ..permissions import TelemetryBasePermission
 from ..logic import MetricLogic
 from ..services.analytics_service import AnalyticsService
@@ -23,6 +23,11 @@ from ..serializers.metric_serializer import (
 
 class MetricViewSet(MetricMixin, ResponseMixin, CacheMixin,
                     viewsets.ModelViewSet):
+    # NOTE: MetricMixin already subclasses TelemetryMixin (see mixins.py) — it is
+    # not listed separately here. Doing so previously produced:
+    #   TypeError: Cannot create a consistent method resolution order (MRO)
+    # because a subclass (MetricMixin) and its own parent (TelemetryMixin)
+    # were both listed as direct bases with the parent ordered first.
     """
     DRF ViewSet for MetricEvent.
 

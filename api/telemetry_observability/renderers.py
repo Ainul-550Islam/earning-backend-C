@@ -21,7 +21,7 @@ produce the inner shape; this renderer wraps them uniformly.
 """
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from rest_framework.renderers import JSONRenderer
 
@@ -62,7 +62,7 @@ class TelemetryJSONRenderer(JSONRenderer):
 
         # ── Attach meta block ─────────────────────────────────────────────
         envelope['meta'] = {
-            'timestamp':  datetime.utcnow().isoformat() + 'Z',
+            'timestamp':  datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
             'version':    getattr(request, 'version', 'v1') if request else 'v1',
             'request_id': str(uuid.uuid4()),
         }

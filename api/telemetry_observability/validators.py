@@ -10,18 +10,20 @@ validator.py (legacy custom base class) is deprecated — do NOT use it.
 """
 import re
 from django.core.exceptions import ValidationError
+from django.utils.deconstruct import deconstructible
 
 
 # ---------------------------------------------------------------------------
 # Metric validators
 # ---------------------------------------------------------------------------
 
+@deconstructible
 class MetricNameValidator:
     """
     Validates that a metric name contains only allowed characters.
-    Pattern: alphanumeric, underscore, colon, dot — follows Prometheus naming conventions.
+    Pattern: alphanumeric, underscore, hyphen, colon, dot.
     """
-    PATTERN = re.compile(r'^[a-zA-Z0-9_:.]+$')
+    PATTERN = re.compile(r'^[a-zA-Z0-9_\-:.]+$')
 
     def __call__(self, value: str) -> None:
         if not value:
@@ -37,6 +39,7 @@ class MetricNameValidator:
         return isinstance(other, MetricNameValidator)
 
 
+@deconstructible
 class MetricValueValidator:
     """Validates that a metric value is a finite number."""
 
@@ -55,6 +58,7 @@ class MetricValueValidator:
 # Log validators
 # ---------------------------------------------------------------------------
 
+@deconstructible
 class LogLevelValidator:
     """Validates that a log level is one of the known levels."""
     VALID_LEVELS = {'debug', 'info', 'warning', 'error', 'critical'}
@@ -69,6 +73,7 @@ class LogLevelValidator:
         return isinstance(other, LogLevelValidator)
 
 
+@deconstructible
 class LogMessageValidator:
     """Validates that a log message is not blank."""
 
@@ -84,6 +89,7 @@ class LogMessageValidator:
 # Trace validators
 # ---------------------------------------------------------------------------
 
+@deconstructible
 class TraceIdValidator:
     """Validates trace_id / span_id format (non-empty alphanumeric-dash-underscore string)."""
     PATTERN = re.compile(r'^[a-zA-Z0-9\-_]+$')
@@ -102,6 +108,7 @@ class TraceIdValidator:
         return isinstance(other, TraceIdValidator)
 
 
+@deconstructible
 class OperationNameValidator:
     """Validates that an operation name is non-empty."""
 
@@ -117,6 +124,7 @@ class OperationNameValidator:
 # Alert validators
 # ---------------------------------------------------------------------------
 
+@deconstructible
 class AlertNameValidator:
     """Validates that an alert name is non-empty and within length limits."""
 
@@ -134,6 +142,7 @@ class AlertNameValidator:
 # Health validators
 # ---------------------------------------------------------------------------
 
+@deconstructible
 class HealthScoreValidator:
     """Validates that a health score is an integer in [0, 100]."""
 
@@ -145,6 +154,7 @@ class HealthScoreValidator:
         return isinstance(other, HealthScoreValidator)
 
 
+@deconstructible
 class ErrorRateValidator:
     """Validates that an error rate is a float in [0.0, 100.0]."""
 
@@ -160,6 +170,7 @@ class ErrorRateValidator:
 # Dashboard validators
 # ---------------------------------------------------------------------------
 
+@deconstructible
 class GridSizeValidator:
     """Validates that a grid width/height is in [1, 12] (12-column grid)."""
 
@@ -171,6 +182,7 @@ class GridSizeValidator:
         return isinstance(other, GridSizeValidator)
 
 
+@deconstructible
 class ServiceNameValidator:
     """Validates that a service name is non-empty and safe (no path separators)."""
     PATTERN = re.compile(r'^[a-zA-Z0-9_\-\.]+$')

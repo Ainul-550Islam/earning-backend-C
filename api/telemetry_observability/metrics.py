@@ -170,7 +170,8 @@ class MetricsCollector:
         source: Optional[str] = None,
         service: Optional[str] = None,
         environment: Optional[str] = None,
-        since: Optional[timezone.datetime] = None
+        since: Optional[timezone.datetime] = None,
+        limit: Optional[int] = None
     ) -> List[MetricEvent]:
         """
         Get metrics with optional filters.
@@ -182,6 +183,7 @@ class MetricsCollector:
             service: Optional service filter
             environment: Optional environment filter
             since: Optional start time filter
+            limit: Optional max number of results (most recent first)
             
         Returns:
             List of MetricEvent instances
@@ -206,7 +208,10 @@ class MetricsCollector:
         if since:
             queryset = queryset.filter(timestamp__gte=since)
         
-        return list(queryset.order_by('-timestamp'))
+        queryset = queryset.order_by('-timestamp')
+        if limit is not None:
+            queryset = queryset[:limit]
+        return list(queryset)
     
     def get_metric_aggregation(
         self,

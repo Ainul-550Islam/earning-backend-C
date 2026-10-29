@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Callable, Dict, Any, List, Optional
 
@@ -60,7 +60,7 @@ class Event:
     ):
         self.event_type = event_type
         self.data       = data
-        self.timestamp  = timestamp or datetime.utcnow()
+        self.timestamp  = timestamp or datetime.now(timezone.utc)
         self.metadata   = metadata or {}
 
     def to_dict(self) -> Dict[str, Any]:

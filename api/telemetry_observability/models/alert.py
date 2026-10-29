@@ -2,9 +2,10 @@
 Alert model for Telemetry Observability.
 """
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
 
 from .base import BaseModel
+from ..choices import AlertTypeChoices, AlertSeverityChoices, AlertStatusChoices
+from ..validators import AlertNameValidator, ServiceNameValidator
 
 
 class AlertManager(models.Manager):
@@ -68,46 +69,30 @@ class Alert(BaseModel):
     Model representing an alert for observability.
     """
 
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, validators=[AlertNameValidator()])
     alert_type = models.CharField(
         max_length=50,
-        choices=[
-            ('metric', 'Metric'),
-            ('log', 'Log'),
-            ('trace', 'Trace'),
-            ('health', 'Health'),
-            ('custom', 'Custom'),
-        ],
-        default='metric'
+        choices=AlertTypeChoices.choices,
+        default=AlertTypeChoices.METRIC,
     )
     severity = models.CharField(
         max_length=50,
-        choices=[
-            ('info', 'Info'),
-            ('warning', 'Warning'),
-            ('error', 'Error'),
-            ('critical', 'Critical'),
-        ],
-        default='warning'
+        choices=AlertSeverityChoices.choices,
+        default=AlertSeverityChoices.WARNING,
     )
     status = models.CharField(
         max_length=50,
-        choices=[
-            ('open', 'Open'),
-            ('acknowledged', 'Acknowledged'),
-            ('resolved', 'Resolved'),
-            ('suppressed', 'Suppressed'),
-        ],
-        default='open'
+        choices=AlertStatusChoices.choices,
+        default=AlertStatusChoices.OPEN,
     )
     condition = models.JSONField(default=dict)
     message = models.TextField()
-    source = models.CharField(max_length=255, blank=True)
-    service = models.CharField(max_length=255, blank=True)
+    source = models.CharField(max_length=255, blank=True, default='')
+    service = models.CharField(max_length=255, blank=True, default='', validators=[ServiceNameValidator()])
     environment = models.CharField(max_length=50, default='production')
     triggered_at = models.DateTimeField(auto_now_add=True)
     resolved_at = models.DateTimeField(blank=True, null=True)
-    acknowledged_by = models.CharField(max_length=255, blank=True)
+    acknowledged_by = models.CharField(max_length=255, blank=True, default='')
     acknowledged_at = models.DateTimeField(blank=True, null=True)
     metadata = models.JSONField(default=dict)
 
@@ -119,13 +104,13 @@ class Alert(BaseModel):
         verbose_name_plural = 'Alerts'
         ordering = ['-triggered_at']
         indexes = [
-            models.Index(fields=['name']),
-            models.Index(fields=['alert_type']),
-            models.Index(fields=['severity']),
-            models.Index(fields=['status']),
-            models.Index(fields=['source']),
-            models.Index(fields=['service']),
-            models.Index(fields=['triggered_at']),
+            models.Index(fields=['name'], name='alert_name_idx'),
+            models.Index(fields=['alert_type'], name='alert_type_idx'),
+            models.Index(fields=['severity'], name='alert_severity_idx'),
+            models.Index(fields=['status'], name='alert_status_idx'),
+            models.Index(fields=['source'], name='alert_source_idx'),
+            models.Index(fields=['service'], name='alert_service_idx'),
+            models.Index(fields=['triggered_at'], name='alert_triggered_at_idx'),
         ]
 
     def __str__(self):
@@ -139,7 +124,7 @@ class Alert(BaseModel):
             user: User who acknowledged (string identifier or User object)
         """
         from django.utils import timezone
-        self.status = 'acknowledged'
+        self.status = AlertStatusChoices.ACKNOWLEDGED
         self.acknowledged_by = str(user)
         self.acknowledged_at = timezone.now()
         self.save(update_fields=['status', 'acknowledged_by', 'acknowledged_at'])
@@ -149,6 +134,6 @@ class Alert(BaseModel):
         Resolve the alert. Sets status='resolved' and records resolved_at timestamp.
         """
         from django.utils import timezone
-        self.status = 'resolved'
+        self.status = AlertStatusChoices.RESOLVED
         self.resolved_at = timezone.now()
         self.save(update_fields=['status', 'resolved_at'])
