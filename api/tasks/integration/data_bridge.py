@@ -249,6 +249,12 @@ class DataBridge:
     # ─── Serialization helpers ─────────────────────────────────────────────────
 
     @classmethod
+    def _sanitize_key(cls, key: Any) -> str:
+        """Make a cache-safe key: str, no whitespace/control chars, max 200."""
+        import re
+        return re.sub(r"[\s\x00-\x1f\x7f]+", "_", str(key))[:200]
+
+    @classmethod
     def _serialize(cls, value: Any) -> Any:
         if isinstance(value, Decimal):
             return {'__decimal__': str(value)}
