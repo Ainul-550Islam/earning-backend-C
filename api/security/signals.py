@@ -428,7 +428,7 @@ def _clear_brute_force_counters(identifier: str) -> None:
 def _trigger_brute_force_check(username: str, ip_address: str) -> None:
     """Trigger brute force check"""
     try:
-        from ..services import EnhancedBruteForceService
+        from .services import EnhancedBruteForceService
         
         service = EnhancedBruteForceService()
         
@@ -546,7 +546,7 @@ def _trigger_user_risk_assessment(user) -> None:
     """Trigger user risk assessment"""
     try:
         if SECURITY_MODELS_AVAILABLE:
-            from ..services import SecurityService
+            from .services import SecurityService
             
             service = SecurityService()
             risk_assessment = service.assess_user_risk(user)
@@ -1352,7 +1352,7 @@ class KnowledgeBaseManager:
     def add_knowledge(self, key: str, data: Dict[str, Any], confidence: float = 1.0):
         """Add knowledge to the knowledge base"""
         if confidence < self.confidence_threshold:
-            logger.warning(f"Low confidence knowledge rejected: {key} ({confidence})")
+            logger.debug(f"Low confidence knowledge rejected: {key} ({confidence})")
             return False
         
         self.knowledge_base[key] = {
