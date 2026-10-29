@@ -98,3 +98,11 @@ __all__ = [
     # ML Bot Detection
     "BotDetectionML", "BotDetectionResult", "bot_detector_ml",
 ]
+
+# -- Core security services (moved from api/security/services.py) --
+from .SecurityService import (
+    SecurityService,
+    EnhancedRateLimitService,
+    EnhancedBruteForceService,
+)
+__all__ += ["SecurityService", "EnhancedRateLimitService", "EnhancedBruteForceService"]
