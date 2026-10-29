@@ -12,12 +12,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
-SECRET_KEY = env(
-    "SECRET_KEY",
-    default="django-insecure-fx-=99r4pivad601*#wz5i25gc)+&j-q^#ls9($2)f&yea74gm",
-)
-DEBUG = env.bool("DEBUG", default=True)
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
+SECRET_KEY = env("SECRET_KEY")
+DEBUG = env.bool("DEBUG", default=False)
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
 # ==================== INSTALLED APPS ====================
 INSTALLED_APPS = [
@@ -243,10 +240,7 @@ SIMPLE_JWT = {
     # ✅ ADDED: missing JWT fields
     "UPDATE_LAST_LOGIN": True,
     "ALGORITHM": "HS256",
-    "SIGNING_KEY": env(
-        "SECRET_KEY",
-        default="django-insecure-fx-=99r4pivad601*#wz5i25gc)+&j-q^#ls9($2)f&yea74gm",
-    ),
+    "SIGNING_KEY": SECRET_KEY,
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_TYPE_CLAIM": "token_type",
 }
