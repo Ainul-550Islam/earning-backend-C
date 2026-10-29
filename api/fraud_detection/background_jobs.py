@@ -23,7 +23,8 @@ def submit_fraud_detection_job(user_id, payload=None, context=None, priority='no
     try:
         from api.fraud_detection.tasks import batch_risk_assessment
         batch_risk_assessment.apply_async(
-            kwargs={}, priority=9 if priority == 'high' else 5
+            kwargs={'user_ids': [str(user_id)]},
+            priority=9 if priority == 'high' else 5,
         )
         return True
     except Exception as exc:
