@@ -358,8 +358,7 @@ class GamificationTrackingMiddleware:
             # Check for active streak freezes
             active_freezes = StreakFreeze.objects.filter(
                 user_id=user_id,
-                is_active=True,
-                expires_at__gt=timezone.now()
+                used_at__gte=timezone.now() - timezone.timedelta(hours=24)
             ).count()
             
             if active_freezes > 0:
