@@ -53,3 +53,4 @@ earning_db_backup_*.sql
 tenants_backup.json
 tenants_raw_backup.json
 *.dump
+pytest.ini.bak

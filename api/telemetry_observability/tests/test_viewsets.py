@@ -15,7 +15,7 @@ from ..models.dashboard_widget import DashboardWidget
 
 @pytest.mark.django_db
 class TestMetricViewSet:
-    """Tests for MetricViewSet (/api/v1/telemetry/metrics/)."""
+    """Tests for MetricViewSet (/api/telemetry-observability/api/v1/telemetry/metrics/)."""
 
     def test_list_metrics(self, authenticated_api_client):
         """GET /metrics/ returns 200 and a list."""
@@ -26,10 +26,11 @@ class TestMetricViewSet:
             source='test',
             service='test-service'
         )
-        response = authenticated_api_client.get('/api/v1/telemetry/metrics/')
+        response = authenticated_api_client.get('/api/telemetry-observability/api/v1/telemetry/metrics/')
         assert response.status_code == 200
-        assert isinstance(response.data, list)
-        assert len(response.data) >= 1
+        data = response.data["results"] if isinstance(response.data, dict) else response.data
+        assert isinstance(data, list)
+        assert len(data) >= 1
 
     def test_create_metric(self, authenticated_api_client):
         """POST /metrics/ returns 201 and the created metric."""
@@ -40,7 +41,7 @@ class TestMetricViewSet:
             'source': 'test',
             'service': 'test-service'
         }
-        response = authenticated_api_client.post('/api/v1/telemetry/metrics/', data, format='json')
+        response = authenticated_api_client.post('/api/telemetry-observability/api/v1/telemetry/metrics/', data, format='json')
         assert response.status_code == 201
         assert response.data['name'] == 'new-metric'
 
@@ -53,7 +54,7 @@ class TestMetricViewSet:
             source='test',
             service='test-service'
         )
-        response = authenticated_api_client.get(f'/api/v1/telemetry/metrics/{metric.id}/')
+        response = authenticated_api_client.get(f'/api/telemetry-observability/api/v1/telemetry/metrics/{metric.id}/')
         assert response.status_code == 200
         assert response.data['name'] == 'test-metric'
         assert response.data['value'] == 42.5
@@ -67,7 +68,7 @@ class TestMetricViewSet:
             source='test',
             service='test-service'
         )
-        response = authenticated_api_client.delete(f'/api/v1/telemetry/metrics/{metric.id}/')
+        response = authenticated_api_client.delete(f'/api/telemetry-observability/api/v1/telemetry/metrics/{metric.id}/')
         assert response.status_code == 204
         assert not MetricEvent.objects.filter(id=metric.id).exists()
 
@@ -77,7 +78,7 @@ class TestMetricViewSet:
             name='cpu_usage', metric_type='gauge', value=80.0, source='test', service='svc'
         )
         response = authenticated_api_client.get(
-            '/api/v1/telemetry/metrics/statistics/?name=cpu_usage'
+            '/api/telemetry-observability/api/v1/telemetry/metrics/statistics/?name=cpu_usage'
         )
         assert response.status_code == 200
         assert 'metric_name' in response.data
@@ -92,7 +93,7 @@ class TestMetricViewSet:
             ]
         }
         response = authenticated_api_client.post(
-            '/api/v1/telemetry/metrics/batch/', data, format='json'
+            '/api/telemetry-observability/api/v1/telemetry/metrics/batch/', data, format='json'
         )
         assert response.status_code == 201
         assert len(response.data) == 2
@@ -100,13 +101,13 @@ class TestMetricViewSet:
     def test_unauthenticated_returns_403(self):
         """Unauthenticated requests are rejected."""
         client = APIClient()
-        response = client.get('/api/v1/telemetry/metrics/')
+        response = client.get('/api/telemetry-observability/api/v1/telemetry/metrics/')
         assert response.status_code in (401, 403)
 
 
 @pytest.mark.django_db
 class TestLogViewSet:
-    """Tests for LogViewSet (/api/v1/telemetry/logs/)."""
+    """Tests for LogViewSet (/api/telemetry-observability/api/v1/telemetry/logs/)."""
 
     def test_list_logs(self, authenticated_api_client):
         """GET /logs/ returns 200 with list of logs."""
@@ -116,7 +117,7 @@ class TestLogViewSet:
             source='test',
             service='test-service'
         )
-        response = authenticated_api_client.get('/api/v1/telemetry/logs/')
+        response = authenticated_api_client.get('/api/telemetry-observability/api/v1/telemetry/logs/')
         assert response.status_code == 200
         assert len(response.data) >= 1
 
@@ -128,7 +129,7 @@ class TestLogViewSet:
             'source': 'test',
             'service': 'test-service'
         }
-        response = authenticated_api_client.post('/api/v1/telemetry/logs/', data, format='json')
+        response = authenticated_api_client.post('/api/telemetry-observability/api/v1/telemetry/logs/', data, format='json')
         assert response.status_code == 201
         assert response.data['message'] == 'New log entry'
 
@@ -136,23 +137,24 @@ class TestLogViewSet:
         """GET /logs/?level=error returns only error-level logs."""
         LogEntry.objects.create(level='info', message='Info log', source='t', service='s')
         LogEntry.objects.create(level='error', message='Error log', source='t', service='s')
-        response = authenticated_api_client.get('/api/v1/telemetry/logs/?level=error')
+        response = authenticated_api_client.get('/api/telemetry-observability/api/v1/telemetry/logs/?level=error')
         assert response.status_code == 200
-        for log in response.data:
+        data = response.data['results'] if isinstance(response.data, dict) else response.data
+        for log in data:
             assert log['level'] == 'error'
 
     def test_errors_action(self, authenticated_api_client):
         """GET /logs/errors/ returns only error and critical logs."""
         LogEntry.objects.create(level='error', message='Err', source='t', service='s')
         LogEntry.objects.create(level='info', message='Info', source='t', service='s')
-        response = authenticated_api_client.get('/api/v1/telemetry/logs/errors/')
+        response = authenticated_api_client.get('/api/telemetry-observability/api/v1/telemetry/logs/errors/')
         assert response.status_code == 200
         for log in response.data:
             assert log['level'] in ('error', 'critical')
 
     def test_analytics_action(self, authenticated_api_client):
         """GET /logs/analytics/ returns analytics dict."""
-        response = authenticated_api_client.get('/api/v1/telemetry/logs/analytics/?hours=24')
+        response = authenticated_api_client.get('/api/telemetry-observability/api/v1/telemetry/logs/analytics/?hours=24')
         assert response.status_code == 200
         assert 'total_logs' in response.data
         assert 'level_counts' in response.data
@@ -160,7 +162,7 @@ class TestLogViewSet:
 
 @pytest.mark.django_db
 class TestTraceViewSet:
-    """Tests for TraceViewSet (/api/v1/telemetry/traces/)."""
+    """Tests for TraceViewSet (/api/telemetry-observability/api/v1/telemetry/traces/)."""
 
     def test_list_traces(self, authenticated_api_client):
         """GET /traces/ returns 200 with list."""
@@ -169,14 +171,14 @@ class TestTraceViewSet:
             trace_id='t1', span_id='s1', operation_name='op',
             service='svc', start_time=timezone.now()
         )
-        response = authenticated_api_client.get('/api/v1/telemetry/traces/')
+        response = authenticated_api_client.get('/api/telemetry-observability/api/v1/telemetry/traces/')
         assert response.status_code == 200
 
     def test_create_span(self, authenticated_api_client):
         """POST /traces/ starts a new span."""
         data = {'operation_name': 'test-op', 'service': 'test-service'}
         response = authenticated_api_client.post(
-            '/api/v1/telemetry/traces/', data, format='json'
+            '/api/telemetry-observability/api/v1/telemetry/traces/', data, format='json'
         )
         assert response.status_code == 201
         assert response.data['operation_name'] == 'test-op'
@@ -190,7 +192,7 @@ class TestTraceViewSet:
             service='svc', start_time=timezone.now()
         )
         response = authenticated_api_client.post(
-            f'/api/v1/telemetry/traces/{span.id}/finish/',
+            f'/api/telemetry-observability/api/v1/telemetry/traces/{span.id}/finish/',
             {'status': 'success'},
             format='json'
         )
@@ -202,20 +204,20 @@ class TestTraceViewSet:
     def test_slow_action(self, authenticated_api_client):
         """GET /traces/slow/ returns slow spans."""
         response = authenticated_api_client.get(
-            '/api/v1/telemetry/traces/slow/?threshold_ms=100'
+            '/api/telemetry-observability/api/v1/telemetry/traces/slow/?threshold_ms=100'
         )
         assert response.status_code == 200
 
     def test_statistics_action(self, authenticated_api_client):
         """GET /traces/statistics/ returns stats dict."""
-        response = authenticated_api_client.get('/api/v1/telemetry/traces/statistics/')
+        response = authenticated_api_client.get('/api/telemetry-observability/api/v1/telemetry/traces/statistics/')
         assert response.status_code == 200
         assert 'total_spans' in response.data
 
 
 @pytest.mark.django_db
 class TestAlertViewSet:
-    """Tests for AlertViewSet (/api/v1/telemetry/alerts/)."""
+    """Tests for AlertViewSet (/api/telemetry-observability/api/v1/telemetry/alerts/)."""
 
     def test_list_alerts(self, admin_api_client):
         """GET /alerts/ returns 200 with list."""
@@ -223,7 +225,7 @@ class TestAlertViewSet:
             name='test-alert', alert_type='metric', severity='warning',
             status='open', message='Test', source='test', service='svc'
         )
-        response = admin_api_client.get('/api/v1/telemetry/alerts/')
+        response = admin_api_client.get('/api/telemetry-observability/api/v1/telemetry/alerts/')
         assert response.status_code == 200
         assert len(response.data) >= 1
 
@@ -238,7 +240,7 @@ class TestAlertViewSet:
             'service': 'test-service'
         }
         response = admin_api_client.post(
-            '/api/v1/telemetry/alerts/', data, format='json'
+            '/api/telemetry-observability/api/v1/telemetry/alerts/', data, format='json'
         )
         assert response.status_code == 201
         assert response.data['name'] == 'new-alert'
@@ -250,7 +252,7 @@ class TestAlertViewSet:
             status='open', message='Ack me', source='test', service='svc'
         )
         response = admin_api_client.post(
-            f'/api/v1/telemetry/alerts/{alert.id}/acknowledge/',
+            f'/api/telemetry-observability/api/v1/telemetry/alerts/{alert.id}/acknowledge/',
             {'user': 'ops-team'},
             format='json'
         )
@@ -266,7 +268,7 @@ class TestAlertViewSet:
             status='open', message='Resolve me', source='test', service='svc'
         )
         response = admin_api_client.post(
-            f'/api/v1/telemetry/alerts/{alert.id}/resolve/',
+            f'/api/telemetry-observability/api/v1/telemetry/alerts/{alert.id}/resolve/',
             format='json'
         )
         assert response.status_code == 200
@@ -276,7 +278,7 @@ class TestAlertViewSet:
 
     def test_statistics_action(self, admin_api_client):
         """GET /alerts/statistics/ returns stats."""
-        response = admin_api_client.get('/api/v1/telemetry/alerts/statistics/')
+        response = admin_api_client.get('/api/telemetry-observability/api/v1/telemetry/alerts/statistics/')
         assert response.status_code == 200
         assert 'total_alerts' in response.data
 
@@ -290,7 +292,7 @@ class TestAlertViewSet:
             name='resolved-alert', alert_type='metric', severity='info',
             status='resolved', message='Done', source='t', service='s'
         )
-        response = admin_api_client.get('/api/v1/telemetry/alerts/open/')
+        response = admin_api_client.get('/api/telemetry-observability/api/v1/telemetry/alerts/open/')
         assert response.status_code == 200
         for alert_data in response.data:
             assert alert_data['status'] == 'open'
@@ -298,14 +300,14 @@ class TestAlertViewSet:
 
 @pytest.mark.django_db
 class TestHealthViewSet:
-    """Tests for HealthViewSet (/api/v1/telemetry/health/)."""
+    """Tests for HealthViewSet (/api/telemetry-observability/api/v1/telemetry/health/)."""
 
     def test_list_health(self, authenticated_api_client):
         """GET /health/ returns 200."""
         HealthStatus.objects.create(
             service_name='svc-1', status='healthy', health_score=100
         )
-        response = authenticated_api_client.get('/api/v1/telemetry/health/')
+        response = authenticated_api_client.get('/api/telemetry-observability/api/v1/telemetry/health/')
         assert response.status_code == 200
 
     def test_create_health(self, authenticated_api_client):
@@ -317,7 +319,7 @@ class TestHealthViewSet:
             'environment': 'production'
         }
         response = authenticated_api_client.post(
-            '/api/v1/telemetry/health/', data, format='json'
+            '/api/telemetry-observability/api/v1/telemetry/health/', data, format='json'
         )
         assert response.status_code == 201
         assert response.data['service_name'] == 'new-service'
@@ -331,20 +333,20 @@ class TestHealthViewSet:
             'environment': 'staging'
         }
         r1 = authenticated_api_client.post(
-            '/api/v1/telemetry/health/upsert/', data, format='json'
+            '/api/telemetry-observability/api/v1/telemetry/health/upsert/', data, format='json'
         )
         assert r1.status_code == 201
 
         data['health_score'] = 75
         r2 = authenticated_api_client.post(
-            '/api/v1/telemetry/health/upsert/', data, format='json'
+            '/api/telemetry-observability/api/v1/telemetry/health/upsert/', data, format='json'
         )
         assert r2.status_code == 200
         assert r2.data['health_score'] == 75
 
     def test_summary_action(self, authenticated_api_client):
         """GET /health/summary/ returns summary dict."""
-        response = authenticated_api_client.get('/api/v1/telemetry/health/summary/')
+        response = authenticated_api_client.get('/api/telemetry-observability/api/v1/telemetry/health/summary/')
         assert response.status_code == 200
         assert 'total_services' in response.data
         assert 'avg_health_score' in response.data
@@ -352,14 +354,14 @@ class TestHealthViewSet:
 
 @pytest.mark.django_db
 class TestDashboardViewSet:
-    """Tests for DashboardViewSet (/api/v1/telemetry/dashboards/)."""
+    """Tests for DashboardViewSet (/api/telemetry-observability/api/v1/telemetry/dashboards/)."""
 
     def test_list_widgets(self, admin_api_client):
         """GET /dashboards/ returns 200."""
         DashboardWidget.objects.create(
             name='Widget 1', widget_type='metric_card', data_source='metric'
         )
-        response = admin_api_client.get('/api/v1/telemetry/dashboards/')
+        response = admin_api_client.get('/api/telemetry-observability/api/v1/telemetry/dashboards/')
         assert response.status_code == 200
 
     def test_create_widget(self, admin_api_client):
@@ -372,7 +374,7 @@ class TestDashboardViewSet:
             'config': {}
         }
         response = admin_api_client.post(
-            '/api/v1/telemetry/dashboards/', data, format='json'
+            '/api/telemetry-observability/api/v1/telemetry/dashboards/', data, format='json'
         )
         assert response.status_code == 201
         assert response.data['name'] == 'New Widget'
@@ -382,7 +384,7 @@ class TestDashboardViewSet:
         widget = DashboardWidget.objects.create(
             name='My Widget', widget_type='gauge', data_source='metric'
         )
-        response = admin_api_client.get(f'/api/v1/telemetry/dashboards/{widget.id}/')
+        response = admin_api_client.get(f'/api/telemetry-observability/api/v1/telemetry/dashboards/{widget.id}/')
         assert response.status_code == 200
         assert response.data['name'] == 'My Widget'
 
@@ -393,7 +395,7 @@ class TestDashboardViewSet:
             data_source='log', is_active=False
         )
         response = admin_api_client.post(
-            f'/api/v1/telemetry/dashboards/{widget.id}/activate/'
+            f'/api/telemetry-observability/api/v1/telemetry/dashboards/{widget.id}/activate/'
         )
         assert response.status_code == 200
         widget.refresh_from_db()
@@ -406,7 +408,7 @@ class TestDashboardViewSet:
             data_source='metric', is_active=True
         )
         response = admin_api_client.post(
-            f'/api/v1/telemetry/dashboards/{widget.id}/deactivate/'
+            f'/api/telemetry-observability/api/v1/telemetry/dashboards/{widget.id}/deactivate/'
         )
         assert response.status_code == 200
         widget.refresh_from_db()
