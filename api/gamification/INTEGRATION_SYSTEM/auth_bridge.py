@@ -542,6 +542,19 @@ class AuthenticationBridge:
             
             return context
     
+    def get_user_context(self, user_id: str) -> Optional[AuthContext]:
+        """Return the newest valid AuthContext for user_id, or None."""
+        with self._lock:
+            latest = None
+            for ctx in self.active_sessions.values():
+                if ctx.user is None or str(ctx.user.id) != str(user_id):
+                    continue
+                if ctx.credential is None or not ctx.credential.is_valid():
+                    continue
+                if latest is None or ctx.timestamp > latest.timestamp:
+                    latest = ctx
+            return latest
+
     def invalidate_session(self, session_id: str) -> bool:
         """Invalidate a session."""
         with self._lock:
