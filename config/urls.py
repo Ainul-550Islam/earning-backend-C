@@ -351,3 +351,28 @@ if settings.DEBUG:
 # if settings.DEBUG:
 #     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 #     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# --- admin guard (2026-10-28): drop admin registrations whose app label is not installed ---
+def _purge_orphan_admin_models():
+    import logging
+    from collections import Counter
+    from django.apps import apps as _apps
+    from django.contrib import admin as _admin
+    from django.contrib.admin.sites import all_sites
+    _log = logging.getLogger(__name__)
+    _sites = {id(s): s for s in [*all_sites, _admin.site, _admin.sites.site]}.values()
+    for _s in _sites:
+        _bad = [m for m in list(_s._registry) if m._meta.app_label not in _apps.app_configs]
+        for _m in _bad:
+            try:
+                _s.unregister(_m)
+            except Exception:
+                _s._registry.pop(_m, None)
+        if _bad:
+            _log.warning(
+                "admin guard: removed %d model(s) from admin site '%s' (app label not installed): %s",
+                len(_bad), getattr(_s, "name", "?"), dict(Counter(m._meta.app_label for m in _bad)),
+            )
+
+
+_purge_orphan_admin_models()
